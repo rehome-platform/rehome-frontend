@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="40" viewBox="0 0 160 40" fill="none">
+  <circle cx="20" cy="20" r="16" fill="#006b2c"/>
+  <path d="M15 20l3.5 3.5L25 16" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="44" y="26" font-family="'Be Vietnam Pro', sans-serif" font-size="20" font-weight="700" fill="#006b2c">ReHome</text>
+</svg>
