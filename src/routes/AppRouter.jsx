@@ -36,6 +36,7 @@ import {
 
 // Admin Pages
 import {
+  AdminSystemPage,
   RevenueDashboardPage,
   ConfigPage,
   AccountLockPage,
@@ -280,10 +281,13 @@ export default function AppRouter() {
       <Route path="/moderator/disputes" element={<DisputeResolutionPage />} />
       <Route path="/moderator/reports" element={<ReportsPage />} />
 
-      {/* Admin Routes */}
-      <Route path="/admin" element={<RevenueDashboardPage />} />
+      {/* Admin Stitch Routes */}
+      <Route path="/admin" element={<AdminSystemPage />} />
+      <Route path="/admin/users" element={<AdminSystemPage />} />
+      <Route path="/admin/moderators" element={<AdminSystemPage />} />
+      <Route path="/admin/audit-logs" element={<AdminSystemPage />} />
       <Route path="/admin/configs" element={<ConfigPage />} />
-      <Route path="/admin/users" element={<AccountLockPage />} />
+      <Route path="/admin/legacy-revenue" element={<RevenueDashboardPage />} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />

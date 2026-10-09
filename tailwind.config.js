@@ -45,7 +45,7 @@ export default {
         "full": "9999px"
       },
       fontFamily: {
-        sans: ["Inter", "Be Vietnam Pro", "sans-serif"],
+        sans: ["Be Vietnam Pro", "sans-serif"],
         heading: ["Be Vietnam Pro", "sans-serif"],
       }
     }

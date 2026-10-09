@@ -1,19 +1,19 @@
 @import "./tailwind.css";
 
 :root {
-  /* HSL Color System */
-  --surface: #f4fcf0;
+  /* Stitch Design Tokens */
+  --surface: #f6f9f4;
   --surface-dim: #d5dcd1;
-  --surface-bright: #f4fcf0;
+  --surface-bright: #f6f9f4;
   --surface-container-lowest: #ffffff;
   --surface-container-low: #eff6ea;
   --surface-container: #e9f0e5;
   --surface-container-high: #e3eadf;
   --surface-container-highest: #dde5d9;
-  --on-surface: #171d16;
-  --on-surface-variant: #3e4a3d;
-  --outline: #6e7b6c;
-  --outline-variant: #bdcaba;
+  --on-surface: #191c19;
+  --on-surface-variant: #414942;
+  --outline: #717971;
+  --outline-variant: #dde5d9;
   
   --primary: #006b2c;
   --primary-container: #00873a;
@@ -27,8 +27,8 @@
   --secondary-fixed: #ffddb8;
   --on-secondary: #ffffff;
 
-  --tertiary: #a72d51;
-  --tertiary-container: #c74668;
+  --tertiary: #00685f;
+  --tertiary-container: #4db6ac;
   --on-tertiary: #ffffff;
 
   --error: #ba1a1a;
@@ -41,7 +41,7 @@ body {
   margin: 0;
   background-color: var(--surface);
   color: var(--on-surface);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
