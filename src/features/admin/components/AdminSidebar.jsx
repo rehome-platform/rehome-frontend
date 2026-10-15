@@ -4,13 +4,15 @@ import { Link } from 'react-router-dom';
 /**
  * Sidebar Quản trị hệ thống ReHome
  * Thiết kế chính xác theo Google Stitch:
- * Nền: #006B2C | Chữ trắng/xanh nhạt | Phông: Be Vietnam Pro | Phiên bản v2.4.0
+ * Nền: #006B2C | Chữ trắng/xanh nhạt | Phông: Be Vietnam Pro
  */
 export default function AdminSidebar({ activeTab, onSelectTab, isMobileOpen, onCloseMobile }) {
   const menuItems = [
-    { id: 'overview', path: '/admin', label: 'Tổng quan', icon: 'grid_view' },
+    { id: 'overview', path: '/admin', label: 'Tổng quan & Quỹ', icon: 'grid_view' },
     { id: 'accounts', path: '/admin/users', label: 'Tài khoản', icon: 'group' },
-    { id: 'moderators', path: '/admin/moderators', label: 'Moderator', icon: 'verified_user' },
+    { id: 'moderators', path: '/admin/moderators', label: 'Nhân sự Moderator', icon: 'badge' },
+    { id: 'warehouses', path: '/admin/warehouses', label: 'Chi nhánh kho', icon: 'warehouse' },
+    { id: 'configs', path: '/admin/configs', label: 'Cấu hình tham số', icon: 'tune' },
     { id: 'audit', path: '/admin/audit-logs', label: 'Nhật ký hệ thống', icon: 'receipt_long' },
   ];
 
@@ -60,47 +62,60 @@ export default function AdminSidebar({ activeTab, onSelectTab, isMobileOpen, onC
             </button>
           </div>
 
-          {/* Nav List */}
-          <nav className="p-4 space-y-1.5 mt-2">
+          {/* Navigation Links */}
+          <nav className="p-4 space-y-1.5">
             {menuItems.map((item) => {
               const isActive = activeTab === item.id;
               return (
-                <button
+                <Link
                   key={item.id}
-                  id={`sidebar-nav-${item.id}`}
+                  to={item.path}
                   onClick={() => {
                     onSelectTab(item.id);
                     if (onCloseMobile) onCloseMobile();
                   }}
-                  className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-150 text-left ${
+                  className={`flex items-center gap-3.5 px-4 py-3 rounded-xl text-xs font-semibold tracking-wide transition-all duration-150 ${
                     isActive
-                      ? 'bg-white/20 text-white font-semibold shadow-inner'
-                      : 'text-white/80 hover:bg-white/10 hover:text-white'
+                      ? 'bg-white text-[#006B2C] shadow-md shadow-black/10'
+                      : 'text-white/85 hover:bg-white/10 hover:text-white'
                   }`}
                 >
-                  <span className={`material-symbols-outlined text-xl ${isActive ? 'text-white' : 'text-white/70'}`}>
+                  <span
+                    className={`material-symbols-outlined text-[20px] transition-transform duration-150 ${
+                      isActive ? 'text-[#006B2C]' : 'text-white/70'
+                    }`}
+                  >
                     {item.icon}
                   </span>
-                  <span className="tracking-wide">{item.label}</span>
-                </button>
+                  <span>{item.label}</span>
+                </Link>
               );
             })}
           </nav>
         </div>
 
-        {/* Bottom: Version info */}
-        <div className="p-5 border-t border-white/10">
-          <div className="flex items-center justify-between text-xs text-white/60">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>Phiên bản v2.4.0</span>
-            </span>
+        {/* Bottom User Profile */}
+        <div className="p-4 m-3 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white text-[#006B2C] font-bold flex items-center justify-center text-xs shadow-sm">
+                AD
+              </div>
+              <div className="flex flex-col overflow-hidden">
+                <span className="text-xs font-bold truncate text-white leading-tight">
+                  Trần Minh Quân
+                </span>
+                <span className="text-[10px] text-white/70 font-medium leading-tight">
+                  Admin cấp cao
+                </span>
+              </div>
+            </div>
             <Link
               to="/"
-              className="text-white/70 hover:text-white hover:underline text-[11px]"
-              title="Về cổng chính ReHome"
+              className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/15 transition-colors"
+              title="Về cổng chính"
             >
-              Cổng chính ↗
+              <span className="material-symbols-outlined text-lg">logout</span>
             </Link>
           </div>
         </div>

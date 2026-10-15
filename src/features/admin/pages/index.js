@@ -1,4 +1,3 @@
-export { default as RevenueDashboardPage } from './RevenueDashboardPage.jsx';
-export { default as ConfigPage } from './ConfigPage.jsx';
-export { default as AccountLockPage } from './AccountLockPage.jsx';
 export { default as AdminSystemPage } from './AdminSystemPage.jsx';
+export { default as AdminDashboardPage } from './AdminDashboardPage.jsx';
+export { default as ConfigPage } from './ConfigPage.jsx';

@@ -5,6 +5,7 @@ import AdminHeader from '../components/AdminHeader.jsx';
 import AdminOverviewView from '../components/AdminOverviewView.jsx';
 import AdminAccountsView from '../components/AdminAccountsView.jsx';
 import AdminModeratorsView from '../components/AdminModeratorsView.jsx';
+import AdminWarehousesView from '../components/AdminWarehousesView.jsx';
 import AdminAuditLogsView from '../components/AdminAuditLogsView.jsx';
 
 /**
@@ -12,7 +13,7 @@ import AdminAuditLogsView from '../components/AdminAuditLogsView.jsx';
  * Tái hiện toàn diện thiết kế Google Stitch (Figma) Prototype:
  * - Tông màu chủ đạo: #006B2C | Màu nền: #F6F9F4 | Viền: #DDE5D9
  * - Phông chữ: Be Vietnam Pro
- * - Gồm 4 phân hệ cốt lõi: Tổng quan, Tài khoản, Moderator, Nhật ký hệ thống
+ * - Gồm 5 phân hệ cốt lõi: Tổng quan, Tài khoản, Moderator, Chi nhánh kho, Nhật ký hệ thống
  */
 export default function AdminSystemPage() {
   const location = useLocation();
@@ -21,7 +22,8 @@ export default function AdminSystemPage() {
   // Xác định tab hiện tại từ URL
   const getTabFromPath = (pathname) => {
     if (pathname.includes('/users')) return 'accounts';
-    if (pathname.includes('/moderator')) return 'moderators';
+    if (pathname.includes('/moderators')) return 'moderators';
+    if (pathname.includes('/warehouses')) return 'warehouses';
     if (pathname.includes('/audit')) return 'audit';
     return 'overview';
   };
@@ -39,6 +41,7 @@ export default function AdminSystemPage() {
     if (tabId === 'overview') navigate('/admin');
     else if (tabId === 'accounts') navigate('/admin/users');
     else if (tabId === 'moderators') navigate('/admin/moderators');
+    else if (tabId === 'warehouses') navigate('/admin/warehouses');
     else if (tabId === 'audit') navigate('/admin/audit-logs');
   };
 
@@ -49,13 +52,15 @@ export default function AdminSystemPage() {
   const getPageTitle = () => {
     switch (activeTab) {
       case 'accounts':
-        return 'Quản lý Tài khoản';
+        return 'Quản lý Tài khoản (Member & Tổ chức)';
       case 'moderators':
-        return 'Quản lý Moderator';
+        return 'Quản lý Nhân sự Moderator';
+      case 'warehouses':
+        return 'Quản lý Chi nhánh Kho ReHome';
       case 'audit':
-        return 'Nhật ký kiểm toán hệ thống';
+        return 'Nhật ký kiểm toán hệ thống (Audit Log)';
       default:
-        return 'Tổng quan điều hành';
+        return 'Tổng quan điều hành & Quỹ nền tảng';
     }
   };
 
@@ -69,7 +74,7 @@ export default function AdminSystemPage() {
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
-      {/* Main Wrapper (lùi sang phải 64 = 256px trên màn hình lớn) */}
+      {/* Main Wrapper */}
       <div className="lg:pl-64 flex-1 flex flex-col min-w-0">
         {/* Top Header */}
         <AdminHeader
@@ -91,6 +96,10 @@ export default function AdminSystemPage() {
 
           {activeTab === 'moderators' && (
             <AdminModeratorsView onLogAction={handleLogAction} />
+          )}
+
+          {activeTab === 'warehouses' && (
+            <AdminWarehousesView onLogAction={handleLogAction} />
           )}
 
           {activeTab === 'audit' && (
