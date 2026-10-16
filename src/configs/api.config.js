@@ -4,7 +4,7 @@
  * Dành cho hệ thống Web App (Admin & Moderator kho)
  */
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://prm393.up.railway.app";
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://re-backend-9a98.onrender.com";
 export const WS_BASE_URL = `${API_BASE_URL.replace(/^http/, 'ws')}/ws`;
 
 export const API_ENDPOINTS = {
@@ -13,9 +13,20 @@ export const API_ENDPOINTS = {
     LOGIN: "/api/auth/login",
     REFRESH: "/api/auth/refresh",
     LOGOUT: "/api/auth/logout",
-    ME: "/api/auth/me",
-    FORGOT_PASSWORD: "/api/auth/forgot-password",
-    CHANGE_PASSWORD: "/api/auth/change-password",
+    ME: "/api/account/me",
+    REGISTER: "/api/auth/register",
+    VERIFY_OTP: "/api/auth/verify-otp",
+    RESEND_OTP: "/api/auth/resend-otp",
+    FORGOT_PASSWORD: "/api/auth/password/forgot",
+    RESET_PASSWORD: "/api/auth/password/reset",
+    CHANGE_PASSWORD: "/api/auth/password/change",
+    GOOGLE: "/api/auth/google",
+  },
+
+  // Member Profile Endpoints
+  MEMBER: {
+    ME: "/members/me",
+    CODE: "/members/me/code",
   },
 
   // 2. Moderator (Nhân viên vận hành kho & Kiểm duyệt viên tại chi nhánh kho)
@@ -68,6 +79,7 @@ export const API_ENDPOINTS = {
 
   // 3. Admin (Quản trị viên nền tảng ReHome)
   ADMIN: {
+    DASHBOARD: "/api/admin/dashboard",
     DASHBOARD_STATS: "/api/admin/dashboard/stats",
     DASHBOARD_FUND: "/api/admin/dashboard/fund",
     EXPORT_EXCEL: "/api/admin/dashboard/export-excel",
