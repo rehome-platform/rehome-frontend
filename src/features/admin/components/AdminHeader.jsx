@@ -9,13 +9,23 @@ import { useAuth } from '../../../context/AuthContext.jsx';
  */
 export default function AdminHeader({ activeTitle, onOpenMobile }) {
   const [showDropdown, setShowDropdown] = useState(false);
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  const displayName = user?.fullName || user?.name || user?.email || 'Quản trị viên';
+  const displayEmail = user?.email || '';
+  const initials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w[0])
+    .slice(-2)
+    .join('')
+    .toUpperCase() || 'AD';
 
   return (
     <header className="h-20 bg-white border-b border-[#DDE5D9] px-4 sm:px-8 flex items-center justify-between sticky top-0 z-30 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
@@ -48,15 +58,19 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
         >
           <div className="text-right hidden sm:block">
             <p className="text-xs font-bold text-[#191C19] leading-tight">
-              Trần Minh Quân
+              {displayName}
             </p>
             <p className="text-[11px] text-[#717971] font-medium leading-tight mt-0.5">
-              Quản trị viên
+              Quản trị viên (Admin)
             </p>
           </div>
 
-          <div className="w-10 h-10 rounded-xl bg-[#006B2C] text-white flex items-center justify-center font-bold text-sm shadow-sm">
-            <span>TM</span>
+          <div className="w-10 h-10 rounded-xl bg-[#006B2C] text-white flex items-center justify-center font-bold text-sm shadow-sm overflow-hidden">
+            {user?.avatarUrl || user?.avatar ? (
+              <img src={user.avatarUrl || user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              <span>{initials}</span>
+            )}
           </div>
 
           <span className="material-symbols-outlined text-[#717971] text-lg">
@@ -67,16 +81,27 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
         {/* Dropdown Menu */}
         {showDropdown && (
           <div
-            className="absolute right-0 mt-2 w-56 bg-white rounded-2xl border border-[#DDE5D9] shadow-lg py-2 z-40 animate-fadeIn"
+            className="absolute right-0 mt-2 w-64 bg-white rounded-2xl border border-[#DDE5D9] shadow-lg py-2 z-40 animate-fadeIn"
             onMouseLeave={() => setShowDropdown(false)}
           >
             <div className="px-4 py-2.5 border-b border-[#DDE5D9]/60">
-              <p className="text-xs font-bold text-[#191C19]">Trần Minh Quân</p>
-              <p className="text-[11px] text-[#717971]">admin@rehome.vn</p>
-              <span className="inline-block mt-1 px-2 py-0.5 text-[10px] font-semibold bg-[#E8F5E9] text-[#006B2C] rounded-md">
-                Admin tối cao (ADM-04)
+              <p className="text-xs font-bold text-[#191C19] truncate">{displayName}</p>
+              <p className="text-[11px] text-[#717971] truncate">{displayEmail}</p>
+              <span className="inline-block mt-1 px-2 py-0.5 text-[10px] font-semibold bg-[#E8F5E9] text-[#006B2C] rounded-md font-mono">
+                {user?.authorities || 'ROLE_ADMIN'}
               </span>
             </div>
+
+            <button
+              onClick={() => {
+                setShowDropdown(false);
+                navigate('/profile');
+              }}
+              className="w-full px-4 py-2 text-left text-xs text-[#414942] hover:bg-[#F6F9F4] flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined text-base">manage_accounts</span>
+              <span>Hồ sơ cá nhân & Đổi mật khẩu</span>
+            </button>
 
             <button
               onClick={() => {

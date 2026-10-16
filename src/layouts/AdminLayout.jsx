@@ -59,18 +59,18 @@ export default function AdminLayout({ children }) {
 
         <div className="p-4 border-t border-[#DDE5D9] bg-[#FAFCF9]">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[#006B2C]/10 text-[#006B2C] flex items-center justify-center text-xs font-bold border border-[#006B2C]/20">
-                {user?.name?.[0] || 'A'}
+            <Link to="/profile" className="flex items-center space-x-2.5 truncate hover:opacity-85 transition-opacity">
+              <div className="w-8 h-8 rounded-xl bg-[#006B2C]/10 text-[#006B2C] flex items-center justify-center text-xs font-bold border border-[#006B2C]/20 shrink-0">
+                {(user?.fullName || user?.name || user?.email || 'A')[0].toUpperCase()}
               </div>
               <div className="truncate">
-                <p className="text-xs font-bold text-[#191C19] truncate">{user?.name || 'Trần Minh Quân'}</p>
-                <p className="text-[10px] text-[#717971]">Quản trị viên cấp cao</p>
+                <p className="text-xs font-bold text-[#191C19] truncate">{user?.fullName || user?.name || 'Quản trị viên'}</p>
+                <p className="text-[10px] text-[#717971] truncate">{user?.email || 'Admin ReHome'}</p>
               </div>
-            </div>
+            </Link>
             <button
               onClick={logout}
-              className="p-1.5 text-[#717971] hover:text-[#BA1A1A] hover:bg-white rounded-lg border border-transparent hover:border-[#DDE5D9] transition-colors"
+              className="p-1.5 text-[#717971] hover:text-[#BA1A1A] hover:bg-white rounded-lg border border-transparent hover:border-[#DDE5D9] transition-colors ml-1 shrink-0"
               title="Đăng xuất"
             >
               <span className="material-symbols-outlined text-[18px]">logout</span>

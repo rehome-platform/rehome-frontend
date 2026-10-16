@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext.jsx';
 
 /**
  * Sidebar Quản trị hệ thống ReHome
@@ -7,6 +8,15 @@ import { Link } from 'react-router-dom';
  * Nền: #006B2C | Chữ trắng/xanh nhạt | Phông: Be Vietnam Pro
  */
 export default function AdminSidebar({ activeTab, onSelectTab, isMobileOpen, onCloseMobile }) {
+  const { user, logout } = useAuth();
+  const displayName = user?.fullName || user?.name || user?.email || 'Quản trị viên';
+  const initials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w[0])
+    .slice(-2)
+    .join('')
+    .toUpperCase() || 'AD';
   const menuItems = [
     { id: 'overview', path: '/admin', label: 'Tổng quan & Quỹ', icon: 'grid_view' },
     { id: 'accounts', path: '/admin/users', label: 'Tài khoản', icon: 'group' },
@@ -97,26 +107,30 @@ export default function AdminSidebar({ activeTab, onSelectTab, isMobileOpen, onC
         {/* Bottom User Profile */}
         <div className="p-4 m-3 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-white text-[#006B2C] font-bold flex items-center justify-center text-xs shadow-sm">
-                AD
+            <Link to="/profile" className="flex items-center gap-3 truncate hover:opacity-90 transition-opacity">
+              <div className="w-9 h-9 rounded-xl bg-white text-[#006B2C] font-bold flex items-center justify-center text-xs shadow-sm overflow-hidden shrink-0">
+                {user?.avatarUrl || user?.avatar ? (
+                  <img src={user.avatarUrl || user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <span>{initials}</span>
+                )}
               </div>
               <div className="flex flex-col overflow-hidden">
                 <span className="text-xs font-bold truncate text-white leading-tight">
-                  Trần Minh Quân
+                  {displayName}
                 </span>
-                <span className="text-[10px] text-white/70 font-medium leading-tight">
-                  Admin cấp cao
+                <span className="text-[10px] text-white/70 font-medium leading-tight truncate">
+                  {user?.email || 'Quản trị viên (Admin)'}
                 </span>
               </div>
-            </div>
-            <Link
-              to="/"
-              className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/15 transition-colors"
-              title="Về cổng chính"
+            </Link>
+            <button
+              onClick={logout}
+              className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/15 transition-colors ml-1 shrink-0"
+              title="Đăng xuất"
             >
               <span className="material-symbols-outlined text-lg">logout</span>
-            </Link>
+            </button>
           </div>
         </div>
       </aside>

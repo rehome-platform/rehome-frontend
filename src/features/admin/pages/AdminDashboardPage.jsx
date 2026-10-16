@@ -1,16 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../../layouts/AdminLayout.jsx';
 import { formatCurrencyVND } from '../../../utils/formatters.js';
 import { Button, Badge } from '../../../components/common/index.js';
+import { useAuth } from '../../../context/AuthContext.jsx';
+import authService from '../../auth/services/auth.service.js';
 
 /**
  * Trang Dashboard Điều Hành & Quỹ Nền Tảng ReHome (Admin)
  * Chuẩn hóa 100% theo Mục 7 & Mục 8: "Luồng tiền & Nguồn thu của nền tảng" (sau Review 1)
- * Nguyên tắc ghi sổ kép: Quỹ nền tảng đối ứng với ví Member.
+ * Kết nối xác thực phân quyền thực tế với Backend API: GET /api/admin/dashboard
  */
 export default function AdminDashboardPage() {
+  const { user } = useAuth();
   const [exporting, setExporting] = useState(false);
   const [filterPeriod, setFilterPeriod] = useState('MONTH'); // 'TODAY' | 'WEEK' | 'MONTH' | 'ALL'
+  const [adminApiStatus, setAdminApiStatus] = useState({ loading: true, verified: false, message: '' });
+
+  useEffect(() => {
+    let isMounted = true;
+    const verifyAdmin = async () => {
+      try {
+        const res = await authService.checkAdminAccess();
+        if (isMounted) {
+          setAdminApiStatus({
+            loading: false,
+            verified: res.authorized,
+            message: res.message,
+          });
+        }
+      } catch (err) {
+        if (isMounted) {
+          setAdminApiStatus({
+            loading: false,
+            verified: false,
+            message: err.message || 'Không thể xác thực quyền Admin',
+          });
+        }
+      }
+    };
+
+    verifyAdmin();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Ba con số cốt lõi của Quỹ Nền Tảng (Mục 7)
   const fundMetrics = [
@@ -187,6 +220,49 @@ export default function AdminDashboardPage() {
               <span className="material-symbols-outlined text-[18px] mr-1.5">file_download</span>
               Xuất báo cáo Excel
             </Button>
+          </div>
+        </div>
+
+        {/* Backend Authorization Status & Real User Info */}
+        <div className="p-4 rounded-2xl bg-white border border-[#DDE5D9] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${adminApiStatus.verified ? 'bg-[#E8F5E9] text-[#006B2C]' : 'bg-[#FFF3E0] text-[#D97706]'}`}>
+              <span className="material-symbols-outlined text-xl">
+                {adminApiStatus.verified ? 'verified_user' : 'security'}
+              </span>
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-bold text-[#191C19]">Tài khoản Admin: {user?.fullName || user?.name || user?.email}</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7]">
+                  {user?.authorities || 'ROLE_ADMIN'}
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#E0F2F1] text-[#00685F]">
+                  Mã: {user?.memberCode || 'MB-ADMIN'}
+                </span>
+              </div>
+              <p className="text-[11px] text-[#717971] mt-0.5">
+                {adminApiStatus.loading
+                  ? 'Đang kiểm tra kết nối API quản trị...'
+                  : adminApiStatus.verified
+                  ? `Đã kết nối Backend API (/api/admin/dashboard): "${adminApiStatus.message}"`
+                  : `Cảnh báo phân quyền: ${adminApiStatus.message}`}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] font-semibold bg-[#F0F5EE] text-[#006B2C] border border-[#C8E6C9]">
+              <span className="w-2 h-2 rounded-full bg-[#006B2C] animate-pulse"></span>
+              <span>API Phase 1: Hoạt động</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Chú thích ranh giới dữ liệu Phase 1 */}
+        <div className="p-3.5 bg-[#F6F9F4] rounded-xl border border-[#DDE5D9] text-[11px] text-[#5B6776] leading-relaxed flex items-start gap-2.5">
+          <span className="material-symbols-outlined text-base text-[#00685F] shrink-0 mt-0.5">info</span>
+          <div>
+            <strong>Ghi chú ranh giới triển khai:</strong> Toàn bộ luồng xác thực tài khoản, quyền hạn (RBAC) và phiên làm việc đã được kết nối với <strong>Backend API thật</strong>. Các số liệu thống kê quỹ và doanh thu bên dưới là <strong>giao diện mô phỏng chuẩn nghiệp vụ Mục 7 & 8</strong> phục vụ kiểm tra bố cục hiển thị; các endpoint thống kê tài chính tương ứng sẽ được tích hợp trong Phase 5 & 7 theo lộ trình.
           </div>
         </div>
 
