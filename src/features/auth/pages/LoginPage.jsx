@@ -1,23 +1,30 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.jsx';
+import Logo from '../../../components/common/Logo.jsx';
+import { validateEmail, validatePassword } from '../../../utils/validators.js';
 
 /**
- * Trang Đăng nhập Quản trị hệ thống ReHome
- * Thiết kế chính xác theo Google Stitch (Figma) Prototype
- * Phông chữ: Be Vietnam Pro | Màu chủ đạo: #006B2C | Nền: #F6F9F4
+ * Trang Đăng nhập Hệ thống Quản trị & Vận hành ReHome (Web)
+ * Phase 1 — Auth & Hồ sơ (F-004, F-005)
+ * Thiết kế chuẩn Design tokens:
+ * - Màu chủ đạo: Primary #006B2C, Secondary #FEA619, Accent #00685F, Neutral #DDE5D9, Nền #F6F9F4
+ * - Bo góc: 12px ô nhập & nút, 16px thẻ, bo tròn chip
+ * - Phông chữ: Be Vietnam Pro
  */
 export default function LoginPage() {
   const [email, setEmail] = useState('admin@rehome.vn');
   const [password, setPassword] = useState('hs123456');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [activeRolePreset, setActiveRolePreset] = useState('ADMIN'); // 'ADMIN' | 'MOD'
 
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
+  // Role preset handler phục vụ demo nghiệm thu đồ án
   const handleSelectRolePreset = (role) => {
     setActiveRolePreset(role);
     setErrorMessage('');
@@ -34,93 +41,113 @@ export default function LoginPage() {
     if (e) e.preventDefault();
     setErrorMessage('');
 
-    if (!email || !password) {
-      setErrorMessage('Vui lòng nhập đầy đủ Email và Mật khẩu.');
+    // Validation
+    const emailErr = validateEmail(email);
+    if (emailErr) {
+      setErrorMessage(emailErr);
+      return;
+    }
+    const passErr = validatePassword(password);
+    if (passErr) {
+      setErrorMessage(passErr);
       return;
     }
 
     setIsLoading(true);
 
     try {
-      let redirectPath = '/admin';
-      if (email.includes('mod') || email.includes('ha.pham') || activeRolePreset === 'MOD') {
-        redirectPath = '/moderator/counter';
-      }
+      const res = await login({ email, password });
+      const userRole = res?.user?.role || (email.includes('admin') ? 'admin' : 'staff');
 
-      await login({ email, password }).catch(() => { });
-
+      // Điều hướng theo vai trò (F-005)
       setTimeout(() => {
         setIsLoading(false);
-        navigate(redirectPath);
-      }, 600);
-    } catch {
+        if (userRole === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/moderator/counter');
+        }
+      }, 500);
+    } catch (err) {
+      setIsLoading(false);
+      setErrorMessage(err.message || 'Email hoặc mật khẩu không chính xác. Vui lòng thử lại.');
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setIsGoogleLoading(true);
+    setErrorMessage('');
+    try {
+      const res = await loginWithGoogle();
+      const userRole = res?.user?.role || 'admin';
       setTimeout(() => {
-        setIsLoading(false);
-        navigate('/admin');
+        setIsGoogleLoading(false);
+        if (userRole === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/moderator/counter');
+        }
       }, 600);
+    } catch (err) {
+      setIsGoogleLoading(false);
+      setErrorMessage(err.message || 'Không thể đăng nhập bằng Google lúc này.');
     }
   };
 
   return (
     <div className="min-h-screen bg-[#F6F9F4] flex flex-col justify-between items-center px-4 py-8 sm:py-12 select-none">
-      {/* Thanh chọn nhanh vai trò nội bộ Web */}
-      <div className="w-full max-w-md mb-4 bg-white/90 backdrop-blur-sm border border-[#DDE5D9] rounded-2xl p-2.5 flex items-center justify-between text-xs shadow-sm">
-        <div className="flex items-center gap-1.5 text-[#414942] font-semibold">
-          <span className="material-symbols-outlined text-base text-[#006B2C]">badge</span>
-          <span>Chọn vai trò nội bộ Web:</span>
+      {/* Top Banner / Role Switcher for quick evaluation */}
+      <div className="w-full max-w-md bg-white border border-[#DDE5D9] rounded-2xl p-2.5 flex items-center justify-between text-xs shadow-card">
+        <div className="flex items-center gap-2 text-[#1F2A37] font-semibold">
+          <span className="material-symbols-outlined text-base text-[#006B2C]">admin_panel_settings</span>
+          <span>Tài khoản Demo nội bộ:</span>
         </div>
-        <div className="flex items-center gap-1 bg-[#F6F9F4] p-1 rounded-xl border border-[#DDE5D9]">
+        <div className="flex items-center gap-1.5 bg-[#F6F9F4] p-1 rounded-xl border border-[#DDE5D9]">
           <button
             type="button"
+            id="role-preset-admin"
             onClick={() => handleSelectRolePreset('ADMIN')}
-            className={`px-3 py-1.5 rounded-lg font-bold transition-colors ${activeRolePreset === 'ADMIN'
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-150 ${
+              activeRolePreset === 'ADMIN'
                 ? 'bg-[#006B2C] text-white shadow-xs'
-                : 'text-[#414942] hover:text-[#006B2C]'
-              }`}
+                : 'text-[#5B6776] hover:text-[#006B2C]'
+            }`}
           >
-            Quản trị viên (Admin)
+            Quản trị (Admin)
           </button>
           <button
             type="button"
+            id="role-preset-mod"
             onClick={() => handleSelectRolePreset('MOD')}
-            className={`px-3 py-1.5 rounded-lg font-bold transition-colors ${activeRolePreset === 'MOD'
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-150 ${
+              activeRolePreset === 'MOD'
                 ? 'bg-[#00685F] text-white shadow-xs'
-                : 'text-[#414942] hover:text-[#00685F]'
-              }`}
+                : 'text-[#5B6776] hover:text-[#00685F]'
+            }`}
           >
-            Nhân viên Kho (Moderator)
+            Nhân viên Kho (Mod)
           </button>
         </div>
       </div>
 
-      {/* Main Login Card - Pixel Perfect theo Stitch */}
-      <div className="w-full max-w-[440px] bg-white rounded-2xl border border-[#DDE5D9] shadow-[0_8px_30px_rgba(0,107,44,0.04)] p-8 sm:p-10 my-auto transition-all duration-300">
-        {/* Header Logo */}
+      {/* Main Login Card */}
+      <div className="w-full max-w-[440px] bg-white rounded-2xl border border-[#DDE5D9] shadow-card p-8 sm:p-10 my-auto transition-all duration-300">
+        {/* Header Logo theo chuẩn Design tokens */}
         <div className="flex flex-col items-center text-center">
-          <div className="w-12 h-12 rounded-2xl bg-[#E8F5E9] flex items-center justify-center text-[#006B2C] mb-3 shadow-inner">
-            <span className="material-symbols-outlined text-3xl font-light">eco</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-2xl font-extrabold tracking-tight text-[#006B2C] font-heading">
-              ReHome
-            </span>
-          </div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#717971] mt-1">
-            CỔNG ĐIỀU HÀNH NỘI BỘ (WEB)
-          </p>
-          <p className="text-xs text-[#414942] mt-2">
-            Đăng nhập dành cho Quản trị viên và Nhân viên kho ReHome.
+          <Logo size="lg" showText={true} to={null} subtitle="Cổng Vận Hành Nội Bộ" />
+          <p className="text-xs text-[#5B6776] mt-3 max-w-xs leading-relaxed">
+            Hệ thống đăng nhập dành cho Quản trị viên (Admin) và Nhân viên kiểm định kho (Moderator).
           </p>
         </div>
 
-        {/* Thông báo lỗi */}
+        {/* Thông báo lỗi (Unhappy paths) */}
         {errorMessage && (
           <div
             id="login-error-alert"
-            className="mt-6 p-3 rounded-xl bg-[#FFF5F5] border border-[#DC2626]/30 text-[#DC2626] text-xs font-medium flex items-center gap-2 animate-shake"
+            className="mt-6 p-3.5 rounded-xl bg-[#FFF5F5] border border-[#D92D20]/30 text-[#D92D20] text-xs font-medium flex items-start gap-2.5 animate-shake"
           >
-            <span className="material-symbols-outlined text-base shrink-0">error</span>
-            <span>{errorMessage}</span>
+            <span className="material-symbols-outlined text-base shrink-0 mt-0.5">error</span>
+            <div className="flex-1 leading-relaxed">{errorMessage}</div>
           </div>
         )}
 
@@ -129,39 +156,45 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="email-input"
-              className="block text-xs font-semibold text-[#191C19] mb-1.5"
+              className="block text-xs font-semibold text-[#1F2A37] mb-1.5"
             >
               Email nhân sự
             </label>
-            <input
-              id="email-input"
-              type="email"
-              required
-              disabled={isLoading}
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (errorMessage) setErrorMessage('');
-              }}
-              placeholder="nhansu@rehome.vn"
-              className={`w-full px-3.5 py-2.5 text-sm rounded-xl border transition-all outline-none ${errorMessage
-                  ? 'border-[#DC2626] bg-[#FFF5F5] focus:ring-2 focus:ring-[#DC2626]/20'
-                  : 'border-[#DDE5D9] bg-white hover:border-[#006B2C]/50 focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15'
-                } text-[#191C19]`}
-            />
+            <div className="relative">
+              <input
+                id="email-input"
+                type="email"
+                required
+                disabled={isLoading || isGoogleLoading}
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (errorMessage) setErrorMessage('');
+                }}
+                placeholder="nhansu@rehome.vn"
+                className={`w-full pl-3.5 pr-10 py-2.5 text-sm rounded-xl border transition-all outline-none ${
+                  errorMessage
+                    ? 'border-[#D92D20] bg-[#FFF5F5] focus:ring-2 focus:ring-[#D92D20]/20'
+                    : 'border-[#DDE5D9] bg-white hover:border-[#006B2C]/50 focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15'
+                } text-[#1F2A37]`}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-lg text-[#5B6776] pointer-events-none">
+                mail
+              </span>
+            </div>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label
                 htmlFor="password-input"
-                className="text-xs font-semibold text-[#191C19]"
+                className="text-xs font-semibold text-[#1F2A37]"
               >
                 Mật khẩu
               </label>
               <Link
                 to="/forgot-password"
-                className="text-[11px] text-[#006B2C] hover:underline font-medium"
+                className="text-xs text-[#006B2C] hover:text-[#005523] hover:underline font-semibold"
               >
                 Quên mật khẩu?
               </Link>
@@ -171,24 +204,25 @@ export default function LoginPage() {
                 id="password-input"
                 type={showPassword ? 'text' : 'password'}
                 required
-                disabled={isLoading}
+                disabled={isLoading || isGoogleLoading}
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
                   if (errorMessage) setErrorMessage('');
                 }}
                 placeholder="••••••••"
-                className={`w-full px-3.5 py-2.5 pr-10 text-sm rounded-xl border transition-all outline-none ${errorMessage
-                    ? 'border-[#DC2626] bg-[#FFF5F5] focus:ring-2 focus:ring-[#DC2626]/20'
+                className={`w-full pl-3.5 pr-10 py-2.5 text-sm rounded-xl border transition-all outline-none ${
+                  errorMessage
+                    ? 'border-[#D92D20] bg-[#FFF5F5] focus:ring-2 focus:ring-[#D92D20]/20'
                     : 'border-[#DDE5D9] bg-white hover:border-[#006B2C]/50 focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15'
-                  } text-[#191C19]`}
+                } text-[#1F2A37]`}
               />
               <button
                 type="button"
                 tabIndex={-1}
-                disabled={isLoading}
+                disabled={isLoading || isGoogleLoading}
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#717971] hover:text-[#191C19] transition-colors p-0.5 rounded"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5B6776] hover:text-[#1F2A37] transition-colors p-0.5 rounded"
                 title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
               >
                 <span className="material-symbols-outlined text-lg">
@@ -198,16 +232,17 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Nút Đăng nhập */}
+          {/* Nút Đăng nhập chính */}
           <div className="pt-2">
             <button
               id="submit-login-button"
               type="submit"
-              disabled={isLoading}
-              className={`w-full py-3 px-4 rounded-xl text-sm font-semibold text-white transition-all duration-200 flex items-center justify-center gap-2 shadow-sm ${isLoading
+              disabled={isLoading || isGoogleLoading}
+              className={`w-full py-3 px-4 rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 shadow-sm ${
+                isLoading
                   ? 'bg-[#006B2C]/80 cursor-wait'
-                  : 'bg-[#006B2C] hover:bg-[#005523] active:scale-[0.99] hover:shadow-md'
-                }`}
+                  : 'bg-[#006B2C] hover:bg-[#005523] active:scale-[0.99] hover:shadow'
+              }`}
             >
               {isLoading ? (
                 <>
@@ -220,25 +255,75 @@ export default function LoginPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  <span>Đang đăng nhập...</span>
+                  <span>Đang xác thực...</span>
                 </>
               ) : (
-                <span>Đăng nhập hệ thống</span>
+                <>
+                  <span className="material-symbols-outlined text-lg">login</span>
+                  <span>Đăng nhập hệ thống</span>
+                </>
               )}
             </button>
           </div>
         </form>
 
-        <div className="p-3 bg-[#F8FAF8] rounded-xl border border-[#DDE5D9] text-[11px] text-[#717971] mt-6 leading-relaxed">
-          💡 <strong>Lưu ý:</strong> Member và Tổ chức từ thiện sử dụng <strong>Ứng dụng Di động (Mobile App)</strong> để mua bán, quyên góp và tạo chiến dịch.
+        {/* Đường phân cách */}
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-[#DDE5D9]"></div>
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-white px-3 text-[#5B6776] font-medium">hoặc</span>
+          </div>
+        </div>
+
+        {/* Đăng nhập bằng Google Workspace (F-004) */}
+        <button
+          type="button"
+          id="google-login-button"
+          onClick={handleGoogleLogin}
+          disabled={isLoading || isGoogleLoading}
+          className="w-full py-2.5 px-4 rounded-xl border border-[#DDE5D9] bg-white hover:bg-[#F6F9F4] text-xs font-bold text-[#1F2A37] transition-all flex items-center justify-center gap-3 shadow-xs hover:border-[#006B2C]/40"
+        >
+          {isGoogleLoading ? (
+            <span className="inline-block w-4 h-4 border-2 border-[#006B2C] border-t-transparent rounded-full animate-spin"></span>
+          ) : (
+            <svg className="w-4 h-4" viewBox="0 0 24 24">
+              <path
+                fill="#4285F4"
+                d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+              />
+            </svg>
+          )}
+          <span>Đăng nhập với Google Workspace</span>
+        </button>
+
+        {/* Lưu ý phân quyền theo Mục 2 tài liệu */}
+        <div className="p-3 bg-[#F6F9F4] rounded-xl border border-[#DDE5D9] text-[11px] text-[#5B6776] mt-6 leading-relaxed flex items-start gap-2">
+          <span className="material-symbols-outlined text-sm text-[#00685F] shrink-0 mt-0.5">info</span>
+          <div>
+            <strong>Lưu ý nghiệp vụ (Mục 2):</strong> Tác nhân <strong>Member</strong> (mua bán, ký gửi, thử đồ AI) và <strong>Tổ chức</strong> (chiến dịch từ thiện) thực thi trên <strong>Ứng dụng Di động (Mobile App)</strong>.
+          </div>
         </div>
       </div>
 
       {/* Footer Navigation */}
-      <div className="mt-6 text-center text-xs text-[#717971] flex items-center gap-4">
-        <span>ReHome Operations Web</span>
+      <div className="mt-6 text-center text-xs text-[#5B6776] flex items-center gap-4">
+        <span>ReHome Operations Web • Phase 1</span>
         <span>•</span>
-        <Link to="/" className="text-[#006B2C] hover:underline font-medium">
+        <Link to="/" className="text-[#006B2C] hover:underline font-semibold">
           Trang chủ điều hành
         </Link>
       </div>
