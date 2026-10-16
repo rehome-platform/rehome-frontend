@@ -103,18 +103,24 @@ export default function ModeratorLayout({ children }) {
         {/* Current Moderator profile & Branch */}
         <div className="p-4 border-t border-[#E2E8E0] bg-[#FAFCF9]">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 rounded-xl bg-[#006B2C]/10 text-[#006B2C] font-bold flex items-center justify-center text-sm border border-[#006B2C]/20">
-                {user?.name?.[0] || 'M'}
+            <Link to="/profile" className="flex items-center space-x-3 truncate hover:opacity-85 transition-opacity">
+              <div className="w-9 h-9 rounded-xl bg-[#006B2C]/10 text-[#006B2C] font-bold flex items-center justify-center text-sm border border-[#006B2C]/20 shrink-0 overflow-hidden">
+                {user?.avatarUrl || user?.avatar ? (
+                  <img src={user.avatarUrl || user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <span>{(user?.fullName || user?.name || user?.email || 'M')[0].toUpperCase()}</span>
+                )}
               </div>
               <div className="truncate">
-                <p className="text-xs font-bold text-[#191C19] truncate">{user?.name || 'Nguyễn Văn A'}</p>
-                <p className="text-[10px] text-[#717971]">MOD-07-003 • Chi nhánh Q7</p>
+                <p className="text-xs font-bold text-[#191C19] truncate">{user?.fullName || user?.name || 'Nhân viên Kho'}</p>
+                <p className="text-[10px] text-[#717971] truncate">
+                  {user?.memberCode ? `${user.memberCode} • ` : ''}{user?.email || 'Moderator ReHome'}
+                </p>
               </div>
-            </div>
+            </Link>
             <button
               onClick={logout}
-              className="p-1.5 text-[#717971] hover:text-[#BA1A1A] hover:bg-white rounded-lg border border-transparent hover:border-[#E2E8E0] transition-colors"
+              className="p-1.5 text-[#717971] hover:text-[#BA1A1A] hover:bg-white rounded-lg border border-transparent hover:border-[#E2E8E0] transition-colors ml-1 shrink-0"
               title="Đăng xuất"
             >
               <span className="material-symbols-outlined text-[18px]">logout</span>

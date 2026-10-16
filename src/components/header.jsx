@@ -56,20 +56,24 @@ export default function Header() {
           <Logo size="md" showText={true} to="/" />
           
           <nav className="hidden md:flex items-center space-x-6 text-xs font-semibold text-[#5B6776]">
-            <Link
-              to="/moderator/counter"
-              className="hover:text-[#006B2C] transition-colors flex items-center gap-1.5"
-            >
-              <span className="material-symbols-outlined text-base">warehouse</span>
-              <span>Kho & Kiểm định</span>
-            </Link>
-            <Link
-              to="/admin"
-              className="hover:text-[#006B2C] transition-colors flex items-center gap-1.5"
-            >
-              <span className="material-symbols-outlined text-base">monitoring</span>
-              <span>Quản trị & Quỹ</span>
-            </Link>
+            {(!isAuthenticated || !isAdmin) && (
+              <Link
+                to="/moderator/counter"
+                className="hover:text-[#006B2C] transition-colors flex items-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-base">warehouse</span>
+                <span>Kho & Kiểm định</span>
+              </Link>
+            )}
+            {(!isAuthenticated || isAdmin) && (
+              <Link
+                to="/admin"
+                className="hover:text-[#006B2C] transition-colors flex items-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-base">monitoring</span>
+                <span>Quản trị & Quỹ</span>
+              </Link>
+            )}
           </nav>
         </div>
 
@@ -82,13 +86,13 @@ export default function Header() {
                 {isAdmin ? (
                   <>
                     <span className="w-2 h-2 rounded-full bg-[#00685F]"></span>
-                    <span className="text-[#00685F]">Admin Quản Trị</span>
+                    <span className="text-[#00685F]">Quản trị viên (Admin)</span>
                   </>
                 ) : (
                   <>
                     <span className="w-2 h-2 rounded-full bg-[#006B2C]"></span>
                     <span className="text-[#006B2C]">
-                      {user?.warehouse?.code || 'Mod Kho'}
+                      {user?.memberCode ? `${user.memberCode} • Moderator` : 'Nhân viên Kho (Mod)'}
                     </span>
                   </>
                 )}
@@ -113,13 +117,13 @@ export default function Header() {
                 trigger={
                   <button className="flex items-center space-x-2.5 p-1.5 rounded-xl hover:bg-[#F6F9F4] transition-colors border border-transparent hover:border-[#DDE5D9]">
                     <img
-                      src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'}
+                      src={user?.avatarUrl || user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'}
                       alt="Avatar"
                       className="w-8 h-8 rounded-lg object-cover border border-[#006B2C]/20"
                     />
                     <div className="text-left hidden sm:block">
                       <div className="text-xs font-bold text-[#1F2A37] max-w-[120px] truncate leading-tight">
-                        {user?.name || user?.email || 'Nhân sự'}
+                        {user?.fullName || user?.name || user?.email || 'Nhân sự'}
                       </div>
                       <div className="text-[10px] text-[#5B6776] leading-tight">
                         {isAdmin ? 'Quản trị viên' : 'Nhân viên kho'}
