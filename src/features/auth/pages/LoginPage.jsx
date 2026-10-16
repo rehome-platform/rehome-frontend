@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import Logo from '../../../components/common/Logo.jsx';
 import { validateEmail, validatePassword } from '../../../utils/validators.js';
@@ -7,35 +7,22 @@ import { validateEmail, validatePassword } from '../../../utils/validators.js';
 /**
  * Trang Đăng nhập Hệ thống Quản trị & Vận hành ReHome (Web)
  * Phase 1 — Auth & Hồ sơ (F-004, F-005)
- * Thiết kế chuẩn Design tokens:
- * - Màu chủ đạo: Primary #006B2C, Secondary #FEA619, Accent #00685F, Neutral #DDE5D9, Nền #F6F9F4
- * - Bo góc: 12px ô nhập & nút, 16px thẻ, bo tròn chip
- * - Phông chữ: Be Vietnam Pro
+ * Kết nối hoàn toàn với Backend API thật tại https://re-backend-9a98.onrender.com
+ * Không có tài khoản demo, không hardcode credentials, điều hướng chuẩn theo role.
  */
 export default function LoginPage() {
-  const [email, setEmail] = useState('admin@rehome.vn');
-  const [password, setPassword] = useState('hs123456');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [activeRolePreset, setActiveRolePreset] = useState('ADMIN'); // 'ADMIN' | 'MOD'
 
   const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Role preset handler phục vụ demo nghiệm thu đồ án
-  const handleSelectRolePreset = (role) => {
-    setActiveRolePreset(role);
-    setErrorMessage('');
-    if (role === 'ADMIN') {
-      setEmail('admin@rehome.vn');
-      setPassword('hs123456');
-    } else if (role === 'MOD') {
-      setEmail('ha.pham@rehome.vn');
-      setPassword('hs123456');
-    }
-  };
+  const fromLocation = location.state?.from?.pathname;
 
   const handleLoginSubmit = async (e) => {
     if (e) e.preventDefault();
@@ -57,20 +44,26 @@ export default function LoginPage() {
 
     try {
       const res = await login({ email, password });
-      const userRole = res?.user?.role || (email.includes('admin') ? 'admin' : 'staff');
+      const user = res?.user;
+      const userRole = user?.role;
 
-      // Điều hướng theo vai trò (F-005)
-      setTimeout(() => {
-        setIsLoading(false);
-        if (userRole === 'admin') {
-          navigate('/admin');
-        } else {
-          navigate('/moderator/counter');
-        }
-      }, 500);
+      // Phân quyền và điều hướng theo vai trò thực tế từ backend (F-005)
+      if (userRole === 'admin') {
+        const dest = fromLocation && fromLocation.startsWith('/admin') ? fromLocation : '/admin';
+        navigate(dest, { replace: true });
+      } else if (userRole === 'staff' || userRole === 'moderator') {
+        const dest = fromLocation && fromLocation.startsWith('/moderator') ? fromLocation : '/moderator/counter';
+        navigate(dest, { replace: true });
+      } else {
+        // Tài khoản Member hoặc Organization (chỉ dùng trên Mobile theo Mục 2 tài liệu)
+        setErrorMessage(
+          'Tài khoản này thuộc nhóm Thành viên / Tổ chức từ thiện. Cổng Web vận hành chỉ dành riêng cho Quản trị viên (Admin) và Nhân viên kiểm định kho (Moderator). Vui lòng đăng nhập trên ứng dụng Di Động (ReHome Mobile App).'
+        );
+      }
     } catch (err) {
-      setIsLoading(false);
       setErrorMessage(err.message || 'Email hoặc mật khẩu không chính xác. Vui lòng thử lại.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -79,57 +72,25 @@ export default function LoginPage() {
     setErrorMessage('');
     try {
       const res = await loginWithGoogle();
-      const userRole = res?.user?.role || 'admin';
-      setTimeout(() => {
-        setIsGoogleLoading(false);
-        if (userRole === 'admin') {
-          navigate('/admin');
-        } else {
-          navigate('/moderator/counter');
-        }
-      }, 600);
+      const userRole = res?.user?.role;
+      if (userRole === 'admin') {
+        navigate('/admin', { replace: true });
+      } else if (userRole === 'staff' || userRole === 'moderator') {
+        navigate('/moderator/counter', { replace: true });
+      } else {
+        setErrorMessage(
+          'Tài khoản Google này thuộc nhóm Thành viên/Tổ chức. Vui lòng đăng nhập trên ứng dụng Di Động ReHome.'
+        );
+      }
     } catch (err) {
-      setIsGoogleLoading(false);
       setErrorMessage(err.message || 'Không thể đăng nhập bằng Google lúc này.');
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#F6F9F4] flex flex-col justify-between items-center px-4 py-8 sm:py-12 select-none">
-      {/* Top Banner / Role Switcher for quick evaluation */}
-      <div className="w-full max-w-md bg-white border border-[#DDE5D9] rounded-2xl p-2.5 flex items-center justify-between text-xs shadow-card">
-        <div className="flex items-center gap-2 text-[#1F2A37] font-semibold">
-          <span className="material-symbols-outlined text-base text-[#006B2C]">admin_panel_settings</span>
-          <span>Tài khoản Demo nội bộ:</span>
-        </div>
-        <div className="flex items-center gap-1.5 bg-[#F6F9F4] p-1 rounded-xl border border-[#DDE5D9]">
-          <button
-            type="button"
-            id="role-preset-admin"
-            onClick={() => handleSelectRolePreset('ADMIN')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-150 ${
-              activeRolePreset === 'ADMIN'
-                ? 'bg-[#006B2C] text-white shadow-xs'
-                : 'text-[#5B6776] hover:text-[#006B2C]'
-            }`}
-          >
-            Quản trị (Admin)
-          </button>
-          <button
-            type="button"
-            id="role-preset-mod"
-            onClick={() => handleSelectRolePreset('MOD')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-150 ${
-              activeRolePreset === 'MOD'
-                ? 'bg-[#00685F] text-white shadow-xs'
-                : 'text-[#5B6776] hover:text-[#00685F]'
-            }`}
-          >
-            Nhân viên Kho (Mod)
-          </button>
-        </div>
-      </div>
-
       {/* Main Login Card */}
       <div className="w-full max-w-[440px] bg-white rounded-2xl border border-[#DDE5D9] shadow-card p-8 sm:p-10 my-auto transition-all duration-300">
         {/* Header Logo theo chuẩn Design tokens */}
@@ -171,7 +132,7 @@ export default function LoginPage() {
                   setEmail(e.target.value);
                   if (errorMessage) setErrorMessage('');
                 }}
-                placeholder="nhansu@rehome.vn"
+                placeholder="name@example.com"
                 className={`w-full pl-3.5 pr-10 py-2.5 text-sm rounded-xl border transition-all outline-none ${
                   errorMessage
                     ? 'border-[#D92D20] bg-[#FFF5F5] focus:ring-2 focus:ring-[#D92D20]/20'
@@ -255,7 +216,7 @@ export default function LoginPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  <span>Đang xác thực...</span>
+                  <span>Đang xác thực với máy chủ...</span>
                 </>
               ) : (
                 <>
@@ -277,7 +238,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Đăng nhập bằng Google Workspace (F-004) */}
+        {/* Đăng nhập bằng Google Workspace */}
         <button
           type="button"
           id="google-login-button"

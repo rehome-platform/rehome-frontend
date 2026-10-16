@@ -1,7 +1,8 @@
 /**
  * ReHome - Authentication & Profile Service
- * Triển khai theo Phase 1 (Auth & Hồ sơ) - Tài liệu tổng quan hệ thống & Kế hoạch code
- * Hỗ trợ các chức năng F-004, F-006, F-007, F-008, F-009, F-010
+ * Phase 1 — Auth & Hồ sơ (F-004, F-006, F-007, F-008, F-009, F-010)
+ * Hoàn toàn kết nối với Backend API thật tại https://re-backend-9a98.onrender.com
+ * Không sử dụng mock data, fake fallback hay hardcoded credentials.
  */
 import baseApi, {
   saveToken,
@@ -9,326 +10,394 @@ import baseApi, {
   saveUser,
   removeTokens,
   getUser,
+  getToken,
+  getRefreshToken,
+  parseJwt,
+  isTokenExpired,
 } from '../../../services/baseApi.js';
 import { API_ENDPOINTS } from '../../../configs/api.config.js';
+import { formatApiError } from '../../../utils/api.js';
 
-// Mock users phục vụ demo chuẩn nghiệp vụ khi backend chưa deploy endpoint
-const MOCK_USERS = {
-  'admin@rehome.vn': {
-    id: 'usr-admin-001',
-    email: 'admin@rehome.vn',
-    name: 'Nguyễn Thành Nam',
-    role: 'admin',
-    phone: '0908 123 456',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-    employeeCode: 'ADM-HQ-01',
-    department: 'Ban Điều Hành & Quản Trị Hệ Thống',
-    status: 'ACTIVE',
-    lastLogin: new Date().toISOString(),
-    createdAt: '2026-01-15T08:00:00Z',
-  },
-  'ha.pham@rehome.vn': {
-    id: 'usr-mod-004',
-    email: 'ha.pham@rehome.vn',
-    name: 'Phạm Thu Hà',
-    role: 'staff',
-    phone: '0912 345 678',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
-    employeeCode: 'MOD-CG-04',
-    department: 'Vận Hành Kho & Kiểm Định',
-    warehouse: {
-      id: 'wh-cg',
-      code: 'KHO-CG-01',
-      name: 'Kho Tổng Cầu Giấy',
-      address: 'Số 128 Xuân Thủy, Dịch Vọng Hậu, Cầu Giấy, Hà Nội',
-    },
-    status: 'ACTIVE',
-    lastLogin: new Date().toISOString(),
-    createdAt: '2026-03-01T09:30:00Z',
-  },
-};
+/**
+ * Chuẩn hóa role từ Spring Security authorities sang role client
+ * ROLE_ADMIN -> 'admin'
+ * ROLE_MODERATOR -> 'staff' (theo ROLES.MODERATOR trong role.config.js)
+ * ROLE_ORGANIZATION -> 'organization'
+ * ROLE_MEMBER -> 'member'
+ */
+export function normalizeRole(rawRole) {
+  if (!rawRole) return 'member';
+  const str = String(rawRole).toUpperCase();
+  if (str.includes('ADMIN')) return 'admin';
+  if (str.includes('MODERATOR') || str.includes('STAFF')) return 'staff';
+  if (str.includes('ORGANIZATION')) return 'organization';
+  if (str.includes('MEMBER')) return 'member';
+  return 'member';
+}
 
-// In-memory OTP storage for demo forgot password
-const resetOtpStore = new Map();
+/**
+ * Lấy thông tin chi tiết tài khoản từ backend
+ */
+async function fetchUserProfileFromBackend(claims) {
+  let accountMeData = null;
+  let memberData = null;
+
+  // 1. Gọi /api/account/me để lấy email và authorities chính thức từ backend
+  try {
+    const res = await baseApi.get(API_ENDPOINTS.AUTH.ME);
+    accountMeData = res.data;
+  } catch (err) {
+    console.warn('[authService] Không thể gọi /api/account/me:', err.message);
+  }
+
+  // 2. Thử gọi /members/me để lấy hồ sơ chi tiết (fullName, phone, avatarUrl, memberCode)
+  try {
+    const memberRes = await baseApi.get(API_ENDPOINTS.MEMBER.ME);
+    const result = memberRes.data?.result || memberRes.data?.data || memberRes.data;
+    if (result && typeof result === 'object') {
+      memberData = result;
+    }
+  } catch (err) {
+    // Với tài khoản thuần admin nếu không có record member_profile, backend trả 403 hoặc 400
+    // Không ném lỗi để luồng auth vẫn hoạt động với thông tin account
+  }
+
+  const email = memberData?.email || accountMeData?.email || claims?.sub || '';
+  const rawRole = accountMeData?.authorities || claims?.roles || '';
+  const normalizedRole = normalizeRole(rawRole);
+
+  const user = {
+    id: memberData?.accountId || claims?.sub || email,
+    accountId: memberData?.accountId || null,
+    email: email,
+    name: memberData?.fullName || (email ? email.split('@')[0] : 'Người dùng'),
+    fullName: memberData?.fullName || '',
+    phone: memberData?.phone || '',
+    avatar: memberData?.avatarUrl || '',
+    avatarUrl: memberData?.avatarUrl || '',
+    memberCode: memberData?.memberCode || '',
+    emailVerified: memberData?.emailVerified ?? true,
+    role: normalizedRole,
+    rawRole: rawRole,
+    authorities: rawRole,
+  };
+
+  saveUser(user);
+  return user;
+}
 
 export const authService = {
   /**
    * F-004: Đăng nhập bằng Email & Mật khẩu
+   * POST /api/auth/login
    */
   login: async (credentials) => {
-    const { email, password } = credentials;
+    const { email, password } = credentials || {};
+    if (!email || !password) {
+      throw new Error('Vui lòng nhập đầy đủ email và mật khẩu.');
+    }
 
     try {
-      const res = await baseApi.post(API_ENDPOINTS.AUTH.LOGIN, credentials);
-      const data = res.data?.data || res.data;
-      if (data?.token) {
-        saveToken(data.token);
-        if (data.refreshToken) saveRefreshToken(data.refreshToken);
-        if (data.user) saveUser(data.user);
-        return data;
-      }
-    } catch (err) {
-      // Mock Fallback cho giai đoạn Phase 1 song song backend
-      const normalizedEmail = (email || '').trim().toLowerCase();
-      
-      // Kiểm tra xem có phải tài khoản Demo không
-      let targetUser = MOCK_USERS[normalizedEmail];
+      const res = await baseApi.post(API_ENDPOINTS.AUTH.LOGIN, {
+        email: email.trim(),
+        password: password,
+      });
 
-      if (!targetUser) {
-        // Tự động phân loại role nếu người dùng nhập email bất kỳ
-        if (normalizedEmail.includes('admin')) {
-          targetUser = {
-            id: 'usr-custom-admin',
-            email: normalizedEmail,
-            name: 'Quản Trị Viên ReHome',
-            role: 'admin',
-            phone: '0900 000 001',
-            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-            employeeCode: 'ADM-002',
-            department: 'Ban Điều Hành',
-            status: 'ACTIVE',
-            lastLogin: new Date().toISOString(),
-          };
-        } else if (normalizedEmail.includes('mod') || normalizedEmail.includes('kho') || normalizedEmail.includes('staff')) {
-          targetUser = {
-            id: 'usr-custom-mod',
-            email: normalizedEmail,
-            name: 'Nhân Viên Kho Chi Nhánh',
-            role: 'staff',
-            phone: '0900 000 002',
-            avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
-            employeeCode: 'MOD-TB-02',
-            department: 'Vận Hành Kho',
-            warehouse: {
-              id: 'wh-tb',
-              code: 'KHO-TB-01',
-              name: 'Kho Chi Nhánh Tân Bình',
-              address: 'Số 45 Trường Chinh, P. 12, Q. Tân Bình, TP.HCM',
-            },
-            status: 'ACTIVE',
-            lastLogin: new Date().toISOString(),
-          };
-        } else if (normalizedEmail.includes('member') || normalizedEmail.includes('org')) {
-          // Unhappy path theo mục 2 tài liệu: Member & Org chỉ dùng trên Mobile
-          throw new Error('Tài khoản này thuộc nhóm Thành viên/Tổ chức. Vui lòng đăng nhập trên ứng dụng Di Động (ReHome Mobile App).');
-        } else {
-          // Mặc định cho phép login demo với tài khoản staff
-          targetUser = {
-            id: 'usr-demo-user',
-            email: normalizedEmail,
-            name: normalizedEmail.split('@')[0],
-            role: 'staff',
-            phone: '0988 888 888',
-            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-            employeeCode: 'NV-DEMO',
-            department: 'Vận Hành',
-            status: 'ACTIVE',
-            lastLogin: new Date().toISOString(),
-          };
-        }
+      const data = res.data;
+      const accessToken = data.accessToken || data.token;
+      const refreshToken = data.refreshToken;
+
+      if (!accessToken) {
+        throw new Error('Máy chủ không trả về access token xác thực.');
       }
 
-      // Giả lập kiểm tra mật khẩu
-      if (password && password.length < 6) {
-        throw new Error('Mật khẩu phải có ít nhất 6 ký tự.');
+      saveToken(accessToken);
+      if (refreshToken) {
+        saveRefreshToken(refreshToken);
       }
 
-      const mockToken = 'mock_jwt_token_' + Date.now();
-      const mockRefreshToken = 'mock_refresh_token_' + Date.now();
-
-      saveToken(mockToken);
-      saveRefreshToken(mockRefreshToken);
-      saveUser(targetUser);
+      const claims = parseJwt(accessToken);
+      const user = await fetchUserProfileFromBackend(claims);
 
       return {
-        token: mockToken,
-        refreshToken: mockRefreshToken,
-        user: targetUser,
+        token: accessToken,
+        accessToken,
+        refreshToken,
+        user,
         message: 'Đăng nhập thành công',
       };
+    } catch (err) {
+      const msg = formatApiError(err, 'đăng nhập');
+      throw new Error(msg);
     }
   },
 
   /**
-   * F-004: Đăng nhập Google OAuth2 (giả lập/tích hợp)
+   * F-004: Đăng nhập bằng Google ID Token
+   * POST /api/auth/google
    */
-  loginWithGoogle: async (googleToken = null) => {
-    try {
-      const res = await baseApi.post('/api/auth/google', { token: googleToken });
-      const data = res.data?.data || res.data;
-      if (data?.token) {
-        saveToken(data.token);
-        saveUser(data.user);
-        return data;
-      }
-    } catch {
-      // Demo Google login fallback
-      const googleUser = {
-        id: 'usr-google-adm',
-        email: 'admin.google@rehome.vn',
-        name: 'Quản Trị Viên Google',
-        role: 'admin',
-        phone: '0909 999 999',
-        avatar: 'https://lh3.googleusercontent.com/a/default-user=s96-c',
-        employeeCode: 'ADM-GG-01',
-        department: 'Ban Điều Hành',
-        status: 'ACTIVE',
-        lastLogin: new Date().toISOString(),
-      };
+  loginWithGoogle: async (idToken) => {
+    if (!idToken) {
+      throw new Error('Không tìm thấy Google ID Token xác thực.');
+    }
 
-      const mockToken = 'google_jwt_token_' + Date.now();
-      saveToken(mockToken);
-      saveUser(googleUser);
+    try {
+      const res = await baseApi.post(API_ENDPOINTS.AUTH.GOOGLE, { idToken });
+      const data = res.data;
+      const accessToken = data.accessToken || data.token;
+      const refreshToken = data.refreshToken;
+
+      if (!accessToken) {
+        throw new Error('Máy chủ không trả về access token xác thực.');
+      }
+
+      saveToken(accessToken);
+      if (refreshToken) {
+        saveRefreshToken(refreshToken);
+      }
+
+      const claims = parseJwt(accessToken);
+      const user = await fetchUserProfileFromBackend(claims);
 
       return {
-        token: mockToken,
-        user: googleUser,
+        token: accessToken,
+        accessToken,
+        refreshToken,
+        user,
         message: 'Đăng nhập Google thành công',
       };
+    } catch (err) {
+      const msg = formatApiError(err, 'đăng nhập bằng Google');
+      throw new Error(msg);
     }
   },
 
   /**
-   * F-007: Quên mật khẩu - Bước 1: Gửi yêu cầu qua Email
-   */
-  forgotPassword: async (email) => {
-    try {
-      const res = await baseApi.post(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, { email });
-      return res.data;
-    } catch {
-      // Demo: sinh mã OTP 6 số và lưu bộ nhớ tạm
-      const mockOtp = Math.floor(100000 + Math.random() * 900000).toString();
-      resetOtpStore.set(email.toLowerCase(), {
-        otp: mockOtp,
-        expiresAt: Date.now() + 15 * 60 * 1000, // 15 phút
-      });
-
-      return {
-        success: true,
-        message: `Đường dẫn và mã OTP đặt lại mật khẩu đã được gửi đến email ${email}.`,
-        demoOtp: mockOtp, // Cho phép hiển thị gợi ý khi chạy demo
-      };
-    }
-  },
-
-  /**
-   * F-007: Xác thực mã OTP
-   */
-  verifyResetOtp: async (email, otp) => {
-    try {
-      const res = await baseApi.post('/api/auth/verify-reset-otp', { email, otp });
-      return res.data;
-    } catch {
-      const record = resetOtpStore.get(email.toLowerCase());
-      if (!record) {
-        // Cho phép OTP 123456 làm fallback demo
-        if (otp === '123456') return { valid: true };
-        throw new Error('Yêu cầu đặt lại mật khẩu không tồn tại hoặc đã hết hạn.');
-      }
-      if (Date.now() > record.expiresAt) {
-        resetOtpStore.delete(email.toLowerCase());
-        throw new Error('Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới.');
-      }
-      if (record.otp !== otp && otp !== '123456') {
-        throw new Error('Mã OTP xác thực không chính xác.');
-      }
-      return { valid: true };
-    }
-  },
-
-  /**
-   * F-007: Đặt lại mật khẩu mới
-   */
-  resetPassword: async (email, otp, newPassword) => {
-    try {
-      const res = await baseApi.post('/api/auth/reset-password', {
-        email,
-        otp,
-        newPassword,
-      });
-      return res.data;
-    } catch {
-      if (!newPassword || newPassword.length < 6) {
-        throw new Error('Mật khẩu mới phải có ít nhất 6 ký tự.');
-      }
-      resetOtpStore.delete(email.toLowerCase());
-      return {
-        success: true,
-        message: 'Đặt lại mật khẩu thành công! Bạn có thể đăng nhập bằng mật khẩu mới.',
-      };
-    }
-  },
-
-  /**
-   * F-008: Đổi mật khẩu cho người dùng đang đăng nhập
-   */
-  changePassword: async (oldPassword, newPassword) => {
-    try {
-      const res = await baseApi.post(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, {
-        oldPassword,
-        newPassword,
-      });
-      return res.data;
-    } catch {
-      if (!oldPassword) {
-        throw new Error('Vui lòng nhập mật khẩu hiện tại.');
-      }
-      if (!newPassword || newPassword.length < 6) {
-        throw new Error('Mật khẩu mới phải có ít nhất 6 ký tự.');
-      }
-      if (oldPassword === newPassword) {
-        throw new Error('Mật khẩu mới không được trùng với mật khẩu cũ.');
-      }
-      return {
-        success: true,
-        message: 'Đổi mật khẩu thành công. Vui lòng ghi nhớ mật khẩu mới.',
-      };
-    }
-  },
-
-  /**
-   * F-009: Lấy thông tin tài khoản hiện tại
+   * F-009: Lấy thông tin tài khoản và hồ sơ người dùng hiện tại
+   * Kết nối /api/account/me và /members/me
    */
   getCurrentUser: async () => {
+    const token = getToken();
+    if (!token) return null;
+
     try {
-      const res = await baseApi.get(API_ENDPOINTS.AUTH.ME);
-      const user = res.data?.data || res.data;
-      if (user) saveUser(user);
+      const claims = parseJwt(token);
+      const user = await fetchUserProfileFromBackend(claims);
       return user;
-    } catch {
+    } catch (err) {
+      console.warn('[authService] getCurrentUser failed:', err.message);
+      // Nếu token hết hạn và không thể refresh, trả về user đã lưu hoặc null
       return getUser();
     }
   },
 
   /**
-   * F-010: Cập nhật hồ sơ cá nhân (Tên, SĐT, Avatar)
+   * F-010: Cập nhật hồ sơ cá nhân (Họ tên, SĐT, Avatar)
+   * PATCH /members/me
    */
   updateProfile: async (profileData) => {
+    const { fullName, name, phone, avatarUrl, avatar } = profileData || {};
+
+    const payload = {};
+    const targetName = (fullName || name || '').trim();
+    if (targetName) payload.fullName = targetName;
+
+    const targetPhone = (phone || '').trim();
+    if (targetPhone) payload.phone = targetPhone;
+
+    const targetAvatar = (avatarUrl || avatar || '').trim();
+    if (targetAvatar) payload.avatarUrl = targetAvatar;
+
     try {
-      const res = await baseApi.put('/api/auth/profile', profileData);
-      const updatedUser = res.data?.data || res.data;
-      if (updatedUser) saveUser(updatedUser);
-      return updatedUser;
-    } catch {
+      const res = await baseApi.patch(API_ENDPOINTS.MEMBER.ME, payload);
+      const updated = res.data?.result || res.data?.data || res.data;
+
       const currentUser = getUser() || {};
-      const updatedUser = {
+      const newUser = {
         ...currentUser,
-        ...profileData,
-        updatedAt: new Date().toISOString(),
+        fullName: updated?.fullName || payload.fullName || currentUser.fullName,
+        name: updated?.fullName || payload.fullName || currentUser.name,
+        phone: updated?.phone || payload.phone || currentUser.phone,
+        avatar: updated?.avatarUrl || payload.avatarUrl || currentUser.avatar,
+        avatarUrl: updated?.avatarUrl || payload.avatarUrl || currentUser.avatarUrl,
       };
-      saveUser(updatedUser);
-      return updatedUser;
+
+      saveUser(newUser);
+      return newUser;
+    } catch (err) {
+      const msg = formatApiError(err, 'cập nhật thông tin hồ sơ');
+      throw new Error(msg);
     }
   },
 
   /**
-   * F-006: Đăng xuất hệ thống, hủy token
+   * F-008: Đổi mật khẩu tài khoản đang đăng nhập
+   * POST /api/auth/password/change
+   */
+  changePassword: async ({ oldPassword, newPassword, newPasswordRepeat }) => {
+    if (!oldPassword) {
+      throw new Error('Vui lòng nhập mật khẩu hiện tại.');
+    }
+    if (!newPassword || newPassword.length < 6) {
+      throw new Error('Mật khẩu mới phải có ít nhất 6 ký tự.');
+    }
+    if (newPasswordRepeat && newPassword !== newPasswordRepeat) {
+      throw new Error('Mật khẩu nhập lại không khớp với mật khẩu mới.');
+    }
+
+    try {
+      const res = await baseApi.post(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, {
+        oldPassword,
+        newPassword,
+        newPasswordRepeat: newPasswordRepeat || newPassword,
+      });
+
+      return {
+        success: true,
+        message: res.data?.message || 'Đổi mật khẩu thành công.',
+      };
+    } catch (err) {
+      const msg = formatApiError(err, 'đổi mật khẩu');
+      throw new Error(msg);
+    }
+  },
+
+  /**
+   * F-007: Bước 1 - Quên mật khẩu: Gửi email OTP
+   * POST /api/auth/password/forgot
+   */
+  forgotPassword: async (email) => {
+    if (!email) {
+      throw new Error('Vui lòng nhập địa chỉ email của bạn.');
+    }
+
+    try {
+      await baseApi.post(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, {
+        email: email.trim(),
+      });
+
+      return {
+        success: true,
+        message: `Mã OTP xác thực đặt lại mật khẩu đã được gửi đến email ${email}. Vui lòng kiểm tra hộp thư đến.`,
+      };
+    } catch (err) {
+      const msg = formatApiError(err, 'yêu cầu đặt lại mật khẩu');
+      throw new Error(msg);
+    }
+  },
+
+  /**
+   * F-007: Bước 2A - Xác thực mã OTP đặt lại mật khẩu
+   * POST /api/auth/verify-otp
+   */
+  verifyOtp: async ({ email, otp, purpose = 'FORGOT_PASSWORD' }) => {
+    if (!email || !otp) {
+      throw new Error('Vui lòng nhập đầy đủ email và mã OTP 6 số.');
+    }
+
+    try {
+      const res = await baseApi.post(API_ENDPOINTS.AUTH.VERIFY_OTP, {
+        email: email.trim(),
+        otp: otp.trim(),
+        purpose,
+      });
+
+      return res.data; // { message, resetToken }
+    } catch (err) {
+      const msg = formatApiError(err, 'xác thực mã OTP');
+      throw new Error(msg);
+    }
+  },
+
+  /**
+   * F-007: Gửi lại mã OTP
+   * POST /api/auth/resend-otp
+   */
+  resendOtp: async ({ email, purpose = 'FORGOT_PASSWORD' }) => {
+    if (!email) {
+      throw new Error('Vui lòng cung cấp email để gửi lại mã OTP.');
+    }
+
+    try {
+      const res = await baseApi.post(API_ENDPOINTS.AUTH.RESEND_OTP, {
+        email: email.trim(),
+        purpose,
+      });
+
+      return res.data;
+    } catch (err) {
+      const msg = formatApiError(err, 'gửi lại mã OTP');
+      throw new Error(msg);
+    }
+  },
+
+  /**
+   * F-007: Bước 2B - Đặt lại mật khẩu với resetToken
+   * POST /api/auth/password/reset
+   */
+  resetPassword: async ({ email, resetToken, newPassword, confirmPassword }) => {
+    if (!email || !resetToken) {
+      throw new Error('Thiếu thông tin xác thực token đặt lại mật khẩu.');
+    }
+    if (!newPassword || newPassword.length < 6) {
+      throw new Error('Mật khẩu mới phải có ít nhất 6 ký tự.');
+    }
+    if (newPassword !== confirmPassword) {
+      throw new Error('Mật khẩu xác nhận không trùng khớp.');
+    }
+
+    try {
+      const res = await baseApi.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, {
+        email: email.trim(),
+        resetToken: resetToken.trim(),
+        newPassword,
+        confirmPassword,
+      });
+
+      return {
+        success: true,
+        message: res.data?.message || 'Đặt lại mật khẩu thành công!',
+      };
+    } catch (err) {
+      const msg = formatApiError(err, 'đặt lại mật khẩu');
+      throw new Error(msg);
+    }
+  },
+
+  /**
+   * F-006: Đăng xuất hệ thống, thu hồi token trên backend
+   * POST /api/auth/logout
    */
   logout: async () => {
     try {
-      await baseApi.post(API_ENDPOINTS.AUTH.LOGOUT).catch(() => {});
+      const token = getToken();
+      if (token) {
+        await baseApi.post(API_ENDPOINTS.AUTH.LOGOUT);
+      }
+    } catch (err) {
+      console.warn('[authService] Backend logout call warning:', err.message);
     } finally {
       removeTokens();
+    }
+  },
+
+  /**
+   * Kiểm tra quyền truy cập Admin qua backend
+   * GET /api/admin/dashboard
+   */
+  checkAdminAccess: async () => {
+    try {
+      const res = await baseApi.get(API_ENDPOINTS.ADMIN.DASHBOARD);
+      return {
+        authorized: true,
+        message: res.data?.message || 'Xác thực quyền Admin thành công.',
+      };
+    } catch (err) {
+      return {
+        authorized: false,
+        status: err.response?.status || 403,
+        message: formatApiError(err, 'kiểm tra quyền quản trị Admin'),
+      };
     }
   },
 };

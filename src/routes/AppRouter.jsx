@@ -132,25 +132,144 @@ export default function AppRouter() {
       />
 
       {/* 2. Moderator Routes (Chi nhánh kho & Kiểm duyệt) */}
-      <Route path="/moderator" element={<Navigate to="/moderator/counter" replace />} />
-      <Route path="/moderator/counter" element={<CounterPage />} />
-      <Route path="/moderator/queue" element={<ConsignmentQueuePage />} />
-      <Route path="/moderator/inventory" element={<WarehouseInventoryPage />} />
-      <Route path="/moderator/packing" element={<PackingOrdersPage />} />
-      <Route path="/moderator/returns" element={<ReturnProcessingPage />} />
-      <Route path="/moderator/verifications" element={<OrgVerificationPage />} />
-      <Route path="/moderator/reports" element={<ViolationReportsPage />} />
-      <Route path="/moderator/categories" element={<CategoryBrandPage />} />
-      <Route path="/moderator/inbox" element={<WarehouseInboxPage />} />
+      <Route
+        path="/moderator"
+        element={
+          <PrivateRoute roles={['staff', 'admin']}>
+            <Navigate to="/moderator/counter" replace />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/moderator/counter"
+        element={
+          <PrivateRoute roles={['staff', 'admin']}>
+            <CounterPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/moderator/queue"
+        element={
+          <PrivateRoute roles={['staff', 'admin']}>
+            <ConsignmentQueuePage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/moderator/inventory"
+        element={
+          <PrivateRoute roles={['staff', 'admin']}>
+            <WarehouseInventoryPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/moderator/packing"
+        element={
+          <PrivateRoute roles={['staff', 'admin']}>
+            <PackingOrdersPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/moderator/returns"
+        element={
+          <PrivateRoute roles={['staff', 'admin']}>
+            <ReturnProcessingPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/moderator/verifications"
+        element={
+          <PrivateRoute roles={['staff', 'admin']}>
+            <OrgVerificationPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/moderator/reports"
+        element={
+          <PrivateRoute roles={['staff', 'admin']}>
+            <ViolationReportsPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/moderator/categories"
+        element={
+          <PrivateRoute roles={['staff', 'admin']}>
+            <CategoryBrandPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/moderator/inbox"
+        element={
+          <PrivateRoute roles={['staff', 'admin']}>
+            <WarehouseInboxPage />
+          </PrivateRoute>
+        }
+      />
 
-      {/* 3. Admin Routes (Quản trị hệ thống) */}
-      <Route path="/admin" element={<AdminDashboardPage />} />
-      <Route path="/admin/system" element={<AdminSystemPage />} />
-      <Route path="/admin/users" element={<AdminSystemPage />} />
-      <Route path="/admin/moderators" element={<AdminSystemPage />} />
-      <Route path="/admin/warehouses" element={<AdminSystemPage />} />
-      <Route path="/admin/audit-logs" element={<AdminSystemPage />} />
-      <Route path="/admin/configs" element={<ConfigPage />} />
+      {/* 3. Admin Routes (Quản trị hệ thống - Chỉ dành cho role Admin) */}
+      <Route
+        path="/admin"
+        element={
+          <PrivateRoute roles={['admin']}>
+            <AdminDashboardPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/admin/system"
+        element={
+          <PrivateRoute roles={['admin']}>
+            <AdminSystemPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/admin/users"
+        element={
+          <PrivateRoute roles={['admin']}>
+            <AdminSystemPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/admin/moderators"
+        element={
+          <PrivateRoute roles={['admin']}>
+            <AdminSystemPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/admin/warehouses"
+        element={
+          <PrivateRoute roles={['admin']}>
+            <AdminSystemPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/admin/audit-logs"
+        element={
+          <PrivateRoute roles={['admin']}>
+            <AdminSystemPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/admin/configs"
+        element={
+          <PrivateRoute roles={['admin']}>
+            <ConfigPage />
+          </PrivateRoute>
+        }
+      />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
