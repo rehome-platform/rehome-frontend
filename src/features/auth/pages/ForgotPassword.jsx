@@ -7,22 +7,23 @@ import { validateEmail, validatePassword, validateConfirmPassword } from '../../
 /**
  * Trang Quên Mật Khẩu & Đặt Lại Mật Khẩu (F-007, Luồng L-01)
  * Dùng chung cho Quản trị viên (Admin) và Nhân viên Kho (Moderator)
- * Luồng 3 bước hoàn chỉnh:
- * 1. Nhập email nhân sự -> Nhận mã xác thực OTP 6 số
- * 2. Nhập mã OTP + Mật khẩu mới + Xác nhận mật khẩu
+ * Kết nối hoàn toàn với Backend API thật tại https://re-backend-9a98.onrender.com
+ * Luồng 3 bước:
+ * 1. Nhập email nhân sự -> Gọi POST /api/auth/password/forgot
+ * 2. Nhập mã OTP 6 số (xác thực qua /api/auth/verify-otp) + Mật khẩu mới -> Gọi POST /api/auth/password/reset
  * 3. Hoàn tất & Chuyển hướng đăng nhập
  */
 export default function ForgotPassword() {
   const [step, setStep] = useState(1); // 1: Email, 2: OTP & New Password, 3: Success
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [demoOtpHint, setDemoOtpHint] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successInfo, setSuccessInfo] = useState('');
   const [countdown, setCountdown] = useState(0);
 
   const navigate = useNavigate();
@@ -40,6 +41,7 @@ export default function ForgotPassword() {
   const handleRequestOtp = async (e) => {
     if (e) e.preventDefault();
     setError('');
+    setSuccessInfo('');
 
     const emailErr = validateEmail(email);
     if (emailErr) {
@@ -52,9 +54,7 @@ export default function ForgotPassword() {
       const res = await authService.forgotPassword(email);
       setStep(2);
       setCountdown(60);
-      if (res?.demoOtp) {
-        setDemoOtpHint(res.demoOtp);
-      }
+      setSuccessInfo(res?.message || `Mã xác thực OTP đã được gửi đến ${email}.`);
     } catch (err) {
       setError(err.message || 'Không thể gửi mã xác thực. Vui lòng kiểm tra lại email.');
     } finally {
@@ -66,15 +66,14 @@ export default function ForgotPassword() {
   const handleResendOtp = async () => {
     if (countdown > 0 || loading) return;
     setError('');
+    setSuccessInfo('');
     setLoading(true);
     try {
-      const res = await authService.forgotPassword(email);
+      await authService.resendOtp({ email, purpose: 'FORGOT_PASSWORD' });
       setCountdown(60);
-      if (res?.demoOtp) {
-        setDemoOtpHint(res.demoOtp);
-      }
+      setSuccessInfo('Mã OTP mới đã được gửi lại vào email của bạn.');
     } catch (err) {
-      setError(err.message || 'Gửi lại mã thất bại.');
+      setError(err.message || 'Gửi lại mã OTP thất bại.');
     } finally {
       setLoading(false);
     }
@@ -84,6 +83,7 @@ export default function ForgotPassword() {
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccessInfo('');
 
     if (!otp || otp.trim().length < 6) {
       setError('Vui lòng nhập đầy đủ 6 chữ số mã OTP xác thực.');
@@ -104,8 +104,26 @@ export default function ForgotPassword() {
 
     setLoading(true);
     try {
-      await authService.verifyResetOtp(email, otp.trim());
-      await authService.resetPassword(email, otp.trim(), newPassword);
+      // 1. Xác thực OTP để lấy resetToken từ backend
+      const verifyRes = await authService.verifyOtp({
+        email: email.trim(),
+        otp: otp.trim(),
+        purpose: 'FORGOT_PASSWORD',
+      });
+
+      const resetToken = verifyRes?.resetToken;
+      if (!resetToken) {
+        throw new Error('Không nhận được mã xác nhận reset token từ máy chủ.');
+      }
+
+      // 2. Đặt lại mật khẩu với resetToken
+      await authService.resetPassword({
+        email: email.trim(),
+        resetToken,
+        newPassword,
+        confirmPassword,
+      });
+
       setStep(3);
     } catch (err) {
       setError(err.message || 'Mã xác thực không hợp lệ hoặc đã hết hạn.');
@@ -164,6 +182,14 @@ export default function ForgotPassword() {
           </div>
         </div>
 
+        {/* Thông báo thành công */}
+        {successInfo && (
+          <div className="mb-5 p-3.5 rounded-xl bg-[#E8F5E9] border border-[#006B2C]/30 text-[#006B2C] text-xs font-medium flex items-start gap-2.5">
+            <span className="material-symbols-outlined text-base shrink-0 mt-0.5">check_circle</span>
+            <div className="flex-1 leading-relaxed">{successInfo}</div>
+          </div>
+        )}
+
         {/* Thông báo lỗi */}
         {error && (
           <div
@@ -193,7 +219,7 @@ export default function ForgotPassword() {
                     setEmail(e.target.value);
                     if (error) setError('');
                   }}
-                  placeholder="admin@rehome.vn hoặc ha.pham@rehome.vn"
+                  placeholder="nhansu@rehome.vn"
                   className="w-full pl-3.5 pr-10 py-2.5 text-sm rounded-xl border border-[#DDE5D9] bg-white hover:border-[#006B2C]/50 focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15 outline-none text-[#1F2A37] transition-all"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-lg text-[#5B6776]">
@@ -225,22 +251,6 @@ export default function ForgotPassword() {
         {/* BƯỚC 2: NHẬP MÃ OTP & MẬT KHẨU MỚI */}
         {step === 2 && (
           <form onSubmit={handleResetPassword} className="space-y-4">
-            {/* Gợi ý OTP demo cho người dùng test */}
-            {demoOtpHint && (
-              <div className="p-3 bg-[#E8F5E9] border border-[#006B2C]/20 rounded-xl text-xs text-[#006B2C] flex items-center justify-between">
-                <span>
-                  🔑 Mã OTP Demo: <strong>{demoOtpHint}</strong>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setOtp(demoOtpHint)}
-                  className="text-[11px] underline font-bold"
-                >
-                  Tự động điền
-                </button>
-              </div>
-            )}
-
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label htmlFor="otp-input" className="text-xs font-semibold text-[#1F2A37]">
@@ -349,7 +359,7 @@ export default function ForgotPassword() {
             </div>
             <h3 className="text-base font-bold text-[#1F2A37]">Cập nhật mật khẩu thành công!</h3>
             <p className="text-xs text-[#5B6776] leading-relaxed">
-              Mật khẩu mới của bạn đã được ghi nhận trên toàn hệ thống ReHome. Hãy đăng nhập lại để tiếp tục làm việc.
+              Mật khẩu mới của bạn đã được cập nhật thành công trên máy chủ ReHome. Bạn có thể đăng nhập ngay bằng mật khẩu mới.
             </p>
             <div className="pt-2">
               <button

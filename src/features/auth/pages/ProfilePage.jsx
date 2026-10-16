@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import Header from '../../../components/header.jsx';
 import Footer from '../../../components/footer.jsx';
 import Badge from '../../../components/common/Badge.jsx';
+import authService from '../services/auth.service.js';
 import { validatePhone, validatePassword, validateConfirmPassword } from '../../../utils/validators.js';
 
 /**
  * Trang Hồ Sơ Cá Nhân & Quản Trị Tài Khoản Nhân Sự
  * Phase 1 — Auth & Hồ sơ (F-008: Đổi mật khẩu, F-009: Xem hồ sơ, F-010: Cập nhật hồ sơ)
  * Dành cho Admin & Moderator nội bộ trên Web
+ * Kết nối hoàn toàn với Backend API thật tại https://re-backend-9a98.onrender.com
  */
 export default function ProfilePage() {
   const { user, updateProfile, changePassword, logout } = useAuth();
@@ -17,10 +19,11 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('profile');
 
   // Profile Form state
-  const [name, setName] = useState(user?.name || '');
+  const [name, setName] = useState(user?.fullName || user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
-  const [avatar, setAvatar] = useState(user?.avatar || '');
+  const [avatar, setAvatar] = useState(user?.avatarUrl || user?.avatar || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [profileSuccessMsg, setProfileSuccessMsg] = useState('');
   const [profileErrorMsg, setProfileErrorMsg] = useState('');
 
@@ -43,14 +46,48 @@ export default function ProfilePage() {
     'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
   ];
 
-  // Xử lý lưu hồ sơ
+  // Đồng bộ form khi user thay đổi
+  useEffect(() => {
+    if (user) {
+      setName(user.fullName || user.name || '');
+      setPhone(user.phone || '');
+      setAvatar(user.avatarUrl || user.avatar || '');
+    }
+  }, [user]);
+
+  // Tải thông tin hồ sơ mới nhất từ backend API
+  useEffect(() => {
+    let isMounted = true;
+    const fetchLatestProfile = async () => {
+      setIsLoadingProfile(true);
+      try {
+        const freshUser = await authService.getCurrentUser();
+        if (isMounted && freshUser) {
+          setName(freshUser.fullName || freshUser.name || '');
+          setPhone(freshUser.phone || '');
+          setAvatar(freshUser.avatarUrl || freshUser.avatar || '');
+        }
+      } catch (err) {
+        console.warn('Lỗi khi tải hồ sơ từ backend:', err);
+      } finally {
+        if (isMounted) setIsLoadingProfile(false);
+      }
+    };
+
+    fetchLatestProfile();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Xử lý lưu hồ sơ qua PATCH /members/me
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     setProfileSuccessMsg('');
     setProfileErrorMsg('');
 
     if (!name.trim()) {
-      setProfileErrorMsg('Vui lòng nhập họ và tên.');
+      setProfileErrorMsg('Vui lòng nhập họ và tên nhân sự.');
       return;
     }
 
@@ -65,11 +102,13 @@ export default function ProfilePage() {
     setIsSavingProfile(true);
     try {
       await updateProfile({
+        fullName: name.trim(),
         name: name.trim(),
         phone: phone.trim(),
-        avatar,
+        avatarUrl: avatar,
+        avatar: avatar,
       });
-      setProfileSuccessMsg('Cập nhật thông tin hồ sơ thành công!');
+      setProfileSuccessMsg('Cập nhật thông tin hồ sơ trên máy chủ thành công!');
       setTimeout(() => setProfileSuccessMsg(''), 4000);
     } catch (err) {
       setProfileErrorMsg(err.message || 'Không thể cập nhật hồ sơ lúc này.');
@@ -78,7 +117,7 @@ export default function ProfilePage() {
     }
   };
 
-  // Xử lý đổi mật khẩu
+  // Xử lý đổi mật khẩu qua POST /api/auth/password/change
   const handleChangePassword = async (e) => {
     e.preventDefault();
     setPassSuccessMsg('');
@@ -103,8 +142,12 @@ export default function ProfilePage() {
 
     setIsChangingPass(true);
     try {
-      await changePassword(currentPassword, newPassword);
-      setPassSuccessMsg('Đổi mật khẩu thành công! Mật khẩu mới đã được áp dụng.');
+      const res = await changePassword({
+        oldPassword: currentPassword,
+        newPassword: newPassword,
+        newPasswordRepeat: confirmPassword,
+      });
+      setPassSuccessMsg(res?.message || 'Đổi mật khẩu thành công! Mật khẩu mới đã được cập nhật.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -154,17 +197,22 @@ export default function ProfilePage() {
               {/* Avatar */}
               <div className="relative group mb-4">
                 <img
-                  src={avatar || user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'}
+                  src={avatar || user?.avatarUrl || user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'}
                   alt={user?.name || 'Avatar'}
                   className="w-28 h-28 rounded-2xl object-cover border-2 border-[#006B2C]/20 shadow-md"
                 />
-                <div className="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-medium cursor-pointer">
+                <div
+                  onClick={() => setActiveTab('profile')}
+                  className="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-medium cursor-pointer"
+                >
                   Đổi ảnh
                 </div>
               </div>
 
               {/* Tên & vai trò */}
-              <h2 className="text-lg font-bold text-[#1F2A37]">{user?.name || 'Nhân sự ReHome'}</h2>
+              <h2 className="text-lg font-bold text-[#1F2A37]">
+                {user?.fullName || user?.name || 'Nhân sự ReHome'}
+              </h2>
               <p className="text-xs text-[#5B6776] mt-0.5">{user?.email}</p>
 
               <div className="mt-3 flex items-center gap-2">
@@ -183,28 +231,39 @@ export default function ProfilePage() {
                 </span>
               </div>
 
-              {/* Thông tin chi tiết */}
+              {/* Thông tin chi tiết xác thực từ Backend */}
               <div className="w-full mt-6 pt-6 border-t border-[#DDE5D9] space-y-3 text-left text-xs">
                 <div className="flex justify-between items-center">
-                  <span className="text-[#5B6776]">Mã nhân viên:</span>
-                  <span className="font-mono font-bold text-[#1F2A37]">{user?.employeeCode || 'NV-001'}</span>
+                  <span className="text-[#5B6776]">Mã tài khoản (Code):</span>
+                  <span className="font-mono font-bold text-[#1F2A37]">
+                    {user?.memberCode || (isAdmin ? 'ADM-OFFICIAL' : 'MOD-OFFICIAL')}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[#5B6776]">Bộ phận:</span>
-                  <span className="font-semibold text-[#1F2A37]">{user?.department || (isAdmin ? 'Ban Điều Hành' : 'Vận Hành Kho')}</span>
+                  <span className="text-[#5B6776]">Quyền hạn (Authority):</span>
+                  <span className="font-mono text-[11px] font-semibold text-[#006B2C]">
+                    {user?.authorities || user?.rawRole || (isAdmin ? 'ROLE_ADMIN' : 'ROLE_MODERATOR')}
+                  </span>
                 </div>
-                {!isAdmin && user?.warehouse && (
-                  <div className="flex justify-between items-start pt-1 border-t border-[#DDE5D9]/50">
-                    <span className="text-[#5B6776]">Chi nhánh kho:</span>
-                    <span className="font-semibold text-[#006B2C] text-right max-w-[170px]">
-                      {user.warehouse.name}
-                    </span>
-                  </div>
-                )}
                 <div className="flex justify-between items-center">
                   <span className="text-[#5B6776]">Số điện thoại:</span>
                   <span className="font-semibold text-[#1F2A37]">{user?.phone || 'Chưa cập nhật'}</span>
                 </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[#5B6776]">Xác thực Email:</span>
+                  <span className="inline-flex items-center gap-1 font-semibold text-[#006B2C]">
+                    <span className="material-symbols-outlined text-sm">verified</span>
+                    <span>{user?.emailVerified ? 'Đã xác thực' : 'Đang kích hoạt'}</span>
+                  </span>
+                </div>
+                {user?.accountId && (
+                  <div className="flex justify-between items-start pt-1 border-t border-[#DDE5D9]/50">
+                    <span className="text-[#5B6776]">ID tài khoản:</span>
+                    <span className="font-mono text-[10px] text-[#717971] truncate max-w-[150px]">
+                      {user.accountId}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -215,7 +274,7 @@ export default function ProfilePage() {
                 <span>Quy chuẩn bảo mật nội bộ</span>
               </div>
               <p className="text-[#5B6776] leading-relaxed text-[11px]">
-                Theo chính sách bảo mật hệ thống ReHome, nhân sự bắt buộc đổi mật khẩu định kỳ 90 ngày và không chia sẻ tài khoản cho bên thứ ba.
+                Theo chính sách bảo mật hệ thống ReHome, nhân sự bắt buộc đổi mật khẩu định kỳ và không chia sẻ token xác thực cho bên thứ ba.
               </p>
             </div>
           </div>
@@ -235,7 +294,7 @@ export default function ProfilePage() {
                 }`}
               >
                 <span className="material-symbols-outlined text-base">badge</span>
-                <span>Thông tin cá nhân</span>
+                <span>Thông tin cá nhân (F-010)</span>
               </button>
               <button
                 type="button"
@@ -268,11 +327,19 @@ export default function ProfilePage() {
             {/* TAB 1: THÔNG TIN CÁ NHÂN (F-010) */}
             {activeTab === 'profile' && (
               <div className="bg-white rounded-2xl border border-[#DDE5D9] p-6 sm:p-8 shadow-card space-y-6">
-                <div>
-                  <h3 className="text-base font-bold text-[#1F2A37]">Cập nhật thông tin tài khoản</h3>
-                  <p className="text-xs text-[#5B6776] mt-0.5">
-                    Thông tin hiển thị trên biên nhận ký gửi, hệ thống bàn giao hàng và nhật ký kiểm duyệt.
-                  </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base font-bold text-[#1F2A37]">Cập nhật thông tin tài khoản</h3>
+                    <p className="text-xs text-[#5B6776] mt-0.5">
+                      Dữ liệu được lưu trữ và đồng bộ trực tiếp qua Backend API (PATCH /members/me).
+                    </p>
+                  </div>
+                  {isLoadingProfile && (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-[#006B2C] font-semibold">
+                      <span className="w-3.5 h-3.5 border-2 border-[#006B2C] border-t-transparent rounded-full animate-spin"></span>
+                      <span>Đang tải...</span>
+                    </span>
+                  )}
                 </div>
 
                 {profileSuccessMsg && (
@@ -327,6 +394,7 @@ export default function ProfilePage() {
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
+                      placeholder="Nguyễn Văn A"
                       className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-[#DDE5D9] bg-white focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15 outline-none text-[#1F2A37]"
                     />
                   </div>
@@ -334,7 +402,7 @@ export default function ProfilePage() {
                   {/* Email (Disabled) */}
                   <div>
                     <label htmlFor="user-email-input" className="block text-xs font-semibold text-[#1F2A37] mb-1.5">
-                      Email đăng nhập (Cố định theo hệ thống)
+                      Email đăng nhập (Cố định theo hệ thống xác thực)
                     </label>
                     <input
                       id="user-email-input"
@@ -348,14 +416,14 @@ export default function ProfilePage() {
                   {/* Số điện thoại */}
                   <div>
                     <label htmlFor="user-phone-input" className="block text-xs font-semibold text-[#1F2A37] mb-1.5">
-                      Số điện thoại liên hệ
+                      Số điện thoại liên hệ (Định dạng: 0xxxxxxxxx)
                     </label>
                     <input
                       id="user-phone-input"
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="0912 345 678"
+                      placeholder="0912345678"
                       className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-[#DDE5D9] bg-white focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15 outline-none text-[#1F2A37]"
                     />
                   </div>
@@ -368,11 +436,16 @@ export default function ProfilePage() {
                       className="px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-[#006B2C] hover:bg-[#005523] active:scale-[0.99] transition-all flex items-center gap-2 shadow-sm disabled:opacity-50"
                     >
                       {isSavingProfile ? (
-                        <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        <>
+                          <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                          <span>Đang lưu...</span>
+                        </>
                       ) : (
-                        <span className="material-symbols-outlined text-base">save</span>
+                        <>
+                          <span className="material-symbols-outlined text-base">save</span>
+                          <span>Lưu thông tin hồ sơ</span>
+                        </>
                       )}
-                      <span>Lưu thông tin hồ sơ</span>
                     </button>
                   </div>
                 </form>
@@ -385,7 +458,7 @@ export default function ProfilePage() {
                 <div>
                   <h3 className="text-base font-bold text-[#1F2A37]">Đổi mật khẩu tài khoản (F-008)</h3>
                   <p className="text-xs text-[#5B6776] mt-0.5">
-                    Để bảo vệ an toàn cho hệ thống và dữ liệu kho, mật khẩu mới phải có tối thiểu 6 ký tự.
+                    Gửi yêu cầu đổi mật khẩu bảo mật qua Backend API (POST /api/auth/password/change). Mật khẩu mới tối thiểu 6 ký tự.
                   </p>
                 </div>
 
@@ -484,11 +557,16 @@ export default function ProfilePage() {
                       className="px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-[#006B2C] hover:bg-[#005523] active:scale-[0.99] transition-all flex items-center gap-2 shadow-sm disabled:opacity-50"
                     >
                       {isChangingPass ? (
-                        <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        <>
+                          <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                          <span>Đang cập nhật...</span>
+                        </>
                       ) : (
-                        <span className="material-symbols-outlined text-base">lock_reset</span>
+                        <>
+                          <span className="material-symbols-outlined text-base">lock_reset</span>
+                          <span>Cập nhật mật khẩu mới</span>
+                        </>
                       )}
-                      <span>Cập nhật mật khẩu mới</span>
                     </button>
                   </div>
                 </form>
@@ -501,7 +579,7 @@ export default function ProfilePage() {
                 <div>
                   <h3 className="text-base font-bold text-[#1F2A37]">Lịch sử phiên đăng nhập nội bộ</h3>
                   <p className="text-xs text-[#5B6776] mt-0.5">
-                    Quản lý các thiết bị và trình duyệt đang duy trì phiên xác thực bằng JWT Token.
+                    Quản lý phiên xác thực hiện tại được ký số bằng JWT Token trên máy chủ ReHome.
                   </p>
                 </div>
 
@@ -514,53 +592,27 @@ export default function ProfilePage() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-[#1F2A37]">Trình duyệt hiện tại (Chrome / Edge)</span>
+                          <span className="text-xs font-bold text-[#1F2A37]">Phiên hoạt động hiện tại</span>
                           <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#006B2C] text-white">
-                            Phiên này
+                            Active Session
                           </span>
                         </div>
                         <p className="text-[11px] text-[#5B6776] mt-0.5">
-                          Địa chỉ IP: 118.69.182.25 • Hà Nội, Việt Nam • Vừa hoạt động
+                          Tài khoản: {user?.email} • Vai trò: {user?.authorities || user?.role}
                         </p>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Previous Session */}
-                  <div className="p-4 rounded-xl border border-[#DDE5D9] bg-white flex items-center justify-between">
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-10 h-10 rounded-xl bg-[#F6F9F4] text-[#5B6776] flex items-center justify-center border border-[#DDE5D9]">
-                        <span className="material-symbols-outlined text-xl">desktop_windows</span>
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-[#1F2A37]">Máy trạm quầy tiếp nhận kho</span>
-                        </div>
-                        <p className="text-[11px] text-[#5B6776] mt-0.5">
-                          Địa chỉ IP: 14.161.42.10 • Đăng nhập hôm qua lúc 17:45
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="text-xs font-bold text-[#D92D20] hover:underline"
-                      onClick={() => alert('Đã hủy phiên làm việc trên máy trạm quầy!')}
-                    >
-                      Đăng xuất
-                    </button>
                   </div>
                 </div>
 
                 <div className="pt-2 flex justify-between items-center text-xs text-[#5B6776] border-t border-[#DDE5D9]">
-                  <span>Bạn muốn đăng xuất khỏi toàn bộ các thiết bị khác?</span>
+                  <span>Đăng xuất khỏi hệ thống:</span>
                   <button
                     type="button"
-                    onClick={() => {
-                      alert('Đã thu hồi tất cả các Refresh Token trên các thiết bị khác.');
-                    }}
+                    onClick={logout}
                     className="px-4 py-2 font-bold text-xs rounded-xl bg-[#FFF5F5] text-[#D92D20] border border-[#D92D20]/20 hover:bg-[#FEE4E2] transition-colors"
                   >
-                    Đăng xuất mọi thiết bị
+                    Đăng xuất phiên này
                   </button>
                 </div>
               </div>
