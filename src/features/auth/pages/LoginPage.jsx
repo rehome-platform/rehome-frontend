@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import Logo from '../../../components/common/Logo.jsx';
@@ -18,11 +18,25 @@ export default function LoginPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const { login, loginWithGoogle } = useAuth();
+  const { login, loginWithGoogle, isAuthenticated, user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const fromLocation = location.state?.from?.pathname;
+
+  // Nếu người dùng đã có session hợp lệ, chuyển thẳng tới dashboard theo vai trò, tránh bắt đăng nhập lại
+  useEffect(() => {
+    if (!loading && isAuthenticated && user) {
+      const userRole = user.role;
+      if (userRole === 'admin') {
+        const dest = fromLocation && fromLocation.startsWith('/admin') ? fromLocation : '/admin';
+        navigate(dest, { replace: true });
+      } else if (userRole === 'staff' || userRole === 'moderator') {
+        const dest = fromLocation && fromLocation.startsWith('/moderator') ? fromLocation : '/moderator/counter';
+        navigate(dest, { replace: true });
+      }
+    }
+  }, [loading, isAuthenticated, user, navigate, fromLocation]);
 
   const handleLoginSubmit = async (e) => {
     if (e) e.preventDefault();
@@ -280,13 +294,11 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Footer Navigation */}
-      <div className="mt-6 text-center text-xs text-[#5B6776] flex items-center gap-4">
-        <span>ReHome Operations Web • Phase 1</span>
+      {/* Footer */}
+      <div className="mt-6 text-center text-xs text-[#5B6776] flex items-center justify-center gap-2">
+        <span>Cổng Điều Hành & Vận Hành Tập Trung ReHome</span>
         <span>•</span>
-        <Link to="/" className="text-[#006B2C] hover:underline font-semibold">
-          Trang chủ điều hành
-        </Link>
+        <span>Quản trị viên & Nhân viên Kho</span>
       </div>
     </div>
   );
