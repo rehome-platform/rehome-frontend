@@ -3,58 +3,106 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useNotification } from '../context/NotificationContext.jsx';
 import Dropdown from './common/Dropdown.jsx';
+import Logo from './common/Logo.jsx';
 
 export default function Header() {
   const { user, isAuthenticated, logout } = useAuth();
   const { unreadCount } = useNotification();
   const navigate = useNavigate();
 
+  const isAdmin = user?.role === 'admin';
+
   const userMenuItems = [
     {
-      label: 'Cổng Quản trị Admin',
-      onClick: () => navigate('/admin'),
+      label: 'Hồ sơ cá nhân & Tài khoản',
+      icon: 'person',
+      onClick: () => navigate('/profile'),
     },
     {
-      label: 'Cổng Vận hành Kho (Moderator)',
-      onClick: () => navigate('/moderator/counter'),
+      label: 'Đổi mật khẩu',
+      icon: 'lock_reset',
+      onClick: () => navigate('/profile'),
     },
-    { label: 'Đăng xuất', onClick: logout },
+    { divider: true },
+    ...(isAdmin
+      ? [
+          {
+            label: 'Cổng Quản trị Admin',
+            icon: 'admin_panel_settings',
+            onClick: () => navigate('/admin'),
+          },
+        ]
+      : [
+          {
+            label: 'Cổng Vận hành Kho (Moderator)',
+            icon: 'warehouse',
+            onClick: () => navigate('/moderator/counter'),
+          },
+        ]),
+    { divider: true },
+    {
+      label: 'Đăng xuất',
+      icon: 'logout',
+      danger: true,
+      onClick: logout,
+    },
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-sm border-b border-[#DDE5D9] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+    <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-[#DDE5D9] shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Brand */}
+        {/* Brand Logo theo Design tokens */}
         <div className="flex items-center space-x-8">
-          <Link to="/" className="flex items-center space-x-2.5">
-            <span className="w-9 h-9 rounded-xl bg-[#006B2C] flex items-center justify-center text-white font-bold font-heading text-lg shadow-sm">
-              R
-            </span>
-            <span className="text-xl font-black font-heading text-[#006B2C] tracking-tight">ReHome</span>
-          </Link>
-          <nav className="hidden md:flex space-x-6 text-xs font-semibold text-[#414942]">
-            <Link to="/moderator/counter" className="hover:text-[#006B2C] transition-colors">
-              Kho & Kiểm định (Moderator)
+          <Logo size="md" showText={true} to="/" />
+          
+          <nav className="hidden md:flex items-center space-x-6 text-xs font-semibold text-[#5B6776]">
+            <Link
+              to="/moderator/counter"
+              className="hover:text-[#006B2C] transition-colors flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-base">warehouse</span>
+              <span>Kho & Kiểm định</span>
             </Link>
-            <Link to="/admin" className="hover:text-[#006B2C] transition-colors">
-              Quản trị & Quỹ nền tảng (Admin)
+            <Link
+              to="/admin"
+              className="hover:text-[#006B2C] transition-colors flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-base">monitoring</span>
+              <span>Quản trị & Quỹ</span>
             </Link>
           </nav>
         </div>
 
         {/* Right Actions */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3">
           {isAuthenticated ? (
             <>
+              {/* Role badge */}
+              <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-[#DDE5D9] bg-[#F6F9F4]">
+                {isAdmin ? (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-[#00685F]"></span>
+                    <span className="text-[#00685F]">Admin Quản Trị</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-[#006B2C]"></span>
+                    <span className="text-[#006B2C]">
+                      {user?.warehouse?.code || 'Mod Kho'}
+                    </span>
+                  </>
+                )}
+              </div>
+
               {/* Notification icon */}
               <button
-                className="relative p-2 text-[#717971] hover:text-[#006B2C] hover:bg-[#F0F5EE] rounded-xl transition-colors"
+                className="relative p-2 text-[#5B6776] hover:text-[#006B2C] hover:bg-[#F6F9F4] rounded-xl transition-colors"
                 aria-label="Thông báo"
                 onClick={() => navigate('/notifications')}
               >
                 <span className="material-symbols-outlined text-[22px]">notifications</span>
                 {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 w-4 h-4 bg-[#BA1A1A] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#D92D20] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
@@ -63,14 +111,21 @@ export default function Header() {
               {/* User Dropdown */}
               <Dropdown
                 trigger={
-                  <button className="flex items-center space-x-2 p-1.5 rounded-xl hover:bg-[#F0F5EE] transition-colors">
-                    <div className="w-8 h-8 rounded-lg bg-[#006B2C] text-white flex items-center justify-center font-bold text-xs">
-                      {user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'A'}
+                  <button className="flex items-center space-x-2.5 p-1.5 rounded-xl hover:bg-[#F6F9F4] transition-colors border border-transparent hover:border-[#DDE5D9]">
+                    <img
+                      src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'}
+                      alt="Avatar"
+                      className="w-8 h-8 rounded-lg object-cover border border-[#006B2C]/20"
+                    />
+                    <div className="text-left hidden sm:block">
+                      <div className="text-xs font-bold text-[#1F2A37] max-w-[120px] truncate leading-tight">
+                        {user?.name || user?.email || 'Nhân sự'}
+                      </div>
+                      <div className="text-[10px] text-[#5B6776] leading-tight">
+                        {isAdmin ? 'Quản trị viên' : 'Nhân viên kho'}
+                      </div>
                     </div>
-                    <span className="text-xs font-bold text-[#191C19] hidden sm:inline-block">
-                      {user?.name || user?.email || 'Nhân sự ReHome'}
-                    </span>
-                    <span className="material-symbols-outlined text-sm text-[#717971]">expand_more</span>
+                    <span className="material-symbols-outlined text-sm text-[#5B6776]">expand_more</span>
                   </button>
                 }
                 items={userMenuItems}
@@ -79,7 +134,7 @@ export default function Header() {
           ) : (
             <Link
               to="/login"
-              className="px-4 py-2 text-xs font-bold rounded-xl bg-[#006B2C] text-white hover:bg-[#005221] shadow-xs transition-colors"
+              className="px-4 py-2 text-xs font-bold rounded-xl bg-[#006B2C] text-white hover:bg-[#005523] shadow-sm transition-all"
             >
               Đăng nhập nhân sự
             </Link>

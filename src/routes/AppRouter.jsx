@@ -7,7 +7,9 @@ import Footer from '../components/footer.jsx';
 import {
   LoginPage,
   ForgotPassword,
+  ProfilePage,
 } from '../features/auth/pages/index.js';
+import PrivateRoute from './PrivateRoute.jsx';
 
 // Moderator Pages (Cổng Vận Hành Kho & Kiểm Duyệt)
 import {
@@ -120,6 +122,14 @@ export default function AppRouter() {
       <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route
+        path="/profile"
+        element={
+          <PrivateRoute>
+            <ProfilePage />
+          </PrivateRoute>
+        }
+      />
 
       {/* 2. Moderator Routes (Chi nhánh kho & Kiểm duyệt) */}
       <Route path="/moderator" element={<Navigate to="/moderator/counter" replace />} />
