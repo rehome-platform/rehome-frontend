@@ -1,31 +1,31 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getUser, saveUser, saveToken, saveRefreshToken, removeTokens, getToken } from '../services/baseApi.js';
-import baseApi from '../services/baseApi.js';
-import { API_ENDPOINTS } from '../configs/api.config.js';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import {
+  getUser,
+  saveUser,
+  getToken,
+  removeTokens,
+} from '../services/baseApi.js';
+import authService from '../features/auth/services/auth.service.js';
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(getUser());
-  const [isAuthenticated, setIsAuthenticated] = useState(!!getToken());
+  const [user, setUser] = useState(() => getUser());
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!getToken());
   const [loading, setLoading] = useState(false);
 
-  const refreshAuth = () => {
+  const refreshAuth = useCallback(() => {
     const currentUser = getUser();
     const token = getToken();
     setUser(currentUser);
     setIsAuthenticated(!!token);
-  };
+  }, []);
 
   const login = async (credentials) => {
     setLoading(true);
     try {
-      const response = await baseApi.post(API_ENDPOINTS.AUTH.LOGIN, credentials);
-      const data = response.data?.data || response.data;
-      if (data?.token) {
-        saveToken(data.token);
-        if (data.refreshToken) saveRefreshToken(data.refreshToken);
-        if (data.user) saveUser(data.user);
+      const data = await authService.login(credentials);
+      if (data?.user) {
         setUser(data.user);
         setIsAuthenticated(true);
       }
@@ -35,9 +35,39 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithGoogle = async (googleToken = null) => {
+    setLoading(true);
+    try {
+      const data = await authService.loginWithGoogle(googleToken);
+      if (data?.user) {
+        setUser(data.user);
+        setIsAuthenticated(true);
+      }
+      return data;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateProfile = async (profileData) => {
+    setLoading(true);
+    try {
+      const updatedUser = await authService.updateProfile(profileData);
+      setUser(updatedUser);
+      saveUser(updatedUser);
+      return updatedUser;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const changePassword = async (oldPassword, newPassword) => {
+    return await authService.changePassword(oldPassword, newPassword);
+  };
+
   const logout = async () => {
     try {
-      await baseApi.post(API_ENDPOINTS.AUTH.LOGOUT).catch(() => {});
+      await authService.logout();
     } finally {
       removeTokens();
       setUser(null);
@@ -48,15 +78,33 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     refreshAuth();
-  }, []);
+  }, [refreshAuth]);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, loading, login, logout, refreshAuth }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated,
+        loading,
+        login,
+        loginWithGoogle,
+        logout,
+        updateProfile,
+        changePassword,
+        refreshAuth,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
 export default AuthContext;
