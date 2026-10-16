@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import AdminLayout from '../../../layouts/AdminLayout.jsx';
+import { useNavigate } from 'react-router-dom';
 import { formatCurrencyVND } from '../../../utils/formatters.js';
 import { Button, Badge } from '../../../components/common/index.js';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import authService from '../../auth/services/auth.service.js';
+import AdminOverviewView from '../components/AdminOverviewView.jsx';
 
 /**
  * Trang Dashboard Điều Hành & Quỹ Nền Tảng ReHome (Admin)
@@ -12,6 +13,8 @@ import authService from '../../auth/services/auth.service.js';
  */
 export default function AdminDashboardPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('fund'); // 'fund' | 'activities'
   const [exporting, setExporting] = useState(false);
   const [filterPeriod, setFilterPeriod] = useState('MONTH'); // 'TODAY' | 'WEEK' | 'MONTH' | 'ALL'
   const [adminApiStatus, setAdminApiStatus] = useState({ loading: true, verified: false, message: '' });
@@ -172,8 +175,39 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Tab Switcher: Quỹ & Doanh thu VS Hoạt động & Tăng trưởng */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#DDE5D9] pb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setActiveTab('fund')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${
+              activeTab === 'fund'
+                ? 'bg-[#006B2C] text-white shadow-xs'
+                : 'bg-white border border-[#DDE5D9] text-[#5B6776] hover:bg-[#F6F9F4] hover:text-[#006B2C]'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
+            <span>Quỹ nền tảng & Doanh thu (Mục 7 & 8)</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('activities')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${
+              activeTab === 'activities'
+                ? 'bg-[#006B2C] text-white shadow-xs'
+                : 'bg-white border border-[#DDE5D9] text-[#5B6776] hover:bg-[#F6F9F4] hover:text-[#006B2C]'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">insights</span>
+            <span>Hoạt động & Tăng trưởng hệ thống</span>
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'activities' ? (
+        <AdminOverviewView onNavigateToAudit={() => navigate('/admin/audit-logs')} />
+      ) : (
+        <div className="space-y-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -383,6 +417,8 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       </div>
-    </AdminLayout>
+      )}
+    </div>
   );
 }
+

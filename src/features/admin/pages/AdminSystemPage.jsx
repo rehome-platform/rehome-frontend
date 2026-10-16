@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import AdminSidebar from '../components/AdminSidebar.jsx';
-import AdminHeader from '../components/AdminHeader.jsx';
+import AdminLayout from '../../../layouts/AdminLayout.jsx';
 import AdminOverviewView from '../components/AdminOverviewView.jsx';
 import AdminAccountsView from '../components/AdminAccountsView.jsx';
 import AdminModeratorsView from '../components/AdminModeratorsView.jsx';
@@ -10,10 +9,8 @@ import AdminAuditLogsView from '../components/AdminAuditLogsView.jsx';
 
 /**
  * Trang Quản Trị Hệ Thống ReHome (Admin Management System)
- * Tái hiện toàn diện thiết kế Google Stitch (Figma) Prototype:
- * - Tông màu chủ đạo: #006B2C | Màu nền: #F6F9F4 | Viền: #DDE5D9
- * - Phông chữ: Be Vietnam Pro
- * - Gồm 5 phân hệ cốt lõi: Tổng quan, Tài khoản, Moderator, Chi nhánh kho, Nhật ký hệ thống
+ * Tương thích ngược với các đường dẫn /admin/system
+ * Đồng bộ sử dụng chung AdminLayout chuẩn Design tokens
  */
 export default function AdminSystemPage() {
   const location = useLocation();
@@ -25,12 +22,18 @@ export default function AdminSystemPage() {
     if (pathname.includes('/moderators')) return 'moderators';
     if (pathname.includes('/warehouses')) return 'warehouses';
     if (pathname.includes('/audit')) return 'audit';
-    return 'overview';
+    return 'accounts';
   };
 
   const [activeTab, setActiveTab] = useState(getTabFromPath(location.pathname));
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [dynamicLogs, setDynamicLogs] = useState([]);
+  const [dynamicLogs, setDynamicLogs] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('rehome_admin_dynamic_logs');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   useEffect(() => {
     setActiveTab(getTabFromPath(location.pathname));
@@ -46,7 +49,13 @@ export default function AdminSystemPage() {
   };
 
   const handleLogAction = (logEntry) => {
-    setDynamicLogs((prev) => [logEntry, ...prev]);
+    setDynamicLogs((prev) => {
+      const updated = [logEntry, ...prev];
+      try {
+        sessionStorage.setItem('rehome_admin_dynamic_logs', JSON.stringify(updated.slice(0, 50)));
+      } catch {}
+      return updated;
+    });
   };
 
   const getPageTitle = () => {
@@ -60,53 +69,33 @@ export default function AdminSystemPage() {
       case 'audit':
         return 'Nhật ký kiểm toán hệ thống (Audit Log)';
       default:
-        return 'Tổng quan điều hành & Quỹ nền tảng';
+        return 'Quản lý Tài khoản (Member & Tổ chức)';
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F6F9F4] flex flex-col antialiased">
-      {/* Sidebar cố định */}
-      <AdminSidebar
-        activeTab={activeTab}
-        onSelectTab={handleSelectTab}
-        isMobileOpen={isMobileSidebarOpen}
-        onCloseMobile={() => setIsMobileSidebarOpen(false)}
-      />
-
-      {/* Main Wrapper */}
-      <div className="lg:pl-64 flex-1 flex flex-col min-w-0">
-        {/* Top Header */}
-        <AdminHeader
-          activeTitle={getPageTitle()}
-          onOpenMobile={() => setIsMobileSidebarOpen(true)}
+    <AdminLayout title={getPageTitle()}>
+      {activeTab === 'overview' && (
+        <AdminOverviewView
+          onNavigateToAudit={() => handleSelectTab('audit')}
         />
+      )}
 
-        {/* Dynamic Main Body Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto animate-fadeIn">
-          {activeTab === 'overview' && (
-            <AdminOverviewView
-              onNavigateToAudit={() => handleSelectTab('audit')}
-            />
-          )}
+      {activeTab === 'accounts' && (
+        <AdminAccountsView onLogAction={handleLogAction} />
+      )}
 
-          {activeTab === 'accounts' && (
-            <AdminAccountsView onLogAction={handleLogAction} />
-          )}
+      {activeTab === 'moderators' && (
+        <AdminModeratorsView onLogAction={handleLogAction} />
+      )}
 
-          {activeTab === 'moderators' && (
-            <AdminModeratorsView onLogAction={handleLogAction} />
-          )}
+      {activeTab === 'warehouses' && (
+        <AdminWarehousesView onLogAction={handleLogAction} />
+      )}
 
-          {activeTab === 'warehouses' && (
-            <AdminWarehousesView onLogAction={handleLogAction} />
-          )}
-
-          {activeTab === 'audit' && (
-            <AdminAuditLogsView dynamicLogs={dynamicLogs} />
-          )}
-        </main>
-      </div>
-    </div>
+      {activeTab === 'audit' && (
+        <AdminAuditLogsView dynamicLogs={dynamicLogs} />
+      )}
+    </AdminLayout>
   );
 }

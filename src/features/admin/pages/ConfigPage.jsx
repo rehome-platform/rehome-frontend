@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import AdminLayout from '../../../layouts/AdminLayout.jsx';
+import { useOutletContext } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext.jsx';
 import { Input, Button } from '../../../components/common/index.js';
 import { DEFAULT_SYSTEM_CONFIGS } from '../../../configs/systemParams.config.js';
 
@@ -9,6 +10,8 @@ import { DEFAULT_SYSTEM_CONFIGS } from '../../../configs/systemParams.config.js'
  * Mọi thay đổi đều được lưu vào Audit Log hệ thống.
  */
 export default function ConfigPage() {
+  const { user } = useAuth();
+  const { onLogAction } = useOutletContext() || {};
   const [activeTab, setActiveTab] = useState('consignment');
   const [configs, setConfigs] = useState(DEFAULT_SYSTEM_CONFIGS);
   const [saving, setSaving] = useState(false);
@@ -28,13 +31,20 @@ export default function ConfigPage() {
     setTimeout(() => {
       setSaving(false);
       setSavedSuccess(true);
+      if (onLogAction) {
+        onLogAction({
+          time: new Date().toLocaleString('vi-VN'),
+          user: user?.fullName || user?.name || 'Trần Minh Quân',
+          role: 'Admin',
+          action: 'Cập nhật cấu hình tham số hệ thống (Mục 11)',
+        });
+      }
       setTimeout(() => setSavedSuccess(false), 3500);
     }, 600);
   };
 
   return (
-    <AdminLayout>
-      <div className="max-w-5xl mx-auto space-y-6">
+    <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center space-x-2">
@@ -430,7 +440,7 @@ export default function ConfigPage() {
             </div>
           )}
         </form>
-      </div>
-    </AdminLayout>
+    </div>
   );
 }
+
