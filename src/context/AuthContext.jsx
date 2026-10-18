@@ -103,6 +103,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    window.dispatchEvent(new CustomEvent('auth:logout'));
     setLoading(true);
     try {
       await authService.logout();
