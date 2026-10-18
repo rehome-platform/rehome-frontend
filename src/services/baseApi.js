@@ -2,7 +2,7 @@
  * ReHome - Base API Service (Axios Instance with JWT Interceptors)
  */
 import axios from "axios";
-import { API_BASE_URL } from "../configs/api.config.js";
+import { API_BASE_URL, API_ENDPOINTS } from "../configs/api.config.js";
 
 export const TOKEN_KEY = "rehome_token";
 export const REFRESH_TOKEN_KEY = "rehome_refresh_token";
@@ -78,11 +78,20 @@ const baseApi = axios.create({
   timeout: 30000,
 });
 
+// Credential exchanges must not inherit another account's bearer token or retry it.
+function isCredentialExchange(url) {
+  const path = String(url || '').split(/[?#]/)[0].replace(/\/$/, '');
+  return [API_ENDPOINTS.AUTH.LOGIN, API_ENDPOINTS.AUTH.GOOGLE, API_ENDPOINTS.AUTH.REFRESH]
+    .some(endpoint => path.endsWith(endpoint));
+}
+
 // Request Interceptor: đính kèm Bearer token
 baseApi.interceptors.request.use(
   (config) => {
     const token = getToken();
-    if (token && !config.headers.Authorization) {
+    if (isCredentialExchange(config.url)) {
+      delete config.headers.Authorization;
+    } else if (token && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -111,12 +120,10 @@ baseApi.interceptors.response.use(
     const originalRequest = error.config;
     if (!originalRequest) return Promise.reject(error);
 
-    // Không refresh nếu chính request login hoặc refresh bị 401
-    const isAuthRoute =
-      originalRequest.url?.includes("/api/auth/login") ||
-      originalRequest.url?.includes("/api/auth/refresh");
+    const isAuthRoute = isCredentialExchange(originalRequest.url);
 
     if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute) {
+      originalRequest._retry = true;
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -128,9 +135,6 @@ baseApi.interceptors.response.use(
           .catch((err) => Promise.reject(err));
       }
 
-      originalRequest._retry = true;
-      isRefreshing = true;
-
       const refreshToken = getRefreshToken();
       if (!refreshToken) {
         removeTokens();
@@ -141,6 +145,7 @@ baseApi.interceptors.response.use(
         return Promise.reject(error);
       }
 
+      isRefreshing = true;
       try {
         const res = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
           refreshToken,
@@ -155,7 +160,6 @@ baseApi.interceptors.response.use(
           if (newRefreshToken) {
             saveRefreshToken(newRefreshToken);
           }
-          baseApi.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
           processQueue(null, newAccessToken);
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           return baseApi(originalRequest);

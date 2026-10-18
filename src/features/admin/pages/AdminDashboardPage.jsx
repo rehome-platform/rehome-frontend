@@ -170,7 +170,7 @@ export default function AdminDashboardPage() {
     setExporting(true);
     setTimeout(() => {
       setExporting(false);
-      alert('Đã xuất báo cáo Quỹ Nền Tảng & Doanh Thu ra file Excel thành công (theo UC-89)!');
+      alert('Đã xuất báo cáo Quỹ Nền Tảng & Doanh Thu ra file Excel thành công!');
     }, 800);
   };
 

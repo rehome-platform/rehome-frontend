@@ -15,6 +15,7 @@ function getFallbackForStatus(status, action = "thực hiện thao tác") {
     case 400:
       return `Dữ liệu yêu cầu không hợp lệ khi ${action}. Vui lòng kiểm tra lại thông tin gửi đi (HTTP 400).`;
     case 401:
+      if (action === 'đăng nhập') return 'Email hoặc mật khẩu không chính xác. Vui lòng thử lại (HTTP 401).';
       return `Phiên đăng nhập đã hết hạn hoặc chưa xác thực. Vui lòng đăng nhập lại (HTTP 401).`;
     case 403:
       return `Bạn không có quyền hoặc không đủ quyền hạn để ${action} (HTTP 403).`;
@@ -28,6 +29,8 @@ function getFallbackForStatus(status, action = "thực hiện thao tác") {
       return `File đính kèm hoặc ảnh upload vượt quá dung lượng cho phép (Tối đa 5MB) (HTTP 413).`;
     case 422:
       return `Dữ liệu gửi đi không thể xử lý do sai định dạng nghiệp vụ (HTTP 422).`;
+    case 429:
+      return `Bạn đã gửi quá nhiều yêu cầu khi ${action}. Vui lòng chờ rồi thử lại (HTTP 429).`;
     case 500:
     case 502:
     case 503:
@@ -44,6 +47,14 @@ function getFallbackForStatus(status, action = "thực hiện thao tác") {
  */
 export function formatApiError(err, action = "thực hiện thao tác") {
   if (!err) return getFallbackForStatus(500, action);
+
+  if (!err.response && (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT')) {
+    return getFallbackForStatus(408, action);
+  }
+
+  if (!err.response && (err.code === 'ERR_NETWORK' || err.message === 'Network Error')) {
+    return `Không thể kết nối đến máy chủ khi ${action}. Vui lòng kiểm tra lại kết nối mạng của bạn.`;
+  }
 
   if (err.name === "TypeError" && (err.message?.includes("fetch") || err.message?.includes("network") || err.message?.includes("Failed to fetch"))) {
     return `Không thể kết nối đến máy chủ khi ${action}. Vui lòng kiểm tra lại kết nối mạng của bạn.`;
@@ -62,7 +73,7 @@ export function formatApiError(err, action = "thực hiện thao tác") {
   }
 
   if (status > 0) {
-    if (!rawMsg || rawMsg.includes("java.") || rawMsg.includes(".Exception") || rawMsg.includes("<!DOCTYPE") || rawMsg.includes("<html")) {
+    if (!rawMsg || (err.isAxiosError && /^Request failed with status code \d+$/.test(rawMsg)) || rawMsg.includes("java.") || rawMsg.includes(".Exception") || rawMsg.includes("<!DOCTYPE") || rawMsg.includes("<html")) {
       return getFallbackForStatus(status, action);
     }
     return rawMsg;

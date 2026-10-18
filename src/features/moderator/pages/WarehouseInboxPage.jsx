@@ -70,7 +70,7 @@ export default function WarehouseInboxPage() {
         <div>
           <div className="flex items-center space-x-2">
             <span className="px-2.5 py-0.5 text-xs font-bold rounded bg-[#E8F5E9] text-[#006B2C]">
-              Hỗ trợ kho • UC-48
+              Hỗ trợ kho
             </span>
             <h1 className="text-2xl font-extrabold font-heading text-[#191C19]">
               Hộp Thư Hỗ Trợ Kho & Trao Đổi Ký Gửi

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import rehomeLogo from '../../../assets/logo/rehome-logo.png';
@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const authRequestPending = useRef(false);
 
   const { login, loginWithGoogle, isAuthenticated, user, loading } = useAuth();
   const navigate = useNavigate();
@@ -40,6 +41,7 @@ export default function LoginPage() {
 
   const handleLoginSubmit = async (e) => {
     if (e) e.preventDefault();
+    if (authRequestPending.current) return;
     setErrorMessage('');
 
     // Validation
@@ -54,6 +56,7 @@ export default function LoginPage() {
       return;
     }
 
+    authRequestPending.current = true;
     setIsLoading(true);
 
     try {
@@ -77,11 +80,14 @@ export default function LoginPage() {
     } catch (err) {
       setErrorMessage(err.message || 'Email hoặc mật khẩu không chính xác. Vui lòng thử lại.');
     } finally {
+      authRequestPending.current = false;
       setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
+    if (authRequestPending.current) return;
+    authRequestPending.current = true;
     setIsGoogleLoading(true);
     setErrorMessage('');
     try {
@@ -99,6 +105,7 @@ export default function LoginPage() {
     } catch (err) {
       setErrorMessage(err.message || 'Không thể đăng nhập bằng Google lúc này.');
     } finally {
+      authRequestPending.current = false;
       setIsGoogleLoading(false);
     }
   };
