@@ -37,7 +37,7 @@ const bundle = await build({
   `, resolveDir: project, loader: 'jsx' },
   bundle: true, write: false, format: 'iife', platform: 'browser',
   define: { 'process.env.NODE_ENV': '"production"', 'import.meta.env': '{}' },
-  loader: { '.png': 'dataurl', '.svg': 'dataurl' },
+  loader: { '.png': 'dataurl', '.svg': 'dataurl', '.css': 'empty' },
   plugins: [{ name: 'mock-auth-notifications', setup(plugin) {
     plugin.onResolve({ filter: /AuthContext\.jsx$|NotificationContext\.jsx$|auth\.service\.js$/ }, args => ({ path: args.path, namespace: 'fixture-mocks' }));
     plugin.onLoad({ filter: /.*/, namespace: 'fixture-mocks' }, args => ({ contents: args.path.includes('NotificationContext')

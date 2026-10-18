@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import Header from '../../../components/header.jsx';
 import Badge from '../../../components/common/Badge.jsx';
 import authService from '../services/auth.service.js';
 import { validatePhone, validatePassword, validateConfirmPassword } from '../../../utils/validators.js';
+import '../styles/profile-password.css';
 
 /**
  * Trang Hồ Sơ Cá Nhân & Quản Trị Tài Khoản Nhân Sự
@@ -35,6 +36,13 @@ export default function ProfilePage() {
   const [isChangingPass, setIsChangingPass] = useState(false);
   const [passSuccessMsg, setPassSuccessMsg] = useState('');
   const [passErrorMsg, setPassErrorMsg] = useState('');
+  const passwordRequestPending = useRef(false);
+  const passwordFormMounted = useRef(true);
+
+  useEffect(() => {
+    passwordFormMounted.current = true;
+    return () => { passwordFormMounted.current = false; };
+  }, []);
 
   // Sample avatars for quick selection
   const avatarPresets = [
@@ -119,6 +127,7 @@ export default function ProfilePage() {
   // Xử lý đổi mật khẩu qua POST /api/auth/password/change
   const handleChangePassword = async (e) => {
     e.preventDefault();
+    if (passwordRequestPending.current) return;
     setPassSuccessMsg('');
     setPassErrorMsg('');
 
@@ -139,22 +148,28 @@ export default function ProfilePage() {
       return;
     }
 
+    passwordRequestPending.current = true;
     setIsChangingPass(true);
     try {
-      const res = await changePassword({
+      await changePassword({
         oldPassword: currentPassword,
         newPassword: newPassword,
         newPasswordRepeat: confirmPassword,
       });
-      setPassSuccessMsg(res?.message || 'Đổi mật khẩu thành công! Mật khẩu mới đã được cập nhật.');
+      if (!passwordFormMounted.current) return;
+      setPassSuccessMsg('Mật khẩu đã được thay đổi thành công.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      setTimeout(() => setPassSuccessMsg(''), 5000);
+      setShowCurrentPass(false);
+      setShowNewPass(false);
     } catch (err) {
-      setPassErrorMsg(err.message || 'Không thể đổi mật khẩu. Vui lòng kiểm tra lại mật khẩu cũ.');
+      if (passwordFormMounted.current) {
+        setPassErrorMsg(err.message || 'Không thể đổi mật khẩu. Vui lòng kiểm tra lại mật khẩu cũ.');
+      }
     } finally {
-      setIsChangingPass(false);
+      passwordRequestPending.current = false;
+      if (passwordFormMounted.current) setIsChangingPass(false);
     }
   };
 
@@ -457,25 +472,28 @@ export default function ProfilePage() {
                 <div>
                   <h3 className="text-base font-bold text-[#1F2A37]">Đổi mật khẩu tài khoản</h3>
                   <p className="text-xs text-[#5B6776] mt-0.5">
-                    Gửi yêu cầu đổi mật khẩu bảo mật qua Backend API (POST /api/auth/password/change). Mật khẩu mới tối thiểu 6 ký tự.
+                    Mật khẩu mới tối thiểu 6 ký tự.
                   </p>
                 </div>
 
                 {passSuccessMsg && (
-                  <div className="p-3.5 rounded-xl bg-[#E8F5E9] border border-[#006B2C]/30 text-[#006B2C] text-xs font-semibold flex items-center gap-2">
-                    <span className="material-symbols-outlined text-base">check_circle</span>
-                    <span>{passSuccessMsg}</span>
+                  <div role="status" aria-atomic="true" className="p-3.5 rounded-xl bg-[#E8F5E9] border border-[#006B2C]/30 text-[#006B2C] text-xs font-semibold flex items-center gap-2">
+                    <span aria-hidden="true" className="material-symbols-outlined text-base">check_circle</span>
+                    <span className="flex-1">{passSuccessMsg}</span>
+                    <button type="button" aria-label="Đóng thông báo thành công" onClick={() => setPassSuccessMsg('')} className="p-1 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#006B2C]">
+                      <span aria-hidden="true" className="material-symbols-outlined text-base">close</span>
+                    </button>
                   </div>
                 )}
 
                 {passErrorMsg && (
-                  <div className="p-3.5 rounded-xl bg-[#FFF5F5] border border-[#D92D20]/30 text-[#D92D20] text-xs font-semibold flex items-center gap-2">
-                    <span className="material-symbols-outlined text-base">error</span>
+                  <div id="password-change-error" role="alert" className="p-3.5 rounded-xl bg-[#FFF5F5] border border-[#D92D20]/30 text-[#D92D20] text-xs font-semibold flex items-center gap-2">
+                    <span aria-hidden="true" className="material-symbols-outlined text-base">error</span>
                     <span>{passErrorMsg}</span>
                   </div>
                 )}
 
-                <form onSubmit={handleChangePassword} className="space-y-4">
+                <form id="profile-password-form" onSubmit={handleChangePassword} aria-busy={isChangingPass} aria-describedby={passErrorMsg ? 'password-change-error' : undefined} className="space-y-4">
                   {/* Mật khẩu hiện tại */}
                   <div>
                     <label htmlFor="current-pass-input" className="block text-xs font-semibold text-[#1F2A37] mb-1.5">
@@ -484,6 +502,8 @@ export default function ProfilePage() {
                     <div className="relative">
                       <input
                         id="current-pass-input"
+                        autoComplete="current-password"
+                        disabled={isChangingPass}
                         type={showCurrentPass ? 'text' : 'password'}
                         required
                         value={currentPassword}
@@ -493,11 +513,14 @@ export default function ProfilePage() {
                       />
                       <button
                         type="button"
-                        tabIndex={-1}
+                        disabled={isChangingPass}
+                        aria-label={showCurrentPass ? 'Ẩn mật khẩu hiện tại' : 'Hiện mật khẩu hiện tại'}
+                        aria-controls="current-pass-input"
+                        aria-pressed={showCurrentPass}
                         onClick={() => setShowCurrentPass(!showCurrentPass)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5B6776] hover:text-[#1F2A37]"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5B6776] hover:text-[#1F2A37] rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#006B2C]"
                       >
-                        <span className="material-symbols-outlined text-lg">
+                        <span aria-hidden="true" className="material-symbols-outlined text-lg">
                           {showCurrentPass ? 'visibility_off' : 'visibility'}
                         </span>
                       </button>
@@ -512,6 +535,8 @@ export default function ProfilePage() {
                     <div className="relative">
                       <input
                         id="new-pass-input"
+                        autoComplete="new-password"
+                        disabled={isChangingPass}
                         type={showNewPass ? 'text' : 'password'}
                         required
                         value={newPassword}
@@ -521,11 +546,14 @@ export default function ProfilePage() {
                       />
                       <button
                         type="button"
-                        tabIndex={-1}
+                        disabled={isChangingPass}
+                        aria-label={showNewPass ? 'Ẩn mật khẩu mới' : 'Hiện mật khẩu mới'}
+                        aria-controls="new-pass-input confirm-pass-input"
+                        aria-pressed={showNewPass}
                         onClick={() => setShowNewPass(!showNewPass)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5B6776] hover:text-[#1F2A37]"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5B6776] hover:text-[#1F2A37] rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#006B2C]"
                       >
-                        <span className="material-symbols-outlined text-lg">
+                        <span aria-hidden="true" className="material-symbols-outlined text-lg">
                           {showNewPass ? 'visibility_off' : 'visibility'}
                         </span>
                       </button>
@@ -539,6 +567,8 @@ export default function ProfilePage() {
                     </label>
                     <input
                       id="confirm-pass-input"
+                      autoComplete="new-password"
+                      disabled={isChangingPass}
                       type={showNewPass ? 'text' : 'password'}
                       required
                       value={confirmPassword}
@@ -557,8 +587,8 @@ export default function ProfilePage() {
                     >
                       {isChangingPass ? (
                         <>
-                          <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                          <span>Đang cập nhật...</span>
+                          <span aria-hidden="true" className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                          <span>Đang cập nhật mật khẩu...</span>
                         </>
                       ) : (
                         <>

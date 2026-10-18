@@ -85,25 +85,21 @@ export const AuthProvider = ({ children }) => {
   };
 
   const changePassword = async (passwordData) => {
-    setLoading(true);
-    try {
-      // Cho phép truyền object { oldPassword, newPassword, newPasswordRepeat }
-      // hoặc 2 tham số (oldPassword, newPassword)
-      let payload = {};
-      if (typeof passwordData === 'object') {
-        payload = passwordData;
-      } else {
-        const args = Array.from(arguments);
-        payload = {
-          oldPassword: args[0],
-          newPassword: args[1],
-          newPasswordRepeat: args[2] || args[1],
-        };
-      }
-      return await authService.changePassword(payload);
-    } finally {
-      setLoading(false);
+    // Profile owns this request's loading state; auth loading would unmount it.
+    // Cho phép truyền object { oldPassword, newPassword, newPasswordRepeat }
+    // hoặc 2 tham số (oldPassword, newPassword)
+    let payload = {};
+    if (typeof passwordData === 'object') {
+      payload = passwordData;
+    } else {
+      const args = Array.from(arguments);
+      payload = {
+        oldPassword: args[0],
+        newPassword: args[1],
+        newPasswordRepeat: args[2] || args[1],
+      };
     }
+    return await authService.changePassword(payload);
   };
 
   const logout = async () => {
