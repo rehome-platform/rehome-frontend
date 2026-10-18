@@ -1,90 +1,150 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-/**
- * ReHome Official Logo Component
- * Theo Design tokens.pdf:
- * "Ô vuông bo góc màu #006B2C, bên trong là áo thun trắng giữa hai mũi tên vòng, chữ ReHome bên phải."
- */
+const GREEN = '#286B35';
+const ORANGE = '#F5B642';
+
 export default function Logo({
-  size = 'md', // 'sm' | 'md' | 'lg' | 'xl'
+  size = 'md',
   showText = true,
   className = '',
   to = '/',
   subtitle = null,
 }) {
   const iconSizes = {
-    sm: 'w-8 h-8',
-    md: 'w-10 h-10',
-    lg: 'w-12 h-12',
-    xl: 'w-16 h-16',
+    sm: 'w-10 h-10',
+    md: 'w-12 h-12',
+    lg: 'w-16 h-16',
+    xl: 'w-20 h-20',
   };
 
   const textSizes = {
-    sm: 'text-lg',
-    md: 'text-xl',
-    lg: 'text-2xl',
-    xl: 'text-3xl',
+    sm: 'text-xl',
+    md: 'text-2xl',
+    lg: 'text-3xl',
+    xl: 'text-5xl',
   };
 
   const badgeRadius = {
-    sm: 'rounded-lg',
+    sm: 'rounded-xl',
     md: 'rounded-xl',
     lg: 'rounded-2xl',
-    xl: 'rounded-2xl',
+    xl: 'rounded-[1.5rem]',
   };
 
   const content = (
-    <div className={`inline-flex items-center gap-3 select-none ${className}`}>
-      {/* Icon: Ô vuông bo góc màu #006B2C với áo thun trắng và 2 mũi tên vòng */}
+    <div
+      className={`inline-flex items-center gap-3 select-none ${className}`}
+    >
+      {/* ReHome icon */}
       <div
-        className={`${iconSizes[size]} ${badgeRadius[size]} bg-[#006B2C] flex items-center justify-center shadow-sm relative overflow-hidden shrink-0 transition-transform group-hover:scale-105`}
+        className={`
+          ${iconSizes[size]}
+          ${badgeRadius[size]}
+          shrink-0 overflow-hidden
+          flex items-center justify-center
+          bg-[${GREEN}]
+        `}
+        style={{ backgroundColor: GREEN }}
       >
         <svg
-          viewBox="0 0 48 48"
+          viewBox="0 0 100 100"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="w-full h-full p-1.5"
+          className="w-full h-full"
+          aria-label="ReHome logo icon"
+          role="img"
         >
-          {/* Circular curved arrows around t-shirt */}
-          {/* Top curve */}
+          {/* Upper white circular arrow */}
           <path
-            d="M 14 18 C 17 11, 31 11, 34 18"
-            stroke="#FFFFFF"
-            strokeWidth="2.5"
+            d="M19 43
+               C25 22 42 15 57 18
+               C69 20 78 28 83 39"
+            stroke="white"
+            strokeWidth="4.5"
             strokeLinecap="round"
           />
-          <polygon points="32,13 36,18 30,19" fill="#FFFFFF" />
 
-          {/* Bottom curve */}
           <path
-            d="M 34 30 C 31 37, 17 37, 14 30"
-            stroke="#FFFFFF"
-            strokeWidth="2.5"
+            d="M72 34 L84 43 L87 28 Z"
+            fill="white"
+          />
+
+          {/* Lower orange circular arrow */}
+          <path
+            d="M81 56
+               C76 76 58 84 42 80
+               C30 77 21 68 17 57"
+            stroke={ORANGE}
+            strokeWidth="4.5"
             strokeLinecap="round"
           />
-          <polygon points="16,35 12,30 18,29" fill="#FFFFFF" />
 
-          {/* White T-shirt in center */}
           <path
-            d="M 19 19 L 22 17 C 23 18.5, 25 18.5, 26 17 L 29 19 L 27.5 22.5 L 25.8 21.8 L 25.8 30.5 L 22.2 30.5 L 22.2 21.8 L 20.5 22.5 Z"
-            fill="#FFFFFF"
+            d="M26 61 L15 51 L12 66 Z"
+            fill={ORANGE}
+          />
+
+          {/* White T-shirt */}
+          <path
+            d="
+              M39 34
+              L33 38
+              L29 45
+              L35 49
+              L39 45
+              L39 65
+              Q39 68 42 68
+              L60 68
+              Q63 68 63 65
+              L63 45
+              L67 49
+              L73 45
+              L69 38
+              L61 34
+              L56 37
+              Q50 42 44 37
+              Z
+            "
+            fill="white"
+          />
+
+          {/* Orange heart on the shirt */}
+          <path
+            d="
+              M50 51
+              C47 46 41 48 42 52
+              C42 56 50 61 50 61
+              C50 61 58 56 58 52
+              C59 48 53 46 50 51
+              Z
+            "
+            fill={ORANGE}
           />
         </svg>
       </div>
 
-      {/* Brand Text */}
+      {/* Brand name */}
       {showText && (
         <div className="flex flex-col">
-          <div className="flex items-center gap-1">
-            <span
-              className={`${textSizes[size]} font-extrabold font-heading text-[#006B2C] tracking-tight leading-tight`}
-            >
-              ReHome
-            </span>
-          </div>
+          <span
+            className={`
+              ${textSizes[size]}
+              font-extrabold
+              tracking-tight
+              leading-none
+            `}
+            style={{
+              color: GREEN,
+              fontFamily: 'Arial, Helvetica, sans-serif',
+            }}
+          >
+            ReHome
+          </span>
+
           {subtitle && (
-            <span className="text-[10px] sm:text-xs font-semibold text-[#5B6776] tracking-wide uppercase">
+            <span className="mt-1 text-[10px] sm:text-xs font-semibold text-[#5B6776] tracking-wide uppercase">
               {subtitle}
             </span>
           )}
@@ -95,7 +155,11 @@ export default function Logo({
 
   if (to) {
     return (
-      <Link to={to} className="group inline-flex items-center">
+      <Link
+        to={to}
+        className="group inline-flex items-center"
+        aria-label="ReHome - Trang chủ"
+      >
         {content}
       </Link>
     );

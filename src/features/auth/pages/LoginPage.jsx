@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.jsx';
-import Logo from '../../../components/common/Logo.jsx';
+import rehomeLogo from '../../../assets/logo/rehome-logo.png';
 import { validateEmail, validatePassword } from '../../../utils/validators.js';
 
 /**
@@ -109,7 +109,8 @@ export default function LoginPage() {
       <div className="w-full max-w-[440px] bg-white rounded-2xl border border-[#DDE5D9] shadow-card p-8 sm:p-10 my-auto transition-all duration-300">
         {/* Header Logo theo chuẩn Design tokens */}
         <div className="flex flex-col items-center text-center">
-          <Logo size="lg" showText={true} to={null} subtitle="Cổng Vận Hành Nội Bộ" />
+          <img src={rehomeLogo} alt="ReHome" className="w-full max-w-[280px] h-auto object-contain" />
+          <p className="mt-2 text-xs font-semibold text-[#5B6776] uppercase">Cổng Vận Hành Nội Bộ</p>
           <p className="text-xs text-[#5B6776] mt-3 max-w-xs leading-relaxed">
             Hệ thống đăng nhập dành cho Quản trị viên (Admin) và Nhân viên kiểm định kho (Moderator).
           </p>
@@ -119,6 +120,7 @@ export default function LoginPage() {
         {errorMessage && (
           <div
             id="login-error-alert"
+            role="alert"
             className="mt-6 p-3.5 rounded-xl bg-[#FFF5F5] border border-[#D92D20]/30 text-[#D92D20] text-xs font-medium flex items-start gap-2.5 animate-shake"
           >
             <span className="material-symbols-outlined text-base shrink-0 mt-0.5">error</span>
@@ -147,11 +149,10 @@ export default function LoginPage() {
                   if (errorMessage) setErrorMessage('');
                 }}
                 placeholder="name@example.com"
-                className={`w-full pl-3.5 pr-10 py-2.5 text-sm rounded-xl border transition-all outline-none ${
-                  errorMessage
+                className={`w-full pl-3.5 pr-10 py-2.5 text-sm rounded-xl border transition-all outline-none ${errorMessage
                     ? 'border-[#D92D20] bg-[#FFF5F5] focus:ring-2 focus:ring-[#D92D20]/20'
                     : 'border-[#DDE5D9] bg-white hover:border-[#006B2C]/50 focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15'
-                } text-[#1F2A37]`}
+                  } text-[#1F2A37]`}
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-lg text-[#5B6776] pointer-events-none">
                 mail
@@ -177,6 +178,7 @@ export default function LoginPage() {
             <div className="relative">
               <input
                 id="password-input"
+                autoComplete="current-password"
                 type={showPassword ? 'text' : 'password'}
                 required
                 disabled={isLoading || isGoogleLoading}
@@ -186,15 +188,16 @@ export default function LoginPage() {
                   if (errorMessage) setErrorMessage('');
                 }}
                 placeholder="••••••••"
-                className={`w-full pl-3.5 pr-10 py-2.5 text-sm rounded-xl border transition-all outline-none ${
-                  errorMessage
+                className={`w-full pl-3.5 pr-10 py-2.5 text-sm rounded-xl border transition-all outline-none ${errorMessage
                     ? 'border-[#D92D20] bg-[#FFF5F5] focus:ring-2 focus:ring-[#D92D20]/20'
                     : 'border-[#DDE5D9] bg-white hover:border-[#006B2C]/50 focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15'
-                } text-[#1F2A37]`}
+                  } text-[#1F2A37]`}
               />
               <button
                 type="button"
-                tabIndex={-1}
+                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                aria-controls="password-input"
+                aria-pressed={showPassword}
                 disabled={isLoading || isGoogleLoading}
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5B6776] hover:text-[#1F2A37] transition-colors p-0.5 rounded"
@@ -213,11 +216,10 @@ export default function LoginPage() {
               id="submit-login-button"
               type="submit"
               disabled={isLoading || isGoogleLoading}
-              className={`w-full py-3 px-4 rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 shadow-sm ${
-                isLoading
+              className={`w-full py-3 px-4 rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 shadow-sm ${isLoading
                   ? 'bg-[#006B2C]/80 cursor-wait'
                   : 'bg-[#006B2C] hover:bg-[#005523] active:scale-[0.99] hover:shadow'
-              }`}
+                }`}
             >
               {isLoading ? (
                 <>
@@ -252,7 +254,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Đăng nhập bằng Google Workspace */}
+        {/* Đăng nhập bằng Google */}
         <button
           type="button"
           id="google-login-button"
@@ -282,16 +284,9 @@ export default function LoginPage() {
               />
             </svg>
           )}
-          <span>Đăng nhập với Google Workspace</span>
+          <span>Đăng nhập với Google</span>
         </button>
 
-        {/* Lưu ý phân quyền theo Mục 2 tài liệu */}
-        <div className="p-3 bg-[#F6F9F4] rounded-xl border border-[#DDE5D9] text-[11px] text-[#5B6776] mt-6 leading-relaxed flex items-start gap-2">
-          <span className="material-symbols-outlined text-sm text-[#00685F] shrink-0 mt-0.5">info</span>
-          <div>
-            <strong>Lưu ý nghiệp vụ (Mục 2):</strong> Tác nhân <strong>Member</strong> (mua bán, ký gửi, thử đồ AI) và <strong>Tổ chức</strong> (chiến dịch từ thiện) thực thi trên <strong>Ứng dụng Di động (Mobile App)</strong>.
-          </div>
-        </div>
       </div>
 
       {/* Footer */}

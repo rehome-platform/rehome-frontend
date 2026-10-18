@@ -263,7 +263,7 @@ export const authService = {
   },
 
   /**
-   * F-007: Bước 1 - Quên mật khẩu: Gửi email OTP
+   * F-007: Bước 1 - Quên mật khẩu: Gửi liên kết qua email
    * POST /api/auth/password/forgot
    */
   forgotPassword: async (email) => {
@@ -278,7 +278,7 @@ export const authService = {
 
       return {
         success: true,
-        message: `Mã OTP xác thực đặt lại mật khẩu đã được gửi đến email ${email}. Vui lòng kiểm tra hộp thư đến.`,
+        message: 'Nếu email này được đăng ký và đủ điều kiện, bạn sẽ nhận được liên kết đặt lại mật khẩu. Vui lòng kiểm tra email và nhấn vào liên kết được gửi để đặt lại mật khẩu.',
       };
     } catch (err) {
       const msg = formatApiError(err, 'yêu cầu đặt lại mật khẩu');
@@ -339,8 +339,8 @@ export const authService = {
     if (!email || !resetToken) {
       throw new Error('Thiếu thông tin xác thực token đặt lại mật khẩu.');
     }
-    if (!newPassword || newPassword.length < 6) {
-      throw new Error('Mật khẩu mới phải có ít nhất 6 ký tự.');
+    if (!newPassword || !newPassword.trim() || newPassword.length < 6 || newPassword.length > 72) {
+      throw new Error('Mật khẩu mới phải có từ 6 đến 72 ký tự.');
     }
     if (newPassword !== confirmPassword) {
       throw new Error('Mật khẩu xác nhận không trùng khớp.');

@@ -9,6 +9,7 @@ import {
   ProfilePage,
 } from '../features/auth/pages/index.js';
 import PrivateRoute from './PrivateRoute.jsx';
+import ResetPassword from '../features/auth/pages/ResetPassword.jsx';
 
 // Moderator Pages (Cổng Vận Hành Kho & Kiểm Duyệt)
 import {
@@ -75,6 +76,7 @@ export default function AppRouter() {
       <Route path="/" element={<RootRedirect />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route
         path="/profile"
         element={

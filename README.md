@@ -72,7 +72,7 @@ rehome-frontend/
 │   │   │   ├── index.js                  # Export trung tâm icon
 │   │   │   └── verified.svg              # Huy hiệu xác minh chính hãng/tổ chức
 │   │   └── images/                       # Hình ảnh & logo thương hiệu
-│   │       └── logo.svg                  # Logo vector ReHome
+│   │       └── logo.png                 # Logo vector ReHome
 │   │
 │   ├── components/                       # UI Components dùng chung toàn ứng dụng
 │   │   ├── common/                       # Base components chuẩn Material Design

@@ -10,12 +10,12 @@ export default defineConfig({
     port: 3000,
     proxy: {
       "/api": {
-        target: "https://prm393.up.railway.app",
+        target: "https://re-backend-9a98.onrender.com",
         changeOrigin: true,
         secure: false,
       },
       "/ws": {
-        target: "https://prm393.up.railway.app",
+        target: "https://re-backend-9a98.onrender.com",
         ws: true,
         changeOrigin: true,
         secure: false,

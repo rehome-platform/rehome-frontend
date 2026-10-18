@@ -42,6 +42,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* BUG-P1-002: keep Login's custom visibility toggle as the only reveal control. */
+#password-input::-ms-reveal,
+#password-input::-ms-clear {
+  display: none;
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
