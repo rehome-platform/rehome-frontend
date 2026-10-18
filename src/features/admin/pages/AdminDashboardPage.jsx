@@ -175,7 +175,7 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       {/* Tab Switcher: Quỹ & Doanh thu VS Hoạt động & Tăng trưởng */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#DDE5D9] pb-4">
         <div className="flex flex-wrap items-center gap-2">
@@ -188,7 +188,7 @@ export default function AdminDashboardPage() {
             }`}
           >
             <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
-            <span>Quỹ nền tảng & Doanh thu (Mục 7 & 8)</span>
+            <span>Quỹ nền tảng & Doanh thu</span>
           </button>
           <button
             onClick={() => setActiveTab('activities')}
@@ -211,20 +211,12 @@ export default function AdminDashboardPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center space-x-2">
-              <span className="px-2.5 py-0.5 text-xs font-bold rounded bg-[#E8F5E9] text-[#006B2C]">
-                Mục 7 & 8 • Review 1
-              </span>
-              <h1 className="text-2xl font-extrabold font-heading text-[#191C19]">
-                Quỹ Nền Tảng & Tổng Quan Doanh Thu
-              </h1>
-            </div>
-            <p className="text-xs text-[#717971] mt-1">
-              Hệ thống ghi sổ kép: Quỹ nền tảng tập trung đối ứng với ví Member. Mọi dòng tiền đều minh bạch và đối soát được.
-            </p>
+            <h1 className="text-2xl font-extrabold font-heading text-[#191C19]">
+              Quỹ Nền Tảng & Tổng Quan Doanh Thu
+            </h1>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center bg-white border border-[#DDE5D9] rounded-xl p-1 text-xs font-medium">
               <button
                 onClick={() => setFilterPeriod('WEEK')}
@@ -259,13 +251,13 @@ export default function AdminDashboardPage() {
 
         {/* Backend Authorization Status & Real User Info */}
         <div className="p-4 rounded-2xl bg-white border border-[#DDE5D9] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${adminApiStatus.verified ? 'bg-[#E8F5E9] text-[#006B2C]' : 'bg-[#FFF3E0] text-[#D97706]'}`}>
               <span className="material-symbols-outlined text-xl">
                 {adminApiStatus.verified ? 'verified_user' : 'security'}
               </span>
             </div>
-            <div>
+            <div className="min-w-0 break-words">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-bold text-[#191C19]">Tài khoản Admin: {user?.fullName || user?.name || user?.email}</span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7]">
@@ -275,28 +267,18 @@ export default function AdminDashboardPage() {
                   Mã: {user?.memberCode || 'MB-ADMIN'}
                 </span>
               </div>
-              <p className="text-[11px] text-[#717971] mt-0.5">
-                {adminApiStatus.loading
-                  ? 'Đang kiểm tra kết nối API quản trị...'
-                  : adminApiStatus.verified
-                  ? `Đã kết nối Backend API (/api/admin/dashboard): "${adminApiStatus.message}"`
-                  : `Cảnh báo phân quyền: ${adminApiStatus.message}`}
-              </p>
+              {!adminApiStatus.loading && !adminApiStatus.verified && (
+                <p role="alert" className="text-[11px] text-[#717971] mt-0.5">
+                  Cảnh báo phân quyền: {adminApiStatus.message}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] font-semibold bg-[#F0F5EE] text-[#006B2C] border border-[#C8E6C9]">
-              <span className="w-2 h-2 rounded-full bg-[#006B2C] animate-pulse"></span>
-              <span>API Phase 1: Hoạt động</span>
+              <span className={`w-2 h-2 rounded-full ${adminApiStatus.loading ? 'bg-[#FEA619] animate-pulse' : adminApiStatus.verified ? 'bg-[#006B2C]' : 'bg-[#D92D20]'}`}></span>
+              <span role="status">{adminApiStatus.loading ? 'Đang kiểm tra quyền' : adminApiStatus.verified ? 'Đã xác thực quyền quản trị' : 'Cần kiểm tra quyền truy cập'}</span>
             </span>
-          </div>
-        </div>
-
-        {/* Chú thích ranh giới dữ liệu Phase 1 */}
-        <div className="p-3.5 bg-[#F6F9F4] rounded-xl border border-[#DDE5D9] text-[11px] text-[#5B6776] leading-relaxed flex items-start gap-2.5">
-          <span className="material-symbols-outlined text-base text-[#00685F] shrink-0 mt-0.5">info</span>
-          <div>
-            <strong>Ghi chú ranh giới triển khai:</strong> Toàn bộ luồng xác thực tài khoản, quyền hạn (RBAC) và phiên làm việc đã được kết nối với <strong>Backend API thật</strong>. Các số liệu thống kê quỹ và doanh thu bên dưới là <strong>giao diện mô phỏng chuẩn nghiệp vụ Mục 7 & 8</strong> phục vụ kiểm tra bố cục hiển thị; các endpoint thống kê tài chính tương ứng sẽ được tích hợp trong Phase 5 & 7 theo lộ trình.
           </div>
         </div>
 
@@ -320,19 +302,16 @@ export default function AdminDashboardPage() {
                 <p className="text-2xl font-black font-heading text-[#191C19] mt-1 tracking-tight">
                   {typeof m.value === 'number' ? formatCurrencyVND(m.value) : m.value}
                 </p>
-                <p className="text-[11px] text-[#717971] mt-2 border-t border-[#F0F4EE] pt-2 leading-relaxed">
-                  {m.description}
-                </p>
               </div>
             </div>
           ))}
         </div>
 
         {/* Chi tiết nguồn thu & Bút toán sổ kép */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Cột trái: Cơ cấu doanh thu theo Mục 8 */}
-          <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-[#DDE5D9] pb-3">
+        <div className="grid min-w-0 grid-cols-1 gap-6">
+          {/* Cơ cấu doanh thu */}
+          <div className="min-w-0 bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#DDE5D9] pb-3">
               <div>
                 <h3 className="text-base font-bold text-[#191C19]">Cơ Cấu Doanh Thu Nền Tảng</h3>
                 <p className="text-xs text-[#717971]">Phân bổ theo hoa hồng 3 kỳ & các nguồn thu khác</p>
@@ -344,35 +323,31 @@ export default function AdminDashboardPage() {
 
             <div className="space-y-3 pt-1">
               {revenueBreakdown.map((item, idx) => (
-                <div key={idx} className="p-3 rounded-xl bg-[#F8FAF8] border border-[#E8EEE6] flex items-center justify-between">
-                  <div>
+                <div key={idx} className="p-3 rounded-xl bg-[#F8FAF8] border border-[#E8EEE6] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="min-w-0 break-words">
                     <p className="text-xs font-bold text-[#191C19]">{item.source}</p>
                     <p className="text-[11px] text-[#717971] mt-0.5">{item.count} • {item.note}</p>
                   </div>
-                  <span className={`text-xs font-black ${item.amount < 0 ? 'text-[#BA1A1A]' : 'text-[#006B2C]'}`}>
+                  <span className={`shrink-0 text-xs font-black ${item.amount < 0 ? 'text-[#BA1A1A]' : 'text-[#006B2C]'}`}>
                     {item.amount > 0 ? `+${formatCurrencyVND(item.amount)}` : formatCurrencyVND(item.amount)}
                   </span>
                 </div>
               ))}
             </div>
 
-            <div className="p-3.5 rounded-xl bg-[#E8F5E9]/60 border border-[#C8E6C9] text-xs text-[#006B2C] leading-relaxed">
-              <strong>💡 Nguyên tắc tính:</strong> Tỷ lệ hoa hồng được chốt theo kỳ đang chạy lúc đơn được đặt. Phí vận chuyển trả trọn cho GHN, nền tảng không thu phần này.
-            </div>
           </div>
 
-          {/* Cột phải: Bút toán đối ứng sổ kép (Mục 7) */}
-          <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-[#DDE5D9] pb-3">
+          {/* Bút toán đối ứng sổ kép */}
+          <div className="min-w-0 bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#DDE5D9] pb-3">
               <div>
-                <h3 className="text-base font-bold text-[#191C19]">Nhật Ký Ghi Sổ Kép (Quỹ ↔ Ví Member)</h3>
-                <p className="text-xs text-[#717971]">Mọi giao dịch tiền đều có 2 dòng đối ứng cân bằng</p>
+                <h3 id="ledger-heading" className="text-base font-bold text-[#191C19]">Nhật Ký Ghi Sổ Kép (Quỹ → Ví Member)</h3>
               </div>
               <Badge variant="success">Đối soát: Khớp 100%</Badge>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+            <div role="region" aria-labelledby="ledger-heading" tabIndex={0} className="max-w-full overflow-x-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#006B2C]">
+              <table className="w-full min-w-[760px] text-left text-xs [overflow-wrap:anywhere]">
                 <thead>
                   <tr className="border-b border-[#DDE5D9] text-[#717971] font-semibold bg-[#F8FAF8]">
                     <th className="py-2.5 px-3">Thời gian / Mã</th>
@@ -410,10 +385,6 @@ export default function AdminDashboardPage() {
               </table>
             </div>
 
-            <div className="p-3 bg-[#F6F9F4] rounded-xl border border-[#DDE5D9] text-[11px] text-[#717971] flex items-center justify-between">
-              <span>Đồ án mô phỏng: Chi tiền là giao dịch giả lập, số dư quỹ trong hệ thống chỉ tăng, không giảm thật.</span>
-              <span className="font-semibold text-[#006B2C]">Mục 10 Giới hạn</span>
-            </div>
           </div>
         </div>
       </div>

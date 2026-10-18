@@ -57,22 +57,23 @@ Dự án áp dụng mô hình kiến trúc **Feature-based + Layered Architectur
 
 ## 3. Cấu trúc thư mục chi tiết (Folder Structure)
 
-Cây thư mục phản ánh chính xác cấu trúc mã nguồn hiện tại của dự án:
+Cây thư mục dưới đây được đối chiếu với các thư mục và file hiện có trong `rehome-frontend` (không bao gồm `node_modules/` và `dist/`):
 
 ```text
 rehome-frontend/
 ├── docs/                                 # Tài liệu đặc tả nghiệp vụ chính thức
-│   ├── ReHome - Kế hoạch triển khai code.pdf
-│   └── ReHome - Tài liệu tổng quan hệ thống (sau Review 1).pdf
+│   └── demo_account.md
 ├── public/                               # Tài nguyên công khai tĩnh
 ├── src/                                  # Toàn bộ mã nguồn ứng dụng Web
 │   ├── assets/                           # Tài nguyên tĩnh cục bộ
 │   │   ├── icons/                        # Icon SVG dùng chung
-│   │   │   ├── eco.svg                   # Biểu tượng thời trang tuần hoàn xanh
+│   │   │   ├── eco.png
 │   │   │   ├── index.js                  # Export trung tâm icon
 │   │   │   └── verified.svg              # Huy hiệu xác minh chính hãng/tổ chức
-│   │   └── images/                       # Hình ảnh & logo thương hiệu
-│   │       └── logo.png                 # Logo vector ReHome
+│   │   ├── images/
+│   │   │   └── logo.svg
+│   │   └── logo/
+│   │       └── rehome-logo.png
 │   │
 │   ├── components/                       # UI Components dùng chung toàn ứng dụng
 │   │   ├── common/                       # Base components chuẩn Material Design
@@ -80,6 +81,7 @@ rehome-frontend/
 │   │   │   ├── Button.jsx                # Nút bấm tương tác đa kích thước & biến thể
 │   │   │   ├── Dropdown.jsx              # Menu thả xuống chọn thao tác/bộ lọc
 │   │   │   ├── Input.jsx                 # Ô nhập liệu có validation & icon tích hợp
+│   │   │   ├── Logo.jsx
 │   │   │   ├── Modal.jsx                 # Hộp thoại modal tương tác đa năng
 │   │   │   ├── Table.jsx                 # Bảng dữ liệu chuẩn hóa hỗ trợ phân trang
 │   │   │   └── index.js                  # Export tập trung common components
@@ -110,8 +112,12 @@ rehome-frontend/
 │   │   │   │   ├── AdminSidebar.jsx           # Sidebar điều hướng các phân hệ Admin
 │   │   │   │   └── AdminWarehousesView.jsx    # Quản lý mạng lưới kho, chặn ẩn kho còn tồn (UC-82..85)
 │   │   │   ├── pages/
+│   │   │   │   ├── AdminAccountsPage.jsx
+│   │   │   │   ├── AdminAuditLogsPage.jsx
 │   │   │   │   ├── AdminDashboardPage.jsx     # Dashboard Quỹ nền tảng & Sổ kép đối ứng (Mục 7 & 8)
+│   │   │   │   ├── AdminModeratorsPage.jsx
 │   │   │   │   ├── AdminSystemPage.jsx        # Portal điều hành tập trung các phân hệ Admin
+│   │   │   │   ├── AdminWarehousesPage.jsx
 │   │   │   │   ├── ConfigPage.jsx             # Cấu hình 5 nhóm tham số chuẩn Mục 11 (UC-86, 87)
 │   │   │   │   └── index.js                   # Export tập trung các trang Admin
 │   │   │   └── services/
@@ -121,6 +127,8 @@ rehome-frontend/
 │   │   │   ├── pages/
 │   │   │   │   ├── ForgotPassword.jsx         # Khôi phục mật khẩu tài khoản nhân sự qua email (UC-02)
 │   │   │   │   ├── LoginPage.jsx              # Đăng nhập chuẩn Google Stitch (Admin, Moderator)
+│   │   │   │   ├── ProfilePage.jsx
+│   │   │   │   ├── ResetPassword.jsx
 │   │   │   │   └── index.js                   # Export tập trung các trang Auth
 │   │   │   └── services/
 │   │   │       └── auth.service.js            # API services đăng nhập, đăng xuất, refresh token
@@ -175,14 +183,22 @@ rehome-frontend/
 │   ├── App.jsx                           # Root Component bao bọc Providers và AppRouter
 │   └── main.jsx                          # Điểm khởi chạy React 18 với Vite
 │
+├── tests/
+│   ├── auth-recovery.test.mjs
+│   └── role-navigation.test.mjs
+│
 ├── .env                                  # Biến môi trường kết nối API Backend
 ├── .gitignore                            # Danh sách tệp loại trừ khỏi Git
 ├── index.html                            # HTML template nạp font Be Vietnam Pro & Google Icons
 ├── package.json                          # Khai báo dependencies và scripts
+├── package-lock.json
 ├── postcss.config.js                     # Cấu hình PostCSS cho TailwindCSS
+├── README.md
 ├── tailwind.config.js                    # Bảng màu thiết kế Material Design 3 (Google Stitch)
 └── vite.config.js                        # Cấu hình bundler Vite & alias đường dẫn
 ```
+
+`node_modules/` và `dist/` không được liệt kê vì là thư mục sinh ra khi cài đặt và build.
 
 ---
 
