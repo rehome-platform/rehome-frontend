@@ -88,6 +88,8 @@ function buildUser(memberData, accountMeData, claims) {
     role: normalizedRole,
     rawRole: rawRole,
     authorities: rawRole,
+    warehouseId: accountMeData.warehouseId ?? accountMeData.warehouse?.id ?? null,
+    warehouseName: accountMeData.warehouseName ?? accountMeData.warehouse?.name ?? '',
   };
 }
 

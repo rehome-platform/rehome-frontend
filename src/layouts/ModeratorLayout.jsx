@@ -10,14 +10,16 @@ export default function ModeratorLayout({ children }) {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const warehouseName = user?.warehouseName || user?.warehouse?.name || 'Chưa có thông tin kho';
 
   const navSections = [
     {
       group: 'Vận hành tại kho',
       items: [
         { path: '/moderator/counter', label: 'Quầy tiếp nhận & Kiểm định', icon: 'storefront', badge: null },
-        { path: '/moderator/queue', label: 'Hàng đợi duyệt form online', icon: 'pending_actions', badge: '12' },
+        { path: '/moderator/queue', label: 'Hàng đợi ký gửi', icon: 'pending_actions', badge: null },
         { path: '/moderator/inventory', label: 'Quản lý kho & Tồn kho', icon: 'inventory_2', badge: null },
+        { path: '/moderator/end-of-term', label: 'Xử lý cuối kỳ', icon: 'event_repeat', badge: null },
         { path: '/moderator/packing', label: 'Đóng gói & Tạo vận đơn GHN', icon: 'package_2', badge: '5' },
         { path: '/moderator/returns', label: 'Xử lý hàng trả & Nghi giả', icon: 'assignment_return', badge: '2' },
       ],
@@ -36,7 +38,8 @@ export default function ModeratorLayout({ children }) {
   return (
     <div className="min-h-screen flex bg-[#F8FAF8] text-[#191C19] font-sans antialiased">
       {/* Sidebar Desktop */}
-      <aside className="w-72 bg-white border-r border-[#E2E8E0] flex flex-col fixed inset-y-0 z-30 shadow-[1px_0_10px_rgba(0,0,0,0.02)]">
+      {isMobileMenuOpen && <button aria-label="Đóng menu" className="fixed inset-0 z-20 bg-black/40 lg:hidden" onClick={() => setIsMobileMenuOpen(false)} />}
+      <aside className={`${isMobileMenuOpen ? 'flex' : 'hidden'} lg:flex w-72 bg-white border-r border-[#E2E8E0] flex-col fixed inset-y-0 z-30 shadow-sm`}>
         {/* Brand Header */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-[#E2E8E0] bg-white">
           <Link to="/moderator/counter" className="flex items-center space-x-2.5">
@@ -53,7 +56,7 @@ export default function ModeratorLayout({ children }) {
             </div>
           </Link>
           <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-[#E8F5E9] text-[#006B2C] border border-[#C8E6C9]">
-            Kho Q7
+            {warehouseName}
           </span>
         </div>
 
@@ -65,11 +68,12 @@ export default function ModeratorLayout({ children }) {
                 {sec.group}
               </p>
               {sec.items.map((item) => {
-                const isActive = location.pathname === item.path;
+                const isActive = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
                 return (
                   <Link
                     key={item.path}
                     to={item.path}
+                    onClick={() => setIsMobileMenuOpen(false)}
                     className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
                       isActive
                         ? 'bg-[#006B2C] text-white shadow-sm'
@@ -77,7 +81,7 @@ export default function ModeratorLayout({ children }) {
                     }`}
                   >
                     <div className="flex items-center space-x-3">
-                      <span className={`material-symbols-outlined text-[20px] ${isActive ? 'text-white' : 'text-[#717971]'}`}>
+                      <span aria-hidden="true" className={`material-symbols-outlined text-[20px] ${isActive ? 'text-white' : 'text-[#717971]'}`}>
                         {item.icon}
                       </span>
                       <span>{item.label}</span>
@@ -120,6 +124,7 @@ export default function ModeratorLayout({ children }) {
             </Link>
             <button
               onClick={logout}
+              aria-label="Đăng xuất"
               className="p-1.5 text-[#717971] hover:text-[#BA1A1A] hover:bg-white rounded-lg border border-transparent hover:border-[#E2E8E0] transition-colors ml-1 shrink-0"
               title="Đăng xuất"
             >
@@ -130,15 +135,16 @@ export default function ModeratorLayout({ children }) {
       </aside>
 
       {/* Main Content Area */}
-      <div className="pl-72 flex-1 flex flex-col min-w-0">
+      <div className="lg:pl-72 flex-1 flex flex-col min-w-0">
         <header className="h-16 bg-white border-b border-[#E2E8E0] px-6 sm:px-8 flex items-center justify-between sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 min-w-0">
+            <button className="lg:hidden p-2 rounded-xl border border-neutral" aria-label="Mở menu" aria-expanded={isMobileMenuOpen} onClick={() => setIsMobileMenuOpen(value => !value)}>☰</button>
             <div className="flex items-center space-x-2 text-xs text-[#717971]">
-              <span>Kho Quận 7 - TP.HCM</span>
+              <span className="truncate">{warehouseName}</span>
               <span>•</span>
               <span className="inline-flex items-center text-[#006B2C] font-semibold">
                 <span className="w-2 h-2 rounded-full bg-[#006B2C] mr-1.5 animate-pulse"></span>
-                Đang trực quầy
+                Moderator
               </span>
             </div>
           </div>
@@ -162,6 +168,7 @@ export default function ModeratorLayout({ children }) {
         </header>
 
         <main className="flex-1 p-6 sm:p-8 overflow-y-auto">
+          <nav aria-label="Đường dẫn" className="mb-4 flex flex-wrap gap-2 text-xs text-textSecondary"><Link to="/moderator/counter" className="hover:underline">Vận hành kho</Link><span>/</span><span>{navSections.flatMap(section => section.items).find(item => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`))?.label || 'Chi tiết ký gửi'}</span></nav>
           {children}
         </main>
       </div>

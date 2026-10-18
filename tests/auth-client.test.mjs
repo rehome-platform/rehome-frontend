@@ -220,6 +220,7 @@ test('member response envelopes preserve profile precedence and explicit false v
       id: 12, accountId: 12, email: 'member@example.test', name: 'Member', fullName: 'Member',
       phone: '123', avatar: 'avatar', avatarUrl: 'avatar', memberCode: 'M12', emailVerified: false,
       role: 'admin', rawRole: ['ROLE_MODERATOR', 'ROLE_ADMIN'], authorities: ['ROLE_MODERATOR', 'ROLE_ADMIN'],
+      warehouseId: null, warehouseName: '',
     });
     assert.equal(h.client.getRefreshToken(), 'refresh');
     assert.equal(h.client.getUser().memberCode, 'M12');
