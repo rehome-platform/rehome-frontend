@@ -8,6 +8,89 @@ import { Card, Field, ResourceState } from './ui.jsx';
 import PhotoUpload from './PhotoUpload.jsx';
 import CatalogEditor from './CatalogEditor.jsx';
 
+function stockInChoices(data) {
+  return {
+    categories: data?.categories?.filter((item) => !item.hidden) || [],
+    brands: data?.brands?.filter((item) => !item.hidden) || [],
+  };
+}
+
+function readyForStockIn(receipt, recovery, uncertain) {
+  return (
+    canStockIn(receipt) && recovery.data?.checked && !recovery.data.product &&
+    !recovery.error && !uncertain
+  );
+}
+
+function validStockFields(values, choices) {
+  return (
+    values.name.trim() && values.size.trim() && values.shelf.trim() &&
+    choices.categories.some((item) => item.id === values.categoryId) &&
+    choices.brands.some((item) => item.id === values.brandId)
+  );
+}
+
+function StockInFields({ values, setField, choices, error }) {
+  const { name, size, shelf, categoryId, brandId } = values;
+  const { categories, brands } = choices;
+  const errors = error?.fields || {};
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <Field
+        label="Tên sản phẩm"
+        required
+        value={name}
+        onChange={(event) => setField('name', event.target.value)}
+        error={errors.name}
+      />
+      <Field
+        label="Size"
+        required
+        value={size}
+        onChange={(event) => setField('size', event.target.value)}
+        error={errors.size}
+      />
+      <Field
+        label="Vị trí kệ"
+        required
+        value={shelf}
+        onChange={(event) => setField('shelf', event.target.value)}
+        error={errors.shelfLocation}
+      />
+      <Field label="Danh mục">
+        <select
+          className="w-full rounded-xl border-neutral"
+          required
+          value={categoryId}
+          onChange={(event) => setField('categoryId', event.target.value)}
+        >
+          <option value="">Chọn danh mục</option>
+          {categories.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Thương hiệu">
+        <select
+          className="w-full rounded-xl border-neutral"
+          required
+          value={brandId}
+          onChange={(event) => setField('brandId', event.target.value)}
+        >
+          <option value="">Chọn thương hiệu</option>
+          {brands.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+    </div>
+  );
+}
+
 export default function StockInForm({ receipt, onSuccess }) {
   const catalog = useResource((options) => catalogService.list(options), []);
   const recovery = useResource(
@@ -17,12 +100,12 @@ export default function StockInForm({ receipt, onSuccess }) {
     }),
     [receipt.receiptId],
   );
-  const [name, setName] = useState(''),
-    [size, setSize] = useState(''),
-    [shelf, setShelf] = useState('');
-  const [categoryId, setCategory] = useState(''),
-    [brandId, setBrand] = useState(''),
-    [quickAdd, setQuickAdd] = useState(false);
+  const [values, setValues] = useState({
+    name: '', size: '', shelf: '', categoryId: '', brandId: '',
+  });
+  const { name, size, shelf, categoryId, brandId } = values;
+  const setField = (key, value) => setValues((previous) => ({ ...previous, [key]: value }));
+  const [quickAdd, setQuickAdd] = useState(false);
   const [photos, setPhotos] = useState([]),
     [photosPending, setPhotosPending] = useState(false),
     [uncertain, setUncertain] = useState(false);
@@ -30,22 +113,10 @@ export default function StockInForm({ receipt, onSuccess }) {
     setPhotos(urls);
     setPhotosPending(pending);
   }, []);
-  const categories = catalog.data?.categories?.filter((item) => !item.hidden) || [],
-    brands = catalog.data?.brands?.filter((item) => !item.hidden) || [];
+  const choices = stockInChoices(catalog.data);
   const valid =
-    canStockIn(receipt) &&
-    recovery.data?.checked &&
-    !recovery.data.product &&
-    !recovery.error &&
-    !uncertain &&
-    name.trim() &&
-    size.trim() &&
-    shelf.trim() &&
-    categories.some((item) => item.id === categoryId) &&
-    brands.some((item) => item.id === brandId) &&
-    photos.length &&
-    !photosPending;
-  const errors = recovery.error?.fields || {};
+    readyForStockIn(receipt, recovery, uncertain) &&
+    validStockFields(values, choices) && photos.length && !photosPending;
   return (
     <Card title="Nhập kho từ biên nhận đã xác nhận">
       <ResourceState resource={catalog} />
@@ -81,59 +152,12 @@ export default function StockInForm({ receipt, onSuccess }) {
             );
           }}
         >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field
-              label="Tên sản phẩm"
-              required
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              error={errors.name}
-            />
-            <Field
-              label="Size"
-              required
-              value={size}
-              onChange={(event) => setSize(event.target.value)}
-              error={errors.size}
-            />
-            <Field
-              label="Vị trí kệ"
-              required
-              value={shelf}
-              onChange={(event) => setShelf(event.target.value)}
-              error={errors.shelfLocation}
-            />
-            <Field label="Danh mục">
-              <select
-                className="w-full rounded-xl border-neutral"
-                required
-                value={categoryId}
-                onChange={(event) => setCategory(event.target.value)}
-              >
-                <option value="">Chọn danh mục</option>
-                {categories.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Thương hiệu">
-              <select
-                className="w-full rounded-xl border-neutral"
-                required
-                value={brandId}
-                onChange={(event) => setBrand(event.target.value)}
-              >
-                <option value="">Chọn thương hiệu</option>
-                {brands.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </div>
+          <StockInFields
+            values={values}
+            setField={setField}
+            choices={choices}
+            error={recovery.error}
+          />
           <Button variant="outline" onClick={() => setQuickAdd(true)}>
             Thêm nhanh thương hiệu
           </Button>
@@ -167,7 +191,7 @@ export default function StockInForm({ receipt, onSuccess }) {
           onClose={() => setQuickAdd(false)}
           onSaved={(item) => {
             catalog.refresh();
-            setBrand(item.id);
+            setField('brandId', item.id);
           }}
         />
       )}

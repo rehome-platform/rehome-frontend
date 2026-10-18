@@ -71,6 +71,14 @@ export function usePhase2() {
   return useContext(Session);
 }
 
+function deniesResourceAccess(error) {
+  return [401, 403, 404].includes(error.status);
+}
+
+function hasUncertainOutcome(error) {
+  return (!error.status || error.status >= 500) && error.code !== 'CONTRACT_BLOCKED';
+}
+
 export function useResource(
   loader,
   dependencies = [],
@@ -125,44 +133,46 @@ export function useResource(
     session.signal.addEventListener('abort', abort);
     setPollExpired(false);
     setState({ data: null, loading: true, error: null });
+    const isStale = () => controller.signal.aborted || current !== epoch.current;
+    const recordFailure = (error) => {
+      failures++;
+      const normalized = normalizeError(error);
+      terminal = deniesResourceAccess(normalized) || normalized.code === 'CONTRACT_BLOCKED';
+      setState((previous) => ({
+        data: deniesResourceAccess(normalized) ? null : previous.data,
+        loading: false,
+        error: normalized,
+      }));
+    };
+    const canPoll = () =>
+      poll && !terminal && !complete && !controller.signal.aborted &&
+      document.visibilityState !== 'hidden';
+    const scheduleNext = () => {
+      if (!canPoll()) return;
+      if (Date.now() - started >= 600000) {
+        setPollExpired(true);
+        return;
+      }
+      timer = setTimeout(load, Math.min(30000, 5000 * 2 ** failures));
+    };
     const load = async () => {
       clearTimeout(timer);
       if (controller.signal.aborted || inFlight) return;
       inFlight = true;
       try {
         const data = await loaderRef.current({ signal: controller.signal, scope: session.scope });
-        if (controller.signal.aborted || current !== epoch.current) return;
+        if (isStale()) return;
         failures = 0;
         complete = doneRef.current(data);
         terminal = false;
         setState({ data, loading: false, error: null });
       } catch (error) {
-        if (controller.signal.aborted || current !== epoch.current) return;
-        failures++;
-        const normalized = normalizeError(error);
-        terminal =
-          [401, 403, 404].includes(normalized.status) || normalized.code === 'CONTRACT_BLOCKED';
-        setState((previous) => ({
-          data: [401, 403, 404].includes(normalized.status) ? null : previous.data,
-          loading: false,
-          error: normalized,
-        }));
+        if (isStale()) return;
+        recordFailure(error);
       } finally {
         inFlight = false;
       }
-      if (
-        poll &&
-        !terminal &&
-        !complete &&
-        !controller.signal.aborted &&
-        document.visibilityState !== 'hidden'
-      ) {
-        if (Date.now() - started >= 600000) {
-          setPollExpired(true);
-          return;
-        }
-        timer = setTimeout(load, Math.min(30000, 5000 * 2 ** failures));
-      }
+      scheduleNext();
     };
     const visibility = () => {
       clearTimeout(timer);
@@ -182,6 +192,15 @@ export function useResource(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.scope, session.signal, enabled, poll, version, ...dependencies]);
 
+  const recordMutationFailure = (error, onUncertain) => {
+    const normalized = normalizeError(error);
+    if (deniesResourceAccess(normalized))
+      setState({ data: null, loading: false, error: null });
+    if (normalized.status === 409) refresh();
+    if (hasUncertainOutcome(normalized)) onUncertain?.();
+    // Keep action errors separate from refresh to avoid erasing a conflict message.
+    setActionError(normalized);
+  };
   const mutate = async (action, { onSuccess, onUncertain } = {}) => {
     if (mutationLock.current || session.signal.aborted) return false;
     const controller = new AbortController();
@@ -200,17 +219,7 @@ export function useResource(
       return true;
     } catch (error) {
       if (controller.signal.aborted) return false;
-      const normalized = normalizeError(error);
-      if ([401, 403, 404].includes(normalized.status))
-        setState({ data: null, loading: false, error: null });
-      if (normalized.status === 409) refresh();
-      if (
-        (!normalized.status || normalized.status >= 500) &&
-        normalized.code !== 'CONTRACT_BLOCKED'
-      )
-        onUncertain?.();
-      // Keep action errors separate from refresh to avoid erasing a conflict message.
-      setActionError(normalized);
+      recordMutationFailure(error, onUncertain);
       return false;
     } finally {
       mutationLock.current = false;

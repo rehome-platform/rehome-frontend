@@ -72,24 +72,9 @@ function RootRedirect() {
   return <Navigate to="/login" replace />;
 }
 
-export default function AppRouter() {
-  const location = useLocation();
+function moderatorRoutes(pathname) {
   return (
-    <Routes>
-      {/* 1. Public & Auth Routes (Chỉ cho Admin & Moderator) */}
-      <Route path="/" element={<RootRedirect />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route
-        path="/profile"
-        element={
-          <PrivateRoute>
-            <ProfilePage />
-          </PrivateRoute>
-        }
-      />
-
+    <>
       {/* 2. Moderator Routes (Chi nhánh kho & Kiểm duyệt) */}
       <Route
         path="/moderator"
@@ -131,9 +116,30 @@ export default function AppRouter() {
           </PrivateRoute>
         }
       />
-      <Route path="/moderator/consignments/:formId" element={<PrivateRoute roles={['staff', 'admin']}><ConsignmentDetailPage key={location.pathname} /></PrivateRoute>} />
-      <Route path="/moderator/inventory/:sku" element={<PrivateRoute roles={['staff', 'admin']}><InventoryDetailPage key={location.pathname} /></PrivateRoute>} />
-      <Route path="/moderator/end-of-term" element={<PrivateRoute roles={['staff', 'admin']}><EndOfTermPage /></PrivateRoute>} />
+      <Route
+        path="/moderator/consignments/:formId"
+        element={
+          <PrivateRoute roles={['staff', 'admin']}>
+            <ConsignmentDetailPage key={pathname} />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/moderator/inventory/:sku"
+        element={
+          <PrivateRoute roles={['staff', 'admin']}>
+            <InventoryDetailPage key={pathname} />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/moderator/end-of-term"
+        element={
+          <PrivateRoute roles={['staff', 'admin']}>
+            <EndOfTermPage />
+          </PrivateRoute>
+        }
+      />
       <Route
         path="/moderator/returns"
         element={
@@ -174,6 +180,29 @@ export default function AppRouter() {
           </PrivateRoute>
         }
       />
+    </>
+  );
+}
+
+export default function AppRouter() {
+  const location = useLocation();
+  return (
+    <Routes>
+      {/* 1. Public & Auth Routes (Chỉ cho Admin & Moderator) */}
+      <Route path="/" element={<RootRedirect />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route
+        path="/profile"
+        element={
+          <PrivateRoute>
+            <ProfilePage />
+          </PrivateRoute>
+        }
+      />
+
+      {moderatorRoutes(location.pathname)}
 
       {/* 3. Admin Routes (Quản trị hệ thống - Dùng chung MỘT Shared AdminLayout) */}
       <Route

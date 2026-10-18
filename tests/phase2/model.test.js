@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   canStockIn,
+  Phase2Error,
   lookupParams,
   normalizeError,
   ownsClaim,
@@ -10,6 +11,20 @@ import {
 } from '../../src/features/moderator/phase2/model.js';
 
 describe('Phase 2 boundary rules', () => {
+  it('preserves existing errors and error-body fallback precedence', () => {
+    const existing = new Phase2Error('Original', 409, 'CLAIM', { id: 'Invalid' });
+    expect(normalizeError(existing)).toBe(existing);
+    expect(normalizeError({ response: { status: 403, data: { message: 'Server' } } }))
+      .toMatchObject({ message: 'Bạn không có quyền truy cập dữ liệu của kho này.', status: 403 });
+    expect(normalizeError({ response: { status: 500, data: {
+      message: 'Server', code: 'FAILED', fieldErrors: {}, errors: { name: 'Ignored' },
+    } } })).toMatchObject({ message: 'Server', status: 500, code: 'FAILED', fields: {} });
+    expect(normalizeError({ response: { data: { errors: { name: 'Required' } } } }))
+      .toMatchObject({ status: 0, code: '', fields: { name: 'Required' } });
+    expect(normalizeError(new Error('offline')).message).toBe(
+      'Không thể kết nối máy chủ. Hãy tải lại trạng thái trước khi thử tiếp.',
+    );
+  });
   it('accepts empty 204 and both supported envelopes without losing false values', () => {
     expect(unwrap({ status: 204 })).toBeNull();
     expect(unwrap({ status: 200, data: { data: false } })).toBe(false);

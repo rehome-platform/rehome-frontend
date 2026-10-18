@@ -20,20 +20,25 @@ export class Phase2Error extends Error {
   }
 }
 
-export function normalizeError(error) {
-  if (error instanceof Phase2Error) return error;
-  const body = error.response?.data ?? {};
-  const status = error.response?.status ?? 0;
+function errorMessage(status, body) {
   const messages = {
     403: 'Bạn không có quyền truy cập dữ liệu của kho này.',
     404: 'Không tìm thấy dữ liệu.',
     409: 'Dữ liệu đã thay đổi. Vui lòng kiểm tra trạng thái mới.',
     422: 'Vui lòng kiểm tra thông tin nhập.',
   };
+  return (
+    messages[status] || body.message ||
+    'Không thể kết nối máy chủ. Hãy tải lại trạng thái trước khi thử tiếp.'
+  );
+}
+
+export function normalizeError(error) {
+  if (error instanceof Phase2Error) return error;
+  const body = error.response?.data ?? {};
+  const status = error.response?.status ?? 0;
   return new Phase2Error(
-    messages[status] ||
-      body.message ||
-      'Không thể kết nối máy chủ. Hãy tải lại trạng thái trước khi thử tiếp.',
+    errorMessage(status, body),
     status,
     body.code || '',
     body.fieldErrors || body.errors || {},
