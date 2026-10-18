@@ -131,7 +131,7 @@ export default function OrgVerificationPage() {
           <div>
             <div className="flex items-center space-x-2">
               <span className="px-2.5 py-0.5 text-xs font-bold rounded bg-[#E8F5E9] text-[#006B2C]">
-                Mục 9 • UC-69, UC-70
+                Mục 9
               </span>
               <h1 className="text-2xl font-extrabold font-heading text-[#191C19]">
                 Xác Minh Hồ Sơ Tổ Chức Từ Thiện

@@ -93,7 +93,7 @@ export default function WarehouseInventoryPage() {
 
   const handleClearUnclaimed = (id) => {
     setInventory(inventory.filter((item) => item.id !== id));
-    alert('Đã bàn giao món hàng vô thừa nhận cho tổ chức từ thiện đối tác theo biên bản thanh lý (UC-67)!');
+    alert('Đã bàn giao món hàng vô thừa nhận cho tổ chức từ thiện đối tác theo biên bản thanh lý!');
   };
 
   return (
@@ -103,7 +103,7 @@ export default function WarehouseInventoryPage() {
           <div>
             <div className="flex items-center space-x-2">
               <span className="px-2.5 py-0.5 text-xs font-bold rounded bg-[#E8F5E9] text-[#006B2C]">
-                Kho Quận 7 • UC-63, 64, 67
+                Kho Quận 7
               </span>
               <h1 className="text-2xl font-extrabold font-heading text-[#191C19]">
                 Quản Lý Kho Chi Nhánh & Tồn Kho
@@ -214,7 +214,7 @@ export default function WarehouseInventoryPage() {
                           className="bg-[#00685F] text-white text-[11px]"
                           onClick={() => handleClearUnclaimed(item.id)}
                         >
-                          Chuyển từ thiện (UC-67)
+                          Chuyển từ thiện
                         </Button>
                       ) : (
                         <>

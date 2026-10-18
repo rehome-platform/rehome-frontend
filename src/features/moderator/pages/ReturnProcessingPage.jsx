@@ -73,7 +73,7 @@ export default function ReturnProcessingPage() {
         <div>
           <div className="flex items-center space-x-2">
             <span className="px-2.5 py-0.5 text-xs font-bold rounded bg-[#E8F5E9] text-[#006B2C]">
-              Kiểm định hàng trả • UC-68
+              Kiểm định hàng trả
             </span>
             <h1 className="text-2xl font-extrabold font-heading text-[#191C19]">
               Xử Lý Yêu Cầu Trả Hàng & Thẩm Định Hàng Trả

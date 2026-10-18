@@ -96,7 +96,7 @@ export default function PackingOrdersPage() {
         <div>
           <div className="flex items-center space-x-2">
             <span className="px-2.5 py-0.5 text-xs font-bold rounded bg-[#E8F5E9] text-[#006B2C]">
-              Xuất kho GHN • UC-65
+              Xuất kho GHN
             </span>
             <h1 className="text-2xl font-extrabold font-heading text-[#191C19]">
               Đóng Gói Xuất Kho & Tạo Vận Đơn GHN
