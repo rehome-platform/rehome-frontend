@@ -1,7 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext.jsx';
+import { ROLES } from '../configs/role.config.js';
 
 export default function Footer() {
+  const { user, isAuthenticated } = useAuth();
+  const isAdmin = isAuthenticated && user?.role === ROLES.ADMIN;
+  const isModerator = isAuthenticated && (user?.role === ROLES.MODERATOR || user?.role === 'moderator');
   return (
     <footer className="w-full bg-white border-t border-[#DDE5D9] py-8 mt-auto text-[#191C19]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -25,10 +30,14 @@ export default function Footer() {
               Cổng Điều Hành Web
             </h4>
             <ul className="space-y-2 text-[#717971]">
-              <li><Link to="/moderator/counter" className="hover:text-[#006B2C] transition-colors">Quầy Kho & Kiểm định (Moderator)</Link></li>
-              <li><Link to="/moderator/queue" className="hover:text-[#006B2C] transition-colors">Hàng đợi duyệt form online</Link></li>
-              <li><Link to="/admin" className="hover:text-[#006B2C] transition-colors">Quản trị & Quỹ nền tảng (Admin)</Link></li>
-              <li><Link to="/admin/configs" className="hover:text-[#006B2C] transition-colors">Cấu hình tham số Mục 11</Link></li>
+              {isModerator && <>
+                <li><Link to="/moderator/counter" className="hover:text-[#006B2C] transition-colors">Quầy Kho & Kiểm định (Moderator)</Link></li>
+                <li><Link to="/moderator/queue" className="hover:text-[#006B2C] transition-colors">Hàng đợi duyệt form online</Link></li>
+              </>}
+              {isAdmin && <>
+                <li><Link to="/admin" className="hover:text-[#006B2C] transition-colors">Quản trị & Quỹ nền tảng (Admin)</Link></li>
+                <li><Link to="/admin/configs" className="hover:text-[#006B2C] transition-colors">Cấu hình tham số Mục 11</Link></li>
+              </>}
             </ul>
           </div>
 

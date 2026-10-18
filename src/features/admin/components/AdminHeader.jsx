@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.jsx';
 
 /**
@@ -14,7 +14,6 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
   const location = useLocation();
-  const navigate = useNavigate();
   const { user, logout } = useAuth();
 
   const handleLogout = async () => {
@@ -100,6 +99,8 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
             onClick={() => setShowDropdown((prev) => !prev)}
             className="flex items-center gap-2.5 sm:gap-3 p-1.5 pl-2.5 sm:pl-3 rounded-2xl hover:bg-[#F6F9F4] cursor-pointer transition-colors border border-transparent hover:border-[#DDE5D9] select-none"
             role="button"
+            aria-expanded={showDropdown}
+            aria-controls="admin-account-dropdown"
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -140,7 +141,7 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
 
           {/* Profile Dropdown Menu */}
           {showDropdown && (
-            <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl border border-[#DDE5D9] shadow-xl py-2 z-40 animate-fadeIn">
+            <div id="admin-account-dropdown" className="absolute right-0 mt-2 w-64 bg-white rounded-2xl border border-[#DDE5D9] shadow-xl py-2 z-40 animate-fadeIn">
               <div className="px-4 py-2.5 border-b border-[#DDE5D9]/60">
                 <p className="text-xs font-bold text-[#1F2A37] truncate">{displayName}</p>
                 <p className="text-[11px] text-[#5B6776] truncate">{displayEmail}</p>
@@ -159,14 +160,6 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
                   <span>Hồ sơ cá nhân & Đổi mật khẩu</span>
                 </Link>
 
-                <Link
-                  to="/moderator/counter"
-                  onClick={() => setShowDropdown(false)}
-                  className="w-full px-4 py-2 text-left text-xs text-[#1F2A37] hover:bg-[#F6F9F4] hover:text-[#006B2C] flex items-center gap-2.5 transition-colors font-medium"
-                >
-                  <span className="material-symbols-outlined text-base text-[#5B6776]">warehouse</span>
-                  <span>Cổng vận hành kho (Moderator)</span>
-                </Link>
               </div>
 
               <div className="border-t border-[#DDE5D9]/60 my-1"></div>
