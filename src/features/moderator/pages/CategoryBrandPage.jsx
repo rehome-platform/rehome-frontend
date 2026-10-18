@@ -72,7 +72,7 @@ export default function CategoryBrandPage() {
       setCategories([...categories, newCat]);
     }
     setIsCategoryModalOpen(false);
-    alert('Đã lưu cấu hình danh mục thành công (F-143, F-144)!');
+    alert('Đã lưu cấu hình danh mục thành công!');
   };
 
   const handleToggleHideCategory = (cat) => {
@@ -80,7 +80,7 @@ export default function CategoryBrandPage() {
     setCategories(categories.map((c) =>
       c.id === cat.id ? { ...c, status: nextStatus } : c
     ));
-    alert(`Đã ${nextStatus === 'HIDDEN' ? 'ẩn' : 'mở lại'} danh mục "${cat.name}". Dữ liệu sản phẩm cũ vẫn được bảo lưu (F-145).`);
+    alert(`Đã ${nextStatus === 'HIDDEN' ? 'ẩn' : 'mở lại'} danh mục "${cat.name}". Dữ liệu sản phẩm cũ vẫn được bảo lưu.`);
   };
 
   const handleSaveBrand = (e) => {
@@ -97,7 +97,7 @@ export default function CategoryBrandPage() {
     setIsBrandModalOpen(false);
     setBrandName('');
     setBrandOrigin('');
-    alert('Đã thêm thương hiệu mới vào danh sách được phép ký gửi (F-121, F-143)!');
+    alert('Đã thêm thương hiệu mới vào danh sách được phép ký gửi!');
   };
 
   return (
@@ -107,7 +107,7 @@ export default function CategoryBrandPage() {
           <div>
             <div className="flex items-center space-x-2">
               <span className="px-2.5 py-0.5 text-xs font-bold rounded bg-[#E8F5E9] text-[#006B2C]">
-                Cấu hình kho • F-142..F-145
+                Cấu hình kho
               </span>
               <h1 className="text-2xl font-extrabold font-heading text-[#191C19]">
                 Quản Lý Danh Mục & Thương Hiệu
@@ -150,7 +150,7 @@ export default function CategoryBrandPage() {
                 className="bg-[#006B2C] text-white text-xs"
               >
                 <span className="material-symbols-outlined text-sm mr-1">add</span>
-                Thêm danh mục mới (F-143)
+                Thêm danh mục mới
               </Button>
             </div>
 
@@ -224,7 +224,7 @@ export default function CategoryBrandPage() {
                 className="bg-[#006B2C] text-white text-xs"
               >
                 <span className="material-symbols-outlined text-sm mr-1">add</span>
-                Thêm thương hiệu (F-121)
+                Thêm thương hiệu
               </Button>
             </div>
 
@@ -284,7 +284,7 @@ export default function CategoryBrandPage() {
         <Modal
           isOpen={isBrandModalOpen}
           onClose={() => setIsBrandModalOpen(false)}
-          title="Thêm thương hiệu ký gửi mới (F-121)"
+          title="Thêm thương hiệu ký gửi mới"
         >
           <form onSubmit={handleSaveBrand} className="space-y-4">
             <Input

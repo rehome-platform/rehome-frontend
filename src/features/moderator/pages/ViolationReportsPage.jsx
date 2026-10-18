@@ -75,7 +75,7 @@ export default function ViolationReportsPage() {
         <div>
           <div className="flex items-center space-x-2">
             <span className="px-2.5 py-0.5 text-xs font-bold rounded bg-[#E8F5E9] text-[#006B2C]">
-              Mục 13 • F-141, UC-71
+              Mục 13 • UC-71
             </span>
             <h1 className="text-2xl font-extrabold font-heading text-[#191C19]">
               Báo Cáo Vi Phạm & Kiểm Duyệt Nội Dung

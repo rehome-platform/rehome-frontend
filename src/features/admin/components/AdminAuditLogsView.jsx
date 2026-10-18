@@ -189,9 +189,6 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
           <h1 className="text-2xl font-bold text-[#191C19] font-heading">
             Nhật ký hệ thống
           </h1>
-          <p className="text-xs text-[#717971] mt-0.5">
-            Ghi lại các thao tác của Admin và Moderator. Chỉ xem, không thể chỉnh sửa.
-          </p>
         </div>
       </div>
 

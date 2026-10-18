@@ -50,21 +50,21 @@ export default function ReturnProcessingPage() {
     setReturnRequests(returnRequests.map((r) =>
       r.id === retId ? { ...r, status: 'RESOLVED', outcome } : r
     ));
-    alert(`Đã duyệt trả hàng hợp lệ! Hệ thống tự động hoàn 100% tiền đơn vào ví người mua (F-041) và ghi nhận trạng thái hàng: ${outcome === 'RELIST' ? 'Đăng bán lại' : 'Trả người bán'}.`);
+    alert(`Đã duyệt trả hàng hợp lệ! Hệ thống tự động hoàn 100% tiền đơn vào ví người mua và ghi nhận trạng thái hàng: ${outcome === 'RELIST' ? 'Đăng bán lại' : 'Trả người bán'}.`);
   };
 
   const handleInvalidReturn = (retId) => {
     setReturnRequests(returnRequests.map((r) =>
       r.id === retId ? { ...r, status: 'RESOLVED', outcome: 'INVALID_RETURN' } : r
     ));
-    alert('Đã kết luận TRẢ HÀNG KHÔNG HỢP LỆ! Không hoàn tiền cho người mua. Hàng được lưu kho 7 ngày để người mua tự đến lấy hoặc chịu phí ship gửi lại (Mục 6 L-05, F-070).');
+    alert('Đã kết luận TRẢ HÀNG KHÔNG HỢP LỆ! Không hoàn tiền cho người mua. Hàng được lưu kho 7 ngày để người mua tự đến lấy hoặc chịu phí ship gửi lại (Mục 6 L-05).');
   };
 
   const handleVerdictSuccess = (verdictData) => {
     setReturnRequests(returnRequests.map((r) =>
       r.id === verdictData.itemId ? { ...r, status: 'RESOLVED', outcome: verdictData.verdict } : r
     ));
-    alert(`Đã hoàn tất hội chẩn 2 Moderator (F-134, F-135)! Kết luận: ${verdictData.verdict === 'COUNTERFEIT' ? 'HÀNG GIẢ - Tiêu hủy và hoàn tiền người mua' : 'HÀNG CHÍNH HÃNG'}. Lưu vào Audit Log.`);
+    alert(`Đã hoàn tất hội chẩn 2 Moderator! Kết luận: ${verdictData.verdict === 'COUNTERFEIT' ? 'HÀNG GIẢ - Tiêu hủy và hoàn tiền người mua' : 'HÀNG CHÍNH HÃNG'}. Lưu vào Audit Log.`);
   };
 
   return (
@@ -73,7 +73,7 @@ export default function ReturnProcessingPage() {
         <div>
           <div className="flex items-center space-x-2">
             <span className="px-2.5 py-0.5 text-xs font-bold rounded bg-[#E8F5E9] text-[#006B2C]">
-              Kiểm định hàng trả • F-131..F-135, UC-68
+              Kiểm định hàng trả • UC-68
             </span>
             <h1 className="text-2xl font-extrabold font-heading text-[#191C19]">
               Xử Lý Yêu Cầu Trả Hàng & Thẩm Định Hàng Trả
@@ -138,7 +138,7 @@ export default function ReturnProcessingPage() {
                       onClick={() => setCounterfeitModalItem(r)}
                     >
                       <span className="material-symbols-outlined text-sm mr-1">gavel</span>
-                      Hội chẩn 2 Moderator (F-134)
+                      Hội chẩn 2 Moderator
                     </Button>
                   ) : (
                     <>

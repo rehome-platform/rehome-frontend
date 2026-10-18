@@ -102,7 +102,7 @@ export default function OrgVerificationPage() {
     setOrgsQueue(orgsQueue.map((o) =>
       o.id === id ? { ...o, status: 'APPROVED' } : o
     ));
-    alert('Đã xác thực tổ chức từ thiện thành công! Tài khoản được mở quyền tạo chiến dịch (F-138). Ảnh CCCD sẽ tự xóa sau 30 ngày (F-139).');
+    alert('Đã xác thực tổ chức từ thiện thành công! Tài khoản được mở quyền tạo chiến dịch. Ảnh CCCD sẽ tự xóa sau 30 ngày.');
     setSelectedOrg(null);
   };
 
@@ -114,14 +114,14 @@ export default function OrgVerificationPage() {
     setIsRejectModalOpen(false);
     setSelectedOrg(null);
     setRejectReason('');
-    alert('Đã từ chối hồ sơ kèm lý do hướng dẫn bổ sung (F-138)!');
+    alert('Đã từ chối hồ sơ kèm lý do hướng dẫn bổ sung!');
   };
 
   const handleApproveLegalChange = (id) => {
     setLegalChanges(legalChanges.map((c) =>
       c.id === id ? { ...c, status: 'APPROVED' } : c
     ));
-    alert('Đã duyệt yêu cầu đổi thông tin pháp lý của tổ chức (F-140)! Lưu vào Audit Log.');
+    alert('Đã duyệt yêu cầu đổi thông tin pháp lý của tổ chức! Lưu vào Audit Log.');
   };
 
   return (
@@ -208,7 +208,7 @@ export default function OrgVerificationPage() {
                   {/* Tệp đính kèm */}
                   <div>
                     <h4 className="text-xs font-bold uppercase tracking-wider text-[#717971] mb-2">
-                      Tệp giấy tờ pháp lý & CCCD đính kèm (F-139)
+                      Tệp giấy tờ pháp lý & CCCD đính kèm
                     </h4>
                     <div className="grid grid-cols-1 gap-2 text-xs">
                       {selectedOrg.documents.map((doc, idx) => (
@@ -326,7 +326,7 @@ export default function OrgVerificationPage() {
                         }`}
                       >
                         <span className="material-symbols-outlined text-sm mr-1.5">verified</span>
-                        Xác thực tổ chức (F-138)
+                        Xác thực tổ chức
                       </Button>
                     </div>
                   )}
@@ -371,7 +371,7 @@ export default function OrgVerificationPage() {
                       className="bg-[#006B2C] text-white text-xs"
                       onClick={() => handleApproveLegalChange(c.id)}
                     >
-                      Duyệt thay đổi pháp lý (F-140)
+                      Duyệt thay đổi pháp lý
                     </Button>
                   ) : (
                     <span className="text-xs text-[#00685F] font-bold">✓ Đã cập nhật hồ sơ</span>
@@ -386,11 +386,11 @@ export default function OrgVerificationPage() {
         <Modal
           isOpen={isRejectModalOpen}
           onClose={() => setIsRejectModalOpen(false)}
-          title="Từ Chối Hồ Sơ Tổ Chức Từ Thiện (F-138)"
+          title="Từ Chối Hồ Sơ Tổ Chức Từ Thiện"
         >
           <div className="space-y-4">
             <p className="text-xs text-[#717971]">
-              Vui lòng nêu rõ căn cứ pháp lý hoặc giấy tờ còn thiếu để tổ chức chỉnh sửa lại (F-003):
+              Vui lòng nêu rõ căn cứ pháp lý hoặc giấy tờ còn thiếu để tổ chức chỉnh sửa lại:
             </p>
             <textarea
               rows={3}

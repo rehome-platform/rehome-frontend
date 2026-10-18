@@ -121,7 +121,7 @@ export default function CounterPage() {
 
   const handleHandoverItem = (id) => {
     setHandoverQueue(handoverQueue.filter((item) => item.id !== id));
-    alert('Đã xác nhận bàn giao hàng cho khách tại quầy thành công (F-129)! Ghi nhận vào Audit Log.');
+    alert('Đã xác nhận bàn giao hàng cho khách tại quầy thành công! Ghi nhận vào Audit Log.');
   };
 
   return (
@@ -356,7 +356,8 @@ export default function CounterPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
-                    label="Vị trí kệ kho lưu trữ (F-125)"
+                    label="Vị trí kệ kho lưu trữ"
+                    id="vị-trí-kệ-kho-lưu-trữ-(f-125)"
                     required
                     value={shelfLocation}
                     onChange={(e) => setShelfLocation(e.target.value)}
@@ -365,7 +366,7 @@ export default function CounterPage() {
 
                   <div>
                     <label className="block text-xs font-semibold text-[#191C19] mb-1">
-                      Kết luận thẩm định (F-117)
+                      Kết luận thẩm định
                     </label>
                     <div className="p-2.5 bg-[#E8F5E9] text-[#006B2C] font-bold rounded-xl border border-[#C8E6C9] text-xs flex items-center justify-between">
                       <span>✓ Đạt kiểm định chính hãng</span>
@@ -379,10 +380,10 @@ export default function CounterPage() {
                     type="button"
                     variant="outline"
                     className="border-[#BA1A1A] text-[#BA1A1A] hover:bg-[#FFDAD6]/30 text-xs"
-                    onClick={() => alert('Đã từ chối kiểm định sản phẩm! Trả đồ tại chỗ cho Member (F-118).')}
+                    onClick={() => alert('Đã từ chối kiểm định sản phẩm! Trả đồ tại chỗ cho Member.')}
                   >
                     <span className="material-symbols-outlined text-sm mr-1">cancel</span>
-                    Từ chối & Trả đồ tại chỗ (F-118)
+                    Từ chối & Trả đồ tại chỗ
                   </Button>
 
                   <Button
@@ -421,7 +422,7 @@ export default function CounterPage() {
                         onClick={() => setPrintLabelItem(successItem)}
                       >
                         <span className="material-symbols-outlined text-sm mr-1.5">barcode</span>
-                        In tem nhãn SKU (F-122)
+                        In tem nhãn SKU
                       </Button>
                       <Button
                         variant="outline"
@@ -459,7 +460,7 @@ export default function CounterPage() {
         {activeTab === 'HANDOVER' && (
           <div className="bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-sm space-y-4">
             <div>
-              <h3 className="text-base font-bold text-[#191C19]">Hàng Chờ Bàn Giao Cho Khách Tại Quầy (F-129)</h3>
+              <h3 className="text-base font-bold text-[#191C19]">Hàng Chờ Bàn Giao Cho Khách Tại Quầy</h3>
               <p className="text-xs text-[#717971]">
                 Dành cho người bán rút lại hàng ký gửi hoặc người mua nhận lại hàng trả không hợp lệ
               </p>
@@ -486,7 +487,7 @@ export default function CounterPage() {
                       onClick={() => handleHandoverItem(item.id)}
                     >
                       <span className="material-symbols-outlined text-sm mr-1">check_circle</span>
-                      Xác nhận đã giao hàng (F-129)
+                      Xác nhận đã giao hàng
                     </Button>
                   </div>
                 </div>

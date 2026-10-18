@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import Header from '../../../components/header.jsx';
-import Footer from '../../../components/footer.jsx';
 import Badge from '../../../components/common/Badge.jsx';
 import authService from '../services/auth.service.js';
 import { validatePhone, validatePassword, validateConfirmPassword } from '../../../utils/validators.js';
@@ -294,7 +293,7 @@ export default function ProfilePage() {
                 }`}
               >
                 <span className="material-symbols-outlined text-base">badge</span>
-                <span>Thông tin cá nhân (F-010)</span>
+                <span>Thông tin cá nhân</span>
               </button>
               <button
                 type="button"
@@ -307,7 +306,7 @@ export default function ProfilePage() {
                 }`}
               >
                 <span className="material-symbols-outlined text-base">lock_reset</span>
-                <span>Đổi mật khẩu (F-008)</span>
+                <span>Đổi mật khẩu</span>
               </button>
               <button
                 type="button"
@@ -456,7 +455,7 @@ export default function ProfilePage() {
             {activeTab === 'security' && (
               <div className="bg-white rounded-2xl border border-[#DDE5D9] p-6 sm:p-8 shadow-card space-y-6">
                 <div>
-                  <h3 className="text-base font-bold text-[#1F2A37]">Đổi mật khẩu tài khoản (F-008)</h3>
+                  <h3 className="text-base font-bold text-[#1F2A37]">Đổi mật khẩu tài khoản</h3>
                   <p className="text-xs text-[#5B6776] mt-0.5">
                     Gửi yêu cầu đổi mật khẩu bảo mật qua Backend API (POST /api/auth/password/change). Mật khẩu mới tối thiểu 6 ký tự.
                   </p>
@@ -621,7 +620,6 @@ export default function ProfilePage() {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

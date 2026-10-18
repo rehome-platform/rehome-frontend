@@ -13,7 +13,7 @@ export default function BarcodePrintModal({ isOpen, onClose, item }) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="In Tem Nhãn SKU Kho (F-122)"
+      title="In Tem Nhãn SKU Kho"
     >
       <div className="space-y-6">
         <p className="text-xs text-[#717971]">

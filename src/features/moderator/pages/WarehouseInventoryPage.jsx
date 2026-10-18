@@ -88,12 +88,12 @@ export default function WarehouseInventoryPage() {
     ));
     setEditShelfItem(null);
     setNewShelf('');
-    alert('Đã cập nhật vị trí kệ và ghi nhận biến động nhập xuất kho (F-125, F-126)!');
+    alert('Đã cập nhật vị trí kệ và ghi nhận biến động nhập xuất kho!');
   };
 
   const handleClearUnclaimed = (id) => {
     setInventory(inventory.filter((item) => item.id !== id));
-    alert('Đã bàn giao món hàng vô thừa nhận cho tổ chức từ thiện đối tác theo biên bản thanh lý (F-130, UC-67)!');
+    alert('Đã bàn giao món hàng vô thừa nhận cho tổ chức từ thiện đối tác theo biên bản thanh lý (UC-67)!');
   };
 
   return (
@@ -120,7 +120,7 @@ export default function WarehouseInventoryPage() {
               className="bg-[#006B2C] hover:bg-[#005221] text-white text-xs shrink-0"
             >
               <span className="material-symbols-outlined text-[18px] mr-1.5">qr_code_scanner</span>
-              Quét QR định vị SKU (F-124)
+              Quét QR định vị SKU
             </Button>
           </div>
         </div>
@@ -155,7 +155,7 @@ export default function WarehouseInventoryPage() {
                 activeTab === 'UNCLAIMED' ? 'bg-[#D97706] text-white' : 'text-[#717971]'
               }`}
             >
-              <span>Hàng vô thừa nhận (F-130)</span>
+              <span>Hàng vô thừa nhận</span>
               <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-[10px]">
                 {inventory.filter((i) => i.status === 'UNCLAIMED').length}
               </span>
@@ -204,7 +204,7 @@ export default function WarehouseInventoryPage() {
                       {item.status === 'ON_SALE' ? (
                         <Badge variant="success">Đang niêm yết</Badge>
                       ) : (
-                        <Badge variant="danger">Vô thừa nhận (F-130)</Badge>
+                        <Badge variant="danger">Vô thừa nhận</Badge>
                       )}
                     </td>
                     <td className="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">

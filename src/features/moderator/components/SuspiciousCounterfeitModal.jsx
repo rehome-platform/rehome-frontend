@@ -36,11 +36,11 @@ export default function SuspiciousCounterfeitModal({ isOpen, onClose, returnItem
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Hội Chẩn Hàng Nghi Giả 2 Moderator (F-134)"
+      title="Hội Chẩn Hàng Nghi Giả 2 Moderator"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="p-3 bg-[#FFF3E0] border border-[#FED7AA] rounded-xl text-xs text-[#B45309] leading-relaxed">
-          <strong>⚠️ Quy tắc nghiệp vụ F-134:</strong> Để bảo đảm tính khách quan và công bằng, mọi sản phẩm bị nghi ngờ hàng giả bắt buộc phải có ý kiến độc lập của Moderator thứ hai tại kho trước khi đưa ra phán quyết cuối cùng.
+          <strong>⚠️ Quy tắc nghiệp vụ:</strong> Để bảo đảm tính khách quan và công bằng, mọi sản phẩm bị nghi ngờ hàng giả bắt buộc phải có ý kiến độc lập của Moderator thứ hai tại kho trước khi đưa ra phán quyết cuối cùng.
         </div>
 
         <div className="p-3 bg-[#F8FAF8] rounded-xl border border-[#E2E8E0] text-xs space-y-1">

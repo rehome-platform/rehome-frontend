@@ -68,14 +68,14 @@ export default function ConsignmentQueuePage() {
     setQueue(queue.map((f) =>
       f.id === formId ? { ...f, claimedBy: 'MOD-07-003 (Bạn)', status: 'CLAIMED' } : f
     ));
-    alert('Đã nhận việc thành công! Hệ thống sẽ khóa form này trong 48h để bạn xử lý (F-112).');
+    alert('Đã nhận việc thành công! Hệ thống sẽ khóa form này trong 48h để bạn xử lý.');
   };
 
   const handleApprove = (formId) => {
     setQueue(queue.map((f) =>
       f.id === formId ? { ...f, status: 'APPROVED' } : f
     ));
-    alert('Đã duyệt form ký gửi! Member có 7 ngày để mang đồ trực tiếp đến kho (F-114).');
+    alert('Đã duyệt form ký gửi! Member có 7 ngày để mang đồ trực tiếp đến kho.');
     setSelectedForm(null);
   };
 
@@ -87,7 +87,7 @@ export default function ConsignmentQueuePage() {
     setIsRejectModalOpen(false);
     setSelectedForm(null);
     setRejectReason('');
-    alert('Đã từ chối form ký gửi kèm lý do thông báo cho Member (F-114).');
+    alert('Đã từ chối form ký gửi kèm lý do thông báo cho Member.');
   };
 
   return (
@@ -96,7 +96,7 @@ export default function ConsignmentQueuePage() {
         <div>
           <div className="flex items-center space-x-2">
             <span className="px-2.5 py-0.5 text-xs font-bold rounded bg-[#E8F5E9] text-[#006B2C]">
-              Hàng đợi kho • F-111..F-114
+              Hàng đợi kho
             </span>
             <h1 className="text-2xl font-extrabold font-heading text-[#191C19]">
               Hàng Đợi Duyệt Form Ký Gửi Trực Tuyến
@@ -157,7 +157,7 @@ export default function ConsignmentQueuePage() {
                   <div className="flex space-x-2">
                     {f.status === 'PENDING' && (
                       <Button size="sm" onClick={() => handleClaim(f.id)} className="bg-[#006B2C] text-white text-xs">
-                        Nhận việc (F-112)
+                        Nhận việc
                       </Button>
                     )}
                     {f.status === 'CLAIMED' && (
@@ -220,7 +220,7 @@ export default function ConsignmentQueuePage() {
             <div className="p-4 bg-[#F8FAF8] rounded-2xl border border-[#DDE5D9] text-xs text-[#414942] space-y-1.5">
               <p className="font-bold text-[#006B2C] flex items-center space-x-1">
                 <span className="material-symbols-outlined text-sm">schedule</span>
-                <span>Quy tắc tự nhả việc 48h (F-113):</span>
+                <span>Quy tắc tự nhả việc 48h:</span>
               </p>
               <p>Hệ thống tự động nhả công việc về hàng đợi chung nếu sau 48 giờ Moderator nhận việc nhưng không đưa ra quyết định.</p>
             </div>
@@ -231,7 +231,7 @@ export default function ConsignmentQueuePage() {
         <Modal
           isOpen={isRejectModalOpen}
           onClose={() => setIsRejectModalOpen(false)}
-          title="Từ Chối Form Ký Gửi (F-114)"
+          title="Từ Chối Form Ký Gửi"
         >
           <div className="space-y-4">
             <p className="text-xs text-[#717971]">
