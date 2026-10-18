@@ -43,6 +43,32 @@ export function saveUser(user) {
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
+export function parseJwt(token) {
+  if (!token || typeof token !== "string") return null;
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
+
+export function isTokenExpired(token) {
+  const payload = parseJwt(token);
+  if (!payload || !payload.exp) return true;
+  // Expired or will expire within 10 seconds
+  return payload.exp * 1000 <= Date.now() + 10000;
+}
+
 // Axios client instance
 const baseApi = axios.create({
   baseURL: API_BASE_URL,
@@ -83,8 +109,14 @@ baseApi.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    if (!originalRequest) return Promise.reject(error);
 
-    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes("/api/auth/")) {
+    // Không refresh nếu chính request login hoặc refresh bị 401
+    const isAuthRoute =
+      originalRequest.url?.includes("/api/auth/login") ||
+      originalRequest.url?.includes("/api/auth/refresh");
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -102,6 +134,7 @@ baseApi.interceptors.response.use(
       const refreshToken = getRefreshToken();
       if (!refreshToken) {
         removeTokens();
+        window.dispatchEvent(new CustomEvent("auth:expired"));
         if (window.location.pathname !== "/login") {
           window.location.href = "/login";
         }
@@ -112,19 +145,27 @@ baseApi.interceptors.response.use(
         const res = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
           refreshToken,
         });
-        const newToken = res.data?.token || res.data?.data?.token;
-        if (newToken) {
-          saveToken(newToken);
-          baseApi.defaults.headers.common.Authorization = `Bearer ${newToken}`;
-          processQueue(null, newToken);
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        const newAccessToken =
+          res.data?.accessToken || res.data?.token || res.data?.data?.accessToken;
+        const newRefreshToken =
+          res.data?.refreshToken || res.data?.data?.refreshToken;
+
+        if (newAccessToken) {
+          saveToken(newAccessToken);
+          if (newRefreshToken) {
+            saveRefreshToken(newRefreshToken);
+          }
+          baseApi.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
+          processQueue(null, newAccessToken);
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           return baseApi(originalRequest);
         } else {
-          throw new Error("Không nhận được token mới");
+          throw new Error("Không nhận được access token mới từ máy chủ");
         }
       } catch (refreshErr) {
         processQueue(refreshErr, null);
         removeTokens();
+        window.dispatchEvent(new CustomEvent("auth:expired"));
         if (window.location.pathname !== "/login") {
           window.location.href = "/login";
         }

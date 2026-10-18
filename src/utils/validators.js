@@ -1,5 +1,6 @@
 /**
  * ReHome - Form Validation Utilities
+ * Chuẩn hóa theo Tài liệu tổng quan hệ thống ReHome (sau Review 1)
  */
 
 /** Validates email address */
@@ -35,23 +36,49 @@ export function validateConfirmPassword(value, original) {
 
 /** Validates a full name or organization name */
 export function validateFullName(value) {
-  if (!value || !value.trim()) return "Vui lòng nhập họ và tên hoặc tên tổ chức";
+  if (!value || !value.trim()) return "Vui lòng nhập tên đầy đủ";
   if (value.trim().length < 2) return "Tên quá ngắn";
   return null;
 }
 
-/** Validates a 6-digit OTP or receipt code */
-export function validateCode(value, length = 6) {
-  if (!value || !value.trim()) return `Vui lòng nhập mã ${length} số`;
+/** Validates Vietnamese CCCD (12 digits) */
+export function validateCCCD(value) {
+  if (!value || !value.trim()) return "Vui lòng nhập số CCCD người đại diện";
   const digitsOnly = value.replace(/\D/g, "");
-  if (digitsOnly.length !== length) return `Mã phải có đúng ${length} chữ số`;
+  if (digitsOnly.length !== 12) return "Số CCCD phải có đúng 12 chữ số";
   return null;
 }
 
-/** Validates price range against ReHome price ceiling (trần giá 2,000,000đ) */
-export function validateConsignmentPrice(price, maxPrice = 2000000) {
+/** Validates Tax code if present (10 or 13 digits) */
+export function validateTaxCode(value) {
+  if (!value) return null; // Mã số thuế không bắt buộc với mọi tổ chức
+  const cleaned = value.replace(/\s/g, "");
+  if (!/^\d{10}(-\d{3})?$/.test(cleaned) && !/^\d{13}$/.test(cleaned)) {
+    return "Mã số thuế không đúng định dạng (10 hoặc 13 chữ số)";
+  }
+  return null;
+}
+
+/**
+ * Validate giá bán mới so với giá sàn (F-025, F-026, UC-18)
+ * Không được thấp hơn giá sàn và không được cao hơn giá niêm yết ban đầu
+ */
+export function validatePriceFloor(newPrice, floorPrice, agreedPrice) {
+  const num = Number(newPrice);
+  if (isNaN(num) || num <= 0) return "Giá bán phải là số tiền hợp lệ";
+  if (floorPrice && num < floorPrice) {
+    return `Giá mới không được thấp hơn giá sàn ${floorPrice.toLocaleString('vi-VN')} đ`;
+  }
+  if (agreedPrice && num > agreedPrice) {
+    return `Giá mới không được vượt quá giá niêm yết ban đầu ${agreedPrice.toLocaleString('vi-VN')} đ`;
+  }
+  return null;
+}
+
+/** Validate giá chốt tại quầy kiểm định */
+export function validateAgreedPrice(price) {
   const num = Number(price);
-  if (isNaN(num) || num <= 0) return "Giá bán phải lớn hơn 0đ";
-  if (num > maxPrice) return `Giá bán không được vượt quá trần giá ${maxPrice.toLocaleString('vi-VN')} đ`;
+  if (isNaN(num) || num <= 0) return "Giá bán niêm yết phải lớn hơn 0 đ";
+  if (num < 20000) return "Giá bán tối thiểu 20.000 đ";
   return null;
 }
