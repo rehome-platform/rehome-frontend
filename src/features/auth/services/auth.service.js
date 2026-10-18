@@ -47,6 +47,7 @@ async function fetchUserProfileFromBackend(claims) {
     const res = await baseApi.get(API_ENDPOINTS.AUTH.ME);
     accountMeData = res.data;
   } catch (err) {
+    if ([401, 403].includes(err.response?.status)) throw err;
     console.warn('[authService] Không thể gọi /api/account/me:', err.message);
   }
 
@@ -97,6 +98,7 @@ export const authService = {
       throw new Error('Vui lòng nhập đầy đủ email và mật khẩu.');
     }
 
+    let receivedTokens = false;
     try {
       const res = await baseApi.post(API_ENDPOINTS.AUTH.LOGIN, {
         email: email.trim(),
@@ -112,6 +114,7 @@ export const authService = {
       }
 
       saveToken(accessToken);
+      receivedTokens = true;
       if (refreshToken) {
         saveRefreshToken(refreshToken);
       }
@@ -127,6 +130,7 @@ export const authService = {
         message: 'Đăng nhập thành công',
       };
     } catch (err) {
+      if (receivedTokens) removeTokens();
       const msg = formatApiError(err, 'đăng nhập');
       throw new Error(msg);
     }
@@ -141,6 +145,7 @@ export const authService = {
       throw new Error('Không tìm thấy Google ID Token xác thực.');
     }
 
+    let receivedTokens = false;
     try {
       const res = await baseApi.post(API_ENDPOINTS.AUTH.GOOGLE, { idToken });
       const data = res.data;
@@ -152,6 +157,7 @@ export const authService = {
       }
 
       saveToken(accessToken);
+      receivedTokens = true;
       if (refreshToken) {
         saveRefreshToken(refreshToken);
       }
@@ -167,6 +173,7 @@ export const authService = {
         message: 'Đăng nhập Google thành công',
       };
     } catch (err) {
+      if (receivedTokens) removeTokens();
       const msg = formatApiError(err, 'đăng nhập bằng Google');
       throw new Error(msg);
     }
@@ -185,6 +192,10 @@ export const authService = {
       const user = await fetchUserProfileFromBackend(claims);
       return user;
     } catch (err) {
+      if ([401, 403].includes(err.response?.status)) {
+        removeTokens();
+        return null;
+      }
       console.warn('[authService] getCurrentUser failed:', err.message);
       // Nếu token hết hạn và không thể refresh, trả về user đã lưu hoặc null
       return getUser();
