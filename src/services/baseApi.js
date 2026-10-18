@@ -2,7 +2,7 @@
  * ReHome - Base API Service (Axios Instance with JWT Interceptors)
  */
 import axios from "axios";
-import { API_BASE_URL } from "../configs/api.config.js";
+import { API_BASE_URL, API_ENDPOINTS } from "../configs/api.config.js";
 
 export const TOKEN_KEY = "rehome_token";
 export const REFRESH_TOKEN_KEY = "rehome_refresh_token";
@@ -43,6 +43,32 @@ export function saveUser(user) {
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
+export function parseJwt(token) {
+  if (!token || typeof token !== "string") return null;
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
+
+export function isTokenExpired(token) {
+  const payload = parseJwt(token);
+  if (!payload || !payload.exp) return true;
+  // Expired or will expire within 10 seconds
+  return payload.exp * 1000 <= Date.now() + 10000;
+}
+
 // Axios client instance
 const baseApi = axios.create({
   baseURL: API_BASE_URL,
@@ -52,11 +78,20 @@ const baseApi = axios.create({
   timeout: 30000,
 });
 
+// Credential exchanges must not inherit another account's bearer token or retry it.
+function isCredentialExchange(url) {
+  const path = String(url || '').split(/[?#]/)[0].replace(/\/$/, '');
+  return [API_ENDPOINTS.AUTH.LOGIN, API_ENDPOINTS.AUTH.GOOGLE, API_ENDPOINTS.AUTH.REFRESH]
+    .some(endpoint => path.endsWith(endpoint));
+}
+
 // Request Interceptor: đính kèm Bearer token
 baseApi.interceptors.request.use(
   (config) => {
     const token = getToken();
-    if (token && !config.headers.Authorization) {
+    if (isCredentialExchange(config.url)) {
+      delete config.headers.Authorization;
+    } else if (token && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -83,8 +118,12 @@ baseApi.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    if (!originalRequest) return Promise.reject(error);
 
-    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes("/api/auth/")) {
+    const isAuthRoute = isCredentialExchange(originalRequest.url);
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute) {
+      originalRequest._retry = true;
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -96,35 +135,41 @@ baseApi.interceptors.response.use(
           .catch((err) => Promise.reject(err));
       }
 
-      originalRequest._retry = true;
-      isRefreshing = true;
-
       const refreshToken = getRefreshToken();
       if (!refreshToken) {
         removeTokens();
+        window.dispatchEvent(new CustomEvent("auth:expired"));
         if (window.location.pathname !== "/login") {
           window.location.href = "/login";
         }
         return Promise.reject(error);
       }
 
+      isRefreshing = true;
       try {
         const res = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
           refreshToken,
         });
-        const newToken = res.data?.token || res.data?.data?.token;
-        if (newToken) {
-          saveToken(newToken);
-          baseApi.defaults.headers.common.Authorization = `Bearer ${newToken}`;
-          processQueue(null, newToken);
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        const newAccessToken =
+          res.data?.accessToken || res.data?.token || res.data?.data?.accessToken;
+        const newRefreshToken =
+          res.data?.refreshToken || res.data?.data?.refreshToken;
+
+        if (newAccessToken) {
+          saveToken(newAccessToken);
+          if (newRefreshToken) {
+            saveRefreshToken(newRefreshToken);
+          }
+          processQueue(null, newAccessToken);
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           return baseApi(originalRequest);
         } else {
-          throw new Error("Không nhận được token mới");
+          throw new Error("Không nhận được access token mới từ máy chủ");
         }
       } catch (refreshErr) {
         processQueue(refreshErr, null);
         removeTokens();
+        window.dispatchEvent(new CustomEvent("auth:expired"));
         if (window.location.pathname !== "/login") {
           window.location.href = "/login";
         }

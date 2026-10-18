@@ -1,21 +1,26 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    global: "window",
+  },
   server: {
-    port: 3000,
+    host: "0.0.0.0",
+    port: 5173,
     proxy: {
       "/api": {
-        target: "https://prm393.up.railway.app",
+        target: "https://re-backend-9a98.onrender.com",
         changeOrigin: true,
-        secure: false,
+        secure: true,
       },
       "/ws": {
-        target: "https://prm393.up.railway.app",
+        target: "https://re-backend-9a98.onrender.com",
         ws: true,
         changeOrigin: true,
-        secure: false,
+        secure: true,
       },
     },
   },
