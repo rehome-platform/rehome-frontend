@@ -199,42 +199,11 @@ export const authService = {
       throw new Error('Vui lòng nhập đầy đủ email và mật khẩu.');
     }
 
-    let receivedTokens = false;
-    try {
-      const res = await baseApi.post(API_ENDPOINTS.AUTH.LOGIN, {
-        email: email.trim(),
-        password: password,
-      });
-
-      const result = res.data?.result || res.data;
-      const accessToken = result.accessToken || result.token;
-      const refreshToken = result.refreshToken;
-
-      if (!accessToken) {
-        throw new Error('Máy chủ không trả về access token xác thực.');
-      }
-
-      saveToken(accessToken);
-      receivedTokens = true;
-      if (refreshToken) {
-        saveRefreshToken(refreshToken);
-      }
-
-      const claims = parseJwt(accessToken);
-      const user = await fetchUserProfileFromBackend(claims);
-
-      return {
-        token: accessToken,
-        accessToken,
-        refreshToken,
-        user,
-        message: 'Đăng nhập thành công',
-      };
-    } catch (err) {
-      if (receivedTokens) removeTokens();
-      const msg = formatApiError(err, 'đăng nhập');
-      throw new Error(msg);
-    }
+    return createSession(
+      () => baseApi.post(API_ENDPOINTS.AUTH.LOGIN, { email: email.trim(), password }),
+      'Đăng nhập thành công',
+      'đăng nhập',
+    );
   },
 
   /**
@@ -251,38 +220,6 @@ export const authService = {
       'Đăng nhập Google thành công',
       'đăng nhập bằng Google',
     );
-    let receivedTokens = false;
-    try {
-      const res = await baseApi.post(API_ENDPOINTS.AUTH.GOOGLE, { idToken });
-      const result = res.data?.result || res.data;
-      const accessToken = result.accessToken || result.token;
-      const refreshToken = result.refreshToken;
-
-      if (!accessToken) {
-        throw new Error('Máy chủ không trả về access token xác thực.');
-      }
-
-      saveToken(accessToken);
-      receivedTokens = true;
-      if (refreshToken) {
-        saveRefreshToken(refreshToken);
-      }
-
-      const claims = parseJwt(accessToken);
-      const user = await fetchUserProfileFromBackend(claims);
-
-      return {
-        token: accessToken,
-        accessToken,
-        refreshToken,
-        user,
-        message: 'Đăng nhập Google thành công',
-      };
-    } catch (err) {
-      if (receivedTokens) removeTokens();
-      const msg = formatApiError(err, 'đăng nhập bằng Google');
-      throw new Error(msg);
-    }
   },
 
   /**
