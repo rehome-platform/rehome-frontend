@@ -133,8 +133,9 @@ async function createSession(request, message, errorContext) {
   let receivedTokens = false;
   try {
     const { data } = await request();
-    const accessToken = data.accessToken || data.token;
-    const refreshToken = data.refreshToken;
+    const result = unwrapResponse(data);
+    const accessToken = result.accessToken || result.token;
+    const refreshToken = result.refreshToken;
     if (!accessToken) {
       throw new Error('Máy chủ không trả về access token xác thực.');
     }
