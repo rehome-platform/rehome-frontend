@@ -105,9 +105,9 @@ export const authService = {
         password: password,
       });
 
-      const data = res.data;
-      const accessToken = data.accessToken || data.token;
-      const refreshToken = data.refreshToken;
+      const result = res.data?.result || res.data;
+      const accessToken = result.accessToken || result.token;
+      const refreshToken = result.refreshToken;
 
       if (!accessToken) {
         throw new Error('Máy chủ không trả về access token xác thực.');
@@ -148,9 +148,9 @@ export const authService = {
     let receivedTokens = false;
     try {
       const res = await baseApi.post(API_ENDPOINTS.AUTH.GOOGLE, { idToken });
-      const data = res.data;
-      const accessToken = data.accessToken || data.token;
-      const refreshToken = data.refreshToken;
+      const result = res.data?.result || res.data;
+      const accessToken = result.accessToken || result.token;
+      const refreshToken = result.refreshToken;
 
       if (!accessToken) {
         throw new Error('Máy chủ không trả về access token xác thực.');
