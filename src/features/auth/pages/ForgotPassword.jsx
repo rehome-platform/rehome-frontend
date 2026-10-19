@@ -1,12 +1,15 @@
-﻿import React, { useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+﻿import React, { useEffect, useRef, useState } from 'react';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import Logo from '../../../components/common/Logo.jsx';
 import { authService } from '../services/auth.service.js';
 import { validateEmail, validatePassword, validateConfirmPassword } from '../../../utils/validators.js';
 
+const REDIRECT_SECONDS = 5;
+
 // Both pages use the existing email-link contract, never OTP verification.
 export default function PasswordRecovery({ reset = false }) {
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const linkEmail = params.get('email') || '';
   const resetToken = params.get('token') || '';
@@ -16,7 +19,19 @@ export default function PasswordRecovery({ reset = false }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(REDIRECT_SECONDS);
   const pending = useRef(false);
+
+  // Sau khi đặt lại mật khẩu thành công, tự động đếm ngược rồi chuyển về trang đăng nhập.
+  useEffect(() => {
+    if (!reset || !success) return;
+    if (secondsLeft <= 0) {
+      navigate('/login', { replace: true });
+      return;
+    }
+    const timer = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [reset, success, secondsLeft, navigate]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -55,12 +70,32 @@ export default function PasswordRecovery({ reset = false }) {
     <main className="min-h-screen bg-[#F6F9F4] flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-[460px] bg-white rounded-2xl border border-[#DDE5D9] shadow-card p-8 sm:p-10">
         <Logo size="lg" to={null} subtitle="Khôi Phục Mật Khẩu" />
-        <h1 className="mt-6 text-lg font-bold text-[#1F2A37]">{title}</h1>
+        {!success && <h1 className="mt-6 text-lg font-bold text-[#1F2A37]">{title}</h1>}
         {success ? (
-          <p role="status" className="mt-4 text-sm text-[#006B2C] leading-relaxed">
-            {reset ? 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới.'
-              : 'Nếu email này được đăng ký và đủ điều kiện, bạn sẽ nhận được liên kết đặt lại mật khẩu. Vui lòng kiểm tra email và nhấn vào liên kết được gửi để đặt lại mật khẩu.'}
-          </p>
+          reset ? (
+            <div role="status" className="mt-6 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#E8F5E9]">
+                <svg className="h-9 w-9 text-[#006B2C]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+              </div>
+              <h1 className="mt-4 text-lg font-bold text-[#1F2A37]">Đặt lại mật khẩu thành công!</h1>
+              <p className="mt-2 text-sm text-[#5B6776] leading-relaxed">
+                Mật khẩu của bạn đã được cập nhật. Vui lòng đăng nhập lại bằng mật khẩu mới.
+                Mọi phiên đăng nhập trước đó trên các thiết bị khác đã bị đăng xuất để đảm bảo an toàn.
+              </p>
+              <p className="mt-3 text-xs text-[#5B6776]">
+                Tự động chuyển đến trang đăng nhập sau {secondsLeft}s...
+              </p>
+              <Link to="/login" replace className="mt-5 inline-block w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-[#006B2C] hover:bg-[#005523]">
+                Đăng nhập ngay
+              </Link>
+            </div>
+          ) : (
+            <p role="status" className="mt-4 text-sm text-[#006B2C] leading-relaxed">
+              Nếu email này được đăng ký và đủ điều kiện, bạn sẽ nhận được liên kết đặt lại mật khẩu. Vui lòng kiểm tra email và nhấn vào liên kết được gửi để đặt lại mật khẩu.
+            </p>
+          )
         ) : reset && !validLink ? (
           <p role="alert" className="mt-4 text-sm text-[#D92D20]">Liên kết đặt lại mật khẩu không hợp lệ. Vui lòng yêu cầu liên kết mới.</p>
         ) : (
@@ -91,7 +126,9 @@ export default function PasswordRecovery({ reset = false }) {
           </form>
         )}
         {reset && !success && <Link to="/forgot-password" className="block mt-6 text-sm font-semibold text-[#006B2C] hover:underline">Yêu cầu liên kết mới</Link>}
-        <Link to="/login" className="inline-block mt-6 text-sm font-semibold text-[#006B2C] hover:underline">Quay lại đăng nhập</Link>
+        {!(reset && success) && (
+          <Link to="/login" className="inline-block mt-6 text-sm font-semibold text-[#006B2C] hover:underline">Quay lại đăng nhập</Link>
+        )}
       </div>
     </main>
   );
