@@ -2,7 +2,7 @@ Moderator
 
 Email: tongngocanhtai241086@gmail.com
 
-Password: 123456789
+Password: 12345678
 
 Admin
 

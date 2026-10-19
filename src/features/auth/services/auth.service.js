@@ -11,9 +11,7 @@ import baseApi, {
   removeTokens,
   getUser,
   getToken,
-  getRefreshToken,
   parseJwt,
-  isTokenExpired,
 } from '../../../services/baseApi.js';
 import { API_ENDPOINTS } from '../../../configs/api.config.js';
 import { formatApiError } from '../../../utils/api.js';
@@ -39,52 +37,155 @@ export function normalizeRole(rawRole) {
  * Lấy thông tin chi tiết tài khoản từ backend
  */
 async function fetchUserProfileFromBackend(claims) {
-  let accountMeData = null;
-  let memberData = null;
+  const accountMeData = await fetchAccount();
+  const memberData = await fetchMemberProfile();
+  const user = buildUser(memberData ?? {}, accountMeData ?? {}, claims ?? {});
+  saveUser(user);
+  return user;
+}
 
+async function fetchAccount() {
   // 1. Gọi /api/account/me để lấy email và authorities chính thức từ backend
   try {
     const res = await baseApi.get(API_ENDPOINTS.AUTH.ME);
-    accountMeData = res.data;
+    return res.data;
   } catch (err) {
     if ([401, 403].includes(err.response?.status)) throw err;
     console.warn('[authService] Không thể gọi /api/account/me:', err.message);
   }
+  return null;
+}
 
+function unwrapResponse(data) {
+  return data?.result || data?.data || data;
+}
+
+async function fetchMemberProfile() {
   // 2. Thử gọi /members/me để lấy hồ sơ chi tiết (fullName, phone, avatarUrl, memberCode)
   try {
     const memberRes = await baseApi.get(API_ENDPOINTS.MEMBER.ME);
-    const result = memberRes.data?.result || memberRes.data?.data || memberRes.data;
+    const result = unwrapResponse(memberRes.data);
     if (result && typeof result === 'object') {
-      memberData = result;
+      return result;
     }
   } catch (err) {
     // Với tài khoản thuần admin nếu không có record member_profile, backend trả 403 hoặc 400
     // Không ném lỗi để luồng auth vẫn hoạt động với thông tin account
   }
+  return null;
+}
 
-  const email = memberData?.email || accountMeData?.email || claims?.sub || '';
-  const rawRole = accountMeData?.authorities || claims?.roles || '';
+function buildUser(memberData, accountMeData, claims) {
+  const email = memberData.email || accountMeData.email || claims.sub || '';
+  const rawRole = accountMeData.authorities || claims.roles || '';
   const normalizedRole = normalizeRole(rawRole);
 
-  const user = {
-    id: memberData?.accountId || claims?.sub || email,
-    accountId: memberData?.accountId || null,
+  return {
+    id: memberData.accountId || claims.sub || email,
+    accountId: memberData.accountId || null,
     email: email,
-    name: memberData?.fullName || (email ? email.split('@')[0] : 'Người dùng'),
-    fullName: memberData?.fullName || '',
-    phone: memberData?.phone || '',
-    avatar: memberData?.avatarUrl || '',
-    avatarUrl: memberData?.avatarUrl || '',
-    memberCode: memberData?.memberCode || '',
-    emailVerified: memberData?.emailVerified ?? true,
+    ...memberProfileFields(memberData, email),
     role: normalizedRole,
     rawRole: rawRole,
     authorities: rawRole,
+    warehouseId: accountMeData.warehouseId ?? accountMeData.warehouse?.id ?? null,
+    warehouseName: accountMeData.warehouseName ?? accountMeData.warehouse?.name ?? '',
   };
+}
 
-  saveUser(user);
+function memberProfileFields(memberData, email) {
+  return {
+    name: memberData.fullName || (email ? email.split('@')[0] : 'Người dùng'),
+    fullName: memberData.fullName || '',
+    phone: memberData.phone || '',
+    avatar: memberData.avatarUrl || '',
+    avatarUrl: memberData.avatarUrl || '',
+    memberCode: memberData.memberCode || '',
+    emailVerified: memberData.emailVerified ?? true,
+  };
+}
+
+function profilePayload(profileData) {
+  const { fullName, name, phone, avatarUrl, avatar } = profileData || {};
+  const payload = {};
+  const targetName = (fullName || name || '').trim();
+  if (targetName) payload.fullName = targetName;
+  const targetPhone = (phone || '').trim();
+  if (targetPhone) payload.phone = targetPhone;
+  const targetAvatar = (avatarUrl || avatar || '').trim();
+  if (targetAvatar) payload.avatarUrl = targetAvatar;
+  return payload;
+}
+
+function mergeProfile(currentUser, updated, payload) {
+  const fields = {
+    fullName: 'fullName', name: 'fullName', phone: 'phone',
+    avatar: 'avatarUrl', avatarUrl: 'avatarUrl',
+  };
+  const user = { ...currentUser };
+  for (const [target, source] of Object.entries(fields)) {
+    user[target] = updated?.[source] || payload[source] || currentUser[target];
+  }
   return user;
+}
+
+async function createSession(request, message, errorContext) {
+  let receivedTokens = false;
+  try {
+    const { data } = await request();
+    const accessToken = data.accessToken || data.token;
+    const refreshToken = data.refreshToken;
+    if (!accessToken) {
+      throw new Error('Máy chủ không trả về access token xác thực.');
+    }
+
+    saveToken(accessToken);
+    receivedTokens = true;
+    if (refreshToken) saveRefreshToken(refreshToken);
+    const user = await fetchUserProfileFromBackend(parseJwt(accessToken));
+    return { token: accessToken, accessToken, refreshToken, user, message };
+  } catch (err) {
+    if (receivedTokens) removeTokens();
+    throw new Error(formatApiError(err, errorContext));
+  }
+}
+
+async function postOtp(request, errorContext) {
+  try {
+    const res = await request();
+    return res.data;
+  } catch (err) {
+    throw new Error(formatApiError(err, errorContext));
+  }
+}
+
+function validatePasswordChange(oldPassword, newPassword, newPasswordRepeat) {
+  if (!oldPassword) {
+    throw new Error('Vui lòng nhập mật khẩu hiện tại.');
+  }
+  if (!newPassword || newPassword.length < 6) {
+    throw new Error('Mật khẩu mới phải có ít nhất 6 ký tự.');
+  }
+  if (newPasswordRepeat && newPassword !== newPasswordRepeat) {
+    throw new Error('Mật khẩu nhập lại không khớp với mật khẩu mới.');
+  }
+}
+
+function invalidResetPassword(password) {
+  if (!password || !password.trim()) return true;
+  return password.length < 6 || password.length > 72;
+}
+
+function validatePasswordReset(email, resetToken, newPassword, confirmPassword) {
+  if (!email || !resetToken) {
+    throw new Error('Thiếu thông tin xác thực token đặt lại mật khẩu.');
+  }
+  if (invalidResetPassword(newPassword)) {
+    throw new Error('Mật khẩu mới phải có từ 6 đến 72 ký tự.');
+  }
+  if (newPassword !== confirmPassword) {
+    throw new Error('Mật khẩu xác nhận không trùng khớp.');
+  }
 }
 
 export const authService = {
@@ -98,42 +199,11 @@ export const authService = {
       throw new Error('Vui lòng nhập đầy đủ email và mật khẩu.');
     }
 
-    let receivedTokens = false;
-    try {
-      const res = await baseApi.post(API_ENDPOINTS.AUTH.LOGIN, {
-        email: email.trim(),
-        password: password,
-      });
-
-      const result = res.data?.result || res.data;
-      const accessToken = result.accessToken || result.token;
-      const refreshToken = result.refreshToken;
-
-      if (!accessToken) {
-        throw new Error('Máy chủ không trả về access token xác thực.');
-      }
-
-      saveToken(accessToken);
-      receivedTokens = true;
-      if (refreshToken) {
-        saveRefreshToken(refreshToken);
-      }
-
-      const claims = parseJwt(accessToken);
-      const user = await fetchUserProfileFromBackend(claims);
-
-      return {
-        token: accessToken,
-        accessToken,
-        refreshToken,
-        user,
-        message: 'Đăng nhập thành công',
-      };
-    } catch (err) {
-      if (receivedTokens) removeTokens();
-      const msg = formatApiError(err, 'đăng nhập');
-      throw new Error(msg);
-    }
+    return createSession(
+      () => baseApi.post(API_ENDPOINTS.AUTH.LOGIN, { email: email.trim(), password }),
+      'Đăng nhập thành công',
+      'đăng nhập',
+    );
   },
 
   /**
@@ -145,38 +215,11 @@ export const authService = {
       throw new Error('Không tìm thấy Google ID Token xác thực.');
     }
 
-    let receivedTokens = false;
-    try {
-      const res = await baseApi.post(API_ENDPOINTS.AUTH.GOOGLE, { idToken });
-      const result = res.data?.result || res.data;
-      const accessToken = result.accessToken || result.token;
-      const refreshToken = result.refreshToken;
-
-      if (!accessToken) {
-        throw new Error('Máy chủ không trả về access token xác thực.');
-      }
-
-      saveToken(accessToken);
-      receivedTokens = true;
-      if (refreshToken) {
-        saveRefreshToken(refreshToken);
-      }
-
-      const claims = parseJwt(accessToken);
-      const user = await fetchUserProfileFromBackend(claims);
-
-      return {
-        token: accessToken,
-        accessToken,
-        refreshToken,
-        user,
-        message: 'Đăng nhập Google thành công',
-      };
-    } catch (err) {
-      if (receivedTokens) removeTokens();
-      const msg = formatApiError(err, 'đăng nhập bằng Google');
-      throw new Error(msg);
-    }
+    return createSession(
+      () => baseApi.post(API_ENDPOINTS.AUTH.GOOGLE, { idToken }),
+      'Đăng nhập Google thành công',
+      'đăng nhập bằng Google',
+    );
   },
 
   /**
@@ -207,31 +250,14 @@ export const authService = {
    * PATCH /members/me
    */
   updateProfile: async (profileData) => {
-    const { fullName, name, phone, avatarUrl, avatar } = profileData || {};
-
-    const payload = {};
-    const targetName = (fullName || name || '').trim();
-    if (targetName) payload.fullName = targetName;
-
-    const targetPhone = (phone || '').trim();
-    if (targetPhone) payload.phone = targetPhone;
-
-    const targetAvatar = (avatarUrl || avatar || '').trim();
-    if (targetAvatar) payload.avatarUrl = targetAvatar;
+    const payload = profilePayload(profileData);
 
     try {
       const res = await baseApi.patch(API_ENDPOINTS.MEMBER.ME, payload);
-      const updated = res.data?.result || res.data?.data || res.data;
+      const updated = unwrapResponse(res.data);
 
       const currentUser = getUser() || {};
-      const newUser = {
-        ...currentUser,
-        fullName: updated?.fullName || payload.fullName || currentUser.fullName,
-        name: updated?.fullName || payload.fullName || currentUser.name,
-        phone: updated?.phone || payload.phone || currentUser.phone,
-        avatar: updated?.avatarUrl || payload.avatarUrl || currentUser.avatar,
-        avatarUrl: updated?.avatarUrl || payload.avatarUrl || currentUser.avatarUrl,
-      };
+      const newUser = mergeProfile(currentUser, updated, payload);
 
       saveUser(newUser);
       return newUser;
@@ -246,15 +272,7 @@ export const authService = {
    * POST /api/auth/password/change
    */
   changePassword: async ({ oldPassword, newPassword, newPasswordRepeat }) => {
-    if (!oldPassword) {
-      throw new Error('Vui lòng nhập mật khẩu hiện tại.');
-    }
-    if (!newPassword || newPassword.length < 6) {
-      throw new Error('Mật khẩu mới phải có ít nhất 6 ký tự.');
-    }
-    if (newPasswordRepeat && newPassword !== newPasswordRepeat) {
-      throw new Error('Mật khẩu nhập lại không khớp với mật khẩu mới.');
-    }
+    validatePasswordChange(oldPassword, newPassword, newPasswordRepeat);
 
     try {
       const res = await baseApi.post(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, {
@@ -306,18 +324,10 @@ export const authService = {
       throw new Error('Vui lòng nhập đầy đủ email và mã OTP 6 số.');
     }
 
-    try {
-      const res = await baseApi.post(API_ENDPOINTS.AUTH.VERIFY_OTP, {
-        email: email.trim(),
-        otp: otp.trim(),
-        purpose,
-      });
-
-      return res.data; // { message, resetToken }
-    } catch (err) {
-      const msg = formatApiError(err, 'xác thực mã OTP');
-      throw new Error(msg);
-    }
+    return postOtp(
+      () => baseApi.post(API_ENDPOINTS.AUTH.VERIFY_OTP, { email: email.trim(), otp: otp.trim(), purpose }),
+      'xác thực mã OTP',
+    );
   },
 
   /**
@@ -329,17 +339,10 @@ export const authService = {
       throw new Error('Vui lòng cung cấp email để gửi lại mã OTP.');
     }
 
-    try {
-      const res = await baseApi.post(API_ENDPOINTS.AUTH.RESEND_OTP, {
-        email: email.trim(),
-        purpose,
-      });
-
-      return res.data;
-    } catch (err) {
-      const msg = formatApiError(err, 'gửi lại mã OTP');
-      throw new Error(msg);
-    }
+    return postOtp(
+      () => baseApi.post(API_ENDPOINTS.AUTH.RESEND_OTP, { email: email.trim(), purpose }),
+      'gửi lại mã OTP',
+    );
   },
 
   /**
@@ -347,15 +350,7 @@ export const authService = {
    * POST /api/auth/password/reset
    */
   resetPassword: async ({ email, resetToken, newPassword, confirmPassword }) => {
-    if (!email || !resetToken) {
-      throw new Error('Thiếu thông tin xác thực token đặt lại mật khẩu.');
-    }
-    if (!newPassword || !newPassword.trim() || newPassword.length < 6 || newPassword.length > 72) {
-      throw new Error('Mật khẩu mới phải có từ 6 đến 72 ký tự.');
-    }
-    if (newPassword !== confirmPassword) {
-      throw new Error('Mật khẩu xác nhận không trùng khớp.');
-    }
+    validatePasswordReset(email, resetToken, newPassword, confirmPassword);
 
     try {
       const res = await baseApi.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, {

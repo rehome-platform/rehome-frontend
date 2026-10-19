@@ -339,3 +339,7 @@ Kết quả đóng gói bundle tối ưu sẽ được lưu tại thư mục `di
 ```bash
 npm run preview
 ```
+# Phase 2
+
+Implementation, test commands, integration gates and remaining acceptance checks:
+[Phase 2 hand-off](docs/phase2-handoff.md).

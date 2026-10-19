@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Modal from './common/Modal.jsx';
 import Button from './common/Button.jsx';
 import Input from './common/Input.jsx';
@@ -12,14 +12,14 @@ export default function QRScannerModal({
   placeholder = "Nhập mã số (8 số ký gửi hoặc 6 số trả đồ)...",
 }) {
   const [manualCode, setManualCode] = useState('');
-  const { videoRef, startScanning, stopScanning, isScanning, error } = useQRScanner(onScanSuccess);
+  const { videoRef, startScanning, stopScanning, isScanning, error, handleManualCodeSubmit } = useQRScanner(code => { onScanSuccess(code); onClose(); }, isOpen);
+  useEffect(() => { if (!isOpen) setManualCode(''); }, [isOpen]);
 
   const handleSubmitManual = (e) => {
     e.preventDefault();
     if (manualCode.trim()) {
-      onScanSuccess(manualCode.trim());
+      handleManualCodeSubmit(manualCode.trim());
       setManualCode('');
-      onClose();
     }
   };
 
@@ -30,6 +30,8 @@ export default function QRScannerModal({
         <div className="relative aspect-video w-full bg-black rounded-lg overflow-hidden flex items-center justify-center border border-outline-variant">
           <video
             ref={videoRef}
+            muted
+            playsInline
             className={`w-full h-full object-cover ${isScanning ? 'block' : 'hidden'}`}
           />
           {!isScanning && (

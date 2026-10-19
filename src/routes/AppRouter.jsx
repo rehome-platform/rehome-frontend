@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
 // Auth Pages (Chỉ dành cho Admin & Moderator)
@@ -14,6 +14,9 @@ import ResetPassword from '../features/auth/pages/ResetPassword.jsx';
 // Moderator Pages (Cổng Vận Hành Kho & Kiểm Duyệt)
 import {
   CounterPage,
+  ConsignmentDetailPage,
+  InventoryDetailPage,
+  EndOfTermPage,
   ConsignmentQueuePage,
   WarehouseInventoryPage,
   PackingOrdersPage,
@@ -70,6 +73,7 @@ function RootRedirect() {
 }
 
 export default function AppRouter() {
+  const location = useLocation();
   return (
     <Routes>
       {/* 1. Public & Auth Routes (Chỉ cho Admin & Moderator) */}
@@ -127,6 +131,9 @@ export default function AppRouter() {
           </PrivateRoute>
         }
       />
+      <Route path="/moderator/consignments/:formId" element={<PrivateRoute roles={['staff', 'admin']}><ConsignmentDetailPage key={location.pathname} /></PrivateRoute>} />
+      <Route path="/moderator/inventory/:sku" element={<PrivateRoute roles={['staff', 'admin']}><InventoryDetailPage key={location.pathname} /></PrivateRoute>} />
+      <Route path="/moderator/end-of-term" element={<PrivateRoute roles={['staff', 'admin']}><EndOfTermPage /></PrivateRoute>} />
       <Route
         path="/moderator/returns"
         element={
