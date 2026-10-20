@@ -33,6 +33,7 @@ export async function request(
       params,
       data,
       signal,
+      noReplay: config.method.toLowerCase() !== 'get',
       onUploadProgress,
       ...(data instanceof FormData ? { headers: { 'Content-Type': undefined } } : {}),
     });
