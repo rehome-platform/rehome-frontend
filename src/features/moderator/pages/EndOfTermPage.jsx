@@ -18,9 +18,14 @@ import {
   money,
 } from '../phase2/ui.jsx';
 import ReceiptPanel from '../phase2/ReceiptPanel.jsx';
+import { packingService } from '../phase4/api.js';
+import { handoverPayload } from '../phase4/model.js';
+import { operationReady } from '../phase4/contract.js';
 
 function EndTermDetail({ sku, onChanged }) {
-  const { identity } = usePhase2();
+  const { identity, scope } = usePhase2();
+  const [now, setNow] = useState(Date.now());
+  React.useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
   const resource = useResource((options) => endTermService.read(sku, options), [sku]);
   const enums = useResource(
     async () =>
@@ -35,11 +40,13 @@ function EndTermDetail({ sku, onChanged }) {
     [confirm, setConfirm] = useState(null),
     [receiptId, setReceiptId] = useState(null);
   const data = resource.data;
-  const identified = !!identity && identity.memberId === data?.memberId;
+  const identified = isFixtureMode ? !!identity && identity.memberId === data?.memberId
+    : operationReady('handover') && !!handoverPayload(data, identity, scope, now);
   const success = (result) => {
     if (result?.receiptId) setReceiptId(result.receiptId);
     setConfirm(null);
     onChanged();
+    window.dispatchEvent(new Event('warehouse:changed'));
   };
   const run = () => {
     if (!data || !data.allowedActions?.includes(confirm) || (confirm === 'HANDOVER' && !identified))
@@ -47,7 +54,8 @@ function EndTermDetail({ sku, onChanged }) {
     const action =
       confirm === 'HANDOVER'
         ? (options) =>
-            endTermService.handover(sku, { identityToken: identity.identityToken }, options)
+            isFixtureMode ? endTermService.handover(sku, { identityToken: identity.identityToken }, options)
+              : packingService.handover(data, identity, options)
         : confirm === 'RE_CONSIGN'
           ? (options) =>
               endTermService.reconsign(
