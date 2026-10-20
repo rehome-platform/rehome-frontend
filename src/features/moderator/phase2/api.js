@@ -45,7 +45,12 @@ export async function request(
 }
 
 export const queueService = {
-  list: (params, options) => request('queueList', { ...options, params }),
+  list: async (params, options) => {
+    const result = await request('queueList', { ...options, params });
+    if (params?.type !== 'PACKING' || !result) return result;
+    const map = item => ({ ...item, queueId: item.queueId ?? item.id, orderId: item.orderId ?? item.refId });
+    return Array.isArray(result) ? result.map(map) : { ...result, items: (result.items || []).map(map) };
+  },
   claim: (queueId, options) => request('queueClaim', { ...options, ids: { queueId } }),
   release: (queueId, options) => request('queueRelease', { ...options, ids: { queueId } }),
   approve: (formId, options) => request('formApprove', { ...options, ids: { formId } }),
