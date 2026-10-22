@@ -122,7 +122,13 @@ baseApi.interceptors.response.use(
 
     const isAuthRoute = isCredentialExchange(originalRequest.url);
 
-    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute) {
+    if (error.response?.status === 401 && originalRequest.noReplay) {
+      removeTokens();
+      window.dispatchEvent(new CustomEvent('auth:expired'));
+      return Promise.reject(error);
+    }
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute && !originalRequest.noReplay) {
       originalRequest._retry = true;
       if (isRefreshing) {
         return new Promise((resolve, reject) => {

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import { queueService } from '../phase2/api.js';
 import { usePhase2, useResource } from '../phase2/hooks.jsx';
@@ -44,6 +45,7 @@ export default function ConsignmentQueuePage() {
             >
               <option value="FORM_REVIEW">Duyệt form</option>
               <option value="INSPECTION">Kiểm định</option>
+              <option value="PACKING">Đóng gói</option>
             </select>
           </Field>
           <Field label="Người xử lý">
@@ -76,7 +78,7 @@ export default function ConsignmentQueuePage() {
               <Status>{item.status}</Status>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <DetailLink formId={item.formId} />
+              {type === 'PACKING' ? <Link className="text-primary underline" to={`/moderator/packing?orderId=${encodeURIComponent(item.orderId || item.refId)}`}>Chi tiết đóng gói</Link> : <DetailLink formId={item.formId} />}
               {!item.claimedBy && (
                 <Button
                   loading={resource.busy}

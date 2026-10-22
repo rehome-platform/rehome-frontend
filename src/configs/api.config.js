@@ -109,4 +109,9 @@ export const API_ENDPOINTS = {
     LIST: "/api/notifications",
     MARK_READ: (id) => `/api/notifications/${id}/read`,
   },
+
+  // 5. Thanh toán MoMo - trang hiển thị kết quả sau khi được redirect về
+  MOMO: {
+    RETURN_INFO: "/api/momo/return-info",
+  },
 };

@@ -105,6 +105,10 @@ export function useResource(
     setVersion((value) => value + 1);
   }, []);
   useEffect(() => {
+    window.addEventListener('warehouse:changed', refresh);
+    return () => window.removeEventListener('warehouse:changed', refresh);
+  }, [refresh]);
+  useEffect(() => {
     if (!enabled || session.signal.aborted) {
       setState({ data: null, loading: false, error: null });
       return;
