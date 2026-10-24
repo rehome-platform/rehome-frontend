@@ -114,4 +114,9 @@ export const API_ENDPOINTS = {
   MOMO: {
     RETURN_INFO: "/api/momo/return-info",
   },
+
+  // 6. Thanh toán VNPay - trang hiển thị kết quả sau khi được redirect về
+  VNPAY: {
+    RETURN_INFO: "/api/vnpay/return-info",
+  },
 };
