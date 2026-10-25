@@ -29,52 +29,72 @@ export const API_ENDPOINTS = {
     CODE: "/members/me/code",
   },
 
-  // 2. Moderator (Nhân viên vận hành kho & Kiểm duyệt viên tại chi nhánh kho)
+  // 2. Moderator (Nhân viên vận hành kho & Kiểm duyệt viên tại chi nhánh kho) - API 25 -> 48
   MODERATOR: {
-    // Quầy tiếp nhận & Tra cứu Member
-    COUNTER_LOOKUP: (query) => `/api/moderator/counter/lookup?q=${encodeURIComponent(query)}`,
-    COUNTER_INSPECT: "/api/moderator/counter/inspect",
-    COUNTER_HANDOVER: "/api/moderator/counter/handover",
-    RECEIPT_DETAIL: (code) => `/api/moderator/receipts/${code}`,
+    // API 25, 26, 27: Quầy tiếp nhận & Tra cứu Member
+    COUNTER_LOOKUP: "/counter/lookup",
+    COUNTER_CONFIRM_IDENTITY: (accountId) => `/counter/members/${accountId}/confirm-identity`,
+    COUNTER_TASKS: (accountId) => `/counter/members/${accountId}/tasks`,
+    COUNTER_HANDOVER: "/counter/handover",
 
-    // Hàng đợi duyệt form online
-    QUEUE_FORMS: "/api/moderator/queue/forms",
-    CLAIM_FORM: (id) => `/api/moderator/queue/forms/${id}/claim`,
-    APPROVE_FORM: (id) => `/api/moderator/queue/forms/${id}/approve`,
-    REJECT_FORM: (id) => `/api/moderator/queue/forms/${id}/reject`,
+    // API 28, 29, 30: Hàng đợi công việc kho
+    QUEUES: "/queues",
+    CLAIM_QUEUE: (id) => `/queues/${id}/claim`,
+    RELEASE_QUEUE: (id) => `/queues/${id}/release`,
 
-    // Kho chi nhánh & Tồn kho
-    INVENTORY: "/api/moderator/inventory",
-    INVENTORY_UPDATE_SHELF: "/api/moderator/inventory/shelf",
-    UNCLAIMED_ITEMS: "/api/moderator/inventory/unclaimed",
-    CLEAR_UNCLAIMED: (id) => `/api/moderator/inventory/unclaimed/${id}/clear`,
+    // API 31, 32, 33, 34, 35: Quy trình duyệt form & kiểm định ký gửi
+    APPROVE_FORM: (id) => `/consignment-forms/${id}/approve`,
+    REJECT_FORM: (id) => `/consignment-forms/${id}/reject`,
+    START_INSPECTION: (id) => `/consignment-forms/${id}/inspection/start`,
+    COMPLETE_INSPECTION: (id) => `/consignment-forms/${id}/inspection/complete`,
+    RETURN_ONSITE: (id) => `/consignment-forms/${id}/return-onsite`,
+    CONSIGNMENT_FORM_DETAIL: (id) => `/consignment-forms/${id}`,
+    RECEIPT_DETAIL: (id) => `/consignment-receipts/${id}`,
+    RECEIPT_PDF: (id) => `/consignment-receipts/${id}/pdf`,
+
+    // API 36, 37, 38, 39, 40, 41, 42, 43: Tồn kho & Sản phẩm
+    CREATE_PRODUCT: "/products",
+    CONFIRM_UNCLAIMED_TRANSFER: (id) => `/products/${id}/unclaimed/confirm-transfer`,
+    PRODUCT_PHOTOS: (id) => `/products/${id}/photos`,
+    PRODUCT_SKU_LABEL: (id) => `/products/${id}/sku-label`,
+    INVENTORY: "/inventory",
+    PRODUCT_BY_SKU: (sku) => `/products/${sku}`,
+    UPDATE_SHELF_LOCATION: (id) => `/products/${id}/shelf-location`,
+    STOCK_MOVEMENTS: (id) => `/products/${id}/stock-movements`,
+
+    // API 44, 45, 46, 47, 48: Danh mục & Thương hiệu
+    CATEGORIES: "/categories",
+    CATEGORY_DETAIL: (id) => `/categories/${id}`,
+    HIDE_CATEGORY: (id) => `/categories/${id}/hide`,
+    BRANDS: "/brands",
+    BRAND_DETAIL: (id) => `/brands/${id}`,
+    HIDE_BRAND: (id) => `/brands/${id}/hide`,
+
+    // File Upload
+    UPLOADS: "/uploads",
 
     // Đóng gói & GHN
-    ORDERS_PACKING: "/api/moderator/orders/packing",
-    CREATE_GHN_SHIPMENT: (orderId) => `/api/moderator/orders/${orderId}/ghn-shipment`,
+    ORDERS_PACKING: "/orders/packing",
+    CREATE_GHN_SHIPMENT: (orderId) => `/orders/${orderId}/shipment`,
 
-    // Xử lý hàng trả & Thẩm định 2 Mod nghi giả
-    RETURNS: "/api/moderator/returns",
-    INSPECT_RETURN: (id) => `/api/moderator/returns/${id}/inspect`,
-    REPORT_COUNTERFEIT: (id) => `/api/moderator/returns/${id}/counterfeit`,
+    // Xử lý hàng trả
+    RETURNS: "/return-requests",
+    INSPECT_RETURN: (id) => `/return-requests/${id}/inspect`,
+    REPORT_COUNTERFEIT: (id) => `/return-requests/${id}/flag-counterfeit`,
 
     // Xác minh tổ chức & Duyệt đổi pháp lý
-    VERIFICATION_QUEUE: "/api/moderator/organizations/verifications",
-    APPROVE_ORG: (id) => `/api/moderator/organizations/${id}/approve`,
-    REJECT_ORG: (id) => `/api/moderator/organizations/${id}/reject`,
-    LEGAL_CHANGES: "/api/moderator/organizations/legal-changes",
-    APPROVE_LEGAL_CHANGE: (id) => `/api/moderator/organizations/legal-changes/${id}/approve`,
+    VERIFICATION_QUEUE: "/organizations/verifications",
+    APPROVE_ORG: (id) => `/organizations/${id}/verify`,
+    REJECT_ORG: (id) => `/organizations/${id}/reject`,
+    LEGAL_CHANGES: "/organizations/legal-change-requests",
+    APPROVE_LEGAL_CHANGE: (id) => `/organizations/legal-change-requests/${id}/approve`,
 
     // Báo cáo vi phạm nội dung
-    VIOLATION_REPORTS: "/api/moderator/reports",
-    RESOLVE_REPORT: (id) => `/api/moderator/reports/${id}/resolve`,
-
-    // Quản lý Danh mục & Thương hiệu
-    CATEGORIES: "/api/moderator/categories",
-    BRANDS: "/api/moderator/brands",
+    VIOLATION_REPORTS: "/violation-reports",
+    RESOLVE_REPORT: (id) => `/violation-reports/${id}/resolve`,
 
     // Hộp thư hỗ trợ kho
-    WAREHOUSE_INBOX: "/api/moderator/inbox",
+    WAREHOUSE_INBOX: "/conversations",
   },
 
   // 3. Admin (Quản trị viên nền tảng ReHome)
