@@ -1,4 +1,5 @@
 export { default as CounterPage } from './CounterPage.jsx';
+export { default as WarehouseHomePage } from './WarehouseHomePage.jsx';
 export { default as ConsignmentDetailPage } from './ConsignmentDetailPage.jsx';
 export { default as InventoryDetailPage } from './InventoryDetailPage.jsx';
 export { default as EndOfTermPage } from './EndOfTermPage.jsx';

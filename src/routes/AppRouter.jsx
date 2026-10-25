@@ -25,6 +25,7 @@ import {
   ViolationReportsPage,
   CategoryBrandPage,
   WarehouseInboxPage,
+  WarehouseHomePage,
 } from '../features/moderator/pages/index.js';
 
 // Admin Pages & Shared Layout (Cổng Quản Trị Hệ Thống)
@@ -95,7 +96,15 @@ export default function AppRouter() {
         path="/moderator"
         element={
           <PrivateRoute roles={['staff', 'admin']}>
-            <Navigate to="/moderator/counter" replace />
+            <Navigate to="/moderator/home" replace />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/moderator/home"
+        element={
+          <PrivateRoute roles={['staff', 'admin']}>
+            <WarehouseHomePage />
           </PrivateRoute>
         }
       />

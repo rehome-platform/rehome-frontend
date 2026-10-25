@@ -27,27 +27,36 @@ export default function ConsignmentQueuePage() {
     });
   return (
     <Page
-      title="Hàng đợi ký gửi"
-      subtitle="Nhận việc theo kho trước khi duyệt hoặc kiểm định."
+      title="Hàng đợi công việc"
+      subtitle="Việc không ai nhận sau 48 giờ sẽ tự nhả về hàng đợi và báo Admin."
       actions={
         <Button variant="outline" onClick={resource.refresh}>
           Tải lại
         </Button>
       }
     >
+      <div role="tablist" aria-label="Loại công việc" className="flex flex-wrap gap-2">
+        {[
+          ['FORM_REVIEW', 'Duyệt form'],
+          ['INSPECTION', 'Kiểm định'],
+          ['PACKING', 'Đóng gói'],
+        ].map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={type === value}
+            onClick={() => change('type', value)}
+            className={`rounded-xl border px-4 py-2 text-xs font-semibold ${
+              type === value ? 'border-primary bg-primary text-white' : 'border-neutral bg-white text-textSecondary hover:bg-background'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       <Card>
         <div className="flex flex-wrap gap-4">
-          <Field label="Loại công việc">
-            <select
-              value={type}
-              onChange={(event) => change('type', event.target.value)}
-              className="rounded-xl border-neutral"
-            >
-              <option value="FORM_REVIEW">Duyệt form</option>
-              <option value="INSPECTION">Kiểm định</option>
-              <option value="PACKING">Đóng gói</option>
-            </select>
-          </Field>
           <Field label="Người xử lý">
             <select
               value={claim}
