@@ -7,7 +7,7 @@ import {
   safeDocumentUrl,
   unwrap,
   validMoney,
-} from '../../src/features/moderator/phase2/model.js';
+} from '../../src/features/moderator/models/warehouseModel.js';
 
 describe('Phase 2 boundary rules', () => {
   it('accepts empty 204 and both supported envelopes without losing false values', () => {

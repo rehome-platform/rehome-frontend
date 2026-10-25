@@ -3,11 +3,11 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
-import { Phase2Provider } from '../../src/features/moderator/phase2/hooks.jsx';
-import { catalogService, inventoryService } from '../../src/features/moderator/phase2/api.js';
-import { Phase2Error } from '../../src/features/moderator/phase2/model.js';
-import PhotoUpload from '../../src/features/moderator/phase2/PhotoUpload.jsx';
-import StockInForm from '../../src/features/moderator/phase2/StockInForm.jsx';
+import { Phase2Provider } from '../../src/features/moderator/hooks/warehouseHooks.jsx';
+import { catalogService, inventoryService } from '../../src/features/moderator/services/warehouseApi.js';
+import { Phase2Error } from '../../src/features/moderator/models/warehouseModel.js';
+import PhotoUpload from '../../src/features/moderator/components/PhotoUpload.jsx';
+import StockInForm from '../../src/features/moderator/components/StockInForm.jsx';
 import QRScannerModal from '../../src/components/QRScannerModal.jsx';
 const userIdentity = { id: 'mod-a', role: 'staff', warehouseId: 'warehouse-a' };
 vi.mock('../../src/context/AuthContext.jsx', () => ({

@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useNotification } from '../context/NotificationContext.jsx';
@@ -14,12 +14,12 @@ export default function Header() {
 
   const userMenuItems = [
     {
-      label: 'Hồ sơ cá nhân & Tài khoản',
+      label: 'Há»“ sÆ¡ cÃ¡ nhÃ¢n & TÃ i khoáº£n',
       icon: 'person',
       onClick: () => navigate('/profile'),
     },
     {
-      label: 'Đổi mật khẩu',
+      label: 'Äá»•i máº­t kháº©u',
       icon: 'lock_reset',
       onClick: () => navigate('/profile'),
     },
@@ -27,21 +27,21 @@ export default function Header() {
     ...(isAdmin
       ? [
           {
-            label: 'Cổng Quản trị Admin',
+            label: 'Cá»•ng Quáº£n trá»‹ Admin',
             icon: 'admin_panel_settings',
             onClick: () => navigate('/admin'),
           },
         ]
       : [
           {
-            label: 'Cổng Vận hành Kho (Moderator)',
+            label: 'Cá»•ng Váº­n hÃ nh Kho (Moderator)',
             icon: 'warehouse',
             onClick: () => navigate('/moderator/counter'),
           },
         ]),
     { divider: true },
     {
-      label: 'Đăng xuất',
+      label: 'ÄÄƒng xuáº¥t',
       icon: 'logout',
       danger: true,
       onClick: logout,
@@ -62,7 +62,7 @@ export default function Header() {
                 className="hover:text-[#006B2C] transition-colors flex items-center gap-1.5"
               >
                 <span className="material-symbols-outlined text-base">warehouse</span>
-                <span>Kho & Kiểm định</span>
+                <span>Kho & Kiá»ƒm Ä‘á»‹nh</span>
               </Link>
             )}
             {(!isAuthenticated || isAdmin) && (
@@ -71,7 +71,7 @@ export default function Header() {
                 className="hover:text-[#006B2C] transition-colors flex items-center gap-1.5"
               >
                 <span className="material-symbols-outlined text-base">monitoring</span>
-                <span>Quản trị & Quỹ</span>
+                <span>Quáº£n trá»‹ & Quá»¹</span>
               </Link>
             )}
           </nav>
@@ -86,13 +86,13 @@ export default function Header() {
                 {isAdmin ? (
                   <>
                     <span className="w-2 h-2 rounded-full bg-[#00685F]"></span>
-                    <span className="text-[#00685F]">Quản trị viên (Admin)</span>
+                    <span className="text-[#00685F]">Quáº£n trá»‹ viÃªn (Admin)</span>
                   </>
                 ) : (
                   <>
                     <span className="w-2 h-2 rounded-full bg-[#006B2C]"></span>
                     <span className="text-[#006B2C]">
-                      {user?.memberCode ? `${user.memberCode} • Moderator` : 'Nhân viên Kho (Mod)'}
+                      {user?.memberCode ? `${user.memberCode} â€¢ Moderator` : 'NhÃ¢n viÃªn Kho (Mod)'}
                     </span>
                   </>
                 )}
@@ -101,7 +101,7 @@ export default function Header() {
               {/* Notification icon */}
               <button
                 className="relative p-2 text-[#5B6776] hover:text-[#006B2C] hover:bg-[#F6F9F4] rounded-xl transition-colors"
-                aria-label="Thông báo"
+                aria-label="ThÃ´ng bÃ¡o"
                 onClick={() => navigate('/notifications')}
               >
                 <span className="material-symbols-outlined text-[22px]">notifications</span>
@@ -123,10 +123,10 @@ export default function Header() {
                     />
                     <div className="text-left hidden sm:block">
                       <div className="text-xs font-bold text-[#1F2A37] max-w-[120px] truncate leading-tight">
-                        {user?.fullName || user?.name || user?.email || 'Nhân sự'}
+                        {user?.fullName || user?.name || user?.email || 'NhÃ¢n sá»±'}
                       </div>
                       <div className="text-[10px] text-[#5B6776] leading-tight">
-                        {isAdmin ? 'Quản trị viên' : 'Nhân viên kho'}
+                        {isAdmin ? 'Quáº£n trá»‹ viÃªn' : 'NhÃ¢n viÃªn kho'}
                       </div>
                     </div>
                     <span className="material-symbols-outlined text-sm text-[#5B6776]">expand_more</span>
@@ -140,7 +140,7 @@ export default function Header() {
               to="/login"
               className="px-4 py-2 text-xs font-bold rounded-xl bg-[#006B2C] text-white hover:bg-[#005523] shadow-sm transition-all"
             >
-              Đăng nhập nhân sự
+              ÄÄƒng nháº­p nhÃ¢n sá»±
             </Link>
           )}
         </div>

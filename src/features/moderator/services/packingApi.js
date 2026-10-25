@@ -1,7 +1,7 @@
 import baseApi from '../../../services/baseApi.js';
-import { normalizeError, Phase2Error, unwrap } from '../phase2/model.js';
-import { phase4Contract } from './contract.js';
-import { handoverPayload } from './model.js';
+import { normalizeError, Phase2Error, unwrap } from '../models/warehouseModel.js';
+import { phase4Contract } from '../config/packingContract.js';
+import { handoverPayload } from '../models/packingModel.js';
 
 export async function request(operation, { orderId, data, signal, scope } = {}) {
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');

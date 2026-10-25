@@ -8,8 +8,8 @@ import React, {
   useState,
 } from 'react';
 import { useAuth } from '../../../context/AuthContext.jsx';
-import { isFixtureMode } from './contract.js';
-import { normalizeError, warehouseOf } from './model.js';
+import { isFixtureMode } from '../config/warehouseContract.js';
+import { normalizeError, warehouseOf } from '../models/warehouseModel.js';
 
 const Session = createContext(null);
 export function Phase2Provider({ children }) {

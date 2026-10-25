@@ -1,7 +1,7 @@
 import React, { StrictMode } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Phase2Provider, useResource } from '../../src/features/moderator/phase2/hooks.jsx';
+import { Phase2Provider, useResource } from '../../src/features/moderator/hooks/warehouseHooks.jsx';
 
 vi.mock('../../src/context/AuthContext.jsx', () => ({
   useAuth: () => ({ user: testUser, isAuthenticated: true }),

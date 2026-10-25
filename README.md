@@ -43,10 +43,10 @@ Dự án áp dụng mô hình kiến trúc **Feature-based + Layered Architectur
 - **Business Logic & State Layer (Tầng Nghiệp Vụ & Trạng Thái):**
   - Quản lý phiên đăng nhập & phân quyền nhân sự (`src/context/AuthContext.jsx`)
   - Thông báo thời gian thực (`src/context/NotificationContext.jsx`)
-  - Custom Hooks xử lý QR Scanner, debounce tìm kiếm, modal xác nhận (`src/hooks/`)
+  - Custom Hook xử lý QR Scanner (`src/hooks/`)
 - **Service & Network Layer (Tầng Dịch Vụ Mạng):**
   - Axios HTTP Client tích hợp JWT Interceptors & Auto Refresh (`src/services/baseApi.js`)
-  - Các service API theo phân hệ (`src/features/*/services/`)
+  - Auth service (`src/features/auth/services/`) và API nghiệp vụ kho (`src/features/moderator/services/`)
 - **Configuration & Infrastructure Layer (Tầng Cấu Hình & Tiện Ích):**
   - Tập trung hóa Endpoint API (`src/configs/api.config.js`)
   - Định nghĩa phân quyền Web (`src/configs/role.config.js`)
@@ -61,141 +61,38 @@ Cây thư mục dưới đây được đối chiếu với các thư mục và 
 
 ```text
 rehome-frontend/
-├── docs/                                 # Tài liệu đặc tả nghiệp vụ chính thức
-│   └── demo_account.md
-├── public/                               # Tài nguyên công khai tĩnh
-├── src/                                  # Toàn bộ mã nguồn ứng dụng Web
-│   ├── assets/                           # Tài nguyên tĩnh cục bộ
-│   │   ├── icons/                        # Icon SVG dùng chung
-│   │   │   ├── eco.png
-│   │   │   ├── index.js                  # Export trung tâm icon
-│   │   │   └── verified.svg              # Huy hiệu xác minh chính hãng/tổ chức
-│   │   ├── images/
-│   │   │   └── logo.svg
-│   │   └── logo/
-│   │       └── rehome-logo.png
-│   │
-│   ├── components/                       # UI Components dùng chung toàn ứng dụng
-│   │   ├── common/                       # Base components chuẩn Material Design
-│   │   │   ├── Badge.jsx                 # Hiển thị nhãn trạng thái (Success, Warning, Danger, Info)
-│   │   │   ├── Button.jsx                # Nút bấm tương tác đa kích thước & biến thể
-│   │   │   ├── Dropdown.jsx              # Menu thả xuống chọn thao tác/bộ lọc
-│   │   │   ├── Input.jsx                 # Ô nhập liệu có validation & icon tích hợp
-│   │   │   ├── Logo.jsx
-│   │   │   ├── Modal.jsx                 # Hộp thoại modal tương tác đa năng
-│   │   │   ├── Table.jsx                 # Bảng dữ liệu chuẩn hóa hỗ trợ phân trang
-│   │   │   └── index.js                  # Export tập trung common components
-│   │   ├── chat.jsx                      # Widget chat hỗ trợ trao đổi thời gian thực
-│   │   ├── ConfirmModal.jsx              # Modal xác nhận thao tác quan trọng (tiêu hủy, duyệt, khóa)
-│   │   ├── footer.jsx                    # Footer thông tin hệ thống điều hành ReHome
-│   │   ├── header.jsx                    # Header thanh điều hướng Web Portal
-│   │   └── QRScannerModal.jsx            # Modal quét mã QR / SKU bằng camera thiết bị
-│   │
-│   ├── configs/                          # Cấu hình hằng số trung tâm hệ thống
-│   │   ├── api.config.js                 # Centralized API Endpoints cho Admin & Moderator
-│   │   ├── role.config.js                # Phân quyền vai trò trên Web: ADMIN, MODERATOR
-│   │   └── systemParams.config.js        # 5 nhóm tham số cấu hình hệ thống theo Mục 11
-│   │
-│   ├── context/                          # Quản lý trạng thái toàn cục (React Context)
-│   │   ├── AuthContext.jsx               # Quản lý phiên đăng nhập, JWT token & vai trò nhân sự
-│   │   └── NotificationContext.jsx       # Quản lý thông báo toast thời gian thực
-│   │
-│   ├── features/                         # CÁC PHÂN HỆ NGHIỆP VỤ THỰC THI TRÊN WEB
-│   │   │
-│   │   ├── admin/                        # PHÂN HỆ QUẢN TRỊ VIÊN HỆ THỐNG (ADMIN)
-│   │   │   ├── components/
-│   │   │   │   ├── AdminAccountsView.jsx      # Quản lý tài khoản (Member, Org) - Khóa/mở khóa (UC-76..78)
-│   │   │   │   ├── AdminAuditLogsView.jsx     # Nhật ký kiểm toán thao tác hệ thống (UC-90, F-160)
-│   │   │   │   ├── AdminHeader.jsx            # Header riêng của cổng quản trị Admin
-│   │   │   │   ├── AdminModeratorsView.jsx    # Cấp tài khoản & phân bổ Moderator vào kho chi nhánh (UC-79..81)
-│   │   │   │   ├── AdminOverviewView.jsx      # Thống kê tổng quan điều hành Google Stitch
-│   │   │   │   ├── AdminSidebar.jsx           # Sidebar điều hướng các phân hệ Admin
-│   │   │   │   └── AdminWarehousesView.jsx    # Quản lý mạng lưới kho, chặn ẩn kho còn tồn (UC-82..85)
-│   │   │   ├── pages/
-│   │   │   │   ├── AdminAccountsPage.jsx
-│   │   │   │   ├── AdminAuditLogsPage.jsx
-│   │   │   │   ├── AdminDashboardPage.jsx     # Dashboard Quỹ nền tảng & Sổ kép đối ứng (Mục 7 & 8)
-│   │   │   │   ├── AdminModeratorsPage.jsx
-│   │   │   │   ├── AdminSystemPage.jsx        # Portal điều hành tập trung các phân hệ Admin
-│   │   │   │   ├── AdminWarehousesPage.jsx
-│   │   │   │   ├── ConfigPage.jsx             # Cấu hình 5 nhóm tham số chuẩn Mục 11 (UC-86, 87)
-│   │   │   │   └── index.js                   # Export tập trung các trang Admin
-│   │   │   └── services/
-│   │   │       └── admin.service.js           # API services quản trị hệ thống, quỹ và nhân sự
-│   │   │
-│   │   ├── auth/                         # PHÂN HỆ XÁC THỰC NHÂN SỰ NỘI BỘ
-│   │   │   ├── pages/
-│   │   │   │   ├── ForgotPassword.jsx         # Khôi phục mật khẩu tài khoản nhân sự qua email (UC-02)
-│   │   │   │   ├── LoginPage.jsx              # Đăng nhập chuẩn Google Stitch (Admin, Moderator)
-│   │   │   │   ├── ProfilePage.jsx
-│   │   │   │   ├── ResetPassword.jsx
-│   │   │   │   └── index.js                   # Export tập trung các trang Auth
-│   │   │   └── services/
-│   │   │       └── auth.service.js            # API services đăng nhập, đăng xuất, refresh token
-│   │   │
-│   │   └── moderator/                    # PHÂN HỆ NHÂN VIÊN KHO / KIỂM DUYỆT (MODERATOR)
-│   │       ├── components/
-│   │       │   ├── BarcodePrintModal.jsx      # In tem nhãn barcode/QR SKU dán lên áo quần (F-122)
-│   │       │   ├── ConsignmentReceiptModal.jsx# Mẫu Biên nhận ký gửi hàng hóa chuẩn Mục 12
-│   │       │   └── SuspiciousCounterfeitModal.jsx # Quy trình hội chẩn 2 Moderator nghi hàng giả (F-134, F-135)
-│   │       ├── pages/
-│   │       │   ├── CategoryBrandPage.jsx      # Quản lý Danh mục (slot Áo/Quần thử đồ AI) & Thương hiệu (UC-72..75)
-│   │       │   ├── ConsignmentQueuePage.jsx   # Hàng đợi tiếp nhận & duyệt form ký gửi online (F-111..F-114)
-│   │       │   ├── CounterPage.jsx            # Quầy tiếp nhận: Tra cứu Member, Kiểm định, Chốt giá, Bàn giao (UC-60, 62, 66)
-│   │       │   ├── OrgVerificationPage.jsx    # Xác minh hồ sơ tổ chức theo 8 bước Mục 9 & duyệt đổi pháp lý (UC-69, 70)
-│   │       │   ├── PackingOrdersPage.jsx      # Đóng gói xuất kho, quét SKU đối chiếu & tạo vận đơn GHN (UC-65, F-127)
-│   │       │   ├── ReturnProcessingPage.jsx   # Xử lý hàng trả về kho, thẩm định 2 Moderator (F-131..F-135, UC-68)
-│   │       │   ├── ViolationReportsPage.jsx   # Xử lý báo cáo vi phạm cộng đồng theo Mục 13 (UC-71, F-141)
-│   │       │   ├── WarehouseInboxPage.jsx     # Hộp thư hỗ trợ kho trao đổi với Member (UC-48, F-091)
-│   │       │   ├── WarehouseInventoryPage.jsx # Quản lý tồn kho: Vị trí kệ, Quét QR, Hàng vô thừa nhận (UC-63, 64, 67, F-130)
-│   │       │   └── index.js                   # Export tập trung các trang Moderator
-│   │       └── services/
-│   │           ├── audit.service.js           # API services kiểm kê kho & nhật ký vận hành
-│   │           └── staff.service.js           # API services quầy tiếp nhận, đơn hàng, kiểm duyệt
-│   │
-│   ├── hooks/                            # Custom React Hooks
-│   │   ├── useConfirm.jsx                # Hook gọi hộp thoại xác nhận tương tác
-│   │   ├── useDebounce.js                # Hook tối ưu hóa tìm kiếm & tra cứu dữ liệu
-│   │   └── useQRScanner.js               # Hook tích hợp camera quét mã QR/SKU
-│   │
-│   ├── layouts/                          # Khung giao diện phân quyền trên Web
-│   │   ├── AdminLayout.jsx               # Layout chuyên nghiệp cho Quản trị viên (Sidebar + Topbar)
-│   │   ├── AuthLayout.jsx                # Layout màn hình xác thực đăng nhập / quên mật khẩu
-│   │   └── ModeratorLayout.jsx           # Layout tác nghiệp kho cho Moderator (Vận hành + Kiểm duyệt)
-│   │
-│   ├── routes/                           # Cấu hình định tuyến (Routing)
-│   │   ├── AppRouter.jsx                 # Cấu hình Route trung tâm cho Web (Admin & Moderator)
-│   │   └── PrivateRoute.jsx              # Bảo vệ route theo vai trò người dùng (Role-based Guard)
-│   │
-│   ├── services/                         # Tầng kết nối mạng trung tâm
-│   │   └── baseApi.js                    # Cấu hình Axios Client, JWT Interceptors & Auto Refresh Token
-│   │
-│   ├── styles/                           # Định kiểu toàn cục (Styling)
-│   │   ├── global.css                    # CSS toàn cục & cấu hình phông chữ Be Vietnam Pro
-│   │   └── tailwind.css                  # Tích hợp TailwindCSS
-│   │
-│   ├── utils/                            # Tiện ích bổ trợ (Pure Helpers & Validators)
-│   │   ├── api.js                        # Tiện ích bóc tách và định dạng lỗi API chuẩn hóa
-│   │   ├── conditionMapping.js           # Bảng mapping 5 mức độ độ mới sản phẩm kiểm định (1-5)
-│   │   ├── formatters.js                 # Định dạng tiền tệ VND, ngày tháng, mã đơn hàng
-│   │   └── validators.js                 # Validation form (giá sàn 50%, CCCD 12 số, mã số thuế)
-│   │
-│   ├── App.jsx                           # Root Component bao bọc Providers và AppRouter
-│   └── main.jsx                          # Điểm khởi chạy React 18 với Vite
-│
+├── .github/workflows/       # CI
+├── docs/                    # Tài liệu và biên bản rà soát
+├── public/favicon.png       # Tài nguyên công khai
+├── src/
+│   ├── assets/logo/         # Logo import qua Vite
+│   ├── components/          # Header, QR scanner, footer phục vụ kiểm thử
+│   │   └── common/          # UI dùng chung
+│   ├── configs/             # API, vai trò, tham số hệ thống
+│   ├── context/             # Auth và thông báo realtime
+│   ├── features/
+│   │   ├── admin/           # components/, pages/
+│   │   ├── auth/            # pages/, services/, styles/
+│   │   └── moderator/       # components/, pages/, hooks/, services/, models/, config/, fixtures/
+│   ├── hooks/               # Quét QR
+│   ├── layouts/             # Admin và Moderator
+│   ├── routes/              # Router và bảo vệ quyền
+│   ├── services/            # HTTP client dùng chung
+│   ├── styles/              # Global CSS và Tailwind
+│   ├── utils/               # API helpers, formatters, validators
+│   ├── App.jsx
+│   └── main.jsx
 ├── tests/
-│   ├── auth-recovery.test.mjs
-│   └── role-navigation.test.mjs
-│
-├── .env                                  # Biến môi trường kết nối API Backend
-├── .gitignore                            # Danh sách tệp loại trừ khỏi Git
-├── index.html                            # HTML template nạp font Be Vietnam Pro & Google Icons
-├── package.json                          # Khai báo dependencies và scripts
+│   ├── *.test.mjs           # Kiểm thử Node (test:legacy)
+│   ├── *.browser.mjs        # Kịch bản browser độc lập
+│   ├── phase2/, phase4/     # Kiểm thử Vitest
+│   ├── e2e/                 # Playwright với fixture
+│   └── integration/         # Kiểm thử backend thật
+├── .env.example
+├── index.html
+├── package.json
 ├── package-lock.json
-├── postcss.config.js                     # Cấu hình PostCSS cho TailwindCSS
-├── README.md
-├── tailwind.config.js                    # Bảng màu thiết kế Material Design 3 (Google Stitch)
-└── vite.config.js                        # Cấu hình bundler Vite & alias đường dẫn
+└── *.config.js              # Vite, Vitest, Playwright, PostCSS, Tailwind
 ```
 
 `node_modules/` và `dist/` không được liệt kê vì là thư mục sinh ra khi cài đặt và build.
@@ -218,7 +115,6 @@ rehome-frontend/
 | **`CategoryBrandPage.jsx`** | UC-72 → UC-75 | **Danh mục & Thương hiệu:** Quản lý danh mục hỗ trợ phân loại slot Áo / Quần phục vụ tính năng AI Thử đồ ảo (Virtual Try-on) trên Mobile. |
 | **`WarehouseInboxPage.jsx`** | UC-48, F-091 | **Hộp thư kho chi nhánh:** Kênh trao đổi trực tiếp giữa nhân viên kho và Member về tình trạng sản phẩm ký gửi. |
 | **`BarcodePrintModal.jsx`** | F-122 | Hỗ trợ in tem nhãn barcode SKU chuẩn khổ giấy nhiệt để dán trực tiếp lên sản phẩm. |
-| **`ConsignmentReceiptModal.jsx`**| Mục 12 | Mẫu biên nhận ký gửi hàng hóa gồm thông tin Member, danh mục hàng, giá thỏa thuận, điều khoản 3 kỳ. |
 | **`SuspiciousCounterfeitModal.jsx`**| F-134, F-135 | Hộp thoại hội chẩn bắt buộc cần chữ ký/xác nhận của Moderator thứ 2 độc lập đối với sản phẩm nghi giả. |
 
 ---
@@ -281,11 +177,11 @@ Toàn bộ tham số vận hành được quản lý tập trung tại `src/conf
 | `/moderator/categories` | Moderator | `CategoryBrandPage` | Quản lý danh mục (slot thử đồ AI) & thương hiệu |
 | `/moderator/inbox` | Moderator | `WarehouseInboxPage` | Hộp thư hỗ trợ trao đổi với khách hàng |
 | `/admin` | Admin | `AdminDashboardPage` | Dashboard Quỹ nền tảng & Sổ kép đối ứng |
-| `/admin/system` | Admin | `AdminSystemPage` | Cổng điều hành chung các phân hệ quản trị |
-| `/admin/users` | Admin | `AdminSystemPage` | Quản lý tài khoản người dùng & tổ chức |
-| `/admin/moderators` | Admin | `AdminSystemPage` | Phân bổ Moderator theo chi nhánh kho |
-| `/admin/warehouses` | Admin | `AdminSystemPage` | Mạng lưới kho vật lý (chặn ẩn kho còn tồn) |
-| `/admin/audit-logs` | Admin | `AdminSystemPage` | Nhật ký kiểm toán thao tác hệ thống |
+| `/admin/system` | Admin | `Redirect → /admin/users` | Cổng điều hành chung các phân hệ quản trị |
+| `/admin/users` | Admin | `AdminAccountsPage` | Quản lý tài khoản người dùng & tổ chức |
+| `/admin/moderators` | Admin | `AdminModeratorsPage` | Phân bổ Moderator theo chi nhánh kho |
+| `/admin/warehouses` | Admin | `AdminWarehousesPage` | Mạng lưới kho vật lý (chặn ẩn kho còn tồn) |
+| `/admin/audit-logs` | Admin | `AdminAuditLogsPage` | Nhật ký kiểm toán thao tác hệ thống |
 | `/admin/configs` | Admin | `ConfigPage` | Cấu hình 5 nhóm tham số hệ thống Mục 11 |
 
 ---
@@ -301,7 +197,6 @@ Toàn bộ tham số vận hành được quản lý tập trung tại `src/conf
     - Typography: **Be Vietnam Pro** (nạp trực tiếp từ Google Fonts)
 - **Routing:** React Router DOM v6 (`^6.23.1`)
 - **HTTP Client:** Axios (`^1.7.2`) kèm Interceptors tự động đính kèm Bearer Token
-- **Bản đồ kho & vị trí:** Leaflet (`^1.9.4`)
 - **Giao tiếp thời gian thực:** `@stomp/stompjs` & `sockjs-client`
 
 ---
@@ -339,7 +234,11 @@ Kết quả đóng gói bundle tối ưu sẽ được lưu tại thư mục `di
 ```bash
 npm run preview
 ```
-# Phase 2
+## Kiểm tra và bảo trì
 
-Implementation, test commands, integration gates and remaining acceptance checks:
-[Phase 2 hand-off](docs/phase2-handoff.md).
+- `npm test`: Vitest cho nghiệp vụ kho.
+- `npm run test:legacy`: kiểm thử Node cho auth, admin và phân quyền.
+- `npm run test:e2e`: Playwright với fixture cục bộ.
+- `npm run test:e2e:integration`: cần backend và biến môi trường tích hợp.
+
+Chi tiết: [Biên bản rà soát](docs/cleanup-audit.md).

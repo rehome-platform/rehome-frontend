@@ -2,11 +2,11 @@ import React, { useCallback, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import BarcodePrintModal from '../components/BarcodePrintModal.jsx';
-import PhotoUpload from '../phase2/PhotoUpload.jsx';
-import { inventoryService } from '../phase2/api.js';
-import { useResource } from '../phase2/hooks.jsx';
-import { listItems } from '../phase2/model.js';
-import { Page, Card, Field, Photos, Status, ResourceState, date, money } from '../phase2/ui.jsx';
+import PhotoUpload from '../components/PhotoUpload.jsx';
+import { inventoryService } from '../services/warehouseApi.js';
+import { useResource } from '../hooks/warehouseHooks.jsx';
+import { listItems } from '../models/warehouseModel.js';
+import { Page, Card, Field, Photos, Status, ResourceState, date, money } from '../components/WarehouseUi.jsx';
 
 export default function InventoryDetailPage() {
   const { sku } = useParams();

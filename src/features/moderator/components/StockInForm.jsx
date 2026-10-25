@@ -1,10 +1,10 @@
 import React, { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
-import { catalogService, inventoryService } from './api.js';
-import { useResource } from './hooks.jsx';
-import { canStockIn } from './model.js';
-import { Card, Field, ResourceState } from './ui.jsx';
+import { catalogService, inventoryService } from '../services/warehouseApi.js';
+import { useResource } from '../hooks/warehouseHooks.jsx';
+import { canStockIn } from '../models/warehouseModel.js';
+import { Card, Field, ResourceState } from './WarehouseUi.jsx';
 import PhotoUpload from './PhotoUpload.jsx';
 import CatalogEditor from './CatalogEditor.jsx';
 

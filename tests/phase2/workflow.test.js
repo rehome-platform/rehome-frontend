@@ -3,7 +3,7 @@ import {
   confirmFixtureReceipt,
   fixtureRequest,
   resetFixtures,
-} from '../../src/features/moderator/phase2/fixtures.js';
+} from '../../src/features/moderator/fixtures/warehouseFixtures.js';
 const scope = { userId: 'moderator-a', warehouseId: 'warehouse-a' };
 const call = (operation, options = {}) => fixtureRequest(operation, { scope, ...options });
 beforeEach(resetFixtures);
