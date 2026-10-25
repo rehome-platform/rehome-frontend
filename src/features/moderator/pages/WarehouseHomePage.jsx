@@ -14,7 +14,7 @@ const QUEUE_TYPES = [
 ];
 const STOCK_ROWS = [
   { status: 'ON_SALE', label: 'Đang bán' },
-  { status: 'WAITING_END_OF_TERM', label: 'Chờ xử lý cuối kỳ', to: '/moderator/end-of-term' },
+  { status: 'WAITING_END_OF_TERM', label: 'Chờ xử lý cuối kỳ', to: '/moderator/end-of-term', unavailable: true },
   { status: 'UNCLAIMED', label: 'Vô thừa nhận', to: '/moderator/end-of-term' },
 ];
 
@@ -40,11 +40,10 @@ export default function WarehouseHomePage() {
   const review = useResource((o) => queueService.list({ type: 'FORM_REVIEW' }, o), []);
   const inspection = useResource((o) => queueService.list({ type: 'INSPECTION' }, o), []);
   const packing = useResource((o) => queueService.list({ type: 'PACKING' }, o), []);
-  const onSale = useResource((o) => inventoryService.list({ status: STOCK_ROWS[0].status }, o), []);
-  const endTerm = useResource((o) => inventoryService.list({ status: STOCK_ROWS[1].status }, o), []);
-  const unclaimed = useResource((o) => inventoryService.list({ status: STOCK_ROWS[2].status }, o), []);
+  const onSale = useResource((o) => inventoryService.list({ status: 'ON_SALE' }, o), []);
+  const unclaimed = useResource((o) => inventoryService.list({ status: 'UNCLAIMED' }, o), []);
   const queues = [review, inspection, packing];
-  const stocks = [onSale, endTerm, unclaimed];
+  const stocks = [onSale, unclaimed];
 
   const tasks = QUEUE_TYPES.flatMap(({ type, label }, index) =>
     listItems(queues[index].data).map((item) => ({ ...item, kind: type, kindLabel: label, source: queues[index], hours: waitedHours(item) })),
@@ -124,10 +123,16 @@ export default function WarehouseHomePage() {
 
         <Card title="Tồn kho theo trạng thái">
           <ul className="space-y-2 text-sm">
-            {STOCK_ROWS.map((row, index) => (
-              <li key={row.status} className={`flex justify-between ${index === 2 ? 'border-t border-neutral pt-2 font-semibold' : ''}`}>
+            {STOCK_ROWS.map((row) => (
+              <li key={row.status} className={`flex justify-between ${row.status === 'UNCLAIMED' ? 'border-t border-neutral pt-2 font-semibold' : ''}`}>
                 {row.to ? <Link className="text-textSecondary hover:underline" to={row.to}>{row.label}</Link> : <span className="text-textSecondary">{row.label}</span>}
-                <span className="font-semibold">{countOf(stocks[index].data)}</span>
+                <span className="font-semibold" title={row.unavailable ? 'Chưa hỗ trợ thống kê từ API' : undefined}>
+                  {row.status === 'ON_SALE'
+                    ? countOf(onSale.data)
+                    : row.status === 'UNCLAIMED'
+                    ? countOf(unclaimed.data)
+                    : '—'}
+                </span>
               </li>
             ))}
           </ul>

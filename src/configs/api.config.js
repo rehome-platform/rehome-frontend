@@ -5,7 +5,21 @@
  */
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://re-backend-9a98.onrender.com";
-export const WS_BASE_URL = `${API_BASE_URL.replace(/^http/, 'ws')}/ws`;
+
+/**
+ * Tạo URL hợp lệ cho SockJS client.
+ * SockJS yêu cầu bắt buộc giao thức http: hoặc https:. Tuyệt đối không dùng ws: hoặc wss:.
+ */
+export function getSockJsUrl(baseUrl = API_BASE_URL) {
+  if (!baseUrl) return "";
+  const httpUrl = String(baseUrl)
+    .replace(/^ws:\/\//i, "http://")
+    .replace(/^wss:\/\//i, "https://");
+  const cleanBase = httpUrl.replace(/\/+$/, "");
+  return `${cleanBase}/ws`;
+}
+
+export const WS_BASE_URL = getSockJsUrl(API_BASE_URL);
 
 export const API_ENDPOINTS = {
   // 1. Auth & Session Security (Web: Admin & Moderator)
@@ -124,9 +138,9 @@ export const API_ENDPOINTS = {
     AUDIT_LOGS: "/api/admin/audit-logs",
   },
 
-  // 4. Notifications
+  // 4. Notifications (API 114)
   NOTIFICATIONS: {
-    LIST: "/api/notifications",
-    MARK_READ: (id) => `/api/notifications/${id}/read`,
+    LIST: "/notifications",
+    MARK_READ: (id) => `/notifications/${id}/read`,
   },
 };

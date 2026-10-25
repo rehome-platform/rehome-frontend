@@ -9,6 +9,16 @@ import { useResource } from '../hooks/warehouseHooks.jsx';
 import { listItems } from '../models/warehouseModel.js';
 import { Page, Field, Status, Pager, ResourceState, money } from '../components/WarehouseUi.jsx';
 
+export const SUPPORTED_INVENTORY_STATUSES = [
+  'ON_SALE',
+  'RESERVED',
+  'SOLD',
+  'WITHDRAWN',
+  'UNCLAIMED',
+  'DONATED',
+  'DESTROYED',
+];
+
 export default function WarehouseInventoryPage() {
   const [search, setSearch] = useSearchParams();
   const navigate = useNavigate();
@@ -94,7 +104,10 @@ export default function WarehouseInventoryPage() {
               onChange={(e) => change('status', e.target.value)}
             >
               <option value="">Tất cả trạng thái</option>
-              {(enums.data?.inventoryStatuses || ['ON_SALE', 'PAID', 'WAITING_END_OF_TERM', 'UNCLAIMED']).map((value) => (
+              {(Array.isArray(enums.data?.inventoryStatuses) && enums.data.inventoryStatuses.length > 0
+                ? enums.data.inventoryStatuses.filter((s) => SUPPORTED_INVENTORY_STATUSES.includes(s))
+                : SUPPORTED_INVENTORY_STATUSES
+              ).map((value) => (
                 <option key={value} value={value}>
                   {value}
                 </option>

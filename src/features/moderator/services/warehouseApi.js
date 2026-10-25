@@ -402,8 +402,11 @@ export const inventoryService = {
     };
 
     try {
+      // Backend ProductStatus enum does not support WAITING_END_OF_TERM
+      const validStatus =
+        params?.status && params.status !== 'WAITING_END_OF_TERM' ? params.status : undefined;
       const queryParams = {
-        ...(params?.status ? { status: params.status } : {}),
+        ...(validStatus ? { status: validStatus } : {}),
         ...(params?.shelf ? { shelfLocation: params.shelf } : {}),
         page: params?.page ?? 0,
         size: params?.size ?? 20,
