@@ -22,7 +22,7 @@ export default function CounterPage() {
   const [recentServed, setRecentServed] = useState([
     { name: 'Trần Thị B', memberCode: 'MB-0098231', phone: '0900000002', taskNote: 'Kiểm định ký gửi · 08:05' },
     { name: 'Lê Minh C', memberCode: 'MB-0101744', phone: '0900000003', taskNote: 'Bàn giao hàng rút về · 07:40' },
-    { name: 'Ngô Hải F', memberCode: 'MB-0094012', phone: '0900000004', taskNote: 'Nhận lại hàng cuối kỳ · hôm qua 16:20' },
+    { name: 'Ngô Hải F', memberCode: 'MB-004821', phone: '0912 345 456', taskNote: 'Nhận lại hàng cuối kỳ · hôm qua 16:20' },
   ]);
 
   const memberCodeInputRef = useRef(null);
