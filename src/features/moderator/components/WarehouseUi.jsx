@@ -2,8 +2,8 @@ import React, { useId } from 'react';
 import { Link } from 'react-router-dom';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 import Button from '../../../components/common/Button.jsx';
-import { safeDocumentUrl } from './model.js';
-import { isFixtureMode } from './contract.js';
+import { safeDocumentUrl } from '../models/warehouseModel.js';
+import { isFixtureMode } from '../config/warehouseContract.js';
 
 export const money = (value) =>
   value == null

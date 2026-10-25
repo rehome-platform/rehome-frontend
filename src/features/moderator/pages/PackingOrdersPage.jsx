@@ -2,13 +2,13 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import QRScannerModal from '../../../components/QRScannerModal.jsx';
-import { Page, Card, ResourceState } from '../phase2/ui.jsx';
-import { usePhase2, useResource } from '../phase2/hooks.jsx';
-import { queueService } from '../phase2/api.js';
-import { listItems, safeDocumentUrl } from '../phase2/model.js';
-import { packingService } from '../phase4/api.js';
-import { canPack, canShip } from '../phase4/model.js';
-import { operationReady } from '../phase4/contract.js';
+import { Page, Card, ResourceState } from '../components/WarehouseUi.jsx';
+import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
+import { queueService } from '../services/warehouseApi.js';
+import { listItems, safeDocumentUrl } from '../models/warehouseModel.js';
+import { packingService } from '../services/packingApi.js';
+import { canPack, canShip } from '../models/packingModel.js';
+import { operationReady } from '../config/packingContract.js';
 
 export function PackingDetail({ orderId, onChanged }) {
   const { scope, signal } = usePhase2();

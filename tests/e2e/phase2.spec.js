@@ -69,7 +69,7 @@ test('inspect → wait Member → stock-in → SKU → shelf history (fixtures)'
   await expect(page.getByText(/Đang chờ Member xác nhận/)).toBeVisible();
   await expect(page.getByLabel('Tên sản phẩm')).toHaveCount(0);
   await page.evaluate(async () => {
-    const fixtures = await import('/src/features/moderator/phase2/fixtures.js');
+    const fixtures = await import('/src/features/moderator/fixtures/warehouseFixtures.js');
     fixtures.confirmFixtureReceipt('receipt-1');
   });
   await page.getByRole('button', { name: 'Tải lại biên nhận' }).click();

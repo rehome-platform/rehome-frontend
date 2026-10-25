@@ -2,11 +2,11 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { it, expect, vi, beforeEach, afterAll } from 'vitest';
-import { Phase2Provider } from '../../src/features/moderator/phase2/hooks.jsx';
+import { Phase2Provider } from '../../src/features/moderator/hooks/warehouseHooks.jsx';
 import { PackingDetail } from '../../src/features/moderator/pages/PackingOrdersPage.jsx';
-import { packingService } from '../../src/features/moderator/phase4/api.js';
+import { packingService } from '../../src/features/moderator/services/packingApi.js';
 import { orderFixture } from './fixtures.js';
-import { phase4Contract } from '../../src/features/moderator/phase4/contract.js';
+import { phase4Contract } from '../../src/features/moderator/config/packingContract.js';
 const original = structuredClone(phase4Contract);
 beforeEach(() => {
   phase4Contract.revision = 'test-only'; phase4Contract.gates.scan = true; phase4Contract.gates.shipment = true;

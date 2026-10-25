@@ -1,5 +1,5 @@
 /** Explicit dev/test view-model fixtures. They are NOT approved BE wire contracts. */
-import { Phase2Error } from './model.js';
+import { Phase2Error } from '../models/warehouseModel.js';
 
 export const fixtureOptions = {
   inspectionReturnReasons: [

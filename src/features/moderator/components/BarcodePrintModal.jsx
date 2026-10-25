@@ -1,9 +1,9 @@
 import React from 'react';
 import Modal from '../../../components/common/Modal.jsx';
 import Button from '../../../components/common/Button.jsx';
-import { inventoryService } from '../phase2/api.js';
-import { useResource } from '../phase2/hooks.jsx';
-import { DocumentLink, ResourceState } from '../phase2/ui.jsx';
+import { inventoryService } from '../services/warehouseApi.js';
+import { useResource } from '../hooks/warehouseHooks.jsx';
+import { DocumentLink, ResourceState } from './WarehouseUi.jsx';
 
 export default function BarcodePrintModal({ isOpen, onClose, item }) {
   const label = useResource(

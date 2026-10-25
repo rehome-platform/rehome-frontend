@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
-import CatalogEditor from '../phase2/CatalogEditor.jsx';
-import { catalogService } from '../phase2/api.js';
-import { phase2Contract, isFixtureMode } from '../phase2/contract.js';
-import { useResource } from '../phase2/hooks.jsx';
-import { Page, Card, Status, ResourceState } from '../phase2/ui.jsx';
+import CatalogEditor from '../components/CatalogEditor.jsx';
+import { catalogService } from '../services/warehouseApi.js';
+import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
+import { useResource } from '../hooks/warehouseHooks.jsx';
+import { Page, Card, Status, ResourceState } from '../components/WarehouseUi.jsx';
 
 export default function CategoryBrandPage() {
   const [search, setSearch] = useSearchParams();
@@ -15,7 +15,7 @@ export default function CategoryBrandPage() {
   const enums = useResource(
     async () =>
       isFixtureMode
-        ? (await import('../phase2/fixtures.js')).fixtureOptions
+        ? (await import('../fixtures/warehouseFixtures.js')).fixtureOptions
         : phase2Contract.options,
     [],
   );

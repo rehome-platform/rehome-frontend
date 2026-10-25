@@ -1,6 +1,6 @@
 import baseApi from '../../../services/baseApi.js';
-import { phase2Contract, isFixtureMode } from './contract.js';
-import { normalizeError, Phase2Error, unwrap } from './model.js';
+import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
+import { normalizeError, Phase2Error, unwrap } from '../models/warehouseModel.js';
 
 /** No implicit fallback, no network retry. Unknown contracts fail before making a request. */
 export async function request(
@@ -9,7 +9,7 @@ export async function request(
 ) {
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   if (isFixtureMode) {
-    const { fixtureRequest } = await import('./fixtures.js');
+    const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
     return fixtureRequest(operation, { ids, params, data, signal, scope });
   }
   const config = phase2Contract.operations[operation];

@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import QRScannerModal from '../../../components/QRScannerModal.jsx';
-import { inventoryService } from '../phase2/api.js';
-import { phase2Contract, isFixtureMode } from '../phase2/contract.js';
-import { useResource } from '../phase2/hooks.jsx';
-import { listItems } from '../phase2/model.js';
-import { Page, Card, Field, Status, Pager, ResourceState, money } from '../phase2/ui.jsx';
+import { inventoryService } from '../services/warehouseApi.js';
+import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
+import { useResource } from '../hooks/warehouseHooks.jsx';
+import { listItems } from '../models/warehouseModel.js';
+import { Page, Card, Field, Status, Pager, ResourceState, money } from '../components/WarehouseUi.jsx';
 
 export default function WarehouseInventoryPage() {
   const [search, setSearch] = useSearchParams(),
@@ -23,7 +23,7 @@ export default function WarehouseInventoryPage() {
   const enums = useResource(
     async () =>
       isFixtureMode
-        ? (await import('../phase2/fixtures.js')).fixtureOptions
+        ? (await import('../fixtures/warehouseFixtures.js')).fixtureOptions
         : phase2Contract.options,
     [],
   );

@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Button from '../../../components/common/Button.jsx';
-import { inventoryService } from './api.js';
-import { usePhase2 } from './hooks.jsx';
-import { normalizeError } from './model.js';
+import { inventoryService } from '../services/warehouseApi.js';
+import { usePhase2 } from '../hooks/warehouseHooks.jsx';
+import { normalizeError } from '../models/warehouseModel.js';
 
 export default function PhotoUpload({ onChange, disabled = false }) {
   const { signal, scope } = usePhase2();

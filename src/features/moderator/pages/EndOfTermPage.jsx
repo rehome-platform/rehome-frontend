@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
-import { endTermService } from '../phase2/api.js';
-import { phase2Contract, isFixtureMode } from '../phase2/contract.js';
-import { usePhase2, useResource } from '../phase2/hooks.jsx';
-import { listItems, validMoney } from '../phase2/model.js';
+import { endTermService } from '../services/warehouseApi.js';
+import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
+import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
+import { listItems, validMoney } from '../models/warehouseModel.js';
 import {
   Page,
   Card,
@@ -16,11 +16,11 @@ import {
   Pager,
   date,
   money,
-} from '../phase2/ui.jsx';
-import ReceiptPanel from '../phase2/ReceiptPanel.jsx';
-import { packingService } from '../phase4/api.js';
-import { handoverPayload } from '../phase4/model.js';
-import { operationReady } from '../phase4/contract.js';
+} from '../components/WarehouseUi.jsx';
+import ReceiptPanel from '../components/ReceiptPanel.jsx';
+import { packingService } from '../services/packingApi.js';
+import { handoverPayload } from '../models/packingModel.js';
+import { operationReady } from '../config/packingContract.js';
 
 function EndTermDetail({ sku, onChanged }) {
   const { identity, scope } = usePhase2();
@@ -30,7 +30,7 @@ function EndTermDetail({ sku, onChanged }) {
   const enums = useResource(
     async () =>
       isFixtureMode
-        ? (await import('../phase2/fixtures.js')).fixtureOptions
+        ? (await import('../fixtures/warehouseFixtures.js')).fixtureOptions
         : phase2Contract.options,
     [],
   );

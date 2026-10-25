@@ -2,9 +2,9 @@ import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import QRScannerModal from '../../../components/QRScannerModal.jsx';
-import { counterService } from '../phase2/api.js';
-import { usePhase2, useResource } from '../phase2/hooks.jsx';
-import { listItems, lookupParams } from '../phase2/model.js';
+import { counterService } from '../services/warehouseApi.js';
+import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
+import { listItems, lookupParams } from '../models/warehouseModel.js';
 import {
   Page,
   Card,
@@ -13,7 +13,7 @@ import {
   ResourceState,
   Status,
   DetailLink,
-} from '../phase2/ui.jsx';
+} from '../components/WarehouseUi.jsx';
 
 export default function CounterPage() {
   const { identity, setIdentity } = usePhase2();

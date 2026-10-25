@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
-import { consignmentService, queueService } from '../phase2/api.js';
-import { phase2Contract, isFixtureMode } from '../phase2/contract.js';
-import { usePhase2, useResource } from '../phase2/hooks.jsx';
-import { ownsClaim, validMoney } from '../phase2/model.js';
+import { consignmentService, queueService } from '../services/warehouseApi.js';
+import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
+import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
+import { ownsClaim, validMoney } from '../models/warehouseModel.js';
 import {
   Page,
   Card,
@@ -15,8 +15,8 @@ import {
   Status,
   money,
   date,
-} from '../phase2/ui.jsx';
-import ReceiptPanel from '../phase2/ReceiptPanel.jsx';
+} from '../components/WarehouseUi.jsx';
+import ReceiptPanel from '../components/ReceiptPanel.jsx';
 
 export default function ConsignmentDetailPage() {
   const { formId } = useParams();
@@ -33,7 +33,7 @@ export default function ConsignmentDetailPage() {
   const optionsResource = useResource(
     async () =>
       isFixtureMode
-        ? (await import('../phase2/fixtures.js')).fixtureOptions
+        ? (await import('../fixtures/warehouseFixtures.js')).fixtureOptions
         : phase2Contract.options,
     [],
   );

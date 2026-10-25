@@ -2,10 +2,10 @@ import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
-import { queueService } from '../phase2/api.js';
-import { usePhase2, useResource } from '../phase2/hooks.jsx';
-import { listItems, ownsClaim } from '../phase2/model.js';
-import { Page, Card, Status, Field, Pager, ResourceState, DetailLink } from '../phase2/ui.jsx';
+import { queueService } from '../services/warehouseApi.js';
+import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
+import { listItems, ownsClaim } from '../models/warehouseModel.js';
+import { Page, Card, Status, Field, Pager, ResourceState, DetailLink } from '../components/WarehouseUi.jsx';
 
 export default function ConsignmentQueuePage() {
   const { scope } = usePhase2();

@@ -7,17 +7,17 @@ import {
   Phase2Provider,
   usePhase2,
   useResource,
-} from '../../src/features/moderator/phase2/hooks.jsx';
+} from '../../src/features/moderator/hooks/warehouseHooks.jsx';
 import {
   counterService,
   consignmentService,
   inventoryService,
   catalogService,
-} from '../../src/features/moderator/phase2/api.js';
+} from '../../src/features/moderator/services/warehouseApi.js';
 import CounterPage from '../../src/features/moderator/pages/CounterPage.jsx';
-import ReceiptPanel from '../../src/features/moderator/phase2/ReceiptPanel.jsx';
+import ReceiptPanel from '../../src/features/moderator/components/ReceiptPanel.jsx';
 import Modal from '../../src/components/common/Modal.jsx';
-import { Phase2Error } from '../../src/features/moderator/phase2/model.js';
+import { Phase2Error } from '../../src/features/moderator/models/warehouseModel.js';
 
 const auth = vi.hoisted(() => ({
   user: { id: 'mod-a', role: 'staff', warehouseId: 'warehouse-a', warehouseName: 'Kho A' },

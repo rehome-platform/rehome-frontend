@@ -46,7 +46,7 @@ Dự án áp dụng mô hình kiến trúc **Feature-based + Layered Architectur
   - Custom Hook xử lý QR Scanner (`src/hooks/`)
 - **Service & Network Layer (Tầng Dịch Vụ Mạng):**
   - Axios HTTP Client tích hợp JWT Interceptors & Auto Refresh (`src/services/baseApi.js`)
-  - Auth service (`src/features/auth/services/`) và API nghiệp vụ kho (`src/features/moderator/phase2/`, `phase4/`)
+  - Auth service (`src/features/auth/services/`) và API nghiệp vụ kho (`src/features/moderator/services/`)
 - **Configuration & Infrastructure Layer (Tầng Cấu Hình & Tiện Ích):**
   - Tập trung hóa Endpoint API (`src/configs/api.config.js`)
   - Định nghĩa phân quyền Web (`src/configs/role.config.js`)
@@ -73,7 +73,7 @@ rehome-frontend/
 │   ├── features/
 │   │   ├── admin/           # components/, pages/
 │   │   ├── auth/            # pages/, services/, styles/
-│   │   └── moderator/       # components/, pages/, phase2/, phase4/
+│   │   └── moderator/       # components/, pages/, hooks/, services/, models/, config/, fixtures/
 │   ├── hooks/               # Quét QR
 │   ├── layouts/             # Admin và Moderator
 │   ├── routes/              # Router và bảo vệ quyền

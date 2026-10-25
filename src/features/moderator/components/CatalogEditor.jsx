@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import Modal from '../../../components/common/Modal.jsx';
 import Button from '../../../components/common/Button.jsx';
-import { catalogService } from './api.js';
-import { useResource } from './hooks.jsx';
-import { Field, ResourceState } from './ui.jsx';
+import { catalogService } from '../services/warehouseApi.js';
+import { useResource } from '../hooks/warehouseHooks.jsx';
+import { Field, ResourceState } from './WarehouseUi.jsx';
 
 export default function CatalogEditor({ kind, item, slots = [], onClose, onSaved }) {
   const [name, setName] = useState(item?.name || ''),
