@@ -1,4 +1,5 @@
 import React, { useId } from 'react';
+import '../styles/apiColors.css';
 import { Link } from 'react-router-dom';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 import Button from '../../../components/common/Button.jsx';
@@ -10,9 +11,9 @@ export const money = (value) =>
     ? '—'
     : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 export const date = (value) => (value ? new Date(value).toLocaleString('vi-VN') : '—');
-export function Page({ title, subtitle, children, actions }) {
+export function Page({ title, subtitle, children, actions, apiColors = true }) {
   return (
-    <ModeratorLayout>
+    <ModeratorLayout apiColors={apiColors && !isFixtureMode}>
       <div className="mx-auto max-w-6xl space-y-6">
         {isFixtureMode && (
           <div role="status" className="rounded-xl border border-secondary bg-amber-50 p-3 text-sm">

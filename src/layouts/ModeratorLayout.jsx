@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext.jsx';
  * Layout chuyên biệt dành cho Nhân viên Kho / Kiểm duyệt viên (Moderator)
  * Thao tác nghiệp vụ tại kho tập trung ReHome
  */
-export default function ModeratorLayout({ children }) {
+export default function ModeratorLayout({ children, apiColors = false }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -50,7 +50,7 @@ export default function ModeratorLayout({ children }) {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#F8FAF8] text-[#191C19] font-sans antialiased">
+    <div className={`${apiColors ? 'moderator-api-colors ' : ''}min-h-screen flex bg-[#F8FAF8] text-[#191C19] font-sans antialiased`}>
       {/* Sidebar Desktop */}
       {isMobileMenuOpen && <button aria-label="Đóng menu" className="fixed inset-0 z-20 bg-black/40 lg:hidden" onClick={() => setIsMobileMenuOpen(false)} />}
       <aside className={`${isMobileMenuOpen ? 'flex' : 'hidden'} lg:flex w-72 bg-white border-r border-[#E2E8E0] flex-col fixed inset-y-0 z-30 shadow-sm`}>

@@ -190,6 +190,7 @@ export default function EndOfTermPage() {
     });
   return (
     <Page
+      apiColors={false}
       title="Xử lý cuối kỳ"
       subtitle="Trạng thái và quyền thao tác do backend quyết định; giữ nguyên SKU khi ký gửi lại."
       actions={
