@@ -13,13 +13,14 @@ export default function ModeratorLayout({ children }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [skuQuery, setSkuQuery] = useState('');
   const warehouseName = user?.warehouseName || user?.warehouse?.name || 'Chưa có thông tin kho';
-  const queueType = new URLSearchParams(location.search).get('type');
+  const searchParams = typeof URLSearchParams !== 'undefined' ? new URLSearchParams(location.search || '') : null;
+  const queueType = searchParams ? searchParams.get('type') : null;
   const onPath = (...prefixes) =>
     prefixes.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`));
 
   // Điều hướng phẳng theo wireframe "Bảng điều khiển kho" (MA-04 / HQ-01).
   const navItems = [
-    { to: '/moderator/home', label: 'Trang chủ kho', icon: 'dashboard', active: onPath('/moderator/home') },
+    { to: '/moderator', label: 'Trang chủ kho', icon: 'dashboard', active: location.pathname === '/moderator' },
     {
       to: '/moderator/queue',
       label: 'Hàng đợi công việc',
@@ -55,7 +56,7 @@ export default function ModeratorLayout({ children }) {
       <aside className={`${isMobileMenuOpen ? 'flex' : 'hidden'} lg:flex w-72 bg-white border-r border-[#E2E8E0] flex-col fixed inset-y-0 z-30 shadow-sm`}>
         {/* Brand Header */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-[#E2E8E0] bg-white">
-          <Link to="/moderator/home" className="flex items-center space-x-2.5">
+          <Link to="/moderator" className="flex items-center space-x-2.5">
             <div className="w-9 h-9 rounded-xl bg-[#006B2C] text-white flex items-center justify-center font-bold font-heading text-lg shadow-sm">
               R
             </div>

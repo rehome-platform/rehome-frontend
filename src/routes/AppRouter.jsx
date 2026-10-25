@@ -96,14 +96,6 @@ export default function AppRouter() {
         path="/moderator"
         element={
           <PrivateRoute roles={['staff', 'admin']}>
-            <Navigate to="/moderator/home" replace />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/moderator/home"
-        element={
-          <PrivateRoute roles={['staff', 'admin']}>
             <WarehouseHomePage />
           </PrivateRoute>
         }
