@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 import { Button, Badge, Modal } from '../../../components/common/index.js';
 
+import { violationReportService } from '../services/moderatorMockData.js';
+
 /**
  * Trang Xử Lý Báo Cáo Vi Phạm Cộng Đồng (F-141, UC-71)
  * Chuẩn hóa theo Mục 13: "Vi phạm và hình thức xử lý":
@@ -9,64 +11,58 @@ import { Button, Badge, Modal } from '../../../components/common/index.js';
  * Quyết định khóa tài khoản thuộc thẩm quyền Admin dựa trên lịch sử vi phạm trong audit log.
  */
 export default function ViolationReportsPage() {
-  const [reports, setReports] = useState([
-    {
-      id: 'REP-101',
-      type: 'POST', // 'POST' | 'CAMPAIGN' | 'COMMENT'
-      targetTitle: 'Bài viết: "Kêu gọi quyên góp khẩn cấp chuyển tiền vào STK cá nhân..."',
-      authorName: 'Mái Ấm Hy Vọng Tự Phát',
-      authorRole: 'Tổ chức',
-      reporterName: 'Lê Hoàng Nam (Member)',
-      reason: 'Bài viết kêu gọi chuyển tiền mặt vào số tài khoản cá nhân, sai lệch mục đích quyên góp quần áo của ReHome.',
-      evidenceUrl: 'https://images.unsplash.com/photo-1544441893-675973e31985?w=500',
-      submittedAt: '15/10/2026 09:15',
-      status: 'PENDING',
-    },
-    {
-      id: 'REP-102',
-      type: 'CAMPAIGN',
-      targetTitle: 'Chiến dịch: "Tiếp nhận áo ấm mùa đông tại 999 Hoàng Hoa Thám"',
-      authorName: 'CLB Thiện Nguyện Ánh Sao',
-      authorRole: 'Tổ chức',
-      reporterName: 'Võ Minh Trí (Member)',
-      reason: 'Địa điểm nhận đồ không có thật, người dân mang đồ đến không có ai tiếp nhận.',
-      submittedAt: '14/10/2026 14:30',
-      status: 'PENDING',
-    },
-    {
-      id: 'REP-103',
-      type: 'COMMENT',
-      targetTitle: 'Bình luận trên bài viết "Tổng kết chiến dịch vùng cao 2026"',
-      authorName: 'Trần Văn Cường',
-      authorRole: 'Member',
-      reporterName: 'Quỹ Áo Ấm Vùng Cao',
-      reason: 'Sử dụng ngôn từ lăng mạ, vu khống tổ chức chiếm đoạt quần áo quyên góp.',
-      submittedAt: '14/10/2026 11:00',
-      status: 'RESOLVED',
-      actionTaken: 'Đã xóa bình luận',
-    },
-  ]);
-
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedReport, setSelectedReport] = useState(null);
 
-  const handleTakeDown = (report, actionName) => {
-    setReports(reports.map((r) =>
-      r.id === report.id
-        ? { ...r, status: 'RESOLVED', actionTaken: actionName }
-        : r
-    ));
-    alert(`Đã thực thi [${actionName}] thành công theo Mục 13! Hành động được ghi nhận vào Audit Log để Admin theo dõi lịch sử vi phạm.`);
-    setSelectedReport(null);
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await violationReportService.list();
+      setReports(res.data);
+    } catch (err) {
+      setError('Không thể tải danh sách báo cáo vi phạm.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDismissReport = (report) => {
-    setReports(reports.map((r) =>
-      r.id === report.id
-        ? { ...r, status: 'RESOLVED', actionTaken: 'Bác bỏ báo cáo (Nội dung hợp lệ)' }
-        : r
-    ));
-    alert('Đã bác bỏ báo cáo vi phạm (Mục 13). Nội dung được giữ nguyên.');
-    setSelectedReport(null);
+  React.useEffect(() => {
+    fetchReports();
+  }, []);
+
+  const handleTakeDown = async (report, actionName) => {
+    try {
+      await violationReportService.takeAction(report.id, actionName);
+      setReports((prev) =>
+        prev.map((r) =>
+          r.id === report.id ? { ...r, status: 'RESOLVED', actionTaken: actionName } : r
+        )
+      );
+      alert(`Đã thực thi [${actionName}] thành công theo Mục 13! Hành động được ghi nhận vào Audit Log để Admin theo dõi lịch sử vi phạm.`);
+      setSelectedReport(null);
+    } catch (err) {
+      alert('Có lỗi xảy ra khi thực thi xử lý vi phạm.');
+    }
+  };
+
+  const handleDismissReport = async (report) => {
+    try {
+      await violationReportService.dismiss(report.id);
+      setReports((prev) =>
+        prev.map((r) =>
+          r.id === report.id
+            ? { ...r, status: 'RESOLVED', actionTaken: 'Bác bỏ báo cáo (Nội dung hợp lệ)' }
+            : r
+        )
+      );
+      alert('Đã bác bỏ báo cáo vi phạm (Mục 13). Nội dung được giữ nguyên.');
+      setSelectedReport(null);
+    } catch (err) {
+      alert('Có lỗi xảy ra khi bác bỏ báo cáo.');
+    }
   };
 
   return (
@@ -86,8 +82,32 @@ export default function ViolationReportsPage() {
           </p>
         </div>
 
+        {/* Trạng thái tải / Lỗi / Rỗng */}
+        {loading && (
+          <div className="p-8 text-center bg-white rounded-2xl border border-[#DDE5D9] text-[#717971] text-sm">
+            <span className="material-symbols-outlined animate-spin text-2xl mb-2 block">progress_activity</span>
+            Đang tải danh sách báo cáo vi phạm...
+          </div>
+        )}
+
+        {error && (
+          <div className="p-4 rounded-xl bg-[#FFDAD6]/40 border border-[#BA1A1A]/30 text-[#BA1A1A] text-xs flex justify-between items-center">
+            <span>{error}</span>
+            <Button size="sm" variant="outline" onClick={fetchReports}>Thử lại</Button>
+          </div>
+        )}
+
+        {!loading && !error && reports.length === 0 && (
+          <div className="p-12 text-center bg-white rounded-2xl border border-[#DDE5D9] text-[#717971]">
+            <span className="material-symbols-outlined text-4xl mb-2 text-[#717971]">verified_user</span>
+            <p className="font-bold text-sm text-[#191C19]">Không có báo cáo vi phạm nào cần xử lý</p>
+            <p className="text-xs mt-1">Cộng đồng đang an toàn và không có nội dung bị khiếu nại.</p>
+          </div>
+        )}
+
         {/* Danh sách báo cáo vi phạm */}
-        <div className="bg-white rounded-2xl border border-[#DDE5D9] shadow-sm divide-y divide-[#F0F4EE]">
+        {!loading && reports.length > 0 && (
+          <div className="bg-white rounded-2xl border border-[#DDE5D9] shadow-sm divide-y divide-[#F0F4EE]">
           {reports.map((r) => (
             <div key={r.id} className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-1.5 text-xs">
@@ -154,7 +174,8 @@ export default function ViolationReportsPage() {
               )}
             </div>
           ))}
-        </div>
+          </div>
+        )}
 
         {/* Bảng phân cấp xử lý Mục 13 */}
         <div className="bg-white p-5 rounded-2xl border border-[#DDE5D9] shadow-sm space-y-2 text-xs text-[#414942]">

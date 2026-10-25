@@ -4,6 +4,8 @@ import { Button, Badge, Modal, Input } from '../../../components/common/index.js
 import SuspiciousCounterfeitModal from '../components/SuspiciousCounterfeitModal.jsx';
 import { formatCurrencyVND } from '../../../utils/formatters.js';
 
+import { returnService } from '../services/moderatorMockData.js';
+
 /**
  * Trang Xử Lý Yêu Cầu Trả Hàng & Kiểm Hàng Về Kho (F-131..F-135, UC-68)
  * Moderator kiểm tra thực tế hàng gửi trả về kho:
@@ -12,59 +14,68 @@ import { formatCurrencyVND } from '../../../utils/formatters.js';
  * - Nghi hàng giả -> Kích hoạt quy trình F-134 hội chẩn 2 Moderator độc lập
  */
 export default function ReturnProcessingPage() {
-  const [returnRequests, setReturnRequests] = useState([
-    {
-      id: 'RET-3012',
-      orderId: 'ORD-9821',
-      buyerName: 'Trần Minh Thảo',
-      buyerPhone: '0908 112 344',
-      itemName: 'Áo khoác gió thể thao Adidas',
-      brand: 'Adidas',
-      sku: 'Q7-AK-000411',
-      amount: 450000,
-      reason: 'Nghi ngờ hàng nhái, logo và đường may cẩu thả, chất vải không đúng',
-      photoEvidence: 'https://images.unsplash.com/photo-1544441893-675973e31985?w=500',
-      status: 'SUSPECTED_COUNTERFEIT', // 'PENDING_INSPECT' | 'SUSPECTED_COUNTERFEIT' | 'RESOLVED'
-      carrierStatus: 'Đã giao về kho Q7 (15/10/2026)',
-    },
-    {
-      id: 'RET-3015',
-      orderId: 'ORD-9774',
-      buyerName: 'Nguyễn Văn Đạt',
-      buyerPhone: '0977 441 209',
-      itemName: 'Quần tây công sở Novelty',
-      brand: 'Novelty',
-      sku: 'Q7-QT-000188',
-      amount: 280000,
-      reason: 'Có khuyết điểm vết ố sau lưng áo không như mô tả',
-      photoEvidence: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500',
-      status: 'PENDING_INSPECT',
-      carrierStatus: 'Đã giao về kho Q7 (14/10/2026)',
-    },
-  ]);
-
+  const [returnRequests, setReturnRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [counterfeitModalItem, setCounterfeitModalItem] = useState(null);
 
-  const handleValidReturn = (retId, outcome) => {
-    // outcome: 'RELIST' | 'RETURN_SELLER'
-    setReturnRequests(returnRequests.map((r) =>
-      r.id === retId ? { ...r, status: 'RESOLVED', outcome } : r
-    ));
-    alert(`Đã duyệt trả hàng hợp lệ! Hệ thống tự động hoàn 100% tiền đơn vào ví người mua và ghi nhận trạng thái hàng: ${outcome === 'RELIST' ? 'Đăng bán lại' : 'Trả người bán'}.`);
+  const fetchReturns = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await returnService.list();
+      setReturnRequests(res.data);
+    } catch (err) {
+      setError('Không thể tải danh sách yêu cầu trả hàng.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleInvalidReturn = (retId) => {
-    setReturnRequests(returnRequests.map((r) =>
-      r.id === retId ? { ...r, status: 'RESOLVED', outcome: 'INVALID_RETURN' } : r
-    ));
-    alert('Đã kết luận TRẢ HÀNG KHÔNG HỢP LỆ! Không hoàn tiền cho người mua. Hàng được lưu kho 7 ngày để người mua tự đến lấy hoặc chịu phí ship gửi lại (Mục 6 L-05).');
+  React.useEffect(() => {
+    fetchReturns();
+  }, []);
+
+  const handleValidReturn = async (retId, outcome) => {
+    try {
+      await returnService.resolveValid(retId, outcome);
+      setReturnRequests((prev) =>
+        prev.map((r) => (r.id === retId ? { ...r, status: 'RESOLVED', outcome } : r))
+      );
+      alert(`Đã duyệt trả hàng hợp lệ! Hệ thống tự động hoàn 100% tiền đơn vào ví người mua và ghi nhận trạng thái hàng: ${outcome === 'RELIST' ? 'Đăng bán lại' : 'Trả người bán'}.`);
+    } catch (err) {
+      alert('Có lỗi xảy ra khi duyệt trả hàng.');
+    }
   };
 
-  const handleVerdictSuccess = (verdictData) => {
-    setReturnRequests(returnRequests.map((r) =>
-      r.id === verdictData.itemId ? { ...r, status: 'RESOLVED', outcome: verdictData.verdict } : r
-    ));
-    alert(`Đã hoàn tất hội chẩn 2 Moderator! Kết luận: ${verdictData.verdict === 'COUNTERFEIT' ? 'HÀNG GIẢ - Tiêu hủy và hoàn tiền người mua' : 'HÀNG CHÍNH HÃNG'}. Lưu vào Audit Log.`);
+  const handleInvalidReturn = async (retId) => {
+    try {
+      await returnService.resolveInvalid(retId);
+      setReturnRequests((prev) =>
+        prev.map((r) => (r.id === retId ? { ...r, status: 'RESOLVED', outcome: 'INVALID_RETURN' } : r))
+      );
+      alert('Đã kết luận TRẢ HÀNG KHÔNG HỢP LỆ! Không hoàn tiền cho người mua. Hàng được lưu kho 7 ngày để người mua tự đến lấy hoặc chịu phí ship gửi lại (Mục 6 L-05).');
+    } catch (err) {
+      alert('Có lỗi xảy ra khi ghi nhận trả hàng không hợp lệ.');
+    }
+  };
+
+  const handleVerdictSuccess = async (verdictData) => {
+    try {
+      if (verdictData.verdict === 'COUNTERFEIT') {
+        await returnService.resolveInvalid(verdictData.itemId);
+      } else {
+        await returnService.resolveValid(verdictData.itemId, 'RELIST');
+      }
+      setReturnRequests((prev) =>
+        prev.map((r) =>
+          r.id === verdictData.itemId ? { ...r, status: 'RESOLVED', outcome: verdictData.verdict } : r
+        )
+      );
+      alert(`Đã hoàn tất hội chẩn 2 Moderator! Kết luận: ${verdictData.verdict === 'COUNTERFEIT' ? 'HÀNG GIẢ - Tiêu hủy và hoàn tiền người mua' : 'HÀNG CHÍNH HÃNG'}. Lưu vào Audit Log.`);
+    } catch (err) {
+      alert('Có lỗi xảy ra khi lưu biên bản hội chẩn.');
+    }
   };
 
   return (
@@ -84,15 +95,39 @@ export default function ReturnProcessingPage() {
           </p>
         </div>
 
+        {/* Trạng thái tải / Lỗi / Rỗng */}
+        {loading && (
+          <div className="p-8 text-center bg-white rounded-2xl border border-[#DDE5D9] text-[#717971] text-sm">
+            <span className="material-symbols-outlined animate-spin text-2xl mb-2 block">progress_activity</span>
+            Đang tải danh sách yêu cầu trả hàng...
+          </div>
+        )}
+
+        {error && (
+          <div className="p-4 rounded-xl bg-[#FFDAD6]/40 border border-[#BA1A1A]/30 text-[#BA1A1A] text-xs flex justify-between items-center">
+            <span>{error}</span>
+            <Button size="sm" variant="outline" onClick={fetchReturns}>Thử lại</Button>
+          </div>
+        )}
+
+        {!loading && !error && returnRequests.length === 0 && (
+          <div className="p-12 text-center bg-white rounded-2xl border border-[#DDE5D9] text-[#717971]">
+            <span className="material-symbols-outlined text-4xl mb-2 text-[#717971]">assignment_turned_in</span>
+            <p className="font-bold text-sm text-[#191C19]">Không có yêu cầu trả hàng nào cần xử lý</p>
+            <p className="text-xs mt-1">Tất cả kiện hàng hoàn về kho đã được kiểm tra và xử lý xong.</p>
+          </div>
+        )}
+
         {/* Danh sách yêu cầu trả */}
-        <div className="space-y-4">
-          {returnRequests.map((r) => (
-            <div
-              key={r.id}
-              className={`p-6 rounded-2xl border bg-white shadow-sm flex flex-col lg:flex-row gap-5 justify-between transition-all ${
-                r.status === 'SUSPECTED_COUNTERFEIT' ? 'border-[#FED7AA] bg-[#FFFDFB]' : 'border-[#DDE5D9]'
-              }`}
-            >
+        {!loading && (
+          <div className="space-y-4">
+            {returnRequests.map((r) => (
+              <div
+                key={r.id}
+                className={`p-6 rounded-2xl border bg-white shadow-sm flex flex-col lg:flex-row gap-5 justify-between transition-all ${
+                  r.status === 'SUSPECTED_COUNTERFEIT' ? 'border-[#FED7AA] bg-[#FFFDFB]' : 'border-[#DDE5D9]'
+                }`}
+              >
               <div className="flex flex-col sm:flex-row gap-4">
                 <img
                   src={r.photoEvidence}
@@ -169,7 +204,8 @@ export default function ReturnProcessingPage() {
               )}
             </div>
           ))}
-        </div>
+          </div>
+        )}
 
         {/* Modal hội chẩn 2 mod */}
         <SuspiciousCounterfeitModal

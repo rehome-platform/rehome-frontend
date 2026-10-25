@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 import { Button, Badge, Modal, Input } from '../../../components/common/index.js';
 
+import { orgVerificationService } from '../services/moderatorMockData.js';
+
 /**
  * Trang Xác Minh Hồ Sơ Tổ Chức Từ Thiện & Duyệt Đổi Pháp Lý (F-137..F-140, UC-69, 70)
  * Triển khai chính xác Quy trình kiểm chứng bên ngoài 8 bước theo Mục 9
@@ -11,6 +13,8 @@ export default function OrgVerificationPage() {
   const [selectedOrg, setSelectedOrg] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // 8 Checklist items theo Mục 9
   const [checklist, setChecklist] = useState({
@@ -23,60 +27,29 @@ export default function OrgVerificationPage() {
     socialReputationOk: false, // Bước 7: Rà soát báo chí & mạng xã hội không có tiền sử lừa đảo
   });
 
-  const [orgsQueue, setOrgsQueue] = useState([
-    {
-      id: 'ORG-01',
-      name: 'Quỹ Từ Thiện Áo Ấm Vùng Cao',
-      type: 'Quỹ từ thiện (NĐ 03/2026/NĐ-CP)',
-      taxCode: '0312891204',
-      representative: 'Lê Văn Cường (Chủ tịch Quỹ)',
-      cccd: '079089012345',
-      phone: '028 3822 9912',
-      email: 'lienhe@aoamvungcao.org',
-      address: '45 Nguyễn Đình Chiểu, P. Đa Kao, Q. 1, TP.HCM',
-      receivingDropoff: 'Văn phòng quỹ - 45 Nguyễn Đình Chiểu (T2-T6, 8h-17h)',
-      documents: [
-        { name: 'Giấy phép thành lập và công nhận điều lệ quỹ (QĐ 145/QĐ-UBND)', url: 'https://images.unsplash.com/photo-1568667256549-094345857637?w=500' },
-        { name: 'Điều lệ quỹ đã được công nhận', url: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=500' },
-        { name: 'CCCD người đại diện hai mặt (Tự xóa sau 30 ngày)', url: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=500' },
-      ],
-      submittedAt: '14/10/2026',
-      status: 'PENDING',
-    },
-    {
-      id: 'ORG-02',
-      name: 'Câu Lạc Bộ Tình Nguyện Cầu Vồng',
-      type: 'Câu lạc bộ trực thuộc Đoàn Trường ĐH KHXH&NV',
-      taxCode: '', // Không có mã số thuế
-      representative: 'Nguyễn Thị Bích (Chủ nhiệm CLB)',
-      cccd: '075199008812',
-      phone: '0918 332 109',
-      email: 'clbcauvong@ussh.edu.vn',
-      address: 'Phòng C102, 10-12 Đinh Tiên Hoàng, Q. 1, TP.HCM',
-      receivingDropoff: 'Sảnh C nhà trường (T3-T5, 9h-16h)',
-      documents: [
-        { name: 'Quyết định thành lập CLB của Đoàn trường', url: 'https://images.unsplash.com/photo-1568667256549-094345857637?w=500' },
-        { name: 'Văn bản cử người đại diện phụ trách', url: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=500' },
-        { name: 'CCCD người phụ trách hai mặt', url: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=500' },
-      ],
-      submittedAt: '15/10/2026',
-      status: 'PENDING',
-    },
-  ]);
+  const [orgsQueue, setOrgsQueue] = useState([]);
+  const [legalChanges, setLegalChanges] = useState([]);
 
-  const [legalChanges, setLegalChanges] = useState([
-    {
-      id: 'CHG-101',
-      orgName: 'Hội Bảo Trợ Bệnh Nhân Nghèo',
-      oldRep: 'Trần Văn An',
-      newRep: 'Phạm Minh Đức',
-      newCCCD: '079075001294',
-      proofDoc: 'Quyết định bổ nhiệm người đại diện mới (Sở Nội Vụ)',
-      reason: 'Thay đổi nhân sự chủ tịch nhiệm kỳ 2026-2030',
-      submittedAt: '14/10/2026',
-      status: 'PENDING',
-    },
-  ]);
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [orgsRes, changesRes] = await Promise.all([
+        orgVerificationService.getQueue(),
+        orgVerificationService.getLegalChanges(),
+      ]);
+      setOrgsQueue(orgsRes.data);
+      setLegalChanges(changesRes.data);
+    } catch (err) {
+      setError('Không thể tải dữ liệu xác minh tổ chức.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    loadData();
+  }, []);
 
   const handleSelectOrg = (org) => {
     setSelectedOrg(org);
@@ -98,30 +71,47 @@ export default function OrgVerificationPage() {
     checklist.authorityChecked &&
     checklist.socialReputationOk;
 
-  const handleApproveOrg = (id) => {
-    setOrgsQueue(orgsQueue.map((o) =>
-      o.id === id ? { ...o, status: 'APPROVED' } : o
-    ));
-    alert('Đã xác thực tổ chức từ thiện thành công! Tài khoản được mở quyền tạo chiến dịch. Ảnh CCCD sẽ tự xóa sau 30 ngày.');
-    setSelectedOrg(null);
+  const handleApproveOrg = async (id) => {
+    try {
+      await orgVerificationService.approveOrg(id);
+      setOrgsQueue((prev) =>
+        prev.map((o) => (o.id === id ? { ...o, status: 'APPROVED' } : o))
+      );
+      alert('Đã xác thực tổ chức từ thiện thành công! Tài khoản được mở quyền tạo chiến dịch. Ảnh CCCD sẽ tự xóa sau 30 ngày.');
+      setSelectedOrg(null);
+    } catch (err) {
+      alert('Có lỗi xảy ra khi xác thực tổ chức.');
+    }
   };
 
-  const handleConfirmReject = () => {
-    if (!rejectReason.trim()) return;
-    setOrgsQueue(orgsQueue.map((o) =>
-      o.id === selectedOrg.id ? { ...o, status: 'REJECTED', rejectReason } : o
-    ));
-    setIsRejectModalOpen(false);
-    setSelectedOrg(null);
-    setRejectReason('');
-    alert('Đã từ chối hồ sơ kèm lý do hướng dẫn bổ sung!');
+  const handleConfirmReject = async () => {
+    if (!rejectReason.trim() || !selectedOrg) return;
+    try {
+      await orgVerificationService.rejectOrg(selectedOrg.id, rejectReason);
+      setOrgsQueue((prev) =>
+        prev.map((o) =>
+          o.id === selectedOrg.id ? { ...o, status: 'REJECTED', rejectReason } : o
+        )
+      );
+      setIsRejectModalOpen(false);
+      setSelectedOrg(null);
+      setRejectReason('');
+      alert('Đã từ chối hồ sơ kèm lý do hướng dẫn bổ sung!');
+    } catch (err) {
+      alert('Có lỗi xảy ra khi từ chối hồ sơ.');
+    }
   };
 
-  const handleApproveLegalChange = (id) => {
-    setLegalChanges(legalChanges.map((c) =>
-      c.id === id ? { ...c, status: 'APPROVED' } : c
-    ));
-    alert('Đã duyệt yêu cầu đổi thông tin pháp lý của tổ chức! Lưu vào Audit Log.');
+  const handleApproveLegalChange = async (id) => {
+    try {
+      await orgVerificationService.approveLegalChange(id);
+      setLegalChanges((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, status: 'APPROVED' } : c))
+      );
+      alert('Đã duyệt yêu cầu đổi thông tin pháp lý của tổ chức! Lưu vào Audit Log.');
+    } catch (err) {
+      alert('Có lỗi xảy ra khi duyệt đổi pháp lý.');
+    }
   };
 
   return (
@@ -162,12 +152,32 @@ export default function OrgVerificationPage() {
           </div>
         </div>
 
+        {/* Trạng thái tải / Lỗi */}
+        {loading && (
+          <div className="p-8 text-center bg-white rounded-2xl border border-[#DDE5D9] text-[#717971] text-sm">
+            <span className="material-symbols-outlined animate-spin text-2xl mb-2 block">progress_activity</span>
+            Đang tải dữ liệu hồ sơ tổ chức...
+          </div>
+        )}
+
+        {error && (
+          <div className="p-4 rounded-xl bg-[#FFDAD6]/40 border border-[#BA1A1A]/30 text-[#BA1A1A] text-xs flex justify-between items-center">
+            <span>{error}</span>
+            <Button size="sm" variant="outline" onClick={loadData}>Thử lại</Button>
+          </div>
+        )}
+
         {/* TAB 1: Hồ sơ đăng ký mới */}
-        {activeTab === 'NEW_ORGS' && (
+        {!loading && activeTab === 'NEW_ORGS' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Cột danh sách hồ sơ */}
             <div className="lg:col-span-5 space-y-4">
-              {orgsQueue.map((org) => (
+              {orgsQueue.length === 0 ? (
+                <div className="p-8 text-center bg-white rounded-2xl border border-[#DDE5D9] text-[#717971] text-xs">
+                  Không có hồ sơ tổ chức nào chờ duyệt.
+                </div>
+              ) : (
+                orgsQueue.map((org) => (
                 <div
                   key={org.id}
                   onClick={() => handleSelectOrg(org)}
@@ -187,7 +197,7 @@ export default function OrgVerificationPage() {
                   <p className="text-xs text-[#414942] mt-1">Đại diện: <strong>{org.representative}</strong></p>
                   <p className="text-[11px] text-[#717971] mt-0.5">SĐT: {org.phone} • Ngày nộp: {org.submittedAt}</p>
                 </div>
-              ))}
+              )))}
             </div>
 
             {/* Cột chi tiết thẩm định & Checklist 8 bước */}
@@ -342,43 +352,49 @@ export default function OrgVerificationPage() {
         )}
 
         {/* TAB 2: Yêu cầu đổi thông tin pháp lý (UC-70, F-140) */}
-        {activeTab === 'LEGAL_CHANGES' && (
+        {!loading && activeTab === 'LEGAL_CHANGES' && (
           <div className="bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-sm divide-y divide-[#F0F4EE]">
-            {legalChanges.map((c) => (
-              <div key={c.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1 text-xs">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-extrabold text-sm text-[#191C19]">{c.orgName}</span>
-                    <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-[#F8FAF8] text-[#006B2C]">
-                      {c.id}
-                    </span>
+            {legalChanges.length === 0 ? (
+              <div className="py-12 text-center text-[#717971] text-xs">
+                Không có yêu cầu đổi thông tin pháp lý nào cần duyệt.
+              </div>
+            ) : (
+              legalChanges.map((c) => (
+                <div key={c.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1 text-xs">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-extrabold text-sm text-[#191C19]">{c.orgName}</span>
+                      <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-[#F8FAF8] text-[#006B2C]">
+                        {c.id}
+                      </span>
+                      {c.status === 'PENDING' ? (
+                        <Badge variant="warning">Chờ Moderator duyệt</Badge>
+                      ) : (
+                        <Badge variant="success">Đã chấp thuận</Badge>
+                      )}
+                    </div>
+                    <p className="text-[#414942]">
+                      Đại diện cũ: <del className="text-[#BA1A1A]">{c.oldRep}</del> ➔ Đại diện mới: <strong className="text-[#006B2C]">{c.newRep}</strong> (CCCD: {c.newCCCD})
+                    </p>
+                    <p className="text-[#717971]">Minh chứng: <strong>{c.proofDoc}</strong> • Lý do: "{c.reason}"</p>
+                  </div>
+
+                  <div className="flex items-center space-x-2 shrink-0">
                     {c.status === 'PENDING' ? (
-                      <Badge variant="warning">Chờ Moderator duyệt</Badge>
+                      <Button
+                        size="sm"
+                        className="bg-[#006B2C] text-white text-xs"
+                        onClick={() => handleApproveLegalChange(c.id)}
+                      >
+                        Duyệt thay đổi pháp lý
+                      </Button>
                     ) : (
-                      <Badge variant="success">Đã chấp thuận</Badge>
+                      <span className="text-xs text-[#00685F] font-bold">✓ Đã cập nhật hồ sơ</span>
                     )}
                   </div>
-                  <p className="text-[#414942]">
-                    Đại diện cũ: <del className="text-[#BA1A1A]">{c.oldRep}</del> ➔ Đại diện mới: <strong className="text-[#006B2C]">{c.newRep}</strong> (CCCD: {c.newCCCD})
-                  </p>
-                  <p className="text-[#717971]">Minh chứng: <strong>{c.proofDoc}</strong> • Lý do: "{c.reason}"</p>
                 </div>
-
-                <div className="flex items-center space-x-2 shrink-0">
-                  {c.status === 'PENDING' ? (
-                    <Button
-                      size="sm"
-                      className="bg-[#006B2C] text-white text-xs"
-                      onClick={() => handleApproveLegalChange(c.id)}
-                    >
-                      Duyệt thay đổi pháp lý
-                    </Button>
-                  ) : (
-                    <span className="text-xs text-[#00685F] font-bold">✓ Đã cập nhật hồ sơ</span>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         )}
 
