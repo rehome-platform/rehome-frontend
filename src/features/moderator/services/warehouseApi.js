@@ -45,7 +45,7 @@ export async function request(
   }
 }
 
-/** Helper to call real backend API with error normalization and safe fallback */
+/** Helper to call real backend API with error normalization and safe handling */
 async function callBackend(config, { fallback, signal } = {}) {
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   if (isFixtureMode && fallback) {
@@ -62,7 +62,19 @@ async function callBackend(config, { fallback, signal } = {}) {
   } catch (error) {
     if (signal?.aborted || error.code === 'ERR_CANCELED') throw error;
     const normalized = normalizeError(error);
-    // If backend returns 404 (endpoint unmapped/unimplemented yet) or network is unreachable and fallback exists:
+
+    // QUY TẮC AN TOÀN TUYỆT ĐỐI:
+    // Thao tác ghi (POST, PUT, PATCH, DELETE):
+    // Luôn ném lỗi thực tế từ backend (400, 401, 403, 404, 409, 500, lỗi mạng).
+    // Tuyệt đối không fallback sang mock để tránh báo thành công giả khi ghi dữ liệu thất bại!
+    const isWrite = config.method && config.method.toLowerCase() !== 'get';
+    if (isWrite) {
+      throw normalized;
+    }
+
+    // Thao tác đọc (GET):
+    // Chỉ fallback khi endpoint chưa tồn tại trên backend (404) hoặc mất kết nối
+    // VÀ đã được cấu hình hàm fallback
     if (fallback && ([404, 0].includes(normalized.status) || !navigator.onLine)) {
       try {
         return await fallback();
@@ -82,50 +94,37 @@ export const queueService = {
   list: async (params, options) => {
     const fallback = async () => {
       const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      const res = await fixtureRequest('queueList', { params, ...options });
-      return res;
+      return fixtureRequest('queueList', { params, ...options });
     };
 
     const typeQuery = params?.type && params.type !== 'ALL' ? params.type : undefined;
-    try {
-      const result = await callBackend(
-        {
-          method: 'get',
-          url: API_ENDPOINTS.MODERATOR.QUEUES,
-          params: typeQuery ? { type: typeQuery } : undefined,
-        },
-        { fallback, signal: options?.signal }
-      );
+    const result = await callBackend(
+      {
+        method: 'get',
+        url: API_ENDPOINTS.MODERATOR.QUEUES,
+        params: typeQuery ? { type: typeQuery } : undefined,
+      },
+      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+    );
 
-      const map = (item) => ({
-        ...item,
-        queueId: item.queueId ?? item.id,
-        id: item.id ?? item.queueId,
-        refId: item.refId ?? item.id,
-        formId: item.formId ?? item.refId ?? item.id,
-        orderId: item.orderId ?? item.refId,
-        type: item.type,
-        claimedBy: item.claimedBy,
-        claimedAt: item.claimedAt,
-        createdAt: item.createdAt,
-        status: item.status || (item.claimedBy ? 'PROCESSING' : 'PENDING'),
-      });
+    const map = (item) => ({
+      ...item,
+      queueId: item.queueId ?? item.id,
+      id: item.id ?? item.queueId,
+      refId: item.refId ?? item.id,
+      formId: item.formId ?? item.refId ?? item.id,
+      orderId: item.orderId ?? item.refId,
+      type: item.type,
+      claimedBy: item.claimedBy,
+      claimedAt: item.claimedAt,
+      createdAt: item.createdAt,
+      status: item.status || (item.claimedBy ? 'PROCESSING' : 'PENDING'),
+    });
 
-      const list = Array.isArray(result) ? result.map(map) : { ...result, items: (result?.items || []).map(map) };
-      // Nếu backend trả về danh sách rỗng trong dev, hợp nhất thêm dữ liệu mẫu để giao diện luôn đầy đủ
-      if (Array.isArray(list) && list.length === 0 && fallback) {
-        try {
-          const sample = await fallback();
-          return Array.isArray(sample) ? sample.map(map) : sample;
-        } catch {
-          return list;
-        }
-      }
-      return list;
-    } catch (err) {
-      if (fallback) return fallback();
-      throw err;
-    }
+    // Trả về đúng danh sách từ backend, bảo toàn trạng thái rỗng (empty state) khi không có bản ghi nào
+    if (Array.isArray(result)) return result.map(map);
+    if (result && Array.isArray(result.items)) return { ...result, items: result.items.map(map) };
+    return result || [];
   },
 
   // API 29: POST /queues/{id}/claim
@@ -140,7 +139,7 @@ export const queueService = {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.CLAIM_QUEUE(queueId),
       },
-      { fallback, signal: options?.signal }
+      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
     );
   },
 
@@ -156,7 +155,7 @@ export const queueService = {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.RELEASE_QUEUE(queueId),
       },
-      { fallback, signal: options?.signal }
+      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
     );
   },
 
@@ -172,7 +171,7 @@ export const queueService = {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.APPROVE_FORM(formId),
       },
-      { fallback, signal: options?.signal }
+      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
     );
   },
 
@@ -189,7 +188,7 @@ export const queueService = {
         url: API_ENDPOINTS.MODERATOR.REJECT_FORM(formId),
         data: { reason },
       },
-      { fallback, signal: options?.signal }
+      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
     );
   },
 };
@@ -198,11 +197,12 @@ export const queueService = {
 // API 25, 26, 27: Quầy tiếp nhận & Tra cứu Member
 // =========================================================================
 export const counterService = {
-  // API 25: POST /counter/lookup
+  // API 25: POST /counter/lookup (Backend CounterController chưa có endpoint này)
   lookup: async (params, options) => {
     const fallback = async () => {
       const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('memberLookup', { params, ...options });
+      const res = await fixtureRequest('memberLookup', { params, ...options });
+      return (Array.isArray(res) ? res : [res]).map((item) => ({ ...item, isMock: true }));
     };
 
     try {
@@ -212,9 +212,9 @@ export const counterService = {
           url: API_ENDPOINTS.MODERATOR.COUNTER_LOOKUP,
           data: params,
         },
-        { fallback, signal: options?.signal }
+        { signal: options?.signal }
       );
-      if (!result) return fallback();
+      if (!result) throw new Phase2Error('Không tìm thấy thành viên', 404);
       const list = Array.isArray(result) ? result : [result];
       return list.map((item) => ({
         memberId: item.accountId || item.memberId || item.id,
@@ -223,54 +223,59 @@ export const counterService = {
         name: item.fullName || item.name || '',
         avatarUrl: item.avatarUrl || '',
         phone: item.phone || params?.phone || '',
+        isMock: false,
       }));
     } catch (err) {
-      return fallback();
+      if (err.status === 404 || isFixtureMode) {
+        return fallback();
+      }
+      throw err;
     }
   },
 
-  // API 26: POST /counter/members/{accountId}/confirm-identity
+  // API 26: POST /counter/members/{accountId}/confirm-identity (Đã triển khai ở CounterController.java:24)
   confirm: async (memberId, options) => {
-    const fallback = async () => {
+    if (isFixtureMode) {
       const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
       return fixtureRequest('identityConfirm', { data: { memberId }, ...options });
-    };
-
-    try {
-      await callBackend(
-        {
-          method: 'post',
-          url: API_ENDPOINTS.MODERATOR.COUNTER_CONFIRM_IDENTITY(memberId),
-        },
-        { fallback, signal: options?.signal }
-      );
-      return {
-        memberId,
-        identityToken: `proof-${memberId}-${Date.now()}`,
-        confirmedAt: new Date().toISOString(),
-      };
-    } catch {
-      return fallback();
     }
+
+    await callBackend(
+      {
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.COUNTER_CONFIRM_IDENTITY(memberId),
+      },
+      { signal: options?.signal }
+    );
+    return {
+      memberId,
+      identityToken: `proof-${memberId}-${Date.now()}`,
+      confirmedAt: new Date().toISOString(),
+    };
   },
 
-  // API 27: GET /counter/members/{accountId}/tasks
+  // API 27: GET /counter/members/{accountId}/tasks (Backend CounterController chưa có endpoint này)
   tasks: async (memberId, options) => {
     const fallback = async () => {
       const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('memberTasks', { ids: { memberId }, ...options });
+      const res = await fixtureRequest('memberTasks', { ids: { memberId }, ...options });
+      return { ...res, isMock: true };
     };
 
     try {
-      return await callBackend(
+      const res = await callBackend(
         {
           method: 'get',
           url: API_ENDPOINTS.MODERATOR.COUNTER_TASKS(memberId),
         },
-        { fallback, signal: options?.signal }
+        { signal: options?.signal }
       );
-    } catch {
-      return fallback();
+      return { ...res, isMock: false };
+    } catch (err) {
+      if (err.status === 404 || isFixtureMode) {
+        return fallback();
+      }
+      throw err;
     }
   },
 };
@@ -279,6 +284,12 @@ export const counterService = {
 // API 33, 34, 35, 19: Kiểm định & Biên nhận ký gửi
 // =========================================================================
 export const consignmentService = {
+  // API 31: POST /consignment-forms/{id}/approve
+  approve: (formId, options) => queueService.approve(formId, options),
+
+  // API 32: POST /consignment-forms/{id}/reject
+  reject: (formId, reason, options) => queueService.reject(formId, reason, options),
+
   // GET /consignment-forms/{id}
   read: async (formId, options) => {
     const fallback = async () => {
@@ -407,7 +418,8 @@ export const inventoryService = {
         { fallback, signal: options?.signal }
       );
 
-      const items = (result?.content || result?.items || (Array.isArray(result) ? result : [])).map((item) => ({
+      const rawList = result?.content || result?.items || (Array.isArray(result) ? result : []);
+      const items = rawList.map((item) => ({
         ...item,
         sku: item.id || item.sku,
         id: item.id || item.sku,
@@ -416,14 +428,6 @@ export const inventoryService = {
         status: item.status || 'ON_SALE',
       }));
 
-      if (!items.length && fallback) {
-        try {
-          return await fallback();
-        } catch {
-          return { content: [], totalElements: 0, totalPages: 0, items: [] };
-        }
-      }
-
       return {
         ...result,
         items,
@@ -431,8 +435,9 @@ export const inventoryService = {
         totalElements: result?.totalElements ?? items.length,
         totalPages: result?.totalPages ?? Math.ceil(items.length / 20),
       };
-    } catch {
-      return fallback();
+    } catch (err) {
+      if (isFixtureMode && fallback) return fallback();
+      throw err;
     }
   },
 
@@ -449,9 +454,9 @@ export const inventoryService = {
           method: 'get',
           url: API_ENDPOINTS.MODERATOR.PRODUCT_BY_SKU(sku),
         },
-        { fallback, signal: options?.signal }
+        { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
       );
-      if (!res) return fallback();
+      if (!res) throw new Phase2Error(`Không tìm thấy sản phẩm SKU ${sku}`, 404);
       return {
         ...res,
         sku: res.id || res.sku || sku,
@@ -460,8 +465,9 @@ export const inventoryService = {
         status: res.status || 'ON_SALE',
         allowedActions: res.allowedActions || ['CHANGE_SHELF', 'ADD_PHOTOS'],
       };
-    } catch {
-      return fallback();
+    } catch (err) {
+      if (isFixtureMode && fallback) return fallback();
+      throw err;
     }
   },
 
@@ -496,7 +502,7 @@ export const inventoryService = {
         url: API_ENDPOINTS.MODERATOR.CREATE_PRODUCT,
         data: payload,
       },
-      { fallback, signal: options?.signal }
+      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
     );
   },
 
@@ -521,17 +527,18 @@ export const inventoryService = {
         data: formData,
         onUploadProgress: options?.onUploadProgress,
       },
-      { fallback, signal: options?.signal }
+      { signal: options?.signal }
     );
 
     return { url: res?.url || res?.fileUrl || (typeof res === 'string' ? res : '') };
   },
 
-  // API 38: POST /products/{id}/photos
+  // API 38: POST /products/{id}/photos (Backend chưa có endpoint này ở ProductController)
   addPhotos: async (sku, photoUrls, options) => {
     const fallback = async () => {
       const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('productPhotos', { ids: { sku }, data: { photoUrls }, ...options });
+      const res = await fixtureRequest('productPhotos', { ids: { sku }, data: { photoUrls }, ...options });
+      return { ...res, isMock: true };
     };
 
     try {
@@ -541,10 +548,13 @@ export const inventoryService = {
           url: API_ENDPOINTS.MODERATOR.PRODUCT_PHOTOS(sku),
           data: { imageUrl: photoUrls[0] },
         },
-        { fallback, signal: options?.signal }
+        { signal: options?.signal }
       );
-    } catch {
-      return fallback();
+    } catch (err) {
+      if (err.status === 404 || isFixtureMode) {
+        return fallback();
+      }
+      throw err;
     }
   },
 
@@ -561,7 +571,7 @@ export const inventoryService = {
         url: API_ENDPOINTS.MODERATOR.UPDATE_SHELF_LOCATION(sku),
         data: { shelfLocation },
       },
-      { fallback, signal: options?.signal }
+      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
     );
   },
 
@@ -578,11 +588,12 @@ export const inventoryService = {
           method: 'get',
           url: API_ENDPOINTS.MODERATOR.STOCK_MOVEMENTS(sku),
         },
-        { fallback, signal: options?.signal }
+        { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
       );
-      return Array.isArray(res) ? res : fallback();
-    } catch {
-      return fallback();
+      return Array.isArray(res) ? res : [];
+    } catch (err) {
+      if (isFixtureMode && fallback) return fallback();
+      throw err;
     }
   },
 
@@ -595,16 +606,12 @@ export const inventoryService = {
 
     if (isFixtureMode) return fallback();
 
-    try {
-      const response = await baseApi.get(API_ENDPOINTS.MODERATOR.PRODUCT_SKU_LABEL(sku), {
-        responseType: 'blob',
-        signal: options?.signal,
-      });
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      return { labelPdfUrl: URL.createObjectURL(blob) };
-    } catch {
-      return fallback();
-    }
+    const response = await baseApi.get(API_ENDPOINTS.MODERATOR.PRODUCT_SKU_LABEL(sku), {
+      responseType: 'blob',
+      signal: options?.signal,
+    });
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    return { labelPdfUrl: URL.createObjectURL(blob) };
   },
 };
 
@@ -641,13 +648,10 @@ export const catalogService = {
         status: b.status,
       }));
 
-      if (!categories.length && !brands.length && fallback) {
-        return fallback();
-      }
-
       return { categories, brands };
-    } catch {
-      return fallback();
+    } catch (err) {
+      if (isFixtureMode && fallback) return fallback();
+      throw err;
     }
   },
 
@@ -680,7 +684,7 @@ export const catalogService = {
         url,
         data: payload,
       },
-      { fallback, signal: options?.signal }
+      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
     );
   },
 
@@ -701,7 +705,7 @@ export const catalogService = {
         method: 'patch',
         url,
       },
-      { fallback, signal: options?.signal }
+      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
     );
   },
 };
@@ -747,7 +751,7 @@ export const endTermService = {
         url: API_ENDPOINTS.MODERATOR.CONFIRM_UNCLAIMED_TRANSFER(sku),
         data: { partnerOrganizationName: partnerName, partnerName },
       },
-      { fallback, signal: options?.signal }
+      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
     );
   },
 };

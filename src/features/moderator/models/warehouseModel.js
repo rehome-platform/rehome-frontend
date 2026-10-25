@@ -67,9 +67,8 @@ export function safeDocumentUrl(value) {
   }
 }
 export function warehouseOf(user) {
-  const isMod = user?.role === 'staff' || String(user?.rawRole || '').toUpperCase().includes('MODERATOR');
   return {
-    id: user?.warehouseId ?? user?.warehouse?.id ?? (isMod ? (user?.id ? `wh-${String(user.id).slice(0, 8)}` : 'wh-default') : null),
-    name: user?.warehouseName ?? user?.warehouse?.name ?? (isMod ? 'Kho ReHome' : ''),
+    id: user?.warehouseId ?? user?.warehouse?.id ?? null,
+    name: user?.warehouseName ?? user?.warehouse?.name ?? '',
   };
 }
