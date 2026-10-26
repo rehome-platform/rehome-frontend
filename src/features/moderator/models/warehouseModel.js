@@ -131,3 +131,47 @@ export function warehouseOf(user) {
     name: user?.warehouseName ?? user?.warehouse?.name ?? '',
   };
 }
+
+export function normalizeConsignmentForm(data, currentUserId) {
+  if (!data) return null;
+  const status = data.status || 'PENDING';
+  let allowedActions = [];
+  if (status === 'PENDING') {
+    allowedActions = ['APPROVE', 'REJECT'];
+  } else if (status === 'APPROVED') {
+    allowedActions = ['START_INSPECTION'];
+  } else if (status === 'INSPECTING') {
+    allowedActions = ['COMPLETE_INSPECTION', 'RETURN_ONSITE'];
+  }
+
+  const rawPhotos = data.photos || data.photoUrls || [];
+  const photos = Array.isArray(rawPhotos)
+    ? rawPhotos.map((p) => (typeof p === 'string' ? { url: p } : p))
+    : [];
+
+  return {
+    ...data,
+    id: data.id || data.formId,
+    formId: data.formId || data.id,
+    name: data.name || data.productName || 'Sản phẩm ký gửi',
+    productName: data.productName || data.name || 'Sản phẩm ký gửi',
+    status,
+    allowedActions: data.allowedActions || allowedActions,
+    claimedBy: data.claimedBy ?? currentUserId ?? null,
+    photos,
+    desiredPrice: Number(data.desiredPrice || 0),
+    bringDeadline: data.bringInDeadline || data.bringDeadline || null,
+    rejectReason: data.rejectReason || null,
+    receiptId: data.receiptId || null,
+  };
+}
+
+export function canCompleteInspection(checklistObj, totalRequired, price, term, conditionNote) {
+  const checkedCount = Object.values(checklistObj || {}).filter(Boolean).length;
+  return (
+    checkedCount === totalRequired &&
+    validMoney(price) &&
+    Boolean(term) &&
+    Boolean(conditionNote && String(conditionNote).trim())
+  );
+}

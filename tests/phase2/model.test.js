@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canCompleteInspection,
   canStockIn,
   listItems,
   lookupParams,
+  normalizeConsignmentForm,
   normalizeError,
   normalizeMemberTasks,
   ownsClaim,
@@ -75,5 +77,32 @@ describe('Phase 2 boundary rules', () => {
     expect(normalized.pendingWithdrawals[0].refId).toBe('w1');
     expect(normalized.pendingEndOfTerm[0].refId).toBe('e1');
     expect(listItems(backendData)).toHaveLength(3);
+  });
+  it('normalizes consignment form and derives allowedActions based on status', () => {
+    expect(normalizeConsignmentForm(null)).toBeNull();
+    const pending = normalizeConsignmentForm({ id: 'form-1', productName: 'Áo gió', status: 'PENDING' }, 'mod-1');
+    expect(pending.name).toBe('Áo gió');
+    expect(pending.allowedActions).toEqual(['APPROVE', 'REJECT']);
+    expect(pending.claimedBy).toBe('mod-1');
+
+    const approved = normalizeConsignmentForm({ id: 'form-2', status: 'APPROVED', bringInDeadline: '2026-11-01' });
+    expect(approved.allowedActions).toEqual(['START_INSPECTION']);
+    expect(approved.bringDeadline).toBe('2026-11-01');
+
+    const inspecting = normalizeConsignmentForm({ id: 'form-3', status: 'INSPECTING', photoUrls: ['https://img.test/1.jpg'] });
+    expect(inspecting.allowedActions).toEqual(['COMPLETE_INSPECTION', 'RETURN_ONSITE']);
+    expect(inspecting.photos).toEqual([{ url: 'https://img.test/1.jpg' }]);
+
+    const rejected = normalizeConsignmentForm({ id: 'form-4', status: 'REJECTED' });
+    expect(rejected.allowedActions).toEqual([]);
+  });
+  it('validates canCompleteInspection conditions accurately', () => {
+    const checklist6 = { 0: true, 1: true, 2: true, 3: true, 4: true, 5: true };
+    expect(canCompleteInspection(checklist6, 6, '850000', '30', 'Hàng tốt')).toBe(true);
+    expect(canCompleteInspection({ ...checklist6, 5: false }, 6, '850000', '30', 'Hàng tốt')).toBe(false);
+    expect(canCompleteInspection(checklist6, 6, '0', '30', 'Hàng tốt')).toBe(false);
+    expect(canCompleteInspection(checklist6, 6, '-100', '30', 'Hàng tốt')).toBe(false);
+    expect(canCompleteInspection(checklist6, 6, '850000', '', 'Hàng tốt')).toBe(false);
+    expect(canCompleteInspection(checklist6, 6, '850000', '30', '   ')).toBe(false);
   });
 });

@@ -70,7 +70,12 @@ export const phase2Contract = {
   },
   // Free-form return reasons and configurable term lengths stay empty until integrated.
   options: {
-    inspectionReturnReasons: [],
+    inspectionReturnReasons: [
+      'Không đạt tiêu chí chất lượng kiểm định',
+      'Nghi ngờ hàng giả, hàng nhái thương hiệu',
+      'Nghi ngờ hàng cấm hoặc vi phạm pháp luật',
+      'Không thống nhất giá chốt thỏa thuận',
+    ],
     categorySlots: ['TOP', 'BOTTOM', 'DRESS'],
     inventoryStatuses: [
       'ON_SALE',
@@ -81,7 +86,7 @@ export const phase2Contract = {
       'DONATED',
       'DESTROYED',
     ],
-    termLengthDays: [],
+    termLengthDays: [30, 60, 90],
   },
 };
 
