@@ -3,7 +3,7 @@ import { API_ENDPOINTS } from '../../../configs/api.config.js';
 import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
 import { normalizeError, Phase2Error, unwrap } from '../models/warehouseModel.js';
 
-/** Low-level request adapter preserving contract gating for test suites */
+/** Contract adapter for operations with a verified backend endpoint. */
 export async function request(
   operation,
   { ids = {}, params, data, signal, onUploadProgress, scope } = {},
@@ -14,6 +14,9 @@ export async function request(
     return fixtureRequest(operation, { ids, params, data, signal, scope });
   }
   const config = phase2Contract.operations[operation];
+  if (!config || config.supported === false) {
+    throw new Phase2Error(config?.reason || 'Backend chưa hỗ trợ thao tác này.', 501, 'OPERATION_UNSUPPORTED');
+  }
   if (!config || !phase2Contract.revision || !phase2Contract.gates[config.gate] || !config.path) {
     throw new Phase2Error(
       `Chờ bàn giao contract backend (Gate ${config?.gate ?? '—'}).`,
@@ -31,9 +34,10 @@ export async function request(
     const response = await baseApi.request({
       method: config.method,
       url,
-      params,
+      params: config.params ? { ...config.params, ...params } : params,
       data,
       signal,
+      ...(config.responseType ? { responseType: config.responseType } : {}),
       noReplay: config.method.toLowerCase() !== 'get',
       onUploadProgress,
       ...(data instanceof FormData ? { headers: { 'Content-Type': undefined } } : {}),
@@ -61,28 +65,9 @@ async function callBackend(config, { fallback, signal } = {}) {
     return unwrap(response);
   } catch (error) {
     if (signal?.aborted || error.code === 'ERR_CANCELED') throw error;
-    const normalized = normalizeError(error);
-
-    // QUY TẮC AN TOÀN TUYỆT ĐỐI:
-    // Thao tác ghi (POST, PUT, PATCH, DELETE):
-    // Luôn ném lỗi thực tế từ backend (400, 401, 403, 404, 409, 500, lỗi mạng).
-    // Tuyệt đối không fallback sang mock để tránh báo thành công giả khi ghi dữ liệu thất bại!
-    const isWrite = config.method && config.method.toLowerCase() !== 'get';
-    if (isWrite) {
-      throw normalized;
-    }
-
-    // Thao tác đọc (GET):
-    // Chỉ fallback khi endpoint chưa tồn tại trên backend (404) hoặc mất kết nối
-    // VÀ đã được cấu hình hàm fallback
-    if (fallback && ([404, 0].includes(normalized.status) || !navigator.onLine)) {
-      try {
-        return await fallback();
-      } catch {
-        throw normalized;
-      }
-    }
-    throw normalized;
+    // Fixture data is selected only before a request in explicit development mode.
+    // A failed real request must always remain a failure, including reads and 404s.
+    throw normalizeError(error);
   }
 }
 
@@ -197,7 +182,7 @@ export const queueService = {
 // API 25, 26, 27: Quầy tiếp nhận & Tra cứu Member
 // =========================================================================
 export const counterService = {
-  // API 25: POST /counter/lookup (Backend CounterController chưa có endpoint này)
+  // API 25: POST /counter/lookup
   lookup: async (params, options) => {
     const fallback = async () => {
       const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
@@ -205,32 +190,27 @@ export const counterService = {
       return (Array.isArray(res) ? res : [res]).map((item) => ({ ...item, isMock: true }));
     };
 
-    try {
-      const result = await callBackend(
-        {
-          method: 'post',
-          url: API_ENDPOINTS.MODERATOR.COUNTER_LOOKUP,
-          data: params,
-        },
-        { signal: options?.signal }
-      );
-      if (!result) throw new Phase2Error('Không tìm thấy thành viên', 404);
-      const list = Array.isArray(result) ? result : [result];
-      return list.map((item) => ({
-        memberId: item.accountId || item.memberId || item.id,
-        memberCode: item.memberCode || '',
-        fullName: item.fullName || item.name || '',
-        name: item.fullName || item.name || '',
-        avatarUrl: item.avatarUrl || '',
-        phone: item.phone || params?.phone || '',
-        isMock: false,
-      }));
-    } catch (err) {
-      if (err.status === 404 || isFixtureMode) {
-        return fallback();
-      }
-      throw err;
-    }
+    if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    if (isFixtureMode) return fallback();
+    const result = await callBackend(
+      {
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.COUNTER_LOOKUP,
+        data: params,
+      },
+      { signal: options?.signal }
+    );
+    if (!result) throw new Phase2Error('Không tìm thấy thành viên', 404);
+    const list = Array.isArray(result) ? result : [result];
+    return list.map((item) => ({
+      memberId: item.accountId || item.memberId || item.id,
+      memberCode: item.memberCode || '',
+      fullName: item.fullName || item.name || '',
+      name: item.fullName || item.name || '',
+      avatarUrl: item.avatarUrl || '',
+      phone: item.phone || params?.phone || '',
+      isMock: false,
+    }));
   },
 
   // API 26: POST /counter/members/{accountId}/confirm-identity (Đã triển khai ở CounterController.java:24)
@@ -254,7 +234,7 @@ export const counterService = {
     };
   },
 
-  // API 27: GET /counter/members/{accountId}/tasks (Backend CounterController chưa có endpoint này)
+  // API 27: GET /counter/members/{accountId}/tasks
   tasks: async (memberId, options) => {
     const fallback = async () => {
       const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
@@ -262,21 +242,16 @@ export const counterService = {
       return { ...res, isMock: true };
     };
 
-    try {
-      const res = await callBackend(
-        {
-          method: 'get',
-          url: API_ENDPOINTS.MODERATOR.COUNTER_TASKS(memberId),
-        },
-        { signal: options?.signal }
-      );
-      return { ...res, isMock: false };
-    } catch (err) {
-      if (err.status === 404 || isFixtureMode) {
-        return fallback();
-      }
-      throw err;
-    }
+    if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    if (isFixtureMode) return fallback();
+    const res = await callBackend(
+      {
+        method: 'get',
+        url: API_ENDPOINTS.MODERATOR.COUNTER_TASKS(memberId),
+      },
+      { signal: options?.signal }
+    );
+    return { ...res, isMock: false };
   },
 };
 
@@ -297,18 +272,13 @@ export const consignmentService = {
       return fixtureRequest('formRead', { ids: { formId }, ...options });
     };
 
-    try {
-      const res = await callBackend(
-        {
-          method: 'get',
-          url: API_ENDPOINTS.MODERATOR.CONSIGNMENT_FORM_DETAIL(formId),
-        },
-        { fallback, signal: options?.signal }
-      );
-      return res || fallback();
-    } catch {
-      return fallback();
-    }
+    return callBackend(
+      {
+        method: 'get',
+        url: API_ENDPOINTS.MODERATOR.CONSIGNMENT_FORM_DETAIL(formId),
+      },
+      { fallback, signal: options?.signal }
+    );
   },
 
   // API 33: POST /consignment-forms/{id}/inspection/start
@@ -375,18 +345,13 @@ export const consignmentService = {
       return fixtureRequest('receiptRead', { ids: { receiptId }, ...options });
     };
 
-    try {
-      const res = await callBackend(
-        {
-          method: 'get',
-          url: API_ENDPOINTS.MODERATOR.RECEIPT_DETAIL(receiptId),
-        },
-        { fallback, signal: options?.signal }
-      );
-      return res || fallback();
-    } catch {
-      return fallback();
-    }
+    return callBackend(
+      {
+        method: 'get',
+        url: API_ENDPOINTS.MODERATOR.RECEIPT_DETAIL(receiptId),
+      },
+      { fallback, signal: options?.signal }
+    );
   },
 };
 
@@ -407,7 +372,7 @@ export const inventoryService = {
         params?.status && params.status !== 'WAITING_END_OF_TERM' ? params.status : undefined;
       const queryParams = {
         ...(validStatus ? { status: validStatus } : {}),
-        ...(params?.shelf ? { shelfLocation: params.shelf } : {}),
+        ...((params?.shelfLocation || params?.shelf) ? { shelfLocation: params.shelfLocation || params.shelf } : {}),
         page: params?.page ?? 0,
         size: params?.size ?? 20,
       };
@@ -466,7 +431,7 @@ export const inventoryService = {
         name: res.name || sku,
         shelfLocation: res.shelfLocation || 'Chưa gán',
         status: res.status || 'ON_SALE',
-        allowedActions: res.allowedActions || ['CHANGE_SHELF', 'ADD_PHOTOS'],
+        allowedActions: res.allowedActions || ['CHANGE_SHELF'],
       };
     } catch (err) {
       if (isFixtureMode && fallback) return fallback();
@@ -480,8 +445,9 @@ export const inventoryService = {
       return fixtureRequest('productByReceipt', { ids: { receiptId }, ...options });
     };
 
+    if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     if (isFixtureMode) return fallback();
-    return null;
+    throw new Phase2Error('Backend chưa hỗ trợ tra cứu sản phẩm theo biên nhận.', 501, 'OPERATION_UNSUPPORTED');
   },
 
   // API 37: POST /products
@@ -536,7 +502,7 @@ export const inventoryService = {
     return { url: res?.url || res?.fileUrl || (typeof res === 'string' ? res : '') };
   },
 
-  // API 38: POST /products/{id}/photos (Backend chưa có endpoint này ở ProductController)
+  // Additional product photos have no backend endpoint; upload at creation is supported.
   addPhotos: async (sku, photoUrls, options) => {
     const fallback = async () => {
       const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
@@ -544,21 +510,9 @@ export const inventoryService = {
       return { ...res, isMock: true };
     };
 
-    try {
-      return await callBackend(
-        {
-          method: 'post',
-          url: API_ENDPOINTS.MODERATOR.PRODUCT_PHOTOS(sku),
-          data: { imageUrl: photoUrls[0] },
-        },
-        { signal: options?.signal }
-      );
-    } catch (err) {
-      if (err.status === 404 || isFixtureMode) {
-        return fallback();
-      }
-      throw err;
-    }
+    if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    if (isFixtureMode) return fallback();
+    throw new Phase2Error('Backend chưa hỗ trợ thêm ảnh cho sản phẩm đã nhập kho.', 501, 'OPERATION_UNSUPPORTED');
   },
 
   // API 42: PATCH /products/{id}/shelf-location
@@ -629,6 +583,8 @@ export const catalogService = {
       return fixtureRequest('catalogList', options);
     };
 
+    if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    if (isFixtureMode) return fallback();
     try {
       const [catsRes, brandsRes] = await Promise.all([
         callBackend({ method: 'get', url: API_ENDPOINTS.MODERATOR.CATEGORIES }, { signal: options?.signal }),
@@ -668,7 +624,9 @@ export const catalogService = {
 
     const method = id ? 'put' : 'post';
     const baseUrl = isCategory ? API_ENDPOINTS.MODERATOR.CATEGORIES : API_ENDPOINTS.MODERATOR.BRANDS;
-    const url = id ? `${baseUrl}/${id}` : baseUrl;
+    const url = id
+      ? (isCategory ? API_ENDPOINTS.MODERATOR.CATEGORY_DETAIL(id) : API_ENDPOINTS.MODERATOR.BRAND_DETAIL(id))
+      : baseUrl;
 
     const payload = isCategory
       ? {
@@ -718,27 +676,51 @@ export const catalogService = {
 // =========================================================================
 export const endTermService = {
   list: async (params, options) => {
-    const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-    return fixtureRequest('endTermList', { ...options, params });
+    if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    if (isFixtureMode) {
+      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
+      return fixtureRequest('endTermList', { ...options, params });
+    }
+    return inventoryService.list({ ...params, status: 'UNCLAIMED' }, options);
   },
 
   read: async (sku, options) => {
-    const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-    return fixtureRequest('endTermRead', { ...options, ids: { sku } });
+    if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    if (isFixtureMode) {
+      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
+      return fixtureRequest('endTermRead', { ...options, ids: { sku } });
+    }
+    return inventoryService.read(sku, options);
   },
 
   handover: async (sku, data, options) => {
-    const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-    return fixtureRequest('endTermHandover', {
-      ...options,
-      ids: { sku },
-      data: { ...data, context: 'END_OF_TERM_TAKE_BACK' },
-    });
+    if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    if (isFixtureMode) {
+      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
+      return fixtureRequest('endTermHandover', {
+        ...options,
+        ids: { sku },
+        data: { ...data, context: 'END_OF_TERM_TAKE_BACK' },
+      });
+    }
+    // accountId and refId come from a counter task, not from the product SKU.
+    if (!data?.accountId || !data?.refId) {
+      throw new Phase2Error('Thiếu tài khoản hoặc mã yêu cầu bàn giao tại quầy.', 422);
+    }
+    return callBackend({
+      method: 'post',
+      url: API_ENDPOINTS.MODERATOR.COUNTER_HANDOVER,
+      data: { accountId: data.accountId, refId: data.refId, context: 'END_OF_TERM_TAKE_BACK' },
+    }, { signal: options?.signal });
   },
 
   reconsign: async (sku, data, options) => {
-    const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-    return fixtureRequest('endTermReconsign', { ...options, ids: { sku }, data });
+    if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    if (isFixtureMode) {
+      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
+      return fixtureRequest('endTermReconsign', { ...options, ids: { sku }, data });
+    }
+    throw new Phase2Error('Backend chưa hỗ trợ Moderator chốt ký gửi lại.', 501, 'OPERATION_UNSUPPORTED');
   },
 
   // API 36: POST /products/{id}/unclaimed/confirm-transfer
@@ -752,7 +734,7 @@ export const endTermService = {
       {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.CONFIRM_UNCLAIMED_TRANSFER(sku),
-        data: { partnerOrganizationName: partnerName, partnerName },
+        data: { partnerOrganizationName: partnerName },
       },
       { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
     );

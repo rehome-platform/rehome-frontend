@@ -6,6 +6,9 @@ import { handoverPayload } from '../models/packingModel.js';
 export async function request(operation, { orderId, data, signal, scope } = {}) {
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   const config = phase4Contract.operations[operation];
+  if (!config || config.supported === false) {
+    throw new Phase2Error(config?.reason || 'Backend chưa hỗ trợ thao tác này.', 501, 'OPERATION_UNSUPPORTED');
+  }
   if (!phase4Contract.revision || !phase4Contract.gates[operation] || !config?.path)
     throw new Phase2Error('Chờ contract backend Phase 4 được xác minh.', 0, 'CONTRACT_BLOCKED');
   if (!scope?.warehouseId || !scope.userId) throw new Phase2Error('Chưa xác định phiên và kho.', 403);
@@ -31,8 +34,8 @@ export const packingService = {
   read: (orderId, options) => request('read', { ...options, orderId }),
   scan: (orderId, productId, options) => request('scan', { ...options, orderId, data: { productId } }),
   shipment: (orderId, options) => request('shipment', { ...options, orderId }),
-  handover: (task, identity, options) => {
-    const data = handoverPayload(task, identity, options.scope);
+  handover: (task, identity, options = {}) => {
+    const data = handoverPayload(task, identity, options.scope || {});
     if (!data) throw new Phase2Error('Yêu cầu hoặc xác nhận danh tính không còn hợp lệ.', 409);
     return request('handover', { ...options, data });
   },

@@ -145,7 +145,8 @@ export function useResource(
         failures++;
         const normalized = normalizeError(error);
         terminal =
-          [401, 403, 404].includes(normalized.status) || normalized.code === 'CONTRACT_BLOCKED';
+          [401, 403, 404].includes(normalized.status) ||
+          ['CONTRACT_BLOCKED', 'OPERATION_UNSUPPORTED'].includes(normalized.code);
         setState((previous) => ({
           data: [401, 403, 404].includes(normalized.status) ? null : previous.data,
           loading: false,
@@ -210,7 +211,7 @@ export function useResource(
       if (normalized.status === 409) refresh();
       if (
         (!normalized.status || normalized.status >= 500) &&
-        normalized.code !== 'CONTRACT_BLOCKED'
+        !['CONTRACT_BLOCKED', 'OPERATION_UNSUPPORTED'].includes(normalized.code)
       )
         onUncertain?.();
       // Keep action errors separate from refresh to avoid erasing a conflict message.

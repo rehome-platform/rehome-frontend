@@ -2,6 +2,7 @@ import React, { StrictMode } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Phase2Provider, useResource } from '../../src/features/moderator/hooks/warehouseHooks.jsx';
+import { Phase2Error } from '../../src/features/moderator/models/warehouseModel.js';
 
 vi.mock('../../src/context/AuthContext.jsx', () => ({
   useAuth: () => ({ user: testUser, isAuthenticated: true }),
@@ -26,6 +27,21 @@ function Probe({ loader, done }) {
 }
 afterEach(() => vi.useRealTimers());
 describe('bounded polling', () => {
+  it('stops polling unsupported operations until a manual refresh', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    const loader = vi.fn(async () => {
+      throw new Phase2Error('Unavailable operation', 501, 'OPERATION_UNSUPPORTED');
+    });
+    render(<Probe loader={loader} />, { wrapper: Wrapper });
+    await act(async () => {});
+    const initial = loader.mock.calls.length;
+    await act(async () => vi.advanceTimersByTimeAsync(60000));
+    await act(async () => fireEvent(document, new Event('visibilitychange')));
+    expect(loader).toHaveBeenCalledTimes(initial);
+    await act(async () => fireEvent.click(screen.getByText('Refresh')));
+    expect(loader).toHaveBeenCalledTimes(initial + 1);
+  });
   it('polls every five seconds, pauses while hidden, refreshes on focus and stops when complete', async () => {
     vi.useFakeTimers();
     let completed = false;
