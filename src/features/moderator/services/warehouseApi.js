@@ -227,10 +227,14 @@ export const counterService = {
       },
       { signal: options?.signal }
     );
+    const confirmedAt = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
     return {
       memberId,
+      accountId: memberId,
       identityToken: `proof-${memberId}-${Date.now()}`,
-      confirmedAt: new Date().toISOString(),
+      confirmedAt,
+      expiresAt,
     };
   },
 
@@ -252,6 +256,23 @@ export const counterService = {
       { signal: options?.signal }
     );
     return { ...res, isMock: false };
+  },
+
+  // API 72: POST /counter/handover (Context: ITEM_WITHDRAWAL / END_OF_TERM_TAKE_BACK)
+  handover: async ({ accountId, refId, context }, options) => {
+    const fallback = async () => {
+      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
+      return fixtureRequest('endTermHandover', { data: { accountId, refId, context }, ...options });
+    };
+
+    return callBackend(
+      {
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.COUNTER_HANDOVER,
+        data: { accountId, refId, context },
+      },
+      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+    );
   },
 };
 

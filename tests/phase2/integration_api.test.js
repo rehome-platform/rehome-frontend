@@ -276,6 +276,16 @@ describe('real API mode never substitutes warehouse fixtures', () => {
     })).resolves.toBeNull();
   });
 
+  it('hands over counter tasks using counterService.handover with exact payload', async () => {
+    server.use(http.post(`${API_BASE_URL}/counter/handover`, async ({ request }) => {
+      expect(await request.json()).toEqual({ accountId: 'member-a', refId: 'withdrawal-1', context: 'ITEM_WITHDRAWAL' });
+      return new HttpResponse(null, { status: 204 });
+    }));
+    await expect(counterService.handover({
+      accountId: 'member-a', refId: 'withdrawal-1', context: 'ITEM_WITHDRAWAL',
+    })).resolves.toBeNull();
+  });
+
   it.each([
     ['adding product photos', () => inventoryService.addPhotos('sku-a', ['https://example.com/photo.jpg'])],
     ['finding a product by receipt', () => inventoryService.byReceipt('receipt-a')],
