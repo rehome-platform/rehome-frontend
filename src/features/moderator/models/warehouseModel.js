@@ -41,7 +41,60 @@ export function normalizeError(error) {
 }
 
 export function listItems(data) {
-  return Array.isArray(data) ? data : (data?.items ?? []);
+  if (Array.isArray(data)) return data;
+  if (data?.items && Array.isArray(data.items)) return data.items;
+  if (data?.pendingForms || data?.pendingWithdrawals || data?.pendingEndOfTerm) {
+    return [
+      ...(data.pendingForms || []),
+      ...(data.pendingWithdrawals || []),
+      ...(data.pendingEndOfTerm || []),
+    ];
+  }
+  return [];
+}
+
+export function normalizeMemberTasks(data) {
+  if (!data) {
+    return { pendingForms: [], pendingWithdrawals: [], pendingEndOfTerm: [], totalCount: 0 };
+  }
+  if (Array.isArray(data)) {
+    const pendingForms = data.map((item) => ({
+      ...item,
+      id: item.id || item.formId,
+      formId: item.formId || item.id,
+      productName: item.productName || item.name || '',
+      name: item.name || item.productName || '',
+    }));
+    return {
+      pendingForms,
+      pendingWithdrawals: [],
+      pendingEndOfTerm: [],
+      totalCount: pendingForms.length,
+    };
+  }
+  const pendingForms = (data.pendingForms || []).map((f) => ({
+    ...f,
+    id: f.id || f.formId,
+    formId: f.id || f.formId,
+    name: f.productName || f.name || '',
+    productName: f.productName || f.name || '',
+  }));
+  const pendingWithdrawals = (data.pendingWithdrawals || []).map((w) => ({
+    ...w,
+    id: w.id || w.refId,
+    refId: w.id || w.refId,
+  }));
+  const pendingEndOfTerm = (data.pendingEndOfTerm || []).map((e) => ({
+    ...e,
+    id: e.id || e.refId,
+    refId: e.id || e.refId,
+  }));
+  return {
+    pendingForms,
+    pendingWithdrawals,
+    pendingEndOfTerm,
+    totalCount: pendingForms.length + pendingWithdrawals.length + pendingEndOfTerm.length,
+  };
 }
 export function validMoney(value) {
   return /^\d+$/.test(String(value)) && Number.isSafeInteger(Number(value)) && Number(value) > 0;

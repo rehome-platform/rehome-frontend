@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   canStockIn,
+  listItems,
   lookupParams,
   normalizeError,
+  normalizeMemberTasks,
   ownsClaim,
   safeDocumentUrl,
   unwrap,
@@ -41,5 +43,31 @@ describe('Phase 2 boundary rules', () => {
     expect(safeDocumentUrl('https://example.test/receipt.pdf')).toBe(
       'https://example.test/receipt.pdf',
     );
+  });
+  it('normalizes member tasks and flattens task groups with listItems', () => {
+    expect(normalizeMemberTasks(null)).toEqual({
+      pendingForms: [],
+      pendingWithdrawals: [],
+      pendingEndOfTerm: [],
+      totalCount: 0,
+    });
+    const legacyArray = [{ formId: 'f1', name: 'Áo thun', status: 'PENDING' }];
+    expect(normalizeMemberTasks(legacyArray)).toEqual({
+      pendingForms: [{ formId: 'f1', id: 'f1', name: 'Áo thun', productName: 'Áo thun', status: 'PENDING' }],
+      pendingWithdrawals: [],
+      pendingEndOfTerm: [],
+      totalCount: 1,
+    });
+    const backendData = {
+      pendingForms: [{ id: 'f2', productName: 'Váy', desiredPrice: 200000, status: 'APPROVED' }],
+      pendingWithdrawals: [{ id: 'w1', productId: 'Q7-AK-001', productName: 'Áo khoác', feeCharged: 50000 }],
+      pendingEndOfTerm: [{ id: 'e1', productId: 'Q7-DM-002', productName: 'Đầm dạ hội' }],
+    };
+    const normalized = normalizeMemberTasks(backendData);
+    expect(normalized.totalCount).toBe(3);
+    expect(normalized.pendingForms[0].formId).toBe('f2');
+    expect(normalized.pendingWithdrawals[0].refId).toBe('w1');
+    expect(normalized.pendingEndOfTerm[0].refId).toBe('e1');
+    expect(listItems(backendData)).toHaveLength(3);
   });
 });
