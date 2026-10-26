@@ -1,7 +1,7 @@
 import React, { StrictMode } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   Phase2Provider,
@@ -17,6 +17,7 @@ import {
 } from '../../src/features/moderator/services/warehouseApi.js';
 import CounterPage from '../../src/features/moderator/pages/CounterPage.jsx';
 import ConsignmentQueuePage from '../../src/features/moderator/pages/ConsignmentQueuePage.jsx';
+import ConsignmentDetailPage from '../../src/features/moderator/pages/ConsignmentDetailPage.jsx';
 import ReceiptPanel from '../../src/features/moderator/components/ReceiptPanel.jsx';
 import Modal from '../../src/components/common/Modal.jsx';
 import { Phase2Error } from '../../src/features/moderator/models/warehouseModel.js';
@@ -385,5 +386,261 @@ describe('ConsignmentQueuePage component behaviors', () => {
       expect(releaseSpy).toHaveBeenCalledWith('q-mine-2', expect.anything());
     });
     expect(await screen.findByText(/Đã nhả việc/)).toBeInTheDocument();
+  });
+});
+
+function WithIdentity({ identity, children }) {
+  const { setIdentity } = usePhase2();
+  React.useEffect(() => {
+    if (identity) setIdentity(identity);
+  }, [identity, setIdentity]);
+  return children;
+}
+
+function renderDetailRoute(ui, route = '/moderator/consignments/form-101', identity = null) {
+  return render(
+    <StrictMode>
+      <MemoryRouter initialEntries={[route]}>
+        <Phase2Provider>
+          <WithIdentity identity={identity}>
+            <Routes>
+              <Route path="/moderator/consignments/:formId" element={ui} />
+            </Routes>
+          </WithIdentity>
+        </Phase2Provider>
+      </MemoryRouter>
+    </StrictMode>,
+  );
+}
+
+describe('ConsignmentDetailPage component behaviors', () => {
+  it('renders form details and approves form successfully with feedback', async () => {
+    vi.spyOn(consignmentService, 'read').mockResolvedValue({
+      id: 'form-101',
+      formId: 'form-101',
+      name: 'Áo khoác gió',
+      productName: 'Áo khoác gió',
+      status: 'PENDING',
+      allowedActions: ['APPROVE', 'REJECT'],
+      claimedBy: 'mod-a',
+    });
+    const approveSpy = vi.spyOn(queueService, 'approve').mockResolvedValue({
+      id: 'form-101',
+      status: 'APPROVED',
+      bringInDeadline: '2026-11-03',
+    });
+
+    renderDetailRoute(<ConsignmentDetailPage />);
+    expect(await screen.findByRole('heading', { name: /Áo khoác gió/ })).toBeInTheDocument();
+    expect(screen.getByText('Chờ duyệt')).toBeInTheDocument();
+
+    const approveBtn = screen.getByRole('button', { name: /Duyệt form/ });
+    fireEvent.click(approveBtn);
+
+    await waitFor(() => {
+      expect(approveSpy).toHaveBeenCalledWith('form-101', expect.anything());
+    });
+    expect(await screen.findByText(/Đã duyệt form ký gửi thành công/)).toBeInTheDocument();
+  });
+
+  it('rejects form online with reason feedback', async () => {
+    vi.spyOn(consignmentService, 'read').mockResolvedValue({
+      id: 'form-101',
+      formId: 'form-101',
+      name: 'Quần jeans',
+      status: 'PENDING',
+      allowedActions: ['APPROVE', 'REJECT'],
+      claimedBy: 'mod-a',
+    });
+    const rejectSpy = vi.spyOn(queueService, 'reject').mockResolvedValue({
+      id: 'form-101',
+      status: 'REJECTED',
+    });
+
+    const user = userEvent.setup();
+    renderDetailRoute(<ConsignmentDetailPage />);
+    expect(await screen.findByRole('heading', { name: /Quần jeans/ })).toBeInTheDocument();
+
+    const rejectRadio = screen.getByLabelText(/Từ chối kèm lý do/i);
+    await user.click(rejectRadio);
+
+    const reasonInput = screen.getByPlaceholderText(/Nhập lý do từ chối/);
+    await user.type(reasonInput, 'Ảnh quá mờ không xem được');
+
+    const rejectBtn = screen.getByRole('button', { name: 'Từ chối form ký gửi' });
+    await user.click(rejectBtn);
+
+    await waitFor(() => {
+      expect(rejectSpy).toHaveBeenCalledWith('form-101', 'Ảnh quá mờ không xem được', expect.anything());
+    });
+    expect(await screen.findByText(/Đã từ chối form ký gửi/)).toBeInTheDocument();
+  });
+
+  it('starts inspection when member is identified at counter', async () => {
+    vi.spyOn(consignmentService, 'read').mockResolvedValue({
+      id: 'form-101',
+      formId: 'form-101',
+      name: 'Váy dạ hội',
+      status: 'APPROVED',
+      memberId: 'member-1',
+      allowedActions: ['START_INSPECTION'],
+      claimedBy: 'mod-a',
+    });
+    const startSpy = vi.spyOn(consignmentService, 'start').mockResolvedValue(null);
+
+    renderDetailRoute(
+      <ConsignmentDetailPage />,
+      '/moderator/consignments/form-101',
+      { memberId: 'member-1', identityToken: 'token-abc' },
+    );
+    expect(await screen.findByRole('heading', { name: /Váy dạ hội/ })).toBeInTheDocument();
+
+    const startBtn = screen.getByRole('button', { name: 'Bắt đầu kiểm định tại quầy' });
+    fireEvent.click(startBtn);
+
+    await waitFor(() => {
+      expect(startSpy).toHaveBeenCalledWith('form-101', expect.anything(), expect.anything());
+    });
+    expect(await screen.findByText(/Đã bắt đầu kiểm định tại quầy/)).toBeInTheDocument();
+  });
+
+  it('completes inspection after checking all 6 checklist items and entering valid price', async () => {
+    vi.spyOn(consignmentService, 'read').mockResolvedValue({
+      id: 'form-101',
+      formId: 'form-101',
+      name: 'Đầm hoa',
+      status: 'INSPECTING',
+      memberId: 'member-1',
+      allowedActions: ['COMPLETE_INSPECTION', 'RETURN_ONSITE'],
+      claimedBy: 'mod-a',
+    });
+    const completeSpy = vi.spyOn(consignmentService, 'complete').mockResolvedValue({
+      receiptId: 'rcpt-test-1',
+    });
+
+    const user = userEvent.setup();
+    renderDetailRoute(
+      <ConsignmentDetailPage />,
+      '/moderator/consignments/form-101',
+      { memberId: 'member-1', identityToken: 'token-abc' },
+    );
+    expect(await screen.findByRole('heading', { name: /Đầm hoa/ })).toBeInTheDocument();
+
+    // Check all 6 checklist boxes
+    const checkboxes = screen.getAllByRole('checkbox');
+    expect(checkboxes).toHaveLength(6);
+    for (const box of checkboxes) {
+      await user.click(box);
+    }
+
+    const noteInput = screen.getByPlaceholderText(/Mô tả độ mới/);
+    await user.type(noteInput, 'Còn nguyên tag, mới 99%');
+
+    const priceInput = screen.getByPlaceholderText(/VD: 850000/);
+    await user.type(priceInput, '850000');
+
+    const termSelect = screen.getByLabelText(/Độ dài kỳ ký gửi/);
+    await user.selectOptions(termSelect, '30');
+
+    const submitBtn = screen.getByRole('button', { name: /Đạt kiểm định/ });
+    expect(submitBtn).toBeEnabled();
+    await user.click(submitBtn);
+
+    await waitFor(() => {
+      expect(completeSpy).toHaveBeenCalledWith(
+        'form-101',
+        expect.objectContaining({
+          conditionNote: 'Còn nguyên tag, mới 99%',
+          agreedPrice: 850000,
+          termLengthDays: 30,
+        }),
+        expect.anything(),
+      );
+    });
+    expect(await screen.findByText(/Đã lập biên nhận ký gửi thành công/)).toBeInTheDocument();
+  });
+
+  it('returns item onsite when inspection fails', async () => {
+    vi.spyOn(consignmentService, 'read').mockResolvedValue({
+      id: 'form-101',
+      formId: 'form-101',
+      name: 'Áo len',
+      status: 'INSPECTING',
+      memberId: 'member-1',
+      allowedActions: ['COMPLETE_INSPECTION', 'RETURN_ONSITE'],
+      claimedBy: 'mod-a',
+    });
+    const returnSpy = vi.spyOn(consignmentService, 'returnOnsite').mockResolvedValue({
+      id: 'form-101',
+      status: 'REJECTED',
+    });
+
+    const user = userEvent.setup();
+    renderDetailRoute(
+      <ConsignmentDetailPage />,
+      '/moderator/consignments/form-101',
+      { memberId: 'member-1', identityToken: 'token-abc' },
+    );
+    expect(await screen.findByRole('heading', { name: /Áo len/ })).toBeInTheDocument();
+
+    const returnSelect = screen.getByLabelText(/Lý do không nhận/);
+    await user.selectOptions(returnSelect, returnSelect.options[1].value);
+
+    const noteInput = screen.getByPlaceholderText(/Mô tả vết bẩn, lỗi rách/);
+    await user.type(noteInput, 'Vết rách lớn ở tay áo');
+
+    const returnBtn = screen.getByRole('button', { name: 'Xác nhận trả đồ tại chỗ cho Member' });
+    await user.click(returnBtn);
+
+    await waitFor(() => {
+      expect(returnSpy).toHaveBeenCalledWith(
+        'form-101',
+        expect.objectContaining({ note: 'Vết rách lớn ở tay áo' }),
+        expect.anything(),
+      );
+    });
+    expect(await screen.findByText(/Đã xác nhận trả đồ tại chỗ/)).toBeInTheDocument();
+  });
+
+  it('displays backend permission notice gracefully when read fails with 403', async () => {
+    vi.spyOn(consignmentService, 'read').mockRejectedValue(
+      new Phase2Error('Forbidden', 403, 'CONSIGNMENT_FORM_FORBIDDEN'),
+    );
+
+    renderDetailRoute(<ConsignmentDetailPage />);
+    expect(
+      await screen.findByText(/Backend giới hạn quyền đọc chi tiết form trực tiếp/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mở Hàng đợi công việc' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Quầy tiếp nhận Member' })).toBeInTheDocument();
+  });
+
+  it('ReceiptPanel downloads binary PDF via consignmentService.pdf when confirmed', async () => {
+    vi.spyOn(consignmentService, 'receipt').mockResolvedValue({
+      id: 'rcpt-test-2',
+      receiptId: 'rcpt-test-2',
+      receiptNo: 'RCP-2026-001',
+      confirmedAt: '2026-10-26T14:00:00Z',
+      agreedPrice: 600000,
+      floorPrice: 420000,
+      termLengthDays: 30,
+      commissionRateTerm1: 0.15,
+    });
+    const pdfSpy = vi.spyOn(consignmentService, 'pdf').mockResolvedValue({
+      pdfUrl: 'blob:http://localhost/receipt.pdf',
+    });
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => {});
+
+    render(<ReceiptPanel receiptId="rcpt-test-2" />, { wrapper: Wrapper });
+    expect(await screen.findByText(/RCP-2026-001/)).toBeInTheDocument();
+    expect(screen.getByText(/Member đã xác nhận/)).toBeInTheDocument();
+
+    const pdfBtn = screen.getByRole('button', { name: 'Mở PDF biên nhận' });
+    fireEvent.click(pdfBtn);
+
+    await waitFor(() => {
+      expect(pdfSpy).toHaveBeenCalledWith('rcpt-test-2');
+    });
+    expect(openSpy).toHaveBeenCalledWith('blob:http://localhost/receipt.pdf', '_blank');
   });
 });

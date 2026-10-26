@@ -33,11 +33,22 @@ const SAMPLE_REASONS = [
   'Hàng có dấu hiệu hư hỏng nặng',
 ];
 
+const DEFAULT_TERM_OPTIONS = [30, 60, 90];
+const DEFAULT_RETURN_REASONS = [
+  'Không đạt tiêu chí chất lượng kiểm định',
+  'Nghi ngờ hàng giả, hàng nhái thương hiệu',
+  'Nghi ngờ hàng cấm hoặc vi phạm pháp luật',
+  'Không thống nhất giá chốt thỏa thuận',
+];
+
 export default function ConsignmentDetailPage() {
   const { formId } = useParams();
   const { identity, scope } = usePhase2();
   const resource = useResource((options) => consignmentService.read(formId, options), [formId]);
   const form = resource.data;
+
+  // Banner phản hồi người dùng
+  const [feedback, setFeedback] = useState(null);
 
   // Trạng thái duyệt form
   const [decision, setDecision] = useState('APPROVE'); // 'APPROVE' | 'REJECT'
@@ -64,9 +75,24 @@ export default function ConsignmentDetailPage() {
     [],
   );
   const options = optionsResource.data || phase2Contract.options;
+  const termOptions =
+    options?.termLengthDays && options.termLengthDays.length > 0
+      ? options.termLengthDays
+      : DEFAULT_TERM_OPTIONS;
+  const returnReasons =
+    options?.inspectionReturnReasons && options.inspectionReturnReasons.length > 0
+      ? options.inspectionReturnReasons
+      : DEFAULT_RETURN_REASONS;
 
   const owned = ownsClaim(form, scope.userId);
-  const identified = !!identity && identity.memberId === form?.memberId;
+  const memberId = form?.memberId || form?.member?.id || form?.member?.memberId;
+  const identified = Boolean(
+    identity &&
+      (!memberId ||
+        identity.memberId === memberId ||
+        identity.accountId === memberId ||
+        (form?.member?.memberCode && identity.memberCode === form.member.memberCode)),
+  );
   const allowed = (action) => owned && form?.allowedActions?.includes(action);
   const proof = { identityToken: identified ? identity.identityToken : null };
   const errors = resource.error?.fields || {};
@@ -82,6 +108,15 @@ export default function ConsignmentDetailPage() {
     setChecklist((prev) => ({ ...prev, [idx]: !prev[idx] }));
   };
 
+  React.useEffect(() => {
+    if (resource.actionError) {
+      setFeedback({
+        type: 'error',
+        message: resource.actionError.message || 'Thao tác không thành công. Vui lòng thử lại.',
+      });
+    }
+  }, [resource.actionError]);
+
   return (
     <Page
       title={form?.name ? `Chi tiết ký gửi · ${form.name}` : `Chi tiết ký gửi ${formId}`}
@@ -94,6 +129,7 @@ export default function ConsignmentDetailPage() {
           <Button
             variant="outline"
             onClick={() => {
+              setFeedback(null);
               resource.clearActionError();
               resource.refresh();
             }}
@@ -104,6 +140,50 @@ export default function ConsignmentDetailPage() {
       }
     >
       <ResourceState resource={resource} />
+
+      {feedback && (
+        <div
+          role={feedback.type === 'error' ? 'alert' : 'status'}
+          className={`p-4 rounded-xl text-xs flex items-center justify-between border ${
+            feedback.type === 'success'
+              ? 'bg-[#F0FDF4] border-[#86EFAC] text-[#166534]'
+              : 'bg-[#FEF2F2] border-[#FCA5A5] text-[#991B1B]'
+          }`}
+        >
+          <span>{feedback.message}</span>
+          <button
+            type="button"
+            onClick={() => setFeedback(null)}
+            className="underline ml-4 font-bold cursor-pointer"
+          >
+            Đóng
+          </button>
+        </div>
+      )}
+
+      {resource.error?.status === 403 && !form && (
+        <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-6 space-y-4">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">⚠️</span>
+            <div className="space-y-1">
+              <h3 className="font-bold text-sm text-amber-900">
+                Backend giới hạn quyền đọc chi tiết form trực tiếp (API 17)
+              </h3>
+              <p className="text-xs text-amber-800 leading-relaxed">
+                Theo phân quyền hiện tại của backend, endpoint <code>GET /consignment-forms/:id</code> chỉ cho phép tài khoản Member sở hữu truy cập. Moderator cần thao tác thông qua Hàng đợi công việc hoặc Quầy tiếp nhận.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 pt-2">
+            <Link to="/moderator/queue">
+              <Button className="text-xs font-bold">Mở Hàng đợi công việc</Button>
+            </Link>
+            <Link to="/moderator/counter">
+              <Button variant="outline" className="text-xs font-bold">Quầy tiếp nhận Member</Button>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {form && (
         <div className="space-y-6">
@@ -333,7 +413,19 @@ export default function ConsignmentDetailPage() {
                       <Button
                         className="w-full py-3 bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs"
                         loading={resource.busy}
-                        onClick={() => resource.mutate((opts) => queueService.approve(formId, opts))}
+                        onClick={() =>
+                          resource.mutate(
+                            (opts) => queueService.approve(formId, opts),
+                            {
+                              onSuccess: () => {
+                                setFeedback({
+                                  type: 'success',
+                                  message: 'Đã duyệt form ký gửi thành công! Khách hàng có 7 ngày để mang sản phẩm đến kho.',
+                                });
+                              },
+                            },
+                          )
+                        }
                       >
                         Duyệt form — Mời khách mang đến kho
                       </Button>
@@ -343,7 +435,19 @@ export default function ConsignmentDetailPage() {
                         className="w-full py-3 font-bold text-xs"
                         disabled={!rejectReason.trim()}
                         loading={resource.busy}
-                        onClick={() => resource.mutate((opts) => queueService.reject(formId, rejectReason.trim(), opts))}
+                        onClick={() =>
+                          resource.mutate(
+                            (opts) => queueService.reject(formId, rejectReason.trim(), opts),
+                            {
+                              onSuccess: () => {
+                                setFeedback({
+                                  type: 'success',
+                                  message: 'Đã từ chối form ký gửi và gửi lý do đến khách hàng.',
+                                });
+                              },
+                            },
+                          )
+                        }
                       >
                         Từ chối form ký gửi
                       </Button>
@@ -377,7 +481,19 @@ export default function ConsignmentDetailPage() {
                   <Button
                     className="w-full py-3 bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs"
                     loading={resource.busy}
-                    onClick={() => resource.mutate((opts) => consignmentService.start(formId, proof, opts))}
+                    onClick={() =>
+                      resource.mutate(
+                        (opts) => consignmentService.start(formId, proof, opts),
+                        {
+                          onSuccess: () => {
+                            setFeedback({
+                              type: 'success',
+                              message: 'Đã bắt đầu kiểm định tại quầy. Mời đối chiếu sản phẩm theo checklist.',
+                            });
+                          },
+                        },
+                      )
+                    }
                   >
                     Bắt đầu kiểm định tại quầy
                   </Button>
@@ -422,7 +538,7 @@ export default function ConsignmentDetailPage() {
                     className="space-y-4 border-t border-[#e0e0e0] pt-4"
                     onSubmit={(e) => {
                       e.preventDefault();
-                      if (!validMoney(price) || !options.termLengthDays.includes(Number(term))) return;
+                      if (!validMoney(price) || !term || !conditionNote.trim() || !allChecked) return;
                       resource.mutate(
                         (opts) =>
                           consignmentService.complete(
@@ -435,7 +551,15 @@ export default function ConsignmentDetailPage() {
                             },
                             opts,
                           ),
-                        { onSuccess: (res) => setReceiptId(res?.receiptId) },
+                        {
+                          onSuccess: (res) => {
+                            setFeedback({
+                              type: 'success',
+                              message: 'Đã lập biên nhận ký gửi thành công! Hướng dẫn khách mở app để xác nhận biên nhận.',
+                            });
+                            setReceiptId(res?.receiptId);
+                          },
+                        },
                       );
                     }}
                   >
@@ -466,7 +590,7 @@ export default function ConsignmentDetailPage() {
                           onChange={(e) => setTerm(e.target.value)}
                         >
                           <option value="">Chọn kỳ</option>
-                          {options.termLengthDays.map((days) => (
+                          {termOptions.map((days) => (
                             <option key={days} value={days}>
                               Kỳ {days === 30 ? '1' : days === 60 ? '2' : '3'} ({days} ngày)
                             </option>
@@ -497,12 +621,21 @@ export default function ConsignmentDetailPage() {
                     className="space-y-3"
                     onSubmit={(e) => {
                       e.preventDefault();
-                      resource.mutate((opts) =>
-                        consignmentService.returnOnsite(
-                          formId,
-                          { ...proof, reason: returnReason, note: returnNote.trim() },
-                          opts,
-                        ),
+                      resource.mutate(
+                        (opts) =>
+                          consignmentService.returnOnsite(
+                            formId,
+                            { ...proof, reason: returnReason, note: returnNote.trim() },
+                            opts,
+                          ),
+                        {
+                          onSuccess: () => {
+                            setFeedback({
+                              type: 'success',
+                              message: 'Đã xác nhận trả đồ tại chỗ cho Member.',
+                            });
+                          },
+                        },
                       );
                     }}
                   >
@@ -514,7 +647,7 @@ export default function ConsignmentDetailPage() {
                         onChange={(e) => setReturnReason(e.target.value)}
                       >
                         <option value="">Chọn lý do theo quy định</option>
-                        {options.inspectionReturnReasons.map((reason) => (
+                        {returnReasons.map((reason) => (
                           <option key={reason} value={reason}>
                             {reason}
                           </option>
