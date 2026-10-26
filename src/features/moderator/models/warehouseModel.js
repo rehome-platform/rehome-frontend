@@ -103,7 +103,13 @@ export function canStockIn(receipt) {
   return !!receipt?.confirmedAt && !receipt?.productSku;
 }
 export function ownsClaim(item, userId) {
-  return !!userId && item?.claimedBy === userId;
+  if (!userId || !item) return false;
+  const claimed =
+    typeof item.claimedBy === 'object' && item.claimedBy !== null
+      ? item.claimedBy.id || item.claimedBy.accountId
+      : item.claimedBy;
+  if (!claimed) return false;
+  return String(claimed).trim().toLowerCase() === String(userId).trim().toLowerCase();
 }
 export function lookupParams(kind, value) {
   if (!['memberCode', 'phone', 'qrPayload'].includes(kind) || !value?.trim())

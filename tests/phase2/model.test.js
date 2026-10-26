@@ -32,6 +32,12 @@ describe('Phase 2 boundary rules', () => {
     expect(() => lookupParams('q', 'test')).toThrow();
     expect(ownsClaim({ claimedBy: 'other' }, 'me')).toBe(false);
     expect(ownsClaim({ claimedBy: 'me' }, 'me')).toBe(true);
+    expect(ownsClaim({ claimedBy: 'MOD-001' }, 'mod-001')).toBe(true);
+    expect(ownsClaim({ claimedBy: { id: 'mod-001' } }, 'MOD-001')).toBe(true);
+    expect(ownsClaim({ claimedBy: { accountId: 'mod-002' } }, 'mod-002')).toBe(true);
+    expect(ownsClaim(null, 'me')).toBe(false);
+    expect(ownsClaim({ claimedBy: null }, 'me')).toBe(false);
+    expect(ownsClaim({ claimedBy: 'me' }, null)).toBe(false);
   });
   it('preserves field errors and rejects executable document links', () => {
     const error = normalizeError({
