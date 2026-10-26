@@ -332,4 +332,96 @@ describe('real API mode never substitutes warehouse fixtures', () => {
   ])('reports %s as unsupported when no backend API exists', async (_, invoke) => {
     await expect(invoke()).rejects.toMatchObject({ code: 'OPERATION_UNSUPPORTED' });
   });
+
+  it('API 31: approves consignment form with exact endpoint', async () => {
+    server.use(
+      http.post(`${API_BASE_URL}/consignment-forms/form-101/approve`, () => {
+        return HttpResponse.json({
+          result: { id: 'form-101', status: 'APPROVED', bringInDeadline: '2026-11-03' },
+          statusCode: 200,
+        });
+      }),
+    );
+    const res = await consignmentService.approve('form-101');
+    expect(res).toMatchObject({ id: 'form-101', status: 'APPROVED' });
+  });
+
+  it('API 32: rejects consignment form with reason payload', async () => {
+    server.use(
+      http.post(`${API_BASE_URL}/consignment-forms/form-102/reject`, async ({ request }) => {
+        expect(await request.json()).toEqual({ reason: 'Ảnh mờ không rõ tem' });
+        return HttpResponse.json({
+          result: { id: 'form-102', status: 'REJECTED' },
+          statusCode: 200,
+        });
+      }),
+    );
+    const res = await consignmentService.reject('form-102', 'Ảnh mờ không rõ tem');
+    expect(res).toMatchObject({ id: 'form-102', status: 'REJECTED' });
+  });
+
+  it('API 33: starts inspection on consignment form', async () => {
+    server.use(
+      http.post(`${API_BASE_URL}/consignment-forms/form-103/inspection/start`, () => {
+        return new HttpResponse(null, { status: 200 });
+      }),
+    );
+    await expect(consignmentService.start('form-103')).resolves.toBeNull();
+  });
+
+  it('API 34: completes inspection and creates consignment receipt', async () => {
+    server.use(
+      http.post(`${API_BASE_URL}/consignment-forms/form-104/inspection/complete`, async ({ request }) => {
+        expect(await request.json()).toEqual({
+          result: 'PASS',
+          conditionNote: 'Tình trạng tốt 95%',
+          agreedPrice: 850000,
+          termLengthDays: 30,
+        });
+        return HttpResponse.json({
+          result: { receiptId: 'rcpt-uuid-104' },
+          statusCode: 200,
+        });
+      }),
+    );
+    const res = await consignmentService.complete('form-104', {
+      conditionNote: 'Tình trạng tốt 95%',
+      agreedPrice: 850000,
+      termLengthDays: 30,
+    });
+    expect(res).toMatchObject({ receiptId: 'rcpt-uuid-104' });
+  });
+
+  it('API 35: returns item onsite with structured payload and reason', async () => {
+    server.use(
+      http.post(`${API_BASE_URL}/consignment-forms/form-105/return-onsite`, async ({ request }) => {
+        expect(await request.json()).toEqual({
+          result: 'FAIL',
+          reason: 'Hỏng khóa: Khóa kéo bị kẹt',
+        });
+        return HttpResponse.json({
+          result: { id: 'form-105', status: 'REJECTED' },
+          statusCode: 200,
+        });
+      }),
+    );
+    const res = await consignmentService.returnOnsite('form-105', {
+      reason: 'Hỏng khóa',
+      note: 'Khóa kéo bị kẹt',
+    });
+    expect(res).toMatchObject({ id: 'form-105', status: 'REJECTED' });
+  });
+
+  it('API 19: downloads receipt PDF as blob and produces object url', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/consignment-receipts/rcpt-101/pdf`, () => {
+        return new HttpResponse(new Uint8Array([37, 80, 68, 70]), {
+          headers: { 'Content-Type': 'application/pdf' },
+        });
+      }),
+    );
+    const res = await consignmentService.pdf('rcpt-101');
+    expect(res).toHaveProperty('pdfUrl');
+    expect(typeof res.pdfUrl).toBe('string');
+  });
 });

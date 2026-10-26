@@ -1,7 +1,7 @@
 import baseApi from '../../../services/baseApi.js';
 import { API_ENDPOINTS } from '../../../configs/api.config.js';
 import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
-import { normalizeError, Phase2Error, unwrap } from '../models/warehouseModel.js';
+import { normalizeConsignmentForm, normalizeError, Phase2Error, unwrap } from '../models/warehouseModel.js';
 
 /** Contract adapter for operations with a verified backend endpoint. */
 export async function request(
@@ -277,7 +277,8 @@ export const counterService = {
 };
 
 // =========================================================================
-// API 33, 34, 35, 19: Kiểm định & Biên nhận ký gửi
+// =========================================================================
+// API 31, 32, 33, 34, 35, 19: Thẩm định & Kiểm định & Biên nhận ký gửi
 // =========================================================================
 export const consignmentService = {
   // API 31: POST /consignment-forms/{id}/approve
@@ -286,20 +287,22 @@ export const consignmentService = {
   // API 32: POST /consignment-forms/{id}/reject
   reject: (formId, reason, options) => queueService.reject(formId, reason, options),
 
-  // GET /consignment-forms/{id}
+  // API 17: GET /consignment-forms/{id}
   read: async (formId, options) => {
     const fallback = async () => {
       const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('formRead', { ids: { formId }, ...options });
+      const res = await fixtureRequest('formRead', { ids: { formId }, ...options });
+      return normalizeConsignmentForm(res, options?.scope?.userId);
     };
 
-    return callBackend(
+    const res = await callBackend(
       {
         method: 'get',
         url: API_ENDPOINTS.MODERATOR.CONSIGNMENT_FORM_DETAIL(formId),
       },
       { fallback, signal: options?.signal }
     );
+    return normalizeConsignmentForm(res, options?.scope?.userId);
   },
 
   // API 33: POST /consignment-forms/{id}/inspection/start
@@ -349,11 +352,20 @@ export const consignmentService = {
       return fixtureRequest('returnOnsite', { ids: { formId }, data, ...options });
     };
 
+    const reason = data?.note?.trim()
+      ? (data?.reason ? `${data.reason}: ${data.note.trim()}` : data.note.trim())
+      : (data?.reason || 'Không đạt kiểm định tại quầy');
+
+    const payload = {
+      result: data?.result || 'FAIL',
+      reason,
+    };
+
     return callBackend(
       {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.RETURN_ONSITE(formId),
-        data: { reason: data?.reason || 'Không đạt kiểm định tại quầy' },
+        data: payload,
       },
       { fallback, signal: options?.signal }
     );
@@ -373,6 +385,23 @@ export const consignmentService = {
       },
       { fallback, signal: options?.signal }
     );
+  },
+
+  // API 19 (F-023): GET /consignment-receipts/{id}/pdf
+  pdf: async (receiptId, options) => {
+    const fallback = async () => {
+      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
+      return fixtureRequest('receiptPdf', { ids: { receiptId }, ...options });
+    };
+
+    if (isFixtureMode) return fallback();
+
+    const response = await baseApi.get(API_ENDPOINTS.MODERATOR.RECEIPT_PDF(receiptId), {
+      responseType: 'blob',
+      signal: options?.signal,
+    });
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    return { pdfUrl: URL.createObjectURL(blob) };
   },
 };
 
