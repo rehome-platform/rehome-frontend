@@ -34,11 +34,31 @@ export function normalizeRole(rawRole) {
 }
 
 /**
+ * Kiểm tra xem account có phải role MEMBER hợp lệ không.
+ * Chỉ cho phép gọi GET /members/me khi xác định chắc chắn là MEMBER.
+ * Không suy diễn, không mặc định role lạ/rỗng là MEMBER.
+ */
+export function isMemberRole(rawRole) {
+  if (!rawRole) return false;
+  const str = (Array.isArray(rawRole)
+    ? rawRole.map((r) => (typeof r === 'string' ? r : r?.authority || '')).join(' ')
+    : String(rawRole)
+  ).toUpperCase().trim();
+  if (!str) return false;
+  if (str.includes('ADMIN') || str.includes('MODERATOR') || str.includes('STAFF') || str.includes('ORGANIZATION')) {
+    return false;
+  }
+  return str.includes('MEMBER');
+}
+
+/**
  * Lấy thông tin chi tiết tài khoản từ backend
  */
 async function fetchUserProfileFromBackend(claims) {
   const accountMeData = await fetchAccount();
-  const memberData = await fetchMemberProfile();
+  const rawRole = accountMeData?.authorities || claims?.roles || '';
+  const isMember = isMemberRole(rawRole);
+  const memberData = isMember ? await fetchMemberProfile() : null;
   const user = buildUser(memberData ?? {}, accountMeData ?? {}, claims ?? {});
   saveUser(user);
   return user;
@@ -81,10 +101,10 @@ function buildUser(memberData, accountMeData, claims) {
   const normalizedRole = normalizeRole(rawRole);
 
   return {
-    id: memberData.accountId || claims.sub || email,
-    accountId: memberData.accountId || null,
+    id: memberData.accountId || accountMeData.id || claims.sub || email,
+    accountId: memberData.accountId || accountMeData.id || null,
     email: email,
-    ...memberProfileFields(memberData, email),
+    ...memberProfileFields(memberData, email, accountMeData),
     role: normalizedRole,
     rawRole: rawRole,
     authorities: rawRole,
@@ -93,15 +113,16 @@ function buildUser(memberData, accountMeData, claims) {
   };
 }
 
-function memberProfileFields(memberData, email) {
+function memberProfileFields(memberData, email, accountMeData = {}) {
+  const fullName = memberData.fullName || accountMeData.fullName || accountMeData.name || '';
   return {
-    name: memberData.fullName || (email ? email.split('@')[0] : 'Người dùng'),
-    fullName: memberData.fullName || '',
-    phone: memberData.phone || '',
-    avatar: memberData.avatarUrl || '',
-    avatarUrl: memberData.avatarUrl || '',
-    memberCode: memberData.memberCode || '',
-    emailVerified: memberData.emailVerified ?? true,
+    name: fullName || (email ? email.split('@')[0] : 'Người dùng'),
+    fullName: fullName,
+    phone: memberData.phone || accountMeData.phone || '',
+    avatar: memberData.avatarUrl || accountMeData.avatarUrl || '',
+    avatarUrl: memberData.avatarUrl || accountMeData.avatarUrl || '',
+    memberCode: memberData.memberCode || accountMeData.memberCode || '',
+    emailVerified: memberData.emailVerified ?? accountMeData.emailVerified ?? true,
   };
 }
 

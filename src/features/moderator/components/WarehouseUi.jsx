@@ -1,18 +1,19 @@
 import React, { useId } from 'react';
+import '../styles/apiColors.css';
 import { Link } from 'react-router-dom';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 import Button from '../../../components/common/Button.jsx';
-import { safeDocumentUrl } from './model.js';
-import { isFixtureMode } from './contract.js';
+import { safeDocumentUrl } from '../models/warehouseModel.js';
+import { isFixtureMode } from '../config/warehouseContract.js';
 
 export const money = (value) =>
   value == null
     ? '—'
     : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 export const date = (value) => (value ? new Date(value).toLocaleString('vi-VN') : '—');
-export function Page({ title, subtitle, children, actions }) {
+export function Page({ title, subtitle, children, actions, apiColors = true }) {
   return (
-    <ModeratorLayout>
+    <ModeratorLayout apiColors={apiColors && !isFixtureMode}>
       <div className="mx-auto max-w-6xl space-y-6">
         {isFixtureMode && (
           <div role="status" className="rounded-xl border border-secondary bg-amber-50 p-3 text-sm">
@@ -48,6 +49,10 @@ const statusLabels = {
   WAITING_CONFIRMATION: 'Chờ Member xác nhận',
   STOCKED: 'Đã nhập kho',
   ON_SALE: 'Đang bán',
+  RESERVED: 'Đang giữ hàng',
+  SOLD: 'Đã bán',
+  WITHDRAWN: 'Đã rút hàng',
+  DESTROYED: 'Đã tiêu huỷ',
   WAITING_END_OF_TERM: 'Chờ xử lý cuối kỳ',
   UNCLAIMED: 'Vô thừa nhận',
   DONATED: 'Đã chuyển giao',

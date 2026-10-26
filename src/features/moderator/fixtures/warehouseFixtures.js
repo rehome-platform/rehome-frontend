@@ -1,5 +1,5 @@
 /** Explicit dev/test view-model fixtures. They are NOT approved BE wire contracts. */
-import { Phase2Error } from './model.js';
+import { Phase2Error } from '../models/warehouseModel.js';
 
 export const fixtureOptions = {
   inspectionReturnReasons: [
@@ -9,7 +9,15 @@ export const fixtureOptions = {
     'PRICE_DISAGREEMENT',
   ],
   categorySlots: ['TOP', 'BOTTOM'],
-  inventoryStatuses: ['ON_SALE', 'WAITING_END_OF_TERM', 'UNCLAIMED', 'DONATED'],
+  inventoryStatuses: [
+    'ON_SALE',
+    'RESERVED',
+    'SOLD',
+    'WITHDRAWN',
+    'UNCLAIMED',
+    'DONATED',
+    'DESTROYED',
+  ],
   termLengthDays: [30],
 };
 const clone = (value) => JSON.parse(JSON.stringify(value));

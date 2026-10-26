@@ -50,7 +50,15 @@ export const phase2Contract = {
   options: {
     inspectionReturnReasons: [],
     categorySlots: [],
-    inventoryStatuses: [],
+    inventoryStatuses: [
+      'ON_SALE',
+      'RESERVED',
+      'SOLD',
+      'WITHDRAWN',
+      'UNCLAIMED',
+      'DONATED',
+      'DESTROYED',
+    ],
     termLengthDays: [],
   },
 };

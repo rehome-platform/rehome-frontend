@@ -1,4 +1,4 @@
-﻿import { test } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
@@ -180,7 +180,20 @@ test('both login methods preserve token aliases, JWT fallback and distinct succe
     assert.equal(result.message, method === 'login' ? 'Đăng nhập thành công' : 'Đăng nhập Google thành công');
     assert.deepEqual(JSON.parse(h.requests[0].data), method === 'login'
       ? { email: 'user@example.test', password: ' secret ' } : { idToken: input });
-    assert.deepEqual(h.requests.slice(1).map(config => config.url), ['/api/account/me', '/members/me']);
+    assert.deepEqual(h.requests.slice(1).map(config => config.url), ['/api/account/me']);
+  }
+});
+
+test('moderator and admin login does not trigger /members/me endpoint', async () => {
+  for (const authority of ['ROLE_MODERATOR', 'ROLE_ADMIN', '[ROLE_MODERATOR]', '[ROLE_ADMIN]', ['ROLE_MODERATOR'], 'ROLE_UNKNOWN', '']) {
+    const h = fixture(config => {
+      if (config.url === '/api/auth/login') return ok(config, { accessToken: 'opaque', refreshToken: 'refresh' });
+      if (config.url === '/api/account/me') return ok(config, { email: 'user@example.test', authorities: authority });
+      if (config.url === '/members/me') throw new Error('ERR_MEMBER_ME_CALLED: /members/me should not be called');
+      return ok(config, {});
+    });
+    const { user } = await h.service.login({ email: 'user@example.test', password: 'secret' });
+    assert.ok(!h.requests.some(r => r.url.includes('/members/me')), `Should not call /members/me for ${authority}`);
   }
 });
 
@@ -212,14 +225,14 @@ test('member response envelopes preserve profile precedence and explicit false v
   for (const envelope of [data => data, data => ({ result: data }), data => ({ data })]) {
     const h = fixture(config => {
       if (config.url === '/api/auth/login') return ok(config, { accessToken: 'opaque', refreshToken: 'refresh' });
-      if (config.url === '/api/account/me') return ok(config, { email: 'account@example.test', authorities: ['ROLE_MODERATOR', 'ROLE_ADMIN'] });
+      if (config.url === '/api/account/me') return ok(config, { email: 'account@example.test', authorities: ['ROLE_MEMBER'] });
       return ok(config, envelope({ accountId: 12, email: 'member@example.test', fullName: 'Member', phone: '123', avatarUrl: 'avatar', memberCode: 'M12', emailVerified: false }));
     });
     const { user } = await h.service.login({ email: 'input@example.test', password: 'secret' });
     assert.deepEqual(JSON.parse(JSON.stringify(user)), {
       id: 12, accountId: 12, email: 'member@example.test', name: 'Member', fullName: 'Member',
       phone: '123', avatar: 'avatar', avatarUrl: 'avatar', memberCode: 'M12', emailVerified: false,
-      role: 'admin', rawRole: ['ROLE_MODERATOR', 'ROLE_ADMIN'], authorities: ['ROLE_MODERATOR', 'ROLE_ADMIN'],
+      role: 'member', rawRole: ['ROLE_MEMBER'], authorities: ['ROLE_MEMBER'],
       warehouseId: null, warehouseName: '',
     });
     assert.equal(h.client.getRefreshToken(), 'refresh');

@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
-import { consignmentService } from './api.js';
-import { useResource } from './hooks.jsx';
-import { canStockIn } from './model.js';
-import { Card, ResourceState, DocumentLink, money, date } from './ui.jsx';
+import { consignmentService } from '../services/warehouseApi.js';
+import { useResource } from '../hooks/warehouseHooks.jsx';
+import { canStockIn } from '../models/warehouseModel.js';
+import { Card, ResourceState, DocumentLink, money, date } from './WarehouseUi.jsx';
 import StockInForm from './StockInForm.jsx';
 
 export default function ReceiptPanel({ receiptId, allowStockIn = false, onStocked }) {

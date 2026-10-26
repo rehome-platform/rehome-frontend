@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canPack, canShip, handoverPayload } from '../../src/features/moderator/phase4/model.js';
+import { canPack, canShip, handoverPayload } from '../../src/features/moderator/models/packingModel.js';
 import { orderFixture, scope } from './fixtures.js';
 describe('packing eligibility', () => {
   it('requires owner, warehouse and an unexpired claim', () => {

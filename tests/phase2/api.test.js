@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { request } from '../../src/features/moderator/phase2/api.js';
-import { phase2Contract } from '../../src/features/moderator/phase2/contract.js';
+import { request } from '../../src/features/moderator/services/warehouseApi.js';
+import { phase2Contract } from '../../src/features/moderator/config/warehouseContract.js';
 import { API_BASE_URL } from '../../src/configs/api.config.js';
 
 const server = setupServer();
