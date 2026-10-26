@@ -4,12 +4,14 @@ import Button from '../../../components/common/Button.jsx';
 import QRScannerModal from '../../../components/QRScannerModal.jsx';
 import { counterService } from '../services/warehouseApi.js';
 import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
-import { listItems, lookupParams } from '../models/warehouseModel.js';
+import { listItems, lookupParams, normalizeMemberTasks } from '../models/warehouseModel.js';
 import {
   Page,
   ResourceState,
   Status,
   DetailLink,
+  money,
+  date,
 } from '../components/WarehouseUi.jsx';
 
 export default function CounterPage() {
@@ -19,10 +21,13 @@ export default function CounterPage() {
   const [submitted, setSubmitted] = useState(null);
   const [selected, setSelected] = useState(null);
   const [scanner, setScanner] = useState(false);
+  const [confirmHandover, setConfirmHandover] = useState(null);
+  const [handoverLoading, setHandoverLoading] = useState(false);
+  const [handoverFeedback, setHandoverFeedback] = useState(null);
   const [recentServed, setRecentServed] = useState([
-    { name: 'Trần Thị B', memberCode: 'MB-0098231', phone: '0900000002', taskNote: 'Kiểm định ký gửi · 08:05' },
-    { name: 'Lê Minh C', memberCode: 'MB-0101744', phone: '0900000003', taskNote: 'Bàn giao hàng rút về · 07:40' },
-    { name: 'Ngô Hải F', memberCode: 'MB-004821', phone: '0912 345 456', taskNote: 'Nhận lại hàng cuối kỳ · hôm qua 16:20' },
+    { name: 'Trần Thị Seller 1', memberCode: 'MB000903', memberId: 'a0000000-0000-0000-0000-000000000903', phone: '0911111103', taskNote: 'Kiểm định ký gửi · 08:05' },
+    { name: 'Lê Văn Seller 2', memberCode: 'MB000904', memberId: 'a0000000-0000-0000-0000-000000000904', phone: '0911111104', taskNote: 'Bàn giao hàng rút về · 07:40' },
+    { name: 'Nguyễn Văn Buyer 1', memberCode: 'MB000901', memberId: 'a0000000-0000-0000-0000-000000000901', phone: '0911111101', taskNote: 'Nhận lại hàng cuối kỳ · hôm qua 16:20' },
   ]);
 
   const memberCodeInputRef = useRef(null);
@@ -50,6 +55,8 @@ export default function CounterPage() {
     setSelected(null);
     setIdentity(null);
     setSubmitted(null);
+    setConfirmHandover(null);
+    setHandoverFeedback(null);
     results.clearActionError();
   };
 
@@ -69,6 +76,8 @@ export default function CounterPage() {
     selectedRef.current = member;
     setIdentity(null);
     setSelected(member);
+    setConfirmHandover(null);
+    setHandoverFeedback(null);
     if (member?.fullName || member?.name) {
       setRecentServed((prev) => {
         const next = prev.filter((p) => p.memberCode !== member.memberCode);
@@ -76,6 +85,7 @@ export default function CounterPage() {
           {
             name: member.fullName || member.name,
             memberCode: member.memberCode,
+            memberId: member.memberId || member.accountId,
             phone: member.phone || '',
             taskNote: 'Vừa phục vụ tại quầy',
           },
@@ -85,8 +95,51 @@ export default function CounterPage() {
     }
   };
 
+  const executeHandover = async (item, context) => {
+    setHandoverLoading(true);
+    setHandoverFeedback(null);
+    try {
+      await counterService.handover({
+        accountId: selected.memberId,
+        refId: item.refId || item.id,
+        context,
+      });
+      setHandoverFeedback({
+        type: 'success',
+        message: `Đã bàn giao thành công "${item.productName || item.productId}" cho khách hàng!`,
+      });
+      setRecentServed((prev) => {
+        const next = prev.filter((p) => p.memberCode !== selected.memberCode);
+        return [
+          {
+            name: selected.fullName || selected.name,
+            memberCode: selected.memberCode,
+            memberId: selected.memberId,
+            phone: selected.phone || '',
+            taskNote: `Bàn giao hàng · ${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`,
+          },
+          ...next.slice(0, 4),
+        ];
+      });
+      setConfirmHandover(null);
+      tasks.refresh();
+    } catch (err) {
+      setHandoverFeedback({
+        type: 'error',
+        message:
+          err.code === 'COUNTER_IDENTITY_NOT_CONFIRMED'
+            ? 'Phiên xác nhận danh tính đã hết hạn hoặc chưa được xác nhận. Vui lòng đối chiếu lại danh tính khách hàng.'
+            : (err.message || 'Không thể thực hiện bàn giao.'),
+      });
+      setConfirmHandover(null);
+    } finally {
+      setHandoverLoading(false);
+    }
+  };
+
   const confirmed = !!selected && identity?.memberId === selected.memberId;
   const resultList = listItems(results.data);
+  const taskGroups = normalizeMemberTasks(tasks.data);
 
   return (
     <Page
@@ -291,7 +344,7 @@ export default function CounterPage() {
                       </span>
                     </div>
                     <p className="text-xs text-[#5B6776] mt-0.5">
-                      {selected.memberCode} · {selected.phone} · tham gia 02/2026 · chưa có vi phạm
+                      {selected.memberCode} · {selected.phone || '09xx xxx xxx'} · Phiên xác nhận hiệu lực 15 phút
                     </p>
                   </div>
                 </div>
@@ -305,53 +358,174 @@ export default function CounterPage() {
                 </div>
               </div>
 
+              {handoverFeedback && (
+                <div
+                  role="alert"
+                  className={`rounded-xl p-4 text-xs font-semibold flex items-center justify-between ${
+                    handoverFeedback.type === 'success'
+                      ? 'bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7]'
+                      : 'bg-[#FFEBEE] text-[#C62828] border border-[#FFCDD2]'
+                  }`}
+                >
+                  <p>{handoverFeedback.message}</p>
+                  <button
+                    type="button"
+                    className="text-xs font-bold underline ml-2 cursor-pointer"
+                    onClick={() => setHandoverFeedback(null)}
+                  >
+                    Đóng
+                  </button>
+                </div>
+              )}
+
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-base font-bold text-[#191C19]">Việc cần xử lý tại quầy hôm nay</h3>
-                  <span className="text-xs text-[#5B6776]">
-                    {listItems(tasks.data).length ? `${listItems(tasks.data).length} việc đang chờ` : 'Không có việc chờ'}
+                  <span className="text-xs font-semibold text-[#5B6776]">
+                    {taskGroups.totalCount ? `${taskGroups.totalCount} việc đang chờ` : 'Không có việc chờ'}
                   </span>
                 </div>
 
-                <ResourceState resource={tasks} empty={!listItems(tasks.data).length}>
-                  <div className="space-y-3">
-                    {listItems(tasks.data).map((task) => (
-                      <div
-                        key={task.formId}
-                        className="rounded-2xl border-2 border-[#2b2b2b] bg-white overflow-hidden shadow-sm"
-                      >
-                        <div className="bg-[#f4f4f4] border-b border-[#8a8a8a] px-4 py-2.5 flex items-center justify-between">
-                          <span className="text-xs font-bold text-[#191C19]">
-                            {task.status === 'APPROVED' ? 'Tiếp nhận hàng & Kiểm định' : 'Kiểm định ký gửi'}
-                          </span>
-                          <span className="text-[11px] text-[#5B6776]">
-                            Form {task.formId} · <Status>{task.status}</Status>
+                <ResourceState resource={tasks} empty={taskGroups.totalCount === 0}>
+                  <div className="space-y-4">
+                    {/* 1. Form ký gửi */}
+                    {taskGroups.pendingForms.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-[#191C19]">
+                            1. Tiếp nhận hàng ký gửi & Kiểm định
+                          </h4>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C]">
+                            {taskGroups.pendingForms.length}
                           </span>
                         </div>
-                        <div className="p-4 flex items-center justify-between gap-4">
-                          <div>
-                            <p className="font-bold text-sm text-[#191C19]">{task.name || task.formId}</p>
-                            <p className="text-xs text-[#5B6776] mt-0.5">
-                              Member khai: Như mới · Đang có mặt tại quầy
-                            </p>
+                        {taskGroups.pendingForms.map((task) => (
+                          <div
+                            key={task.formId}
+                            className="rounded-2xl border-2 border-[#2b2b2b] bg-white overflow-hidden shadow-sm"
+                          >
+                            <div className="bg-[#f4f4f4] border-b border-[#8a8a8a] px-4 py-2.5 flex items-center justify-between">
+                              <span className="text-xs font-bold text-[#191C19]">
+                                {task.status === 'APPROVED' ? 'Đã duyệt online — Tiếp nhận & Kiểm định' : 'Form ký gửi'}
+                              </span>
+                              <span className="text-[11px] text-[#5B6776]">
+                                Form {task.formId} · <Status>{task.status}</Status>
+                              </span>
+                            </div>
+                            <div className="p-4 flex flex-wrap items-center justify-between gap-4">
+                              <div>
+                                <p className="font-bold text-sm text-[#191C19]">{task.name || task.productName || task.formId}</p>
+                                <p className="text-xs text-[#5B6776] mt-0.5">
+                                  {task.desiredPrice ? `Giá mong muốn: ${money(task.desiredPrice)}` : 'Đang có mặt tại quầy'}
+                                </p>
+                              </div>
+                              <DetailLink formId={task.formId} />
+                            </div>
                           </div>
-                          <DetailLink formId={task.formId} />
-                        </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
+
+                    {/* 2. Rút hàng giữa kỳ */}
+                    {taskGroups.pendingWithdrawals.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-[#191C19]">
+                            2. Khách đến nhận lại hàng rút giữa kỳ
+                          </h4>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FFF3E0] text-[#E65100]">
+                            {taskGroups.pendingWithdrawals.length}
+                          </span>
+                        </div>
+                        {taskGroups.pendingWithdrawals.map((item) => (
+                          <div
+                            key={item.id}
+                            className="rounded-2xl border-2 border-[#E65100]/40 bg-white overflow-hidden shadow-sm"
+                          >
+                            <div className="bg-[#FFF8E1] border-b border-[#FFE082] px-4 py-2.5 flex items-center justify-between">
+                              <span className="text-xs font-bold text-[#B78103]">
+                                Rút hàng giữa kỳ (Chờ nhận lại)
+                              </span>
+                              <span className="text-[11px] text-[#717971]">
+                                Hạn lấy: {date(item.pickupDeadline)}
+                              </span>
+                            </div>
+                            <div className="p-4 flex flex-wrap items-center justify-between gap-4">
+                              <div>
+                                <p className="font-bold text-sm text-[#191C19]">{item.productName || item.productId}</p>
+                                <p className="text-xs text-[#5B6776] mt-0.5">
+                                  Mã SP: <span className="font-mono font-bold text-[#191C19]">{item.productId}</span> · Phí rút: {item.feeCharged ? money(item.feeCharged) : 'Miễn phí'}
+                                </p>
+                              </div>
+                              <Button
+                                type="button"
+                                className="bg-[#2b2b2b] text-white hover:bg-black text-xs font-bold py-2 px-3.5"
+                                onClick={() => setConfirmHandover({ item, context: 'ITEM_WITHDRAWAL' })}
+                              >
+                                Bàn giao cho khách
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 3. Nhận lại hàng cuối kỳ */}
+                    {taskGroups.pendingEndOfTerm.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-[#191C19]">
+                            3. Khách đến nhận lại hàng hết kỳ ký gửi
+                          </h4>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EDE7F6] text-[#512DA8]">
+                            {taskGroups.pendingEndOfTerm.length}
+                          </span>
+                        </div>
+                        {taskGroups.pendingEndOfTerm.map((item) => (
+                          <div
+                            key={item.id}
+                            className="rounded-2xl border-2 border-[#512DA8]/30 bg-white overflow-hidden shadow-sm"
+                          >
+                            <div className="bg-[#F3E5F5] border-b border-[#E1BEE7] px-4 py-2.5 flex items-center justify-between">
+                              <span className="text-xs font-bold text-[#512DA8]">
+                                Hàng cuối kỳ (Đã chọn nhận lại)
+                              </span>
+                              <span className="text-[11px] text-[#717971]">
+                                Hạn xử lý: {date(item.deadline)}
+                              </span>
+                            </div>
+                            <div className="p-4 flex flex-wrap items-center justify-between gap-4">
+                              <div>
+                                <p className="font-bold text-sm text-[#191C19]">{item.productName || item.productId}</p>
+                                <p className="text-xs text-[#5B6776] mt-0.5">
+                                  Mã SP: <span className="font-mono font-bold text-[#191C19]">{item.productId}</span>
+                                </p>
+                              </div>
+                              <Button
+                                type="button"
+                                className="bg-[#2b2b2b] text-white hover:bg-black text-xs font-bold py-2 px-3.5"
+                                onClick={() => setConfirmHandover({ item, context: 'END_OF_TERM_TAKE_BACK' })}
+                              >
+                                Bàn giao cho khách
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </ResourceState>
 
                 <div className="rounded-2xl border border-[#8a8a8a] bg-white p-4 flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-bold text-[#191C19]">Nhận lại hàng cuối kỳ (nếu có yêu cầu)</p>
+                    <p className="text-xs font-bold text-[#191C19]">Danh sách hàng cuối kỳ kho chi nhánh</p>
                     <p className="text-[11px] text-[#5B6776] mt-0.5">
-                      Đối chiếu danh tính để bàn giao lại đồ không bán được hoặc hết hạn ký gửi
+                      Xem toàn bộ danh sách đồ quá hạn hoặc chuyển giao cho tổ chức từ thiện
                     </p>
                   </div>
                   <Link to="/moderator/end-of-term">
                     <Button variant="outline" className="text-xs">
-                      Xử lý nhận lại hàng cuối kỳ
+                      Mở trang Hàng cuối kỳ
                     </Button>
                   </Link>
                 </div>
@@ -435,13 +609,13 @@ export default function CounterPage() {
                     type="button"
                     onClick={() => {
                       choose({
-                        memberId: item.memberCode,
+                        memberId: item.memberId || item.memberCode,
                         memberCode: item.memberCode,
                         fullName: item.name,
                         phone: item.phone,
                       });
                     }}
-                    className="px-2.5 py-1 text-xs border border-[#8a8a8a] rounded bg-white hover:bg-[#F0F5EE] font-semibold"
+                    className="px-2.5 py-1 text-xs border border-[#8a8a8a] rounded bg-white hover:bg-[#F0F5EE] font-semibold cursor-pointer"
                   >
                     Mở lại
                   </button>
@@ -462,6 +636,45 @@ export default function CounterPage() {
           setScanner(false);
         }}
       />
+
+      {/* Modal xác nhận bàn giao tại quầy */}
+      {confirmHandover && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl space-y-4">
+            <h3 className="text-base font-bold text-[#191C19]">
+              Xác nhận bàn giao hiện vật tại quầy
+            </h3>
+            <p className="text-xs text-[#5B6776] leading-relaxed">
+              Bạn có chắc chắn đã trao tận tay sản phẩm{' '}
+              <strong className="text-[#191C19]">
+                {confirmHandover.item.productName || confirmHandover.item.productId}
+              </strong>{' '}
+              cho khách hàng <strong className="text-[#191C19]">{selected.fullName || selected.name}</strong>?
+            </p>
+            <div className="rounded-xl bg-[#F0F5EE] p-3 text-xs text-[#414942]">
+              Hệ thống sẽ cập nhật trạng thái đã hoàn tất bàn giao. Thao tác này không thể hoàn tác.
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                variant="outline"
+                type="button"
+                disabled={handoverLoading}
+                onClick={() => setConfirmHandover(null)}
+              >
+                Hủy bỏ
+              </Button>
+              <Button
+                type="button"
+                loading={handoverLoading}
+                className="bg-[#006B2C] text-white hover:bg-[#005221] font-bold"
+                onClick={() => executeHandover(confirmHandover.item, confirmHandover.context)}
+              >
+                Xác nhận đã bàn giao
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Page>
   );
 }

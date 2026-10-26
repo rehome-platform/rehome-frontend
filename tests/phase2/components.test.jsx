@@ -94,6 +94,53 @@ describe('Member selection', () => {
     await act(async () => resolve({ memberId: 'member-1', identityToken: 'late' }));
     expect(screen.queryByText('Đã xác nhận danh tính')).not.toBeInTheDocument();
   });
+  it('renders all three task groups and executes counter handover upon confirmation', async () => {
+    vi.spyOn(counterService, 'lookup').mockResolvedValue([member1]);
+    vi.spyOn(counterService, 'confirm').mockResolvedValue({
+      memberId: 'member-1',
+      accountId: 'member-1',
+      identityToken: 'proof-1',
+      confirmedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+    });
+    vi.spyOn(counterService, 'tasks').mockResolvedValue({
+      pendingForms: [{ id: 'form-1', productName: 'Áo khoác gió', desiredPrice: 250000, status: 'APPROVED' }],
+      pendingWithdrawals: [{ id: 'req-withdrawal-1', productId: 'Q7-AK-001', productName: 'Quần jeans', feeCharged: 50000, pickupDeadline: '2026-10-30T10:00:00Z' }],
+      pendingEndOfTerm: [{ id: 'req-endterm-1', productId: 'Q7-DM-002', productName: 'Đầm hoa', deadline: '2026-11-05T10:00:00Z' }],
+    });
+    const handoverSpy = vi.spyOn(counterService, 'handover').mockResolvedValue(null);
+
+    const user = userEvent.setup();
+    render(<CounterPage />, { wrapper: Wrapper });
+
+    await user.type(screen.getByLabelText('Mã Member'), 'MB-001');
+    await user.click(screen.getByRole('button', { name: 'Tra cứu', exact: true }));
+    await user.click(await screen.findByRole('button', { name: 'Chọn Member MB-001' }));
+    await user.click(screen.getByRole('button', { name: 'Tôi đã đối chiếu đúng Member' }));
+
+    await screen.findByText('1. Tiếp nhận hàng ký gửi & Kiểm định');
+    expect(screen.getByText('Áo khoác gió')).toBeInTheDocument();
+    expect(screen.getByText('2. Khách đến nhận lại hàng rút giữa kỳ')).toBeInTheDocument();
+    expect(screen.getByText('Quần jeans')).toBeInTheDocument();
+    expect(screen.getByText('3. Khách đến nhận lại hàng hết kỳ ký gửi')).toBeInTheDocument();
+    expect(screen.getByText('Đầm hoa')).toBeInTheDocument();
+
+    const handoverButtons = screen.getAllByRole('button', { name: 'Bàn giao cho khách' });
+    expect(handoverButtons).toHaveLength(2);
+    await user.click(handoverButtons[0]);
+
+    expect(await screen.findByText('Xác nhận bàn giao hiện vật tại quầy')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Xác nhận đã bàn giao' }));
+
+    expect(handoverSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: 'member-1',
+        refId: 'req-withdrawal-1',
+        context: 'ITEM_WITHDRAWAL',
+      }),
+    );
+    expect(await screen.findByText(/Đã bàn giao thành công/)).toBeInTheDocument();
+  });
 });
 
 describe('receipt and recovery gates', () => {
