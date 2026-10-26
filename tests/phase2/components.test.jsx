@@ -13,8 +13,10 @@ import {
   consignmentService,
   inventoryService,
   catalogService,
+  queueService,
 } from '../../src/features/moderator/services/warehouseApi.js';
 import CounterPage from '../../src/features/moderator/pages/CounterPage.jsx';
+import ConsignmentQueuePage from '../../src/features/moderator/pages/ConsignmentQueuePage.jsx';
 import ReceiptPanel from '../../src/features/moderator/components/ReceiptPanel.jsx';
 import Modal from '../../src/components/common/Modal.jsx';
 import { Phase2Error } from '../../src/features/moderator/models/warehouseModel.js';
@@ -282,5 +284,106 @@ describe('modal keyboard behavior', () => {
     view.unmount();
     expect(trigger).toHaveFocus();
     trigger.remove();
+  });
+});
+
+describe('ConsignmentQueuePage component behaviors', () => {
+  it('renders queue items with badges and claims a task successfully', async () => {
+    vi.spyOn(queueService, 'list').mockResolvedValue([
+      {
+        id: 'q-free',
+        queueId: 'q-free',
+        type: 'FORM_REVIEW',
+        formId: 'form-101',
+        name: 'Áo khoác dạ',
+        claimedBy: null,
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 'q-mine',
+        queueId: 'q-mine',
+        type: 'INSPECTION',
+        formId: 'form-102',
+        name: 'Váy công sở',
+        claimedBy: 'mod-a',
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    const claimSpy = vi.spyOn(queueService, 'claim').mockResolvedValue({
+      id: 'q-free',
+      claimedBy: 'mod-a',
+      claimedAt: new Date().toISOString(),
+    });
+
+    render(<ConsignmentQueuePage />, { wrapper: Wrapper });
+    expect(await screen.findByText('Áo khoác dạ')).toBeInTheDocument();
+    expect(screen.getByText('chưa ai nhận')).toBeInTheDocument();
+    expect(screen.getByText('bạn đang giữ')).toBeInTheDocument();
+
+    const claimBtn = screen.getByRole('button', { name: 'Nhận việc' });
+    fireEvent.click(claimBtn);
+
+    await waitFor(() => {
+      expect(claimSpy).toHaveBeenCalledWith('q-free', expect.anything());
+    });
+    expect(await screen.findByText(/Đã nhận việc/)).toBeInTheDocument();
+  });
+
+  it('displays error banner and reloads when claim encounters 409 conflict', async () => {
+    vi.spyOn(queueService, 'list').mockResolvedValue([
+      {
+        id: 'q-conflict',
+        queueId: 'q-conflict',
+        type: 'PACKING',
+        orderId: 'order-999',
+        name: 'Giày sneaker',
+        claimedBy: null,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    vi.spyOn(queueService, 'claim').mockRejectedValue(
+      new Phase2Error('Xung đột nhận việc', 409, 'QUEUE_ITEM_ALREADY_CLAIMED'),
+    );
+
+    render(<ConsignmentQueuePage />, { wrapper: Wrapper });
+    expect(await screen.findByText('Giày sneaker')).toBeInTheDocument();
+
+    const claimBtn = screen.getByRole('button', { name: 'Nhận việc' });
+    fireEvent.click(claimBtn);
+
+    expect(await screen.findByText(/Công việc đã được người khác nhận trước/)).toBeInTheDocument();
+  });
+
+  it('opens release modal and releases task successfully', async () => {
+    vi.spyOn(queueService, 'list').mockResolvedValue([
+      {
+        id: 'q-mine-2',
+        queueId: 'q-mine-2',
+        type: 'FORM_REVIEW',
+        formId: 'form-202',
+        name: 'Túi xách da',
+        claimedBy: 'mod-a',
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    const releaseSpy = vi.spyOn(queueService, 'release').mockResolvedValue(null);
+
+    render(<ConsignmentQueuePage />, { wrapper: Wrapper });
+    expect(await screen.findByText('Túi xách da')).toBeInTheDocument();
+
+    const releaseTrigger = screen.getByRole('button', { name: 'Nhả việc' });
+    fireEvent.click(releaseTrigger);
+
+    expect(await screen.findByText('Nhả việc này về hàng đợi?')).toBeInTheDocument();
+
+    const modalReleaseBtn = screen.getAllByRole('button', { name: 'Nhả việc' }).find(
+      (btn) => btn.closest('[role="dialog"]'),
+    );
+    fireEvent.click(modalReleaseBtn);
+
+    await waitFor(() => {
+      expect(releaseSpy).toHaveBeenCalledWith('q-mine-2', expect.anything());
+    });
+    expect(await screen.findByText(/Đã nhả việc/)).toBeInTheDocument();
   });
 });

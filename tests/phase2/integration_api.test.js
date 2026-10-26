@@ -243,9 +243,48 @@ describe('real API mode never substitutes warehouse fixtures', () => {
     await expect(read()).resolves.toBeNull();
   });
 
+  it('API 29: claims queue item successfully and maps response', async () => {
+    server.use(
+      http.post(`${API_BASE_URL}/queues/q-101/claim`, () => {
+        return HttpResponse.json({
+          data: {
+            id: 'q-101',
+            claimedBy: 'a0000000-0000-0000-0000-000000000001',
+            claimedAt: '2026-10-26T16:00:00Z',
+          },
+          success: true,
+          statusCode: 200,
+        });
+      }),
+    );
+    const res = await queueService.claim('q-101');
+    expect(res).toMatchObject({
+      id: 'q-101',
+      claimedBy: 'a0000000-0000-0000-0000-000000000001',
+    });
+  });
+
   it('accepts 204 queue release without fabricating a response', async () => {
     server.use(http.post(`${API_BASE_URL}/queues/queue-a/release`, () => new HttpResponse(null, { status: 204 })));
     await expect(queueService.release('queue-a')).resolves.toBeNull();
+  });
+
+  it('API 30: throws 403 when releasing a queue item claimed by another moderator', async () => {
+    server.use(
+      http.post(`${API_BASE_URL}/queues/q-other/release`, () => {
+        return HttpResponse.json(
+          {
+            code: 'QUEUE_ITEM_NOT_CLAIMED_BY_YOU',
+            message: 'Bạn không phải người đang nhận việc này.',
+          },
+          { status: 403 },
+        );
+      }),
+    );
+    await expect(queueService.release('q-other')).rejects.toMatchObject({
+      status: 403,
+      code: 'QUEUE_ITEM_NOT_CLAIMED_BY_YOU',
+    });
   });
 
   it('loads end-of-term products from inventory with the supported unclaimed status', async () => {

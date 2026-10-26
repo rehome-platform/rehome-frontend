@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
@@ -32,6 +32,7 @@ export default function ConsignmentQueuePage() {
   // Modal nhả việc (HQ-02-NhaViec)
   const [releaseTarget, setReleaseTarget] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [feedback, setFeedback] = useState(null);
 
   // Gọi API lấy dữ liệu hàng đợi
   const queryType = typeParam === 'ALL' ? undefined : typeParam;
@@ -39,6 +40,36 @@ export default function ConsignmentQueuePage() {
     (options) => queueService.list({ type: queryType, claim: claimParam, page }, options),
     [queryType, claimParam, page],
   );
+
+  // Tự động bắt lỗi mutation (409 xung đột nhận việc, 403 không có quyền nhả việc)
+  useEffect(() => {
+    if (resource.actionError) {
+      if (
+        resource.actionError.status === 409 ||
+        resource.actionError.code === 'QUEUE_ITEM_ALREADY_CLAIMED'
+      ) {
+        setFeedback({
+          type: 'error',
+          message:
+            'Công việc đã được người khác nhận trước. Hệ thống đã tải lại danh sách mới nhất.',
+        });
+      } else if (
+        resource.actionError.status === 403 ||
+        resource.actionError.code === 'QUEUE_ITEM_NOT_CLAIMED_BY_YOU'
+      ) {
+        setFeedback({
+          type: 'error',
+          message: 'Bạn không có quyền nhả việc do nhân viên khác đang nhận.',
+        });
+      } else {
+        setFeedback({
+          type: 'error',
+          message: resource.actionError.message || 'Đã xảy ra lỗi khi thao tác trên hàng đợi.',
+        });
+      }
+      resource.clearActionError();
+    }
+  }, [resource.actionError]);
 
   const rawItems = listItems(resource.data);
 
@@ -69,14 +100,17 @@ export default function ConsignmentQueuePage() {
     };
   });
 
-  // Áp dụng bộ lọc client-side (trạng thái, quá hạn)
+  // Áp dụng bộ lọc client-side (trạng thái, quá hạn, người nhận)
   const filteredItems = itemsWithMeta.filter((item) => {
     if (overdueOnly && !item.isOverdue) return false;
     if (statusFilter && item.status !== statusFilter) return false;
+    if (claimParam === 'mine' && !ownsClaim(item, scope.userId)) return false;
+    if (claimParam === 'unclaimed' && item.claimedBy) return false;
     return true;
   });
 
   const changeFilter = (key, value) => {
+    setFeedback(null);
     setSearch((prev) => {
       const next = new URLSearchParams(prev);
       if (value) {
@@ -107,12 +141,37 @@ export default function ConsignmentQueuePage() {
     );
   };
 
+  const handleClaim = (item) => {
+    setFeedback(null);
+    resource.mutate((options) => queueService.claim(item.queueId, options), {
+      onSuccess: () => {
+        setFeedback({
+          type: 'success',
+          message: `Đã nhận việc "${item.typeLabel}" (${item.formId || item.orderId || item.queueId}) thành công! Bạn có thể bấm "Mở" để xử lý ngay.`,
+        });
+      },
+    });
+  };
+
+  const handleRelease = (item) => {
+    setFeedback(null);
+    resource.mutate((options) => queueService.release(item.queueId, options), {
+      onSuccess: () => {
+        setReleaseTarget(null);
+        setFeedback({
+          type: 'success',
+          message: `Đã nhả việc "${item.typeLabel}" (${item.formId || item.orderId || item.queueId}) về hàng đợi thành công.`,
+        });
+      },
+    });
+  };
+
   return (
     <Page
       title="Hàng đợi công việc"
       subtitle="Việc không ai nhận sau 48 giờ sẽ tự nhả về hàng đợi và báo Admin"
       actions={
-        <Button variant="outline" onClick={resource.refresh}>
+        <Button variant="outline" onClick={() => { setFeedback(null); resource.refresh(); }}>
           Tải lại
         </Button>
       }
@@ -196,6 +255,32 @@ export default function ConsignmentQueuePage() {
           Hiển thị {filteredItems.length} / {rawItems.length} việc
         </span>
       </div>
+
+      {/* Thông báo kết quả thao tác (Alert / Feedback) */}
+      {feedback && (
+        <div
+          role="alert"
+          className={`rounded-xl p-4 text-xs font-semibold flex items-center justify-between shadow-sm transition-all ${
+            feedback.type === 'success'
+              ? 'bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7]'
+              : 'bg-[#FFEBEE] text-[#C62828] border border-[#FFCDD2]'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-sm">
+              {feedback.type === 'success' ? '✓' : '⚠'}
+            </span>
+            <p>{feedback.message}</p>
+          </div>
+          <button
+            type="button"
+            className="text-xs font-bold underline ml-4 cursor-pointer hover:opacity-80"
+            onClick={() => setFeedback(null)}
+          >
+            Đóng
+          </button>
+        </div>
+      )}
 
       <ResourceState resource={resource} empty={!filteredItems.length} />
 
@@ -282,9 +367,7 @@ export default function ConsignmentQueuePage() {
                           {!item.claimedBy && (
                             <Button
                               loading={resource.busy}
-                              onClick={() =>
-                                resource.mutate((options) => queueService.claim(item.queueId, options))
-                              }
+                              onClick={() => handleClaim(item)}
                               className="text-[11px] py-1.5 px-3 bg-[#2b2b2b] text-white hover:bg-black font-semibold rounded"
                             >
                               Nhận việc
@@ -300,7 +383,10 @@ export default function ConsignmentQueuePage() {
                               </Link>
                               <button
                                 type="button"
-                                onClick={() => setReleaseTarget(item)}
+                                onClick={() => {
+                                  setFeedback(null);
+                                  setReleaseTarget(item);
+                                }}
                                 className="px-2 py-1 text-xs text-[#BA1A1A] hover:underline font-semibold"
                               >
                                 Nhả việc
@@ -371,14 +457,7 @@ export default function ConsignmentQueuePage() {
               <Button
                 className="flex-1 py-2.5 bg-[#2b2b2b] text-white hover:bg-black font-semibold"
                 loading={resource.busy}
-                onClick={() =>
-                  resource.mutate(
-                    (options) => queueService.release(releaseTarget.queueId, options),
-                    {
-                      onSuccess: () => setReleaseTarget(null),
-                    },
-                  )
-                }
+                onClick={() => handleRelease(releaseTarget)}
               >
                 Nhả việc
               </Button>
