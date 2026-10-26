@@ -3,6 +3,69 @@ import { API_ENDPOINTS } from '../../../configs/api.config.js';
 import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
 import { normalizeError, Phase2Error, unwrap } from '../models/warehouseModel.js';
 
+async function callFixture(operation, options) {
+  const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
+  return fixtureRequest(operation, options);
+}
+
+// These operations select fixtures only in dev fixture mode. API failures propagate.
+async function callApiOrFixture(config, operation, fixtureOptions, options) {
+  return callBackend(config, {
+    fallback: isFixtureMode
+      ? () => callFixture(operation, { ...fixtureOptions, ...options })
+      : undefined,
+    signal: options?.signal,
+  });
+}
+
+function inventoryQuery(params) {
+  const { status, shelf, page, size } = params ?? {};
+  const query = {};
+  // Backend ProductStatus does not support WAITING_END_OF_TERM.
+  if (status && status !== 'WAITING_END_OF_TERM') query.status = status;
+  if (shelf) query.shelfLocation = shelf;
+  query.page = page ?? 0;
+  query.size = size ?? 20;
+  return query;
+}
+
+function inventoryItem(item) {
+  return {
+    ...item,
+    sku: item.id || item.sku,
+    id: item.id || item.sku,
+    name: item.name || '',
+    shelfLocation: item.shelfLocation || 'Chưa gán',
+    status: item.status || 'ON_SALE',
+  };
+}
+
+function inventoryPage(result) {
+  const rawList = result?.content || result?.items || (Array.isArray(result) ? result : []);
+  const items = rawList.map(inventoryItem);
+  return {
+    ...result,
+    items,
+    content: items,
+    totalElements: result?.totalElements ?? items.length,
+    totalPages: result?.totalPages ?? Math.ceil(items.length / 20),
+  };
+}
+
+function contractIsBlocked(config) {
+  return !config || !phase2Contract.revision || !phase2Contract.gates[config.gate] || !config.path;
+}
+
+async function recoverRead(error, fallback) {
+  if (!fallback) throw error;
+  if (![404, 0].includes(error.status) && navigator.onLine) throw error;
+  try {
+    return await fallback();
+  } catch {
+    throw error;
+  }
+}
+
 /** Low-level request adapter preserving contract gating for test suites */
 export async function request(
   operation,
@@ -14,7 +77,7 @@ export async function request(
     return fixtureRequest(operation, { ids, params, data, signal, scope });
   }
   const config = phase2Contract.operations[operation];
-  if (!config || !phase2Contract.revision || !phase2Contract.gates[config.gate] || !config.path) {
+  if (contractIsBlocked(config)) {
     throw new Phase2Error(
       `Chờ bàn giao contract backend (Gate ${config?.gate ?? '—'}).`,
       0,
@@ -62,27 +125,9 @@ async function callBackend(config, { fallback, signal } = {}) {
   } catch (error) {
     if (signal?.aborted || error.code === 'ERR_CANCELED') throw error;
     const normalized = normalizeError(error);
-
-    // QUY TẮC AN TOÀN TUYỆT ĐỐI:
-    // Thao tác ghi (POST, PUT, PATCH, DELETE):
-    // Luôn ném lỗi thực tế từ backend (400, 401, 403, 404, 409, 500, lỗi mạng).
-    // Tuyệt đối không fallback sang mock để tránh báo thành công giả khi ghi dữ liệu thất bại!
-    const isWrite = config.method && config.method.toLowerCase() !== 'get';
-    if (isWrite) {
-      throw normalized;
-    }
-
-    // Thao tác đọc (GET):
-    // Chỉ fallback khi endpoint chưa tồn tại trên backend (404) hoặc mất kết nối
-    // VÀ đã được cấu hình hàm fallback
-    if (fallback && ([404, 0].includes(normalized.status) || !navigator.onLine)) {
-      try {
-        return await fallback();
-      } catch {
-        throw normalized;
-      }
-    }
-    throw normalized;
+    // Writes must propagate failures even when a fixture fallback was supplied.
+    if (config.method && config.method.toLowerCase() !== 'get') throw normalized;
+    return recoverRead(normalized, fallback);
   }
 }
 
@@ -92,19 +137,16 @@ async function callBackend(config, { fallback, signal } = {}) {
 export const queueService = {
   // API 28: GET /queues?type={type}
   list: async (params, options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('queueList', { params, ...options });
-    };
-
     const typeQuery = params?.type && params.type !== 'ALL' ? params.type : undefined;
-    const result = await callBackend(
+    const result = await callApiOrFixture(
       {
         method: 'get',
         url: API_ENDPOINTS.MODERATOR.QUEUES,
         params: typeQuery ? { type: typeQuery } : undefined,
       },
-      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+      'queueList',
+      { params },
+      options,
     );
 
     const map = (item) => ({
@@ -129,66 +171,54 @@ export const queueService = {
 
   // API 29: POST /queues/{id}/claim
   claim: async (queueId, options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('queueClaim', { ids: { queueId }, ...options });
-    };
-
-    return callBackend(
+    return callApiOrFixture(
       {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.CLAIM_QUEUE(queueId),
       },
-      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+      'queueClaim',
+      { ids: { queueId } },
+      options,
     );
   },
 
   // API 30: POST /queues/{id}/release
   release: async (queueId, options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('queueRelease', { ids: { queueId }, ...options });
-    };
-
-    return callBackend(
+    return callApiOrFixture(
       {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.RELEASE_QUEUE(queueId),
       },
-      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+      'queueRelease',
+      { ids: { queueId } },
+      options,
     );
   },
 
   // API 31: POST /consignment-forms/{id}/approve
   approve: async (formId, options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('formApprove', { ids: { formId }, ...options });
-    };
-
-    return callBackend(
+    return callApiOrFixture(
       {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.APPROVE_FORM(formId),
       },
-      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+      'formApprove',
+      { ids: { formId } },
+      options,
     );
   },
 
   // API 32: POST /consignment-forms/{id}/reject
   reject: async (formId, reason, options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('formReject', { ids: { formId }, data: { reason }, ...options });
-    };
-
-    return callBackend(
+    return callApiOrFixture(
       {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.REJECT_FORM(formId),
         data: { reason },
       },
-      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+      'formReject',
+      { ids: { formId }, data: { reason } },
+      options,
     );
   },
 };
@@ -292,10 +322,7 @@ export const consignmentService = {
 
   // GET /consignment-forms/{id}
   read: async (formId, options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('formRead', { ids: { formId }, ...options });
-    };
+    const fallback = () => callFixture('formRead', { ids: { formId }, ...options });
 
     try {
       const res = await callBackend(
@@ -313,27 +340,19 @@ export const consignmentService = {
 
   // API 33: POST /consignment-forms/{id}/inspection/start
   start: async (formId, data, options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('inspectionStart', { ids: { formId }, data, ...options });
-    };
-
-    return callBackend(
+    return callApiOrFixture(
       {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.START_INSPECTION(formId),
       },
-      { fallback, signal: options?.signal }
+      'inspectionStart',
+      { ids: { formId }, data },
+      options,
     );
   },
 
   // API 34: POST /consignment-forms/{id}/inspection/complete
   complete: async (formId, data, options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('inspectionComplete', { ids: { formId }, data, ...options });
-    };
-
     const payload = {
       result: data?.result || 'PASS',
       conditionNote: data?.conditionNote || data?.condition || 'Tốt',
@@ -341,39 +360,35 @@ export const consignmentService = {
       ...(data?.termLengthDays ? { termLengthDays: Number(data.termLengthDays) } : {}),
     };
 
-    return callBackend(
+    return callApiOrFixture(
       {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.COMPLETE_INSPECTION(formId),
         data: payload,
       },
-      { fallback, signal: options?.signal }
+      'inspectionComplete',
+      { ids: { formId }, data },
+      options,
     );
   },
 
   // API 35: POST /consignment-forms/{id}/return-onsite
   returnOnsite: async (formId, data, options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('returnOnsite', { ids: { formId }, data, ...options });
-    };
-
-    return callBackend(
+    return callApiOrFixture(
       {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.RETURN_ONSITE(formId),
         data: { reason: data?.reason || 'Không đạt kiểm định tại quầy' },
       },
-      { fallback, signal: options?.signal }
+      'returnOnsite',
+      { ids: { formId }, data },
+      options,
     );
   },
 
   // API 19: GET /consignment-receipts/{id}
   receipt: async (receiptId, options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('receiptRead', { ids: { receiptId }, ...options });
-    };
+    const fallback = () => callFixture('receiptRead', { ids: { receiptId }, ...options });
 
     try {
       const res = await callBackend(
@@ -396,48 +411,19 @@ export const consignmentService = {
 export const inventoryService = {
   // API 40: GET /inventory
   list: async (params, options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('inventoryList', { params, ...options });
-    };
+    const fallback = () => callFixture('inventoryList', { params, ...options });
 
     try {
-      // Backend ProductStatus enum does not support WAITING_END_OF_TERM
-      const validStatus =
-        params?.status && params.status !== 'WAITING_END_OF_TERM' ? params.status : undefined;
-      const queryParams = {
-        ...(validStatus ? { status: validStatus } : {}),
-        ...(params?.shelf ? { shelfLocation: params.shelf } : {}),
-        page: params?.page ?? 0,
-        size: params?.size ?? 20,
-      };
-
       const result = await callBackend(
         {
           method: 'get',
           url: API_ENDPOINTS.MODERATOR.INVENTORY,
-          params: queryParams,
+          params: inventoryQuery(params),
         },
         { fallback, signal: options?.signal }
       );
 
-      const rawList = result?.content || result?.items || (Array.isArray(result) ? result : []);
-      const items = rawList.map((item) => ({
-        ...item,
-        sku: item.id || item.sku,
-        id: item.id || item.sku,
-        name: item.name || '',
-        shelfLocation: item.shelfLocation || 'Chưa gán',
-        status: item.status || 'ON_SALE',
-      }));
-
-      return {
-        ...result,
-        items,
-        content: items,
-        totalElements: result?.totalElements ?? items.length,
-        totalPages: result?.totalPages ?? Math.ceil(items.length / 20),
-      };
+      return inventoryPage(result);
     } catch (err) {
       if (isFixtureMode && fallback) return fallback();
       throw err;
@@ -446,18 +432,15 @@ export const inventoryService = {
 
   // API 41: GET /products/{sku}
   read: async (sku, options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('productRead', { ids: { sku }, ...options });
-    };
-
     try {
-      const res = await callBackend(
+      const res = await callApiOrFixture(
         {
           method: 'get',
           url: API_ENDPOINTS.MODERATOR.PRODUCT_BY_SKU(sku),
         },
-        { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+        'productRead',
+        { ids: { sku } },
+        options,
       );
       if (!res) throw new Phase2Error(`Không tìm thấy sản phẩm SKU ${sku}`, 404);
       return {
@@ -469,16 +452,13 @@ export const inventoryService = {
         allowedActions: res.allowedActions || ['CHANGE_SHELF', 'ADD_PHOTOS'],
       };
     } catch (err) {
-      if (isFixtureMode && fallback) return fallback();
+      if (isFixtureMode) return callFixture('productRead', { ids: { sku }, ...options });
       throw err;
     }
   },
 
   byReceipt: async (receiptId, options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('productByReceipt', { ids: { receiptId }, ...options });
-    };
+    const fallback = () => callFixture('productByReceipt', { ids: { receiptId }, ...options });
 
     if (isFixtureMode) return fallback();
     return null;
@@ -486,11 +466,6 @@ export const inventoryService = {
 
   // API 37: POST /products
   create: async (data, options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('productCreate', { data, ...options });
-    };
-
     const payload = {
       receiptId: data.receiptId,
       name: data.name,
@@ -499,13 +474,15 @@ export const inventoryService = {
       photoUrls: data.photoUrls || [],
     };
 
-    return callBackend(
+    return callApiOrFixture(
       {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.CREATE_PRODUCT,
         data: payload,
       },
-      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+      'productCreate',
+      { data },
+      options,
     );
   },
 
@@ -563,49 +540,40 @@ export const inventoryService = {
 
   // API 42: PATCH /products/{id}/shelf-location
   shelf: async (sku, shelfLocation, options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('shelfUpdate', { ids: { sku }, data: { shelfLocation }, ...options });
-    };
-
-    return callBackend(
+    return callApiOrFixture(
       {
         method: 'patch',
         url: API_ENDPOINTS.MODERATOR.UPDATE_SHELF_LOCATION(sku),
         data: { shelfLocation },
       },
-      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+      'shelfUpdate',
+      { ids: { sku }, data: { shelfLocation } },
+      options,
     );
   },
 
   // API 43: GET /products/{id}/stock-movements
   movements: async (sku, options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('stockMovements', { ids: { sku }, ...options });
-    };
-
     try {
-      const res = await callBackend(
+      const res = await callApiOrFixture(
         {
           method: 'get',
           url: API_ENDPOINTS.MODERATOR.STOCK_MOVEMENTS(sku),
         },
-        { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+        'stockMovements',
+        { ids: { sku } },
+        options,
       );
       return Array.isArray(res) ? res : [];
     } catch (err) {
-      if (isFixtureMode && fallback) return fallback();
+      if (isFixtureMode) return callFixture('stockMovements', { ids: { sku }, ...options });
       throw err;
     }
   },
 
   // API 39: GET /products/{id}/sku-label
   label: async (sku, options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('skuLabel', { ids: { sku }, ...options });
-    };
+    const fallback = () => callFixture('skuLabel', { ids: { sku }, ...options });
 
     if (isFixtureMode) return fallback();
 
@@ -624,10 +592,7 @@ export const inventoryService = {
 export const catalogService = {
   // API 44: GET /categories, GET /brands
   list: async (options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('catalogList', options);
-    };
+    const fallback = () => callFixture('catalogList', options);
 
     try {
       const [catsRes, brandsRes] = await Promise.all([
@@ -661,54 +626,43 @@ export const catalogService = {
   // API 45 (POST /categories), API 46 (POST /brands), API 47 (PUT /categories/{id}, PUT /brands/{id})
   save: async (kind, id, data, options) => {
     const isCategory = kind === 'category';
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest(`${kind}${id ? 'Update' : 'Create'}`, { ids: { id }, data, ...options });
-    };
-
     const method = id ? 'put' : 'post';
     const baseUrl = isCategory ? API_ENDPOINTS.MODERATOR.CATEGORIES : API_ENDPOINTS.MODERATOR.BRANDS;
     const url = id ? `${baseUrl}/${id}` : baseUrl;
 
-    const payload = isCategory
-      ? {
-          name: data.name,
-          tryonSlot: data.slot || data.tryonSlot || null,
-          ...(id && data.status ? { status: data.status } : {}),
-        }
-      : {
-          name: data.name,
-          ...(id && data.status ? { status: data.status } : {}),
-        };
+    const payload = {
+      name: data.name,
+      ...(isCategory ? { tryonSlot: data.slot || data.tryonSlot || null } : {}),
+      ...(id && data.status ? { status: data.status } : {}),
+    };
 
-    return callBackend(
+    return callApiOrFixture(
       {
         method,
         url,
         data: payload,
       },
-      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+      `${kind}${id ? 'Update' : 'Create'}`,
+      { ids: { id }, data },
+      options,
     );
   },
 
   // API 48: PATCH /categories/{id}/hide, PATCH /brands/{id}/hide
   hide: async (kind, id, options) => {
     const isCategory = kind === 'category';
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest(`${kind}Hide`, { ids: { id }, ...options });
-    };
-
     const url = isCategory
       ? API_ENDPOINTS.MODERATOR.HIDE_CATEGORY(id)
       : API_ENDPOINTS.MODERATOR.HIDE_BRAND(id);
 
-    return callBackend(
+    return callApiOrFixture(
       {
         method: 'patch',
         url,
       },
-      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+      `${kind}Hide`,
+      { ids: { id } },
+      options,
     );
   },
 };
@@ -743,18 +697,15 @@ export const endTermService = {
 
   // API 36: POST /products/{id}/unclaimed/confirm-transfer
   transfer: async (sku, partnerName, options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('unclaimedTransfer', { ids: { sku }, data: { partnerName }, ...options });
-    };
-
-    return callBackend(
+    return callApiOrFixture(
       {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.CONFIRM_UNCLAIMED_TRANSFER(sku),
         data: { partnerOrganizationName: partnerName, partnerName },
       },
-      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+      'unclaimedTransfer',
+      { ids: { sku }, data: { partnerName } },
+      options,
     );
   },
 };

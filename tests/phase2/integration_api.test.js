@@ -9,6 +9,7 @@ import {
   catalogService,
 } from '../../src/features/moderator/services/warehouseApi.js';
 import { API_BASE_URL, API_ENDPOINTS } from '../../src/configs/api.config.js';
+import baseApi, { TOKEN_KEY } from '../../src/services/baseApi.js';
 
 const server = setupServer();
 
@@ -17,6 +18,27 @@ beforeEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 describe('API 25-48 Integration & Safety Resilience Tests', () => {
+  it('preserves bearer authentication, JSON headers, and the shared timeout', async () => {
+    const previous = localStorage.getItem(TOKEN_KEY);
+    localStorage.setItem(TOKEN_KEY, 'warehouse-test-token');
+    let calls = 0;
+    server.use(http.patch(`${API_BASE_URL}/products/sku/shelf-location`, async ({ request }) => {
+      calls++;
+      expect(request.headers.get('authorization')).toBe('Bearer warehouse-test-token');
+      expect(request.headers.get('content-type')).toBe('application/json');
+      expect(await request.json()).toEqual({ shelfLocation: 'A1' });
+      return new HttpResponse(null, { status: 204 });
+    }));
+    try {
+      expect(baseApi.defaults.timeout).toBe(30000);
+      await expect(inventoryService.shelf('sku', 'A1')).resolves.toBeNull();
+      expect(calls).toBe(1);
+    } finally {
+      if (previous === null) localStorage.removeItem(TOKEN_KEY);
+      else localStorage.setItem(TOKEN_KEY, previous);
+    }
+  });
+
   // 1. Success case: API 28 list queue items
   it('API 28: fetches queue items successfully with type query', async () => {
     server.use(
