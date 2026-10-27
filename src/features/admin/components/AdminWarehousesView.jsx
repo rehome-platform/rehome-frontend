@@ -2,18 +2,18 @@ import React, { useState } from 'react';
 import { Button, Badge, Modal, Input } from '../../../components/common/index.js';
 
 /**
- * View Quản lý Chi Nhánh Kho ReHome (Admin)
+ * View Quản lý Điểm Kí Gửi ReHome (Admin)
  * Chuẩn hóa theo F-152..F-155 và UC-82..UC-85:
- * - Xem danh sách kho kèm nhân sự Moderator và số lượng hàng tồn
- * - Tạo chi nhánh kho mới (địa chỉ, tọa độ, giờ mở cửa)
- * - Sửa thông tin kho
- * - Ẩn kho không còn hoạt động (chặn ẩn nếu kho vẫn còn hàng tồn - UC-85 Unhappy path)
+ * - Xem danh sách điểm kí gửi kèm nhân sự Moderator và số lượng hàng tồn
+ * - Tạo điểm kí gửi mới (địa chỉ, tọa độ, giờ mở cửa)
+ * - Sửa thông tin điểm kí gửi
+ * - Ẩn điểm kí gửi không còn hoạt động (chặn ẩn nếu còn hàng tồn - UC-85 Unhappy path)
  */
 export default function AdminWarehousesView({ onLogAction }) {
   const [warehouses, setWarehouses] = useState([
     {
       id: 'WH-01',
-      name: 'Kho Quận 7 (Tổng kho phía Nam)',
+      name: 'Điểm kí gửi Quận 7 (Tổng điểm kí gửi phía Nam)',
       address: 'Số 12 Nguyễn Thị Thập, P. Tân Phú, Q. 7, TP.HCM',
       coordinates: '10.7329, 106.7214',
       openingHours: '08:00 - 18:00 (Thứ 2 - Chủ Nhật)',
@@ -24,7 +24,7 @@ export default function AdminWarehousesView({ onLogAction }) {
     },
     {
       id: 'WH-02',
-      name: 'Kho Bình Thạnh (Chi nhánh Trung tâm)',
+      name: 'Điểm kí gửi Bình Thạnh (Chi nhánh Trung tâm)',
       address: 'Số 88 Điện Biên Phủ, P. 15, Q. Bình Thạnh, TP.HCM',
       coordinates: '10.8012, 106.7089',
       openingHours: '08:30 - 17:30 (Thứ 2 - Thứ 7)',
@@ -35,7 +35,7 @@ export default function AdminWarehousesView({ onLogAction }) {
     },
     {
       id: 'WH-03',
-      name: 'Kho Cầu Giấy (Chi nhánh miền Bắc)',
+      name: 'Điểm kí gửi Cầu Giấy (Chi nhánh miền Bắc)',
       address: 'Số 21 Duy Tân, P. Dịch Vọng Hậu, Q. Cầu Giấy, Hà Nội',
       coordinates: '21.0315, 105.7834',
       openingHours: '08:00 - 18:00 (Thứ 2 - Thứ 7)',
@@ -46,7 +46,7 @@ export default function AdminWarehousesView({ onLogAction }) {
     },
     {
       id: 'WH-04',
-      name: 'Kho Thủ Đức (Chi nhánh phụ trợ)',
+      name: 'Điểm kí gửi Thủ Đức (Chi nhánh phụ trợ)',
       address: 'Số 45 Võ Văn Ngân, TP. Thủ Đức, TP.HCM',
       coordinates: '10.8512, 106.7621',
       openingHours: '08:00 - 17:00 (Đã ngừng hoạt động)',
@@ -108,7 +108,7 @@ export default function AdminWarehousesView({ onLogAction }) {
           user: 'Admin',
           role: 'Admin',
           roleColor: 'bg-[#E8F5E9] text-[#006B2C]',
-          action: `Cập nhật thông tin chi nhánh "${formData.name}"`,
+          action: `Cập nhật thông tin điểm kí gửi "${formData.name}"`,
         });
       }
     } else {
@@ -127,7 +127,7 @@ export default function AdminWarehousesView({ onLogAction }) {
           user: 'Admin',
           role: 'Admin',
           roleColor: 'bg-[#E8F5E9] text-[#006B2C]',
-          action: `Tạo mới chi nhánh kho "${formData.name}"`,
+          action: `Tạo mới điểm kí gửi "${formData.name}"`,
         });
       }
     }
@@ -135,9 +135,9 @@ export default function AdminWarehousesView({ onLogAction }) {
   };
 
   const handleToggleHide = (w) => {
-    // Unhappy path: Ẩn kho đang còn tồn -> Chặn, yêu cầu xử lý tồn trước (Mục 6 L-11, F-155)
+    // Unhappy path: Ẩn điểm kí gửi đang còn tồn -> Chặn, yêu cầu xử lý tồn trước (Mục 6 L-11, F-155)
     if (w.status === 'ACTIVE' && w.inventoryCount > 0) {
-      alert(`⚠️ Không thể ẩn kho "${w.name}" vì hiện đang còn ${w.inventoryCount} sản phẩm tồn trong kho! Vui lòng điều chuyển hoặc xử lý hết tồn kho trước khi đóng.`);
+      alert(`⚠️ Không thể ẩn điểm kí gửi "${w.name}" vì hiện đang còn ${w.inventoryCount} sản phẩm tồn trong điểm kí gửi! Vui lòng điều chuyển hoặc xử lý hết tồn kho trước khi đóng.`);
       return;
     }
 
@@ -152,7 +152,7 @@ export default function AdminWarehousesView({ onLogAction }) {
         user: 'Admin',
         role: 'Admin',
         roleColor: 'bg-[#E8F5E9] text-[#006B2C]',
-        action: `${nextStatus === 'HIDDEN' ? 'Ẩn' : 'Mở lại'} chi nhánh kho "${w.name}"`,
+        action: `${nextStatus === 'HIDDEN' ? 'Ẩn' : 'Mở lại'} điểm kí gửi "${w.name}"`,
       });
     }
   };
@@ -167,7 +167,7 @@ export default function AdminWarehousesView({ onLogAction }) {
           </span>
           <input
             type="text"
-            placeholder="Tìm kiếm kho theo tên, địa chỉ chi nhánh..."
+            placeholder="Tìm kiếm điểm kí gửi theo tên, địa chỉ chi nhánh..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#DDE5D9] bg-white text-xs text-[#191C19] focus:outline-none focus:border-[#006B2C]"
@@ -179,7 +179,7 @@ export default function AdminWarehousesView({ onLogAction }) {
           className="bg-[#006B2C] hover:bg-[#005221] text-white text-xs shrink-0"
         >
           <span className="material-symbols-outlined text-[18px] mr-1.5">add_location_alt</span>
-          Thêm chi nhánh kho mới
+          Thêm điểm kí gửi mới
         </Button>
       </div>
 
@@ -249,26 +249,26 @@ export default function AdminWarehousesView({ onLogAction }) {
                 variant={w.status === 'ACTIVE' ? 'danger' : 'outline'}
                 onClick={() => handleToggleHide(w)}
               >
-                {w.status === 'ACTIVE' ? 'Ẩn chi nhánh' : 'Mở hoạt động'}
+                {w.status === 'ACTIVE' ? 'Ẩn điểm kí gửi' : 'Mở hoạt động'}
               </Button>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Modal Thêm / Sửa kho */}
+      {/* Modal Thêm / Sửa điểm kí gửi */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingWarehouse ? 'Chỉnh sửa thông tin chi nhánh kho' : 'Mở chi nhánh kho mới'}
+        title={editingWarehouse ? 'Chỉnh sửa thông tin điểm kí gửi' : 'Mở điểm kí gửi mới'}
       >
         <form onSubmit={handleSave} className="space-y-4">
           <Input
-            label="Tên chi nhánh kho"
+            label="Tên điểm kí gửi"
             required
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="Ví dụ: Kho Tân Bình - Chi nhánh số 5"
+            placeholder="Ví dụ: Điểm kí gửi Tân Bình - Chi nhánh số 5"
           />
           <Input
             label="Địa chỉ chi tiết"
@@ -283,7 +283,7 @@ export default function AdminWarehousesView({ onLogAction }) {
             value={formData.coordinates}
             onChange={(e) => setFormData({ ...formData, coordinates: e.target.value })}
             placeholder="Ví dụ: 10.7769, 106.7009"
-            helperText="Dùng để hiển thị gợi ý kho gần nhất cho Member trên Mobile"
+            helperText="Dùng để hiển thị gợi ý điểm kí gửi gần nhất cho Member trên Mobile"
           />
           <Input
             label="Giờ mở cửa phục vụ tại quầy"
@@ -295,7 +295,7 @@ export default function AdminWarehousesView({ onLogAction }) {
           <div className="flex justify-end space-x-2 pt-3 border-t border-[#DDE5D9]">
             <Button variant="ghost" onClick={() => setIsModalOpen(false)}>Hủy</Button>
             <Button type="submit" className="bg-[#006B2C] text-white">
-              {editingWarehouse ? 'Lưu cập nhật' : 'Tạo kho mới'}
+              {editingWarehouse ? 'Lưu cập nhật' : 'Tạo điểm kí gửi mới'}
             </Button>
           </div>
         </form>
