@@ -494,7 +494,7 @@ export const inventoryService = {
         name: res.name || sku,
         shelfLocation: res.shelfLocation || 'Chưa gán',
         status: res.status || 'ON_SALE',
-        allowedActions: res.allowedActions || ['CHANGE_SHELF'],
+        allowedActions: res.allowedActions || (res.status === 'UNCLAIMED' ? ['TRANSFER', 'CHANGE_SHELF'] : ['CHANGE_SHELF']),
       };
     } catch (err) {
       if (isFixtureMode && fallback) return fallback();
@@ -848,7 +848,14 @@ export const endTermService = {
       const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
       return fixtureRequest('endTermRead', { ...options, ids: { sku } });
     }
-    return inventoryService.read(sku, options);
+    const item = await inventoryService.read(sku, options);
+    const isUnclaimed = item?.status === 'UNCLAIMED';
+    return {
+      ...item,
+      allowedActions: item?.allowedActions?.length
+        ? item.allowedActions
+        : (isUnclaimed ? ['TRANSFER'] : []),
+    };
   },
 
   handover: async (sku, data, options) => {
@@ -883,16 +890,21 @@ export const endTermService = {
 
   // API 36: POST /products/{id}/unclaimed/confirm-transfer
   transfer: async (sku, partnerName, options) => {
+    if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    const partner = typeof partnerName === 'string' ? partnerName.trim() : '';
+    if (!partner) {
+      throw new Phase2Error('Tên tổ chức từ thiện tiếp nhận không được để trống.', 422);
+    }
     const fallback = async () => {
       const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('unclaimedTransfer', { ids: { sku }, data: { partnerName }, ...options });
+      return fixtureRequest('unclaimedTransfer', { ids: { sku }, data: { partnerName: partner }, ...options });
     };
 
     return callBackend(
       {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.CONFIRM_UNCLAIMED_TRANSFER(sku),
-        data: { partnerOrganizationName: partnerName },
+        data: { partnerOrganizationName: partner },
       },
       { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
     );

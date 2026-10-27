@@ -302,7 +302,34 @@ describe('real API mode never substitutes warehouse fixtures', () => {
   it('reads end-of-term product details through the moderator product endpoint', async () => {
     server.use(http.get(`${API_BASE_URL}/products/sku-a`, () =>
       HttpResponse.json({ result: { id: 'sku-a', name: 'Áo', status: 'UNCLAIMED' } })));
-    await expect(endTermService.read('sku-a')).resolves.toMatchObject({ sku: 'sku-a', status: 'UNCLAIMED' });
+    const res = await endTermService.read('sku-a');
+    expect(res).toMatchObject({
+      sku: 'sku-a',
+      status: 'UNCLAIMED',
+    });
+    expect(res.allowedActions).toContain('TRANSFER');
+  });
+
+  it('API 36: transfers unclaimed product to charity partner organization with exact payload and updates status to DONATED', async () => {
+    server.use(
+      http.post(`${API_BASE_URL}/products/sku-unclaimed-1/unclaimed/confirm-transfer`, async ({ request }) => {
+        const body = await request.json();
+        expect(body).toEqual({ partnerOrganizationName: 'Quỹ Tình Thương TP.HCM' });
+        return HttpResponse.json({
+          result: { id: 'sku-unclaimed-1', status: 'DONATED' },
+          statusCode: 200,
+        });
+      }),
+    );
+
+    const res = await endTermService.transfer('sku-unclaimed-1', '  Quỹ Tình Thương TP.HCM  ');
+    expect(res).toMatchObject({ id: 'sku-unclaimed-1', status: 'DONATED' });
+  });
+
+  it('API 36: rejects transfer when charity partner name is empty or whitespace', async () => {
+    await expect(endTermService.transfer('sku-unclaimed-1', '   ')).rejects.toMatchObject({
+      status: 422,
+    });
   });
 
   it('hands over end-of-term products using only the backend request fields', async () => {
