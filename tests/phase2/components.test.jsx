@@ -20,6 +20,8 @@ import ConsignmentQueuePage from '../../src/features/moderator/pages/Consignment
 import ConsignmentDetailPage from '../../src/features/moderator/pages/ConsignmentDetailPage.jsx';
 import WarehouseInventoryPage from '../../src/features/moderator/pages/WarehouseInventoryPage.jsx';
 import InventoryDetailPage from '../../src/features/moderator/pages/InventoryDetailPage.jsx';
+import CategoryBrandPage from '../../src/features/moderator/pages/CategoryBrandPage.jsx';
+import CatalogEditor from '../../src/features/moderator/components/CatalogEditor.jsx';
 import ReceiptPanel from '../../src/features/moderator/components/ReceiptPanel.jsx';
 import StockInForm from '../../src/features/moderator/components/StockInForm.jsx';
 import BarcodePrintModal from '../../src/features/moderator/components/BarcodePrintModal.jsx';
@@ -905,5 +907,140 @@ describe('ConsignmentDetailPage component behaviors', () => {
       expect(screen.getByRole('button', { name: 'Quay lại danh sách tồn kho' })).toBeInTheDocument();
     });
   });
+
+  describe('Task 7: CategoryBrandPage & CatalogEditor behaviors', () => {
+    it('CategoryBrandPage: renders categories, handles search filter, and unhides item', async () => {
+      const listSpy = vi.spyOn(catalogService, 'list').mockResolvedValue({
+        categories: [
+          { id: 'cat-1', name: 'Áo khoác dạ', slot: 'TOP', tryonSlot: 'TOP', hidden: false, status: 'ACTIVE' },
+          { id: 'cat-2', name: 'Quần tây nam', slot: 'BOTTOM', tryonSlot: 'BOTTOM', hidden: true, status: 'HIDDEN' },
+        ],
+        brands: [
+          { id: 'brand-1', name: 'Uniqlo', hidden: false, status: 'ACTIVE' },
+        ],
+      });
+
+      const saveSpy = vi.spyOn(catalogService, 'save').mockResolvedValue({
+        id: 'cat-2',
+        name: 'Quần tây nam',
+        tryonSlot: 'BOTTOM',
+        status: 'ACTIVE',
+      });
+
+      const user = userEvent.setup();
+      render(<CategoryBrandPage />, { wrapper: Wrapper });
+
+      // Check header and categories table
+      expect(await screen.findByRole('heading', { name: 'Danh mục & thương hiệu' })).toBeInTheDocument();
+      expect(screen.getByText('Áo khoác dạ')).toBeInTheDocument();
+      expect(screen.getByText('Áo (TOP)')).toBeInTheDocument();
+      expect(screen.getByText('Quần tây nam')).toBeInTheDocument();
+      expect(screen.getByText('ĐÃ ẨN')).toBeInTheDocument();
+
+      // Test search filter
+      const searchInput = screen.getByPlaceholderText(/Tìm danh mục/);
+      await user.type(searchInput, 'Quần');
+      expect(screen.queryByText('Áo khoác dạ')).not.toBeInTheDocument();
+      expect(screen.getByText('Quần tây nam')).toBeInTheDocument();
+
+      // Clear search
+      await user.clear(searchInput);
+      expect(await screen.findByText('Áo khoác dạ')).toBeInTheDocument();
+
+      // Click "Hiện lại" on cat-2
+      const unhideBtn = screen.getByRole('button', { name: 'Hiện lại' });
+      await user.click(unhideBtn);
+
+      await waitFor(() => {
+        expect(saveSpy).toHaveBeenCalledWith(
+          'category',
+          'cat-2',
+          expect.objectContaining({
+            name: 'Quần tây nam',
+            status: 'ACTIVE',
+            tryonSlot: 'BOTTOM',
+          }),
+          expect.anything(),
+        );
+      });
+    });
+
+    it('CategoryBrandPage: switches to brands tab and hides brand via confirmation modal', async () => {
+      vi.spyOn(catalogService, 'list').mockResolvedValue({
+        categories: [],
+        brands: [
+          { id: 'brand-1', name: 'Zara', hidden: false, status: 'ACTIVE' },
+        ],
+      });
+
+      const hideSpy = vi.spyOn(catalogService, 'hide').mockResolvedValue({
+        status: 'HIDDEN',
+      });
+
+      const user = userEvent.setup();
+      render(<CategoryBrandPage />, { wrapper: Wrapper });
+
+      // Click on "Thương hiệu" tab
+      const brandsTab = await screen.findByRole('button', { name: /Thương hiệu/ });
+      await user.click(brandsTab);
+
+      expect(await screen.findByText('Zara')).toBeInTheDocument();
+
+      // Click "Ẩn" button
+      const hideBtn = screen.getByRole('button', { name: 'Ẩn' });
+      await user.click(hideBtn);
+
+      // Confirm modal appears
+      expect(await screen.findByRole('heading', { name: 'Xác nhận ẩn' })).toBeInTheDocument();
+      expect(screen.getByText(/Ẩn “/)).toBeInTheDocument();
+
+      const confirmBtn = screen.getByRole('button', { name: 'Xác nhận ẩn' });
+      await user.click(confirmBtn);
+
+      await waitFor(() => {
+        expect(hideSpy).toHaveBeenCalledWith('brand', 'brand-1', expect.anything());
+      });
+    });
+
+    it('CatalogEditor: creates new category with tryonSlot and displays duplicate error on 409', async () => {
+      const saveSpy = vi.spyOn(catalogService, 'save').mockRejectedValue(
+        new Phase2Error('Tên danh mục đã tồn tại.', 409, 'CATEGORY_NAME_ALREADY_EXISTS'),
+      );
+
+      const onClose = vi.fn();
+      const onSaved = vi.fn();
+      const user = userEvent.setup();
+
+      render(
+        <CatalogEditor
+          kind="category"
+          item={null}
+          slots={['TOP', 'BOTTOM', 'DRESS']}
+          onClose={onClose}
+          onSaved={onSaved}
+        />,
+        { wrapper: Wrapper },
+      );
+
+      expect(screen.getByRole('heading', { name: 'Thêm danh mục mới' })).toBeInTheDocument();
+      expect(screen.getByLabelText(/Slot thử đồ AI/)).toBeInTheDocument();
+
+      // Enter name
+      const nameInput = screen.getByLabelText(/Tên danh mục/);
+      await user.type(nameInput, 'Áo polo');
+
+      // Submit
+      const submitBtn = screen.getByRole('button', { name: 'Lưu danh mục' });
+      await user.click(submitBtn);
+
+      // Verify error message displayed directly on modal
+      expect(
+        await screen.findByText('Danh mục "Áo polo" đã tồn tại trên hệ thống, vui lòng chọn tên khác.'),
+      ).toBeInTheDocument();
+      expect(onClose).not.toHaveBeenCalled();
+      expect(onSaved).not.toHaveBeenCalled();
+    });
+  });
 });
+
 
