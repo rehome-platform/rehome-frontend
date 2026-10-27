@@ -3,7 +3,9 @@ import {
   canCompleteInspection,
   canStockIn,
   extractReceiptId,
+  filterCatalogItems,
   formatStockMovement,
+  formatTryOnSlot,
   listItems,
   lookupParams,
   normalizeConsignmentForm,
@@ -13,7 +15,10 @@ import {
   ownsClaim,
   safeDocumentUrl,
   STOCK_MOVEMENT_CONFIG,
+  SUPPORTED_TRYON_SLOTS,
+  TRYON_SLOT_CONFIG,
   unwrap,
+  validateCatalogInput,
   validateNewShelf,
   validMoney,
 } from '../../src/features/moderator/models/warehouseModel.js';
@@ -186,5 +191,70 @@ describe('Phase 2 boundary rules', () => {
       expect(validateNewShelf('  B2-10  ', 'A1-01')).toEqual({ valid: true, value: 'B2-10' });
     });
   });
+
+  describe('Task 7: Category & Brand models and helpers', () => {
+    it('formatTryOnSlot: maps slots to localized labels and badges', () => {
+      expect(formatTryOnSlot(null).label).toBe('Không xác định');
+      expect(formatTryOnSlot('').label).toBe('Không xác định');
+
+      const top = formatTryOnSlot('TOP');
+      expect(top.label).toBe('Áo (TOP)');
+      expect(top.badgeClass).toContain('bg-sky-50');
+
+      const bottom = formatTryOnSlot('bottom');
+      expect(bottom.label).toBe('Quần / Váy (BOTTOM)');
+      expect(bottom.badgeClass).toContain('bg-indigo-50');
+
+      const dress = formatTryOnSlot('DRESS');
+      expect(dress.label).toBe('Đầm / Liền thân (DRESS)');
+      expect(dress.badgeClass).toContain('bg-amber-50');
+
+      const custom = formatTryOnSlot('CUSTOM_SLOT');
+      expect(custom.label).toBe('Slot CUSTOM_SLOT');
+    });
+
+    it('validateCatalogInput: validates Category name and tryonSlot', () => {
+      // Empty name
+      expect(validateCatalogInput('category', { name: '', tryonSlot: 'TOP' }).valid).toBe(false);
+      expect(validateCatalogInput('category', { name: '   ', tryonSlot: 'TOP' }).valid).toBe(false);
+
+      // Name too long
+      expect(validateCatalogInput('category', { name: 'A'.repeat(256), tryonSlot: 'TOP' }).valid).toBe(false);
+
+      // Invalid or empty tryonSlot
+      expect(validateCatalogInput('category', { name: 'Áo khoác', tryonSlot: '' }).valid).toBe(false);
+      expect(validateCatalogInput('category', { name: 'Áo khoác', tryonSlot: 'INVALID' }).valid).toBe(false);
+
+      // Valid category
+      const res = validateCatalogInput('category', { name: '  Áo  khoác   dạ  ', tryonSlot: 'top' });
+      expect(res.valid).toBe(true);
+      expect(res.value).toEqual({ name: 'Áo khoác dạ', tryonSlot: 'TOP' });
+    });
+
+    it('validateCatalogInput: validates Brand name', () => {
+      expect(validateCatalogInput('brand', { name: '' }).valid).toBe(false);
+      expect(validateCatalogInput('brand', { name: '   ' }).valid).toBe(false);
+      expect(validateCatalogInput('brand', { name: 'Z'.repeat(256) }).valid).toBe(false);
+
+      const res = validateCatalogInput('brand', { name: '  Zara   Vietnam  ' });
+      expect(res.valid).toBe(true);
+      expect(res.value).toEqual({ name: 'Zara Vietnam' });
+    });
+
+    it('filterCatalogItems: filters categories and brands by keyword', () => {
+      const list = [
+        { id: '1', name: 'Áo khoác dạ', slot: 'TOP' },
+        { id: '2', name: 'Quần jeans', slot: 'BOTTOM' },
+        { id: '3', name: 'Đầm dạ hội', slot: 'DRESS' },
+      ];
+
+      expect(filterCatalogItems(list, '')).toHaveLength(3);
+      expect(filterCatalogItems(list, 'khoác')).toHaveLength(1);
+      expect(filterCatalogItems(list, 'khoác')[0].name).toBe('Áo khoác dạ');
+      expect(filterCatalogItems(list, 'DRESS')).toHaveLength(1);
+      expect(filterCatalogItems(list, 'nonexistent')).toHaveLength(0);
+    });
+  });
 });
+
 
