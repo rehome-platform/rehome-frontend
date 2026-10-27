@@ -32,7 +32,8 @@ export async function request(operation, { orderId, data, signal, scope } = {}) 
 }
 export const packingService = {
   read: (orderId, options) => request('read', { ...options, orderId }),
-  scan: (orderId, productId, options) => request('scan', { ...options, orderId, data: { productId } }),
+  scan: (orderId, productId, options) =>
+    request('scan', { ...options, orderId, data: { productId: String(productId || '').trim() } }),
   shipment: (orderId, options) => request('shipment', { ...options, orderId }),
   handover: (task, identity, options = {}) => {
     const data = handoverPayload(task, identity, options.scope || {});
