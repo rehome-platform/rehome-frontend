@@ -14,6 +14,7 @@ import {
   inventoryService,
   catalogService,
   queueService,
+  endTermService,
 } from '../../src/features/moderator/services/warehouseApi.js';
 import CounterPage from '../../src/features/moderator/pages/CounterPage.jsx';
 import ConsignmentQueuePage from '../../src/features/moderator/pages/ConsignmentQueuePage.jsx';
@@ -21,6 +22,7 @@ import ConsignmentDetailPage from '../../src/features/moderator/pages/Consignmen
 import WarehouseInventoryPage from '../../src/features/moderator/pages/WarehouseInventoryPage.jsx';
 import InventoryDetailPage from '../../src/features/moderator/pages/InventoryDetailPage.jsx';
 import CategoryBrandPage from '../../src/features/moderator/pages/CategoryBrandPage.jsx';
+import EndOfTermPage from '../../src/features/moderator/pages/EndOfTermPage.jsx';
 import CatalogEditor from '../../src/features/moderator/components/CatalogEditor.jsx';
 import ReceiptPanel from '../../src/features/moderator/components/ReceiptPanel.jsx';
 import StockInForm from '../../src/features/moderator/components/StockInForm.jsx';
@@ -1039,6 +1041,83 @@ describe('ConsignmentDetailPage component behaviors', () => {
       ).toBeInTheDocument();
       expect(onClose).not.toHaveBeenCalled();
       expect(onSaved).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Task 9: EndOfTermPage & Charity Transfer Flow', () => {
+    it('EndOfTermPage: renders unclaimed items, searches by keyword and handles charity transfer flow', async () => {
+      const unclaimedItem = {
+        id: 'Q7-AT-009',
+        sku: 'Q7-AT-009',
+        name: 'Áo dạ tweed cao cấp',
+        shelfLocation: 'Kệ A2-05',
+        status: 'UNCLAIMED',
+        currentPrice: 350000,
+        allowedActions: ['TRANSFER'],
+      };
+
+      vi.spyOn(endTermService, 'list').mockResolvedValue({
+        items: [unclaimedItem],
+        content: [unclaimedItem],
+        totalElements: 1,
+        totalPages: 1,
+      });
+
+      vi.spyOn(endTermService, 'read').mockResolvedValue(unclaimedItem);
+
+      const transferSpy = vi.spyOn(endTermService, 'transfer').mockResolvedValue({
+        id: 'Q7-AT-009',
+        status: 'DONATED',
+      });
+
+      const user = userEvent.setup();
+      render(<EndOfTermPage />, { wrapper: Wrapper });
+
+      // Check header and guidance notice
+      expect(screen.getByRole('heading', { name: /Xử lý hàng cuối kỳ & Vô thừa nhận/ })).toBeInTheDocument();
+      expect(screen.getByText(/Hướng dẫn quy trình xử lý cuối kỳ & vô thừa nhận/)).toBeInTheDocument();
+
+      // Check product list
+      expect(await screen.findByText('Q7-AT-009')).toBeInTheDocument();
+      expect(screen.getByText('Áo dạ tweed cao cấp')).toBeInTheDocument();
+      expect(screen.getByText('Kệ A2-05')).toBeInTheDocument();
+
+      // Test search filter
+      const searchInput = screen.getByPlaceholderText(/Tìm theo mã SKU/);
+      await user.type(searchInput, 'tweed');
+      expect(screen.getByText('Áo dạ tweed cao cấp')).toBeInTheDocument();
+
+      // Open detail
+      const openBtn = screen.getByRole('button', { name: 'Mở xử lý' });
+      await user.click(openBtn);
+
+      // Verify detail section rendered
+      expect(await screen.findByText(/Chuyển giao cho tổ chức từ thiện \(API 36\)/)).toBeInTheDocument();
+      const transferBtn = screen.getByRole('button', { name: 'Chuyển giao hàng vô thừa nhận' });
+      expect(transferBtn).toBeDisabled();
+
+      // Click quick suggestion or type partner name
+      const suggestionBtn = screen.getByRole('button', { name: 'Quỹ Tình Thương TP.HCM' });
+      await user.click(suggestionBtn);
+
+      // Now button is enabled
+      expect(transferBtn).toBeEnabled();
+
+      // Click to open confirmation modal
+      await user.click(transferBtn);
+      expect(screen.getByRole('heading', { name: 'Xác nhận chuyển giao từ thiện' })).toBeInTheDocument();
+
+      // Confirm in modal
+      const confirmBtns = screen.getAllByRole('button', { name: 'Xác nhận' });
+      await user.click(confirmBtns[confirmBtns.length - 1]);
+
+      // Verify transfer API called with exact trimmed partner name
+      await waitFor(() => {
+        expect(transferSpy).toHaveBeenCalledWith('Q7-AT-009', 'Quỹ Tình Thương TP.HCM', expect.anything());
+      });
+
+      // Verify success feedback
+      expect(await screen.findByText(/Đã chuyển giao thành công sản phẩm SKU Q7-AT-009/)).toBeInTheDocument();
     });
   });
 });
