@@ -6,7 +6,7 @@ import QRScannerModal from '../../../components/QRScannerModal.jsx';
 import { inventoryService } from '../services/warehouseApi.js';
 import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
-import { listItems } from '../models/warehouseModel.js';
+import { listItems, validateNewShelf } from '../models/warehouseModel.js';
 import { Page, Field, Status, Pager, ResourceState, money } from '../components/WarehouseUi.jsx';
 
 export const SUPPORTED_INVENTORY_STATUSES = [
@@ -75,12 +75,29 @@ export default function WarehouseInventoryPage() {
       <div className="rounded-2xl border border-[#8a8a8a] bg-white p-5 shadow-sm space-y-4">
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
-            <label className="block text-xs font-bold text-[#191C19] mb-1">Mã SKU</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-[#191C19]">Mã SKU</label>
+              {sku.trim() && (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/moderator/inventory/${encodeURIComponent(sku.trim())}`)}
+                  className="text-[11px] text-[#006B2C] font-semibold hover:underline"
+                >
+                  Mở chi tiết SKU →
+                </button>
+              )}
+            </div>
             <input
               type="text"
-              placeholder="VD: RH-A7F31K..."
+              placeholder="VD: Q7-AK-000845..."
               value={sku}
               onChange={(e) => change('sku', e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && sku.trim()) {
+                  e.preventDefault();
+                  navigate(`/moderator/inventory/${encodeURIComponent(sku.trim())}`);
+                }
+              }}
               className="w-full rounded-xl border border-[#8a8a8a] px-3.5 py-2 text-xs font-mono font-bold focus:border-[#006B2C] focus:outline-none"
             />
           </div>
@@ -147,7 +164,10 @@ export default function WarehouseInventoryPage() {
                     </td>
                     <td className="py-3.5 px-4">
                       <p className="font-semibold text-[#191C19]">{item.name}</p>
-                      <p className="text-[11px] text-[#717971]">{item.brand || 'ReHome'} · Size {item.size || 'M'}</p>
+                      <p className="text-[11px] text-[#717971]">
+                        {item.brandName || item.brand || 'ReHome'}
+                        {item.size ? ` · Size ${item.size}` : ''}
+                      </p>
                     </td>
                     <td className="py-3.5 px-4">
                       <span className="font-bold text-[#006B2C] bg-[#E8F5E9] px-2 py-0.5 rounded border border-[#C8E6C9]">
@@ -155,7 +175,7 @@ export default function WarehouseInventoryPage() {
                       </span>
                     </td>
                     <td className="py-3.5 px-4 font-semibold text-[#191C19]">
-                      {money(item.agreedPrice)}
+                      {money(item.agreedPrice || item.currentPrice)}
                     </td>
                     <td className="py-3.5 px-4">
                       <Status>{item.status}</Status>
@@ -225,17 +245,27 @@ export default function WarehouseInventoryPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#191C19] mb-1">
+              <label htmlFor="modal-new-shelf" className="block text-xs font-bold text-[#191C19] mb-1">
                 Vị trí kệ mới
               </label>
               <input
+                id="modal-new-shelf"
                 type="text"
                 required
                 value={shelfModal.newShelf}
                 onChange={(e) => setShelfModal((prev) => ({ ...prev, newShelf: e.target.value }))}
                 placeholder="VD: B1-18, A2-05..."
-                className="w-full rounded-xl border border-[#8a8a8a] px-3.5 py-2 text-xs font-bold focus:border-[#006B2C] focus:outline-none"
+                className={`w-full rounded-xl border px-3.5 py-2 text-xs font-bold focus:outline-none ${
+                  shelfModal.newShelf.trim() && !validateNewShelf(shelfModal.newShelf, shelfModal.item.shelfLocation).valid
+                    ? 'border-red-500 focus:border-red-600'
+                    : 'border-[#8a8a8a] focus:border-[#006B2C]'
+                }`}
               />
+              {shelfModal.newShelf.trim() && !validateNewShelf(shelfModal.newShelf, shelfModal.item.shelfLocation).valid && (
+                <p className="text-[11px] text-red-600 mt-1 font-semibold">
+                  {validateNewShelf(shelfModal.newShelf, shelfModal.item.shelfLocation).message}
+                </p>
+              )}
             </div>
 
             <p className="text-[11px] text-[#5f5f5f] bg-[#f4f5f4] p-2.5 rounded border border-[#d4d4d4] leading-relaxed">
@@ -250,7 +280,7 @@ export default function WarehouseInventoryPage() {
                 type="submit"
                 className="flex-1 py-2 bg-[#2b2b2b] text-white hover:bg-black font-bold"
                 loading={resource.busy}
-                disabled={!shelfModal.newShelf.trim()}
+                disabled={!validateNewShelf(shelfModal.newShelf, shelfModal.item.shelfLocation).valid}
               >
                 Lưu vị trí kệ
               </Button>

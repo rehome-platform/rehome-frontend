@@ -18,7 +18,11 @@ import {
 import CounterPage from '../../src/features/moderator/pages/CounterPage.jsx';
 import ConsignmentQueuePage from '../../src/features/moderator/pages/ConsignmentQueuePage.jsx';
 import ConsignmentDetailPage from '../../src/features/moderator/pages/ConsignmentDetailPage.jsx';
+import WarehouseInventoryPage from '../../src/features/moderator/pages/WarehouseInventoryPage.jsx';
+import InventoryDetailPage from '../../src/features/moderator/pages/InventoryDetailPage.jsx';
 import ReceiptPanel from '../../src/features/moderator/components/ReceiptPanel.jsx';
+import StockInForm from '../../src/features/moderator/components/StockInForm.jsx';
+import BarcodePrintModal from '../../src/features/moderator/components/BarcodePrintModal.jsx';
 import Modal from '../../src/components/common/Modal.jsx';
 import { Phase2Error } from '../../src/features/moderator/models/warehouseModel.js';
 
@@ -643,4 +647,263 @@ describe('ConsignmentDetailPage component behaviors', () => {
     });
     expect(openSpy).toHaveBeenCalledWith('blob:http://localhost/receipt.pdf', '_blank');
   });
+
+  describe('Task 5: StockInForm & BarcodePrintModal behaviors', () => {
+    it('StockInForm: fills required fields and successfully stocks in product, showing generated SKU and Barcode modal button', async () => {
+      vi.spyOn(catalogService, 'list').mockResolvedValue({
+        categories: [{ id: 'cat-1', name: 'Áo', hidden: false }],
+        brands: [{ id: 'brand-1', name: 'Zara', hidden: false }],
+      });
+      vi.spyOn(inventoryService, 'byReceipt').mockResolvedValue(null);
+      vi.spyOn(inventoryService, 'upload').mockResolvedValue({
+        url: 'https://cdn.rehome.test/p1.jpg',
+      });
+      const createSpy = vi.spyOn(inventoryService, 'create').mockResolvedValue({
+        id: 'Q7-AO-000001',
+        sku: 'Q7-AO-000001',
+        name: 'Áo thun cotton',
+        status: 'ON_SALE',
+      });
+      const onSuccess = vi.fn();
+      const user = userEvent.setup();
+
+      render(
+        <StockInForm
+          receipt={{ id: 'rcpt-uuid-99', confirmedAt: '2026-10-26T12:00:00Z' }}
+          onSuccess={onSuccess}
+        />,
+        { wrapper: Wrapper },
+      );
+
+      await user.type(await screen.findByLabelText('Tên sản phẩm'), 'Áo thun cotton');
+      await user.type(screen.getByLabelText('Size'), 'L');
+      await user.type(screen.getByLabelText('Vị trí kệ'), 'A1-02');
+      await user.selectOptions(screen.getByLabelText('Danh mục'), 'cat-1');
+      await user.selectOptions(screen.getByLabelText('Thương hiệu'), 'brand-1');
+
+      const file = new File(['photo'], 'shirt.png', { type: 'image/png' });
+      await user.upload(screen.getByLabelText('Ảnh sản phẩm'), file);
+      await screen.findByText('shirt.png · Đã tải ảnh gốc');
+
+      const submitBtn = screen.getByRole('button', { name: 'Nhập kho · tạo SKU' });
+      expect(submitBtn).toBeEnabled();
+      await user.click(submitBtn);
+
+      await waitFor(() => {
+        expect(createSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            receiptId: 'rcpt-uuid-99',
+            name: 'Áo thun cotton',
+            size: 'L',
+            shelfLocation: 'A1-02',
+            photoUrls: ['https://cdn.rehome.test/p1.jpg'],
+          }),
+          expect.anything(),
+        );
+      });
+
+      expect(await screen.findByText(/Nhập kho thành công · SKU:/)).toBeInTheDocument();
+      expect(screen.getByText('Q7-AO-000001')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'In tem mã vạch SKU' })).toBeInTheDocument();
+      expect(onSuccess).toHaveBeenCalledWith(
+        expect.objectContaining({ sku: 'Q7-AO-000001', status: 'ON_SALE' }),
+      );
+    });
+
+    it('StockInForm: displays friendly error message when backend returns 409 RECEIPT_NOT_CONFIRMED', async () => {
+      vi.spyOn(catalogService, 'list').mockResolvedValue({ categories: [], brands: [] });
+      vi.spyOn(inventoryService, 'byReceipt').mockResolvedValue(null);
+      vi.spyOn(inventoryService, 'upload').mockResolvedValue({ url: 'https://cdn.test/p.jpg' });
+      vi.spyOn(inventoryService, 'create').mockRejectedValue(
+        new Phase2Error('Phiếu ký gửi chưa được Member xác nhận.', 409, 'RECEIPT_NOT_CONFIRMED'),
+      );
+      const user = userEvent.setup();
+
+      render(
+        <StockInForm
+          receipt={{ receiptId: 'rcpt-unconfirmed', confirmedAt: '2026-10-26T12:00:00Z' }}
+          onSuccess={vi.fn()}
+        />,
+        { wrapper: Wrapper },
+      );
+
+      await user.type(await screen.findByLabelText('Tên sản phẩm'), 'Quần jean');
+      await user.type(screen.getByLabelText('Size'), '32');
+      await user.type(screen.getByLabelText('Vị trí kệ'), 'B1-05');
+      const file = new File(['p'], 'jean.jpg', { type: 'image/jpeg' });
+      await user.upload(screen.getByLabelText('Ảnh sản phẩm'), file);
+      await screen.findByText('jean.jpg · Đã tải ảnh gốc');
+
+      await user.click(screen.getByRole('button', { name: 'Nhập kho · tạo SKU' }));
+
+      expect(
+        await screen.findByText(/Khách hàng chưa bấm xác nhận biên nhận trên ứng dụng/),
+      ).toBeInTheDocument();
+    });
+
+    it('BarcodePrintModal: loads and displays PDF barcode label for item and handles print action', async () => {
+      const labelSpy = vi.spyOn(inventoryService, 'label').mockResolvedValue({
+        labelPdfUrl: 'blob:http://localhost/sku-label-123.pdf',
+      });
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => {});
+      const onClose = vi.fn();
+
+      render(
+        <BarcodePrintModal
+          isOpen={true}
+          onClose={onClose}
+          item={{ sku: 'Q7-AK-000845' }}
+        />,
+        { wrapper: Wrapper },
+      );
+
+      expect(await screen.findByText('Tem mã vạch SKU · Q7-AK-000845')).toBeInTheDocument();
+      expect(await screen.findByText('File PDF tem mã vạch đã sẵn sàng')).toBeInTheDocument();
+      expect(labelSpy).toHaveBeenCalledWith('Q7-AK-000845', expect.anything());
+
+      const printBtn = screen.getByRole('button', { name: 'In tem ngay' });
+      fireEvent.click(printBtn);
+      expect(openSpy).toHaveBeenCalledWith('blob:http://localhost/sku-label-123.pdf', '_blank');
+
+      const closeButtons = screen.getAllByRole('button', { name: 'Đóng' });
+      fireEvent.click(closeButtons[0]);
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
+
+  describe('Task 6: WarehouseInventoryPage & InventoryDetailPage behaviors', () => {
+    it('WarehouseInventoryPage: renders inventory list and updates shelf location via modal', async () => {
+      vi.spyOn(inventoryService, 'list').mockResolvedValue({
+        items: [
+          {
+            sku: 'Q7-AK-000845',
+            name: 'Áo khoác dạ Zara',
+            shelfLocation: 'A1-02',
+            agreedPrice: 850000,
+            status: 'ON_SALE',
+          },
+        ],
+        totalPages: 1,
+        totalElements: 1,
+      });
+
+      const shelfSpy = vi.spyOn(inventoryService, 'shelf').mockResolvedValue({
+        id: 'Q7-AK-000845',
+        shelfLocation: 'B2-10',
+      });
+
+      const user = userEvent.setup();
+      render(<WarehouseInventoryPage />, { wrapper: Wrapper });
+
+      expect(await screen.findByText('Q7-AK-000845')).toBeInTheDocument();
+      expect(screen.getByText('Áo khoác dạ Zara')).toBeInTheDocument();
+      expect(screen.getByText('A1-02')).toBeInTheDocument();
+
+      // Open shelf modal
+      const editShelfBtn = screen.getByRole('button', { name: 'Đổi kệ' });
+      await user.click(editShelfBtn);
+
+      expect(await screen.findByText('Cập nhật vị trí kệ kho (TK-04)')).toBeInTheDocument();
+
+      const input = screen.getByLabelText('Vị trí kệ mới');
+      await user.clear(input);
+      await user.type(input, 'B2-10');
+
+      const saveBtn = screen.getByRole('button', { name: 'Lưu vị trí kệ' });
+      expect(saveBtn).toBeEnabled();
+      await user.click(saveBtn);
+
+      await waitFor(() => {
+        expect(shelfSpy).toHaveBeenCalledWith('Q7-AK-000845', 'B2-10', expect.anything());
+      });
+    });
+
+    it('InventoryDetailPage: renders details, movements timeline, and handles shelf relocation', async () => {
+      vi.spyOn(inventoryService, 'read').mockResolvedValue({
+        id: 'Q7-AK-000845',
+        sku: 'Q7-AK-000845',
+        name: 'Áo khoác dạ Zara',
+        shelfLocation: 'A1-02',
+        agreedPrice: 850000,
+        status: 'ON_SALE',
+        brandName: 'Zara',
+        size: 'L',
+        allowedActions: ['CHANGE_SHELF'],
+      });
+
+      vi.spyOn(inventoryService, 'movements').mockResolvedValue([
+        {
+          id: 'log-1',
+          type: 'STOCK_IN',
+          label: 'Nhập kho ban đầu',
+          locationText: 'Kệ A1-02',
+          badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+          createdAt: '2026-10-26T15:00:00Z',
+        },
+      ]);
+
+      const shelfSpy = vi.spyOn(inventoryService, 'shelf').mockResolvedValue({
+        id: 'Q7-AK-000845',
+        shelfLocation: 'C1-05',
+      });
+
+      const user = userEvent.setup();
+      render(
+        <StrictMode>
+          <MemoryRouter initialEntries={['/moderator/inventory/Q7-AK-000845']}>
+            <Phase2Provider>
+              <Routes>
+                <Route path="/moderator/inventory/:sku" element={<InventoryDetailPage />} />
+              </Routes>
+            </Phase2Provider>
+          </MemoryRouter>
+        </StrictMode>,
+      );
+
+      expect(await screen.findByRole('heading', { name: 'Áo khoác dạ Zara' })).toBeInTheDocument();
+      expect(screen.getByText('SKU: Q7-AK-000845')).toBeInTheDocument();
+      expect(screen.getByText('Nhập kho ban đầu')).toBeInTheDocument();
+      expect(screen.getByText('Kệ A1-02')).toBeInTheDocument();
+
+      // Submit new shelf
+      const shelfInput = screen.getByLabelText(/Vị trí kệ mới/);
+      await user.clear(shelfInput);
+      await user.type(shelfInput, 'C1-05');
+
+      const submitBtn = screen.getByRole('button', { name: 'Lưu vị trí kệ' });
+      expect(submitBtn).toBeEnabled();
+      await user.click(submitBtn);
+
+      await waitFor(() => {
+        expect(shelfSpy).toHaveBeenCalledWith('Q7-AK-000845', 'C1-05', expect.anything());
+      });
+
+      expect(await screen.findByText(/Đã chuyển vị trí kệ thành công sang C1-05/)).toBeInTheDocument();
+    });
+
+    it('InventoryDetailPage: handles 403 PRODUCT_NOT_IN_YOUR_WAREHOUSE gracefully', async () => {
+      vi.spyOn(inventoryService, 'read').mockRejectedValue(
+        new Phase2Error('Forbidden', 403, 'PRODUCT_NOT_IN_YOUR_WAREHOUSE'),
+      );
+      vi.spyOn(inventoryService, 'movements').mockResolvedValue([]);
+
+      render(
+        <StrictMode>
+          <MemoryRouter initialEntries={['/moderator/inventory/Q1-OTHER-001']}>
+            <Phase2Provider>
+              <Routes>
+                <Route path="/moderator/inventory/:sku" element={<InventoryDetailPage />} />
+              </Routes>
+            </Phase2Provider>
+          </MemoryRouter>
+        </StrictMode>,
+      );
+
+      expect(
+        await screen.findByText('Sản phẩm không thuộc kho bạn quản lý'),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Quay lại danh sách tồn kho' })).toBeInTheDocument();
+    });
+  });
 });
+
