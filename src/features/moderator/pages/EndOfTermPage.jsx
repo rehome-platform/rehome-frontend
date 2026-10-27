@@ -1,113 +1,30 @@
+import { EndTermInventoryRow } from '../components/endTerm/EndTermInventoryRow.jsx';
+import { useEndTermDetail } from '../hooks/useEndTermDetail.jsx';
+
+import {
+  EndTermConfirmDialog,
+  EndTermReconsignPanel,
+  EndTermTransferPanel,
+  EndTermProductSummary,
+} from '../components/endTerm/EndTermSections.jsx';
 import React, { useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
-import Modal from '../../../components/common/Modal.jsx';
+
 import { endTermService } from '../services/warehouseApi.js';
-import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
-import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
+
+import { useResource } from "../hooks/warehouseHooks.jsx";
 import {
   listItems,
-  validMoney,
-  validatePartnerName,
-  canTransferUnclaimed,
   normalizeUnclaimedItem,
   filterUnclaimedItems,
-} from '../models/warehouseModel.js';
-import {
-  Page,
-  Card,
-  Field,
-  Status,
-  ResourceState,
-  MemberSummary,
-  Pager,
-  date,
-  money,
-} from '../components/WarehouseUi.jsx';
+  hasNoEndTermActions,
+} from "../models/warehouseModel.js";
+import { Page, Card, ResourceState, MemberSummary, Pager } from "../components/WarehouseUi.jsx";
 import ReceiptPanel from '../components/ReceiptPanel.jsx';
-import { packingService } from '../services/packingApi.js';
-import { handoverPayload } from '../models/packingModel.js';
-import { operationReady } from '../config/packingContract.js';
-
-const CHARITY_PARTNER_SUGGESTIONS = [
-  'Quỹ Tình Thương TP.HCM',
-  'Hội Chữ Thập Đỏ Quận 7',
-  'Quỹ Trẻ Em Khuyết Tật',
-  'Mái Ấm Hy Vọng',
-];
 
 function EndTermDetail({ sku, onClose, onChanged }) {
-  const { identity, scope } = usePhase2();
-  const [now, setNow] = useState(Date.now());
-  React.useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const resource = useResource((options) => endTermService.read(sku, options), [sku]);
-  const enums = useResource(
-    async () =>
-      isFixtureMode
-        ? (await import('../fixtures/warehouseFixtures.js')).fixtureOptions
-        : phase2Contract.options,
-    [],
-  );
-
-  const [price, setPrice] = useState('');
-  const [term, setTerm] = useState('');
-  const [partner, setPartner] = useState('');
-  const [confirm, setConfirm] = useState(null);
-  const [receiptId, setReceiptId] = useState(null);
-  const [feedback, setFeedback] = useState(null);
-
-  const rawData = resource.data;
-  const data = useMemo(() => (rawData ? normalizeUnclaimedItem(rawData) : null), [rawData]);
-
-  const identified = isFixtureMode
-    ? !!identity && identity.memberId === data?.memberId
-    : operationReady('handover') && !!handoverPayload(data, identity, scope, now);
-
-  const success = (result) => {
-    if (result?.receiptId) setReceiptId(result.receiptId);
-    if (confirm === 'TRANSFER') {
-      setFeedback({
-        type: 'success',
-        message: `Đã chuyển giao thành công sản phẩm SKU ${sku} cho tổ chức "${partner.trim()}". Trạng thái sản phẩm đổi sang ĐÃ CHUYỂN GIAO (DONATED).`,
-      });
-    }
-    setConfirm(null);
-    onChanged();
-    window.dispatchEvent(new Event('warehouse:changed'));
-  };
-
-  const partnerValidation = useMemo(() => validatePartnerName(partner), [partner]);
-
-  const run = () => {
-    if (!data) return;
-    if (confirm === 'HANDOVER' && !identified) return;
-    if (confirm === 'TRANSFER' && !partnerValidation.valid) return;
-
-    const action =
-      confirm === 'HANDOVER'
-        ? (options) =>
-            isFixtureMode
-              ? endTermService.handover(sku, { identityToken: identity.identityToken }, options)
-              : packingService.handover(data, identity, options)
-        : confirm === 'RE_CONSIGN'
-          ? (options) =>
-              endTermService.reconsign(
-                sku,
-                { agreedPrice: Number(price), termLengthDays: Number(term) },
-                options,
-              )
-          : (options) => endTermService.transfer(sku, partner.trim(), options);
-
-    resource.mutate(action, { onSuccess: success });
-  };
-
-  const isDonated = data?.status === 'DONATED';
-  const showTransfer = canTransferUnclaimed(data) && !isDonated;
-
+  const model = useEndTermDetail({ sku, onClose, onChanged });
   return (
     <Card>
       <div className="flex flex-wrap justify-between items-center gap-2 border-b border-neutral pb-3">
@@ -121,63 +38,32 @@ function EndTermDetail({ sku, onClose, onChanged }) {
         )}
       </div>
 
-      <ResourceState resource={resource} />
+      <ResourceState resource={model.resource} />
 
-      {feedback && (
+      {model.feedback && (
         <div
           role="status"
           className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-800 flex justify-between items-center"
         >
-          <span>{feedback.message}</span>
+          <span>{model.feedback.message}</span>
           <button
             type="button"
             className="text-emerald-700 hover:text-emerald-900 font-semibold ml-3"
-            onClick={() => setFeedback(null)}
+            onClick={() => model.setFeedback(null)}
           >
             Đóng
           </button>
         </div>
       )}
 
-      {data && (
+      {model.data && (
         <div className="space-y-4">
-          {data.member && <MemberSummary member={data.member} />}
+          {model.data.member && <MemberSummary member={model.data.member} />}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-background p-4 rounded-xl border border-neutral">
-            <div>
-              <p className="text-xs text-textSecondary uppercase font-medium">Tên sản phẩm</p>
-              <p className="font-semibold text-text">{data.name}</p>
-            </div>
-            <div>
-              <p className="text-xs text-textSecondary uppercase font-medium">Vị trí kệ</p>
-              <p className="font-semibold text-text">{data.shelfLocation}</p>
-            </div>
-            <div>
-              <p className="text-xs text-textSecondary uppercase font-medium">Trạng thái kho</p>
-              <div className="mt-1">
-                <Status>{data.status}</Status>
-              </div>
-            </div>
-            <div>
-              <p className="text-xs text-textSecondary uppercase font-medium">Giá thỏa thuận / Niêm yết</p>
-              <p className="font-semibold text-text">{money(data.agreedPrice || data.currentPrice)}</p>
-            </div>
-            {data.deadline && (
-              <div>
-                <p className="text-xs text-textSecondary uppercase font-medium">Hạn xử lý</p>
-                <p className="text-sm text-text">{date(data.deadline)}</p>
-              </div>
-            )}
-            {data.decision && (
-              <div>
-                <p className="text-xs text-textSecondary uppercase font-medium">Quyết định ban đầu</p>
-                <p className="text-sm text-text">{data.decision}</p>
-              </div>
-            )}
-          </div>
+          <EndTermProductSummary data={model.data} />
 
           {/* Trường hợp sản phẩm đã chuyển giao từ thiện */}
-          {isDonated && (
+          {model.isDonated && (
             <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-800 text-sm">
               <p className="font-semibold">Sản phẩm đã được chuyển giao từ thiện (DONATED)</p>
               <p className="mt-1 text-xs text-blue-700">
@@ -187,53 +73,15 @@ function EndTermDetail({ sku, onClose, onChanged }) {
           )}
 
           {/* Form chuyển giao cho tổ chức từ thiện (API 36) */}
-          {showTransfer && (
-            <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50/50 p-4">
-              <h3 className="font-semibold text-amber-900">Chuyển giao cho tổ chức từ thiện (API 36)</h3>
-              <p className="text-xs text-textSecondary">
-                Sản phẩm vô thừa nhận quá hạn 30 ngày. Vui lòng nhập tên đối tác từ thiện tiếp nhận để chuyển trạng thái sang <span className="font-semibold text-text">DONATED</span>.
-              </p>
-
-              <Field
-                label="Tên tổ chức đối tác nhận chuyển giao"
-                value={partner}
-                placeholder="VD: Quỹ Tình Thương TP.HCM, Mái Ấm Hy Vọng..."
-                onChange={(event) => setPartner(event.target.value)}
-                error={partner && !partnerValidation.valid ? partnerValidation.message : resource.error?.fields?.partnerOrganizationName}
-              />
-
-              {/* Gợi ý tên đối tác phổ biến */}
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <span className="text-xs text-textSecondary">Gợi ý nhanh:</span>
-                {CHARITY_PARTNER_SUGGESTIONS.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    className="text-xs bg-white hover:bg-neutral px-2.5 py-1 rounded-lg border border-neutral transition-colors text-text"
-                    onClick={() => setPartner(suggestion)}
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-
-              <div className="pt-2">
-                <Button
-                  variant="danger"
-                  disabled={!partnerValidation.valid}
-                  onClick={() => setConfirm('TRANSFER')}
-                >
-                  Chuyển giao hàng vô thừa nhận
-                </Button>
-              </div>
-            </div>
+          {model.showTransfer && (
+            <EndTermTransferPanel {...model.sections.EndTermTransferPanel} />
           )}
 
           {/* Bàn giao nhận lại cuối kỳ */}
-          {data.allowedActions?.includes('HANDOVER') && !isDonated && (
+          {model.data.allowedActions?.includes('HANDOVER') && !model.isDonated && (
             <div className="space-y-3 rounded-xl border border-neutral p-4 bg-background">
               <h3 className="font-semibold text-text">Bàn giao nhận lại cuối kỳ tại quầy (API 72)</h3>
-              {!identified && (
+              {!model.identified && (
                 <div className="text-sm">
                   <p className="text-textSecondary">
                     Yêu cầu kiểm tra danh tính Member trước khi bàn giao sản phẩm:
@@ -243,108 +91,38 @@ function EndTermDetail({ sku, onClose, onChanged }) {
                   </Link>
                 </div>
               )}
-              <Button disabled={!identified} onClick={() => setConfirm('HANDOVER')}>
+              <Button disabled={!model.identified} onClick={() => model.setConfirm('HANDOVER')}>
                 Bàn giao nhận lại cuối kỳ
               </Button>
             </div>
           )}
 
           {/* Tái ký gửi tại quầy */}
-          {data.allowedActions?.includes('RE_CONSIGN') && !isDonated && (
-            <div className="space-y-3 rounded-xl border border-neutral p-4 bg-background">
-              <h3 className="font-semibold text-text">Chốt tái ký gửi lại</h3>
-              <Field
-                label="Giá ký gửi lại (VND)"
-                value={price}
-                inputMode="numeric"
-                onChange={(event) => setPrice(event.target.value)}
-                error={
-                  price && !validMoney(price)
-                    ? 'Giá phải là số nguyên dương.'
-                    : resource.error?.fields?.agreedPrice
-                }
-              />
-              <Field label="Độ dài kỳ mới">
-                <select
-                  className="rounded-xl border-neutral w-full p-2"
-                  value={term}
-                  onChange={(event) => setTerm(event.target.value)}
-                >
-                  <option value="">Chọn kỳ</option>
-                  {(enums.data?.termLengthDays || []).map((days) => (
-                    <option key={days} value={days}>
-                      {days} ngày
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Button
-                disabled={
-                  !validMoney(price) || !(enums.data?.termLengthDays || []).includes(Number(term))
-                }
-                onClick={() => setConfirm('RE_CONSIGN')}
-              >
-                Chốt giá ký gửi lại
-              </Button>
-            </div>
+          {model.data.allowedActions?.includes('RE_CONSIGN') && !model.isDonated && (
+            <EndTermReconsignPanel {...model.sections.EndTermReconsignPanel} />
           )}
 
-          {(data.newReceiptId || receiptId) && (
-            <ReceiptPanel receiptId={data.newReceiptId || receiptId} />
+          {(model.data.newReceiptId || model.receiptId) && (
+            <ReceiptPanel receiptId={model.data.newReceiptId || model.receiptId} />
           )}
 
-          {!showTransfer &&
-            !data.allowedActions?.includes('HANDOVER') &&
-            !data.allowedActions?.includes('RE_CONSIGN') &&
-            !isDonated &&
-            !data.newReceiptId &&
-            !receiptId && (
+          {hasNoEndTermActions(model.data, { showTransfer: model.showTransfer, isDonated: model.isDonated, receiptId: model.receiptId }) && (
               <p className="text-textSecondary text-sm">Không có thao tác khả dụng ở trạng thái hiện tại.</p>
             )}
         </div>
       )}
 
       {/* Modal xác nhận */}
-      <Modal
-        isOpen={!!confirm}
-        onClose={() => {
-          if (!resource.busy) setConfirm(null);
-        }}
-        title={
-          confirm === 'TRANSFER'
-            ? 'Xác nhận chuyển giao từ thiện'
-            : confirm === 'HANDOVER'
-              ? 'Xác nhận bàn giao tại quầy'
-              : 'Xác nhận ký gửi lại'
-        }
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-text leading-relaxed">
-            {confirm === 'HANDOVER'
-              ? `Xác nhận đã bàn giao đúng sản phẩm ${sku} cho Member đã đối chiếu danh tính?`
-              : confirm === 'RE_CONSIGN'
-                ? `Tạo biên nhận mới cho SKU ${sku} với giá ${money(Number(price))}?`
-                : `Xác nhận chuyển giao sản phẩm SKU ${sku} (${data?.name}) cho tổ chức từ thiện "${partner.trim()}"? Thao tác này sẽ đổi trạng thái sản phẩm sang ĐÃ CHUYỂN GIAO (DONATED) và lưu vào Audit Log.`}
-          </p>
-          <ResourceState resource={resource} />
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              variant="outline"
-              disabled={resource.busy}
-              onClick={() => setConfirm(null)}
-            >
-              Hủy
-            </Button>
-            <Button
-              loading={resource.busy}
-              variant={confirm === 'TRANSFER' ? 'danger' : 'primary'}
-              onClick={run}
-            >
-              Xác nhận
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      <EndTermConfirmDialog
+        confirm={model.confirm}
+        resource={model.resource}
+        setConfirm={model.setConfirm}
+        sku={sku}
+        price={model.price}
+        data={model.data}
+        partner={model.partner}
+        run={model.run}
+      />
     </Card>
   );
 }
@@ -432,42 +210,7 @@ export default function EndOfTermPage() {
         <Card>
           <div className="divide-y divide-neutral">
             {filteredItems.map((item) => (
-              <div
-                key={item.sku}
-                className={`flex flex-wrap justify-between items-center gap-3 py-3.5 transition-colors ${
-                  sku === item.sku ? 'bg-primary/5 rounded-xl px-3' : ''
-                }`}
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono font-bold text-text">{item.sku}</span>
-                    <span className="text-textSecondary">·</span>
-                    <span className="font-semibold text-text">{item.name}</span>
-                    <Status>{item.status}</Status>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-textSecondary flex-wrap">
-                    <span>
-                      Vị trí kệ: <span className="font-medium text-text">{item.shelfLocation}</span>
-                    </span>
-                    {item.deadline && (
-                      <span>
-                        Hạn: <span className="font-medium text-text">{date(item.deadline)}</span>
-                      </span>
-                    )}
-                    {item.status === 'UNCLAIMED' && (
-                      <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                        Quá hạn 30 ngày
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <Button
-                  variant={sku === item.sku ? 'primary' : 'outline'}
-                  onClick={() => change('sku', item.sku)}
-                >
-                  {sku === item.sku ? 'Đang mở' : 'Mở xử lý'}
-                </Button>
-              </div>
+              <EndTermInventoryRow key={item.sku} item={item} sku={sku} change={change} />
             ))}
           </div>
         </Card>
