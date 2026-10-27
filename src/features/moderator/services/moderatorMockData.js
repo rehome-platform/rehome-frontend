@@ -273,7 +273,14 @@ export const returnService = {
     );
     return returnRequestsData.find((r) => r.id === retId);
   },
+
+  async detail(retId) {
+    await delay();
+    return returnRequestsData.find((r) => r.id === retId);
+  },
 };
+
+export const returnMockApi = returnService;
 
 // ==========================================
 // 2. ORG VERIFICATION (TC-01..06)
@@ -459,7 +466,14 @@ export const orgVerificationService = {
     );
     return legalChangesData.find((chg) => chg.id === changeId);
   },
+
+  async getOrgDetail(orgId) {
+    await delay();
+    return orgsQueueData.find((org) => org.id === orgId);
+  },
 };
+
+export const orgVerificationMockApi = orgVerificationService;
 
 // ==========================================
 // 3. VIOLATION REPORTS (VP-01..02)
@@ -577,7 +591,29 @@ export const violationReportService = {
     );
     return violationReportsData.find((r) => r.id === reportId);
   },
+
+  async getDetail(reportId) {
+    await delay();
+    return violationReportsData.find((r) => r.id === reportId);
+  },
+
+  async dismissViolation(reportId, reason) {
+    await delay();
+    violationReportsData = violationReportsData.map((r) =>
+      r.id === reportId
+        ? {
+            ...r,
+            status: 'DISMISSED',
+            actionTaken: 'Bác bỏ báo cáo — nội dung không vi phạm',
+            resolveReason: reason,
+          }
+        : r
+    );
+    return violationReportsData.find((r) => r.id === reportId);
+  },
 };
+
+export const violationReportMockApi = violationReportService;
 
 // ==========================================
 // 4. WAREHOUSE INBOX (MC-01..02)
@@ -809,4 +845,11 @@ export const warehouseInboxService = {
     );
     return inboxConversationsData.find((conv) => conv.id === convId);
   },
+
+  async getConversationDetail(convId) {
+    await delay();
+    return inboxConversationsData.find((conv) => conv.id === convId);
+  },
 };
+
+export const warehouseInboxMockApi = warehouseInboxService;
