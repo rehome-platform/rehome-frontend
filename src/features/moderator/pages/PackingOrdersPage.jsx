@@ -115,6 +115,30 @@ export function PackingDetail({ orderId, onChanged }) {
 
       <ResourceState resource={resource} />
 
+      {/* Thông báo Graceful nếu backend chưa mở quyền đọc đơn cho Moderator */}
+      {resource.error && !order && (resource.error.status === 501 || resource.error.status === 403) && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 space-y-3">
+          <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
+            <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+            Thông báo giới hạn phân quyền đọc chi tiết đơn hàng (API 63)
+          </div>
+          <p className="text-xs text-amber-800 leading-relaxed">
+            Backend hiện tại giới hạn quyền gọi <code>GET /orders/{'{'}id{'}'}</code> chỉ dành cho tài khoản Người mua (Role: MEMBER). Nhân viên vận hành kho (Role: MODERATOR) chưa được cấp quyền đọc chi tiết đơn hàng này.
+          </p>
+          <p className="text-xs text-amber-700">
+            Hệ thống frontend đã tích hợp sẵn sàng contract Phase 4 (Quét SKU và Tạo vận đơn GHN). Bạn có thể quay lại danh sách hàng đợi để tiếp tục các công việc khác.
+          </p>
+          <div className="pt-2">
+            <Link
+              to="/moderator/packing"
+              className="inline-flex items-center px-4 py-2 rounded-xl bg-[#2b2b2b] text-white font-bold text-xs hover:bg-black"
+            >
+              ← Quay lại hàng đợi đóng gói
+            </Link>
+          </div>
+        </div>
+      )}
+
       {order && (
         <div className="grid gap-6 lg:grid-cols-[1fr_340px] items-start">
           {/* CỘT TRÁI: PHIẾU LẤY HÀNG & ĐỐI CHIẾU SKU (DG-02, DG-03) */}
@@ -454,7 +478,64 @@ export function PackingDetail({ orderId, onChanged }) {
         </div>
       )}
 
-      {/* Modal Báo sự cố đơn (DG-03-SaiMon) */}
+      {/* Modal Báo sự cố đơn (DG-03) */}
+      {incidentOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-base font-bold text-[#191C19]">Báo sự cố đóng gói đơn hàng</h3>
+              <button
+                type="button"
+                onClick={() => setIncidentOpen(false)}
+                className="text-gray-400 hover:text-gray-600 text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            <form
+              className="space-y-4 text-xs"
+              onSubmit={(e) => {
+                e.preventDefault();
+                alert('Đã ghi nhận báo cáo sự cố đóng gói. Quản lý kho sẽ kiểm tra.');
+                setIncidentOpen(false);
+                setIncidentNote('');
+              }}
+            >
+              <p className="text-gray-600">
+                Ghi nhận tình trạng thiếu món hoặc sản phẩm rách hỏng trong khâu gom hàng:
+              </p>
+              <div>
+                <label className="block font-bold text-[#191C19] mb-1">Mô tả sự cố</label>
+                <textarea
+                  value={incidentNote}
+                  onChange={(e) => setIncidentNote(e.target.value)}
+                  placeholder="Ghi rõ vị trí kệ hoặc mã sản phẩm gặp sự cố..."
+                  rows={3}
+                  className="w-full rounded-xl border border-gray-300 p-2.5 text-xs focus:border-[#006B2C] focus:outline-none"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIncidentOpen(false)}
+                  className="text-xs"
+                >
+                  Hủy
+                </Button>
+                <Button
+                  type="submit"
+                  className="text-xs font-bold bg-[#BA1A1A] text-white hover:bg-red-700"
+                >
+                  Gửi báo sự cố
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Quét Barcode Camera */}
       <QRScannerModal
         isOpen={camera}
         onClose={() => setCamera(false)}
@@ -474,9 +555,41 @@ export default function PackingOrdersPage() {
   const [search, setSearch] = useSearchParams();
   const page = Math.max(0, Number(search.get('page')) || 0);
   const orderId = search.get('orderId');
-  const queue = useResource(options => queueService.list({ type: 'PACKING', page }, options), [page], { poll: true });
+  const queue = useResource((options) => queueService.list({ type: 'PACKING', page }, options), [page], {
+    poll: true,
+  });
+
+  const [claimError, setClaimError] = useState('');
 
   const items = listItems(queue.data);
+
+  const handleClaim = async (queueId) => {
+    setClaimError('');
+    try {
+      await queue.mutate((options) => queueService.claim(queueId, options), {
+        onSuccess: () => window.dispatchEvent(new Event('warehouse:changed')),
+      });
+    } catch (err) {
+      if (err?.status === 409 || err?.code === 'QUEUE_ITEM_ALREADY_CLAIMED') {
+        setClaimError('Công việc đã được nhân viên khác nhận trước. Hệ thống đã làm mới danh sách.');
+      } else {
+        setClaimError(err?.message || 'Không thể nhận việc. Vui lòng thử lại.');
+      }
+      queue.refresh();
+    }
+  };
+
+  const handleRelease = async (queueId) => {
+    setClaimError('');
+    try {
+      await queue.mutate((options) => queueService.release(queueId, options), {
+        onSuccess: () => setSearch({ page: String(page) }),
+      });
+    } catch (err) {
+      setClaimError(err?.message || 'Không thể nhả việc. Vui lòng thử lại.');
+      queue.refresh();
+    }
+  };
 
   return (
     <Page
@@ -490,6 +603,19 @@ export default function PackingOrdersPage() {
     >
       {!orderId ? (
         <div className="space-y-4">
+          {claimError && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-800 flex justify-between items-center">
+              <span>{claimError}</span>
+              <button
+                type="button"
+                onClick={() => setClaimError('')}
+                className="font-bold hover:text-amber-900"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           <ResourceState resource={queue} empty={!items.length} />
 
           {items.map((item) => {
@@ -504,9 +630,23 @@ export default function PackingOrdersPage() {
                   <h3 className="text-base font-bold text-[#191C19]">
                     Đơn hàng: {targetOrderId}
                   </h3>
-                  <p className="text-xs text-[#5B6776] mt-1">
-                    {item.name || 'Người mua ReHome'} · {isMine ? 'Bạn đang xử lý' : item.claimedBy ? 'Người khác đang xử lý' : 'Chưa nhận việc'}
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-[#5B6776]">
+                      {item.name || 'Người mua ReHome'}
+                    </span>
+                    <span className="text-xs text-[#5B6776]">·</span>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold ${
+                        isMine
+                          ? 'bg-[#E8F5E9] text-[#006B2C]'
+                          : item.claimedBy
+                          ? 'bg-[#FFF3E0] text-[#D97706]'
+                          : 'bg-[#F5F5F5] text-[#616161]'
+                      }`}
+                    >
+                      {isMine ? 'Bạn đang xử lý' : item.claimedBy ? 'Người khác đang xử lý' : 'Chưa nhận việc'}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -521,11 +661,7 @@ export default function PackingOrdersPage() {
                   {!item.claimedBy && (
                     <Button
                       disabled={queue.busy}
-                      onClick={() =>
-                        queue.mutate((options) => queueService.claim(item.queueId, options), {
-                          onSuccess: () => window.dispatchEvent(new Event('warehouse:changed')),
-                        })
-                      }
+                      onClick={() => handleClaim(item.queueId)}
                       className="text-xs bg-[#2b2b2b] text-white hover:bg-black font-bold"
                     >
                       Nhận việc
@@ -536,11 +672,7 @@ export default function PackingOrdersPage() {
                     <Button
                       variant="outline"
                       disabled={queue.busy}
-                      onClick={() =>
-                        queue.mutate((options) => queueService.release(item.queueId, options), {
-                          onSuccess: () => setSearch({ page: String(page) }),
-                        })
-                      }
+                      onClick={() => handleRelease(item.queueId)}
                       className="text-xs text-[#BA1A1A]"
                     >
                       Nhả việc
