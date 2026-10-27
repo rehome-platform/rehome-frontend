@@ -4,7 +4,14 @@
  * Dành cho hệ thống Web App (Admin & Moderator kho)
  */
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://re-backend-9a98.onrender.com";
+export function normalizeApiBaseUrl(value) {
+  return String(value || "").trim().replace(/\/+$/, "");
+}
+
+export const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL) ||
+  "https://re-backend-9a98.onrender.com";
+
+const moderatorId = (value) => encodeURIComponent(value);
 
 /**
  * Tạo URL hợp lệ cho SockJS client.
@@ -47,65 +54,65 @@ export const API_ENDPOINTS = {
   MODERATOR: {
     // API 25, 26, 27: Quầy tiếp nhận & Tra cứu Member
     COUNTER_LOOKUP: "/counter/lookup",
-    COUNTER_CONFIRM_IDENTITY: (accountId) => `/counter/members/${accountId}/confirm-identity`,
-    COUNTER_TASKS: (accountId) => `/counter/members/${accountId}/tasks`,
+    COUNTER_CONFIRM_IDENTITY: (accountId) => `/counter/members/${moderatorId(accountId)}/confirm-identity`,
+    COUNTER_TASKS: (accountId) => `/counter/members/${moderatorId(accountId)}/tasks`,
     COUNTER_HANDOVER: "/counter/handover",
 
     // API 28, 29, 30: Hàng đợi công việc kho
     QUEUES: "/queues",
-    CLAIM_QUEUE: (id) => `/queues/${id}/claim`,
-    RELEASE_QUEUE: (id) => `/queues/${id}/release`,
+    CLAIM_QUEUE: (id) => `/queues/${moderatorId(id)}/claim`,
+    RELEASE_QUEUE: (id) => `/queues/${moderatorId(id)}/release`,
 
     // API 31, 32, 33, 34, 35: Quy trình duyệt form & kiểm định ký gửi
-    APPROVE_FORM: (id) => `/consignment-forms/${id}/approve`,
-    REJECT_FORM: (id) => `/consignment-forms/${id}/reject`,
-    START_INSPECTION: (id) => `/consignment-forms/${id}/inspection/start`,
-    COMPLETE_INSPECTION: (id) => `/consignment-forms/${id}/inspection/complete`,
-    RETURN_ONSITE: (id) => `/consignment-forms/${id}/return-onsite`,
-    CONSIGNMENT_FORM_DETAIL: (id) => `/consignment-forms/${id}`,
-    RECEIPT_DETAIL: (id) => `/consignment-receipts/${id}`,
-    RECEIPT_PDF: (id) => `/consignment-receipts/${id}/pdf`,
+    APPROVE_FORM: (id) => `/consignment-forms/${moderatorId(id)}/approve`,
+    REJECT_FORM: (id) => `/consignment-forms/${moderatorId(id)}/reject`,
+    START_INSPECTION: (id) => `/consignment-forms/${moderatorId(id)}/inspection/start`,
+    COMPLETE_INSPECTION: (id) => `/consignment-forms/${moderatorId(id)}/inspection/complete`,
+    RETURN_ONSITE: (id) => `/consignment-forms/${moderatorId(id)}/return-onsite`,
+    CONSIGNMENT_FORM_DETAIL: (id) => `/consignment-forms/${moderatorId(id)}`,
+    RECEIPT_DETAIL: (id) => `/consignment-receipts/${moderatorId(id)}`,
+    RECEIPT_PDF: (id) => `/consignment-receipts/${moderatorId(id)}/pdf`,
 
     // API 36, 37, 38, 39, 40, 41, 42, 43: Tồn kho & Sản phẩm
     CREATE_PRODUCT: "/products",
-    CONFIRM_UNCLAIMED_TRANSFER: (id) => `/products/${id}/unclaimed/confirm-transfer`,
-    PRODUCT_PHOTOS: (id) => `/products/${id}/photos`,
-    PRODUCT_SKU_LABEL: (id) => `/products/${id}/sku-label`,
+    CONFIRM_UNCLAIMED_TRANSFER: (id) => `/products/${moderatorId(id)}/unclaimed/confirm-transfer`,
+    PRODUCT_SKU_LABEL: (id) => `/products/${moderatorId(id)}/sku-label`,
     INVENTORY: "/inventory",
-    PRODUCT_BY_SKU: (sku) => `/products/${sku}`,
-    UPDATE_SHELF_LOCATION: (id) => `/products/${id}/shelf-location`,
-    STOCK_MOVEMENTS: (id) => `/products/${id}/stock-movements`,
+    PRODUCT_BY_SKU: (sku) => `/products/${moderatorId(sku)}`,
+    UPDATE_SHELF_LOCATION: (id) => `/products/${moderatorId(id)}/shelf-location`,
+    STOCK_MOVEMENTS: (id) => `/products/${moderatorId(id)}/stock-movements`,
 
     // API 44, 45, 46, 47, 48: Danh mục & Thương hiệu
     CATEGORIES: "/categories",
-    CATEGORY_DETAIL: (id) => `/categories/${id}`,
-    HIDE_CATEGORY: (id) => `/categories/${id}/hide`,
+    CATEGORY_DETAIL: (id) => `/categories/${moderatorId(id)}`,
+    HIDE_CATEGORY: (id) => `/categories/${moderatorId(id)}/hide`,
     BRANDS: "/brands",
-    BRAND_DETAIL: (id) => `/brands/${id}`,
-    HIDE_BRAND: (id) => `/brands/${id}/hide`,
+    BRAND_DETAIL: (id) => `/brands/${moderatorId(id)}`,
+    HIDE_BRAND: (id) => `/brands/${moderatorId(id)}/hide`,
 
     // File Upload
     UPLOADS: "/uploads",
 
     // Đóng gói & GHN
-    ORDERS_PACKING: "/orders/packing",
-    CREATE_GHN_SHIPMENT: (orderId) => `/orders/${orderId}/shipment`,
+    // Packing work is listed through QUEUES with params: { type: 'PACKING' }.
+    SCAN_PACKING_PRODUCT: (orderId) => `/orders/${moderatorId(orderId)}/pack/scan`,
+    CREATE_GHN_SHIPMENT: (orderId) => `/orders/${moderatorId(orderId)}/shipment`,
 
     // Xử lý hàng trả
     RETURNS: "/return-requests",
-    INSPECT_RETURN: (id) => `/return-requests/${id}/inspect`,
-    REPORT_COUNTERFEIT: (id) => `/return-requests/${id}/flag-counterfeit`,
+    INSPECT_RETURN: (id) => `/return-requests/${moderatorId(id)}/inspect`,
+    REPORT_COUNTERFEIT: (id) => `/return-requests/${moderatorId(id)}/flag-counterfeit`,
 
     // Xác minh tổ chức & Duyệt đổi pháp lý
     VERIFICATION_QUEUE: "/organizations/verifications",
-    APPROVE_ORG: (id) => `/organizations/${id}/verify`,
-    REJECT_ORG: (id) => `/organizations/${id}/reject`,
+    APPROVE_ORG: (id) => `/organizations/${moderatorId(id)}/verify`,
+    REJECT_ORG: (id) => `/organizations/${moderatorId(id)}/reject`,
     LEGAL_CHANGES: "/organizations/legal-change-requests",
-    APPROVE_LEGAL_CHANGE: (id) => `/organizations/legal-change-requests/${id}/approve`,
+    APPROVE_LEGAL_CHANGE: (id) => `/organizations/legal-change-requests/${moderatorId(id)}/approve`,
 
     // Báo cáo vi phạm nội dung
     VIOLATION_REPORTS: "/violation-reports",
-    RESOLVE_REPORT: (id) => `/violation-reports/${id}/resolve`,
+    RESOLVE_REPORT: (id) => `/violation-reports/${moderatorId(id)}/resolve`,
 
     // Hộp thư hỗ trợ kho
     WAREHOUSE_INBOX: "/conversations",

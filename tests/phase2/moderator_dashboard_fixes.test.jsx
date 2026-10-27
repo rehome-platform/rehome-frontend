@@ -14,6 +14,14 @@ import { NotificationProvider, useNotification } from '../../src/context/Notific
 import AuthContext from '../../src/context/AuthContext.jsx';
 import { Phase2Provider } from '../../src/features/moderator/hooks/warehouseHooks.jsx';
 
+// This suite tests HTTP notification failures; keep the realtime transport offline.
+vi.mock('@stomp/stompjs', () => ({
+  Client: class {
+    activate() {}
+    deactivate() {}
+  },
+}));
+
 const server = setupServer();
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));

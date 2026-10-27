@@ -28,8 +28,8 @@ export default function PrivateRoute({ children, roles }) {
     const userRole = user?.role;
     const isAllowed = roles.some((r) => {
       if (r === userRole) return true;
-      if (r === 'staff' && (userRole === 'staff' || userRole === 'moderator')) return true;
-      if (r === 'moderator' && (userRole === 'staff' || userRole === 'moderator')) return true;
+      if (r === 'staff' && userRole === 'moderator') return true;
+      if (r === 'moderator' && userRole === 'staff') return true;
       if (r === 'admin' && userRole === 'admin') return true;
       return false;
     });

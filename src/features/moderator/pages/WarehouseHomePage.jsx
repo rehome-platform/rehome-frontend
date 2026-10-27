@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import { queueService, inventoryService } from '../services/warehouseApi.js';
@@ -37,6 +37,8 @@ function Stat({ label, value, tone }) {
 
 export default function WarehouseHomePage() {
   const { scope, warehouse } = usePhase2();
+  const [feedback, setFeedback] = useState(null);
+
   const review = useResource((o) => queueService.list({ type: 'FORM_REVIEW' }, o), []);
   const inspection = useResource((o) => queueService.list({ type: 'INSPECTION' }, o), []);
   const packing = useResource((o) => queueService.list({ type: 'PACKING' }, o), []);
@@ -44,6 +46,22 @@ export default function WarehouseHomePage() {
   const unclaimed = useResource((o) => inventoryService.list({ status: 'UNCLAIMED' }, o), []);
   const queues = [review, inspection, packing];
   const stocks = [onSale, unclaimed];
+
+  const conflictError = queues.find(
+    (q) =>
+      q.actionError?.status === 409 ||
+      q.actionError?.code === 'QUEUE_ITEM_ALREADY_CLAIMED',
+  );
+
+  useEffect(() => {
+    if (conflictError) {
+      setFeedback({
+        type: 'error',
+        message:
+          'Công việc đã được người khác nhận trước. Hệ thống đã tải lại dữ liệu mới nhất.',
+      });
+    }
+  }, [conflictError]);
 
   const tasks = QUEUE_TYPES.flatMap(({ type, label }, index) =>
     listItems(queues[index].data).map((item) => ({ ...item, kind: type, kindLabel: label, source: queues[index], hours: waitedHours(item) })),
@@ -54,7 +72,23 @@ export default function WarehouseHomePage() {
   const loading = [...queues, ...stocks].some((r) => r.loading);
   const firstError = [...queues, ...stocks].find((r) => r.error);
   const today = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
-  const refresh = () => [...queues, ...stocks].forEach((r) => r.refresh());
+  const refresh = () => {
+    setFeedback(null);
+    [...queues, ...stocks].forEach((r) => r.refresh());
+  };
+
+  const handleClaim = (task) => {
+    setFeedback(null);
+    task.source.mutate((o) => queueService.claim(task.queueId, o), {
+      onSuccess: () => {
+        setFeedback({
+          type: 'success',
+          message: `Đã nhận việc "${task.kindLabel}" (${task.formId || task.orderId || task.queueId}) thành công.`,
+        });
+        refresh();
+      },
+    });
+  };
 
   return (
     <Page
@@ -67,6 +101,29 @@ export default function WarehouseHomePage() {
         </>
       }
     >
+      {feedback && (
+        <div
+          role="alert"
+          className={`rounded-xl p-3 text-xs font-semibold flex items-center justify-between shadow-sm transition-all ${
+            feedback.type === 'success'
+              ? 'bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7]'
+              : 'bg-[#FFEBEE] text-[#C62828] border border-[#FFCDD2]'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <span>{feedback.type === 'success' ? '✓' : '⚠'}</span>
+            <p>{feedback.message}</p>
+          </div>
+          <button
+            type="button"
+            className="text-xs font-bold underline ml-2 cursor-pointer hover:opacity-80"
+            onClick={() => setFeedback(null)}
+          >
+            Đóng
+          </button>
+        </div>
+      )}
+
       {loading && <p role="status">Đang tải dữ liệu…</p>}
       {firstError && <ResourceState resource={firstError} empty={false} />}
 
@@ -105,7 +162,7 @@ export default function WarehouseHomePage() {
                         <td className="text-textSecondary">{task.claimedBy ? (mine ? 'bạn đang giữ' : 'người khác giữ') : 'chưa ai nhận'}</td>
                         <td className="text-right">
                           {!task.claimedBy ? (
-                            <Button loading={task.source.busy} onClick={() => task.source.mutate((o) => queueService.claim(task.queueId, o))}>Nhận</Button>
+                            <Button loading={task.source.busy} onClick={() => handleClaim(task)}>Nhận</Button>
                           ) : mine ? (
                             <Link className="text-primary underline" to={link}>Mở</Link>
                           ) : (
