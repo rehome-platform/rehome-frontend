@@ -606,4 +606,140 @@ describe('real API mode never substitutes warehouse fixtures', () => {
       code: 'PRODUCT_NOT_IN_YOUR_WAREHOUSE',
     });
   });
+
+  describe('Task 6: Inventory management, SKU lookup and stock movements integration', () => {
+    it('API 40: loads paginated inventory with status and shelfLocation params', async () => {
+      server.use(
+        http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.INVENTORY}`, ({ request }) => {
+          const url = new URL(request.url);
+          expect(url.searchParams.get('status')).toBe('ON_SALE');
+          expect(url.searchParams.get('shelfLocation')).toBe('A1-02');
+          expect(url.searchParams.get('page')).toBe('0');
+          expect(url.searchParams.get('size')).toBe('20');
+
+          return HttpResponse.json({
+            content: [
+              {
+                id: 'Q7-AK-000845',
+                name: 'Áo khoác dạ',
+                shelfLocation: 'A1-02',
+                status: 'ON_SALE',
+              },
+            ],
+            totalElements: 1,
+            totalPages: 1,
+          });
+        }),
+      );
+
+      const res = await inventoryService.list({
+        status: 'ON_SALE',
+        shelfLocation: 'A1-02',
+        page: 0,
+        size: 20,
+      });
+
+      expect(res.items).toHaveLength(1);
+      expect(res.items[0].sku).toBe('Q7-AK-000845');
+      expect(res.items[0].shelfLocation).toBe('A1-02');
+      expect(res.items[0].status).toBe('ON_SALE');
+    });
+
+    it('API 41: reads product details by SKU with normalized allowedActions', async () => {
+      server.use(
+        http.get(`${API_BASE_URL}/products/Q7-AK-000845`, () => {
+          return HttpResponse.json({
+            id: 'Q7-AK-000845',
+            name: 'Áo khoác dạ Zara',
+            shelfLocation: 'A1-02',
+            status: 'ON_SALE',
+          });
+        }),
+      );
+
+      const res = await inventoryService.read('Q7-AK-000845');
+      expect(res.sku).toBe('Q7-AK-000845');
+      expect(res.name).toBe('Áo khoác dạ Zara');
+      expect(res.shelfLocation).toBe('A1-02');
+      expect(res.status).toBe('ON_SALE');
+      expect(res.allowedActions).toContain('CHANGE_SHELF');
+    });
+
+    it('API 41: throws 404 PRODUCT_NOT_FOUND when SKU does not exist', async () => {
+      server.use(
+        http.get(`${API_BASE_URL}/products/SKU-NOT-FOUND`, () => {
+          return HttpResponse.json(
+            { code: 'PRODUCT_NOT_FOUND', message: 'Không tìm thấy sản phẩm.' },
+            { status: 404 },
+          );
+        }),
+      );
+
+      await expect(inventoryService.read('SKU-NOT-FOUND')).rejects.toMatchObject({
+        status: 404,
+        code: 'PRODUCT_NOT_FOUND',
+      });
+    });
+
+    it('API 42: updates shelf location and returns new location', async () => {
+      server.use(
+        http.patch(`${API_BASE_URL}/products/Q7-AK-000845/shelf-location`, async ({ request }) => {
+          const body = await request.json();
+          expect(body.shelfLocation).toBe('B2-10');
+          return HttpResponse.json({
+            id: 'Q7-AK-000845',
+            shelfLocation: 'B2-10',
+          });
+        }),
+      );
+
+      const res = await inventoryService.shelf('Q7-AK-000845', '  B2-10  ');
+      expect(res.shelfLocation).toBe('B2-10');
+    });
+
+    it('API 42: rejects empty shelf location on client without calling backend', async () => {
+      await expect(inventoryService.shelf('Q7-AK-000845', '   ')).rejects.toMatchObject({
+        status: 400,
+        message: 'Vui lòng nhập vị trí kệ mới.',
+      });
+    });
+
+    it('API 43: loads stock movements and maps them through formatStockMovement', async () => {
+      server.use(
+        http.get(`${API_BASE_URL}/products/Q7-AK-000845/stock-movements`, () => {
+          return HttpResponse.json([
+            {
+              id: 'log-move-1',
+              type: 'SHELF_MOVE',
+              fromLocation: 'A1-02',
+              toLocation: 'B2-10',
+              note: 'Điều chuyển khu áo ấm',
+              createdAt: '2026-10-27T09:30:00Z',
+            },
+            {
+              id: 'log-stock-2',
+              type: 'STOCK_IN',
+              fromLocation: null,
+              toLocation: 'A1-02',
+              note: 'Nhập kho',
+              createdAt: '2026-10-26T15:00:00Z',
+            },
+          ]);
+        }),
+      );
+
+      const res = await inventoryService.movements('Q7-AK-000845');
+      expect(res).toHaveLength(2);
+
+      expect(res[0].type).toBe('SHELF_MOVE');
+      expect(res[0].label).toBe('Điều chuyển kệ');
+      expect(res[0].locationText).toBe('A1-02 → B2-10');
+      expect(res[0].note).toBe('Điều chuyển khu áo ấm');
+
+      expect(res[1].type).toBe('STOCK_IN');
+      expect(res[1].label).toBe('Nhập kho ban đầu');
+      expect(res[1].locationText).toBe('Kệ A1-02');
+    });
+  });
 });
+

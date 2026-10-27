@@ -1,5 +1,6 @@
 import baseApi from '../../../services/baseApi.js';
 import { API_ENDPOINTS } from '../../../configs/api.config.js';
+import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
 import {
   formatStockMovement,
   normalizeConsignmentForm,
