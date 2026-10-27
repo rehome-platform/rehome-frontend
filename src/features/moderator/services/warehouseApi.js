@@ -1,7 +1,12 @@
 import baseApi from '../../../services/baseApi.js';
 import { API_ENDPOINTS } from '../../../configs/api.config.js';
-import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
-import { normalizeConsignmentForm, normalizeError, Phase2Error, unwrap } from '../models/warehouseModel.js';
+import {
+  formatStockMovement,
+  normalizeConsignmentForm,
+  normalizeError,
+  Phase2Error,
+  unwrap,
+} from '../models/warehouseModel.js';
 
 /** Contract adapter for operations with a verified backend endpoint. */
 export async function request(
@@ -437,7 +442,7 @@ export const inventoryService = {
       );
 
       const rawList = result?.content || result?.items || (Array.isArray(result) ? result : []);
-      const items = rawList.map((item) => ({
+      let items = rawList.map((item) => ({
         ...item,
         sku: item.id || item.sku,
         id: item.id || item.sku,
@@ -445,6 +450,13 @@ export const inventoryService = {
         shelfLocation: item.shelfLocation || 'Chưa gán',
         status: item.status || 'ON_SALE',
       }));
+
+      if (params?.sku && String(params.sku).trim()) {
+        const filterSku = String(params.sku).trim().toLowerCase();
+        items = items.filter(
+          (it) => it.sku?.toLowerCase().includes(filterSku) || it.name?.toLowerCase().includes(filterSku),
+        );
+      }
 
       return {
         ...result,
@@ -507,15 +519,20 @@ export const inventoryService = {
       return fixtureRequest('productCreate', { data, ...options });
     };
 
+    const receiptId = data?.receiptId || data?.id;
+    if (!receiptId) {
+      throw new Phase2Error('receiptId là bắt buộc.', 400);
+    }
+
     const payload = {
-      receiptId: data.receiptId,
-      name: data.name,
-      size: data.size || null,
-      shelfLocation: data.shelfLocation || null,
-      photoUrls: data.photoUrls || [],
+      receiptId,
+      name: String(data?.name || '').trim(),
+      size: data?.size ? String(data.size).trim() : null,
+      shelfLocation: data?.shelfLocation ? String(data.shelfLocation).trim() : null,
+      photoUrls: Array.isArray(data?.photoUrls) ? data.photoUrls : [],
     };
 
-    return callBackend(
+    const res = await callBackend(
       {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.CREATE_PRODUCT,
@@ -523,6 +540,14 @@ export const inventoryService = {
       },
       { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
     );
+
+    return {
+      ...res,
+      sku: res?.id || res?.sku,
+      id: res?.id || res?.sku,
+      name: res?.name || payload.name,
+      status: res?.status || 'ON_SALE',
+    };
   },
 
   // Upload file lên /uploads?folder=PRODUCTS
@@ -549,7 +574,8 @@ export const inventoryService = {
       { signal: options?.signal }
     );
 
-    return { url: res?.url || res?.fileUrl || (typeof res === 'string' ? res : '') };
+    const url = res?.url || res?.fileUrl || (typeof res === 'string' ? res : '');
+    return { url, ...res };
   },
 
   // Additional product photos have no backend endpoint; upload at creation is supported.
@@ -572,11 +598,16 @@ export const inventoryService = {
       return fixtureRequest('shelfUpdate', { ids: { sku }, data: { shelfLocation }, ...options });
     };
 
+    const trimmed = String(shelfLocation || '').trim();
+    if (!trimmed) {
+      throw new Phase2Error('Vui lòng nhập vị trí kệ mới.', 400);
+    }
+
     return callBackend(
       {
         method: 'patch',
         url: API_ENDPOINTS.MODERATOR.UPDATE_SHELF_LOCATION(sku),
-        data: { shelfLocation },
+        data: { shelfLocation: trimmed },
       },
       { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
     );
@@ -586,7 +617,8 @@ export const inventoryService = {
   movements: async (sku, options) => {
     const fallback = async () => {
       const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('stockMovements', { ids: { sku }, ...options });
+      const res = await fixtureRequest('stockMovements', { ids: { sku }, ...options });
+      return Array.isArray(res) ? res.map(formatStockMovement).filter(Boolean) : [];
     };
 
     try {
@@ -597,7 +629,8 @@ export const inventoryService = {
         },
         { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
       );
-      return Array.isArray(res) ? res : [];
+      const raw = Array.isArray(res) ? res : [];
+      return raw.map(formatStockMovement).filter(Boolean);
     } catch (err) {
       if (isFixtureMode && fallback) return fallback();
       throw err;
@@ -613,12 +646,42 @@ export const inventoryService = {
 
     if (isFixtureMode) return fallback();
 
-    const response = await baseApi.get(API_ENDPOINTS.MODERATOR.PRODUCT_SKU_LABEL(sku), {
-      responseType: 'blob',
-      signal: options?.signal,
-    });
-    const blob = new Blob([response.data], { type: 'application/pdf' });
-    return { labelPdfUrl: URL.createObjectURL(blob) };
+    try {
+      const response = await baseApi.get(API_ENDPOINTS.MODERATOR.PRODUCT_SKU_LABEL(sku), {
+        responseType: 'blob',
+        signal: options?.signal,
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      return { labelPdfUrl: URL.createObjectURL(blob), blob };
+    } catch (err) {
+      if (err.response?.data) {
+        let body = err.response.data;
+        if (typeof Blob !== 'undefined' && body instanceof Blob) {
+          try {
+            if (typeof body.text === 'function') {
+              const text = await body.text();
+              body = JSON.parse(text);
+            } else if (typeof FileReader !== 'undefined') {
+              const text = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsText(body);
+              });
+              body = JSON.parse(text);
+            }
+          } catch {}
+        } else if (typeof body === 'string') {
+          try {
+            body = JSON.parse(body);
+          } catch {}
+        }
+        if (body && typeof body === 'object' && (body.code || body.message)) {
+          throw new Phase2Error(body.message || 'Lỗi in tem SKU', err.response.status, body.code || '');
+        }
+      }
+      throw normalizeError(err);
+    }
   },
 };
 

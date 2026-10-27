@@ -424,4 +424,186 @@ describe('real API mode never substitutes warehouse fixtures', () => {
     expect(res).toHaveProperty('pdfUrl');
     expect(typeof res.pdfUrl).toBe('string');
   });
+
+  // ==================== TASK 5: NHẬP KHO & TEM SKU ====================
+  it('API 37: creates product successfully and returns generated SKU and status', async () => {
+    server.use(
+      http.post(`${API_BASE_URL}/products`, async ({ request }) => {
+        const body = await request.json();
+        expect(body).toEqual({
+          receiptId: 'rcpt-uuid-201',
+          name: 'Áo lụa cao cấp',
+          size: 'M',
+          shelfLocation: 'A1-02',
+          photoUrls: ['https://example.test/photo1.jpg'],
+        });
+        return HttpResponse.json(
+          {
+            result: {
+              id: 'Q7-AO-000001',
+              name: 'Áo lụa cao cấp',
+              status: 'ON_SALE',
+            },
+            statusCode: 201,
+            message: 'Đã nhập kho',
+          },
+          { status: 201 },
+        );
+      }),
+    );
+
+    const res = await inventoryService.create({
+      receiptId: 'rcpt-uuid-201',
+      name: 'Áo lụa cao cấp',
+      size: 'M',
+      shelfLocation: 'A1-02',
+      photoUrls: ['https://example.test/photo1.jpg'],
+    });
+
+    expect(res).toMatchObject({
+      sku: 'Q7-AO-000001',
+      id: 'Q7-AO-000001',
+      name: 'Áo lụa cao cấp',
+      status: 'ON_SALE',
+    });
+  });
+
+  it('API 37: throws 409 RECEIPT_NOT_CONFIRMED when member has not confirmed receipt', async () => {
+    server.use(
+      http.post(`${API_BASE_URL}/products`, () => {
+        return HttpResponse.json(
+          { code: 'RECEIPT_NOT_CONFIRMED', message: 'Phiếu ký gửi chưa được Member xác nhận.' },
+          { status: 409 },
+        );
+      }),
+    );
+
+    await expect(
+      inventoryService.create({
+        receiptId: 'rcpt-uuid-unconfirmed',
+        name: 'Váy dạ hội',
+      }),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'RECEIPT_NOT_CONFIRMED',
+    });
+  });
+
+  it('API 37: throws 409 RECEIPT_ALREADY_HAS_PRODUCT when receipt is already stocked', async () => {
+    server.use(
+      http.post(`${API_BASE_URL}/products`, () => {
+        return HttpResponse.json(
+          { code: 'RECEIPT_ALREADY_HAS_PRODUCT', message: 'Phiếu ký gửi này đã được nhập kho.' },
+          { status: 409 },
+        );
+      }),
+    );
+
+    await expect(
+      inventoryService.create({
+        receiptId: 'rcpt-uuid-already-has-prod',
+        name: 'Áo len',
+      }),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'RECEIPT_ALREADY_HAS_PRODUCT',
+    });
+  });
+
+  it('API 37: throws 404 RECEIPT_NOT_FOUND when receipt does not exist', async () => {
+    server.use(
+      http.post(`${API_BASE_URL}/products`, () => {
+        return HttpResponse.json(
+          { code: 'RECEIPT_NOT_FOUND', message: 'Không tìm thấy phiếu ký gửi.' },
+          { status: 404 },
+        );
+      }),
+    );
+
+    await expect(
+      inventoryService.create({
+        receiptId: 'rcpt-uuid-nonexistent',
+        name: 'Quần jeans',
+      }),
+    ).rejects.toMatchObject({
+      status: 404,
+      code: 'RECEIPT_NOT_FOUND',
+    });
+  });
+
+  it('Upload API: uploads photo to /uploads?folder=PRODUCTS and returns public url', async () => {
+    server.use(
+      http.post(`${API_BASE_URL}/uploads`, async ({ request }) => {
+        const url = new URL(request.url);
+        expect(url.searchParams.get('folder')).toBe('PRODUCTS');
+        const formData = await request.formData();
+        const file = formData.get('file');
+        expect(file).toBeTruthy();
+        return HttpResponse.json({
+          result: {
+            url: 'https://cdn.rehome.test/products/item-001.jpg',
+            originalFileName: 'item-001.jpg',
+            contentType: 'image/jpeg',
+            sizeBytes: 1024,
+          },
+          statusCode: 200,
+        });
+      }),
+    );
+
+    const dummyFile = new File(['dummy-bytes'], 'item-001.jpg', { type: 'image/jpeg' });
+    const res = await inventoryService.upload(dummyFile);
+    expect(res).toMatchObject({
+      url: 'https://cdn.rehome.test/products/item-001.jpg',
+    });
+  });
+
+  it('Upload API: throws 413 FILE_TOO_LARGE when file exceeds size limit', async () => {
+    server.use(
+      http.post(`${API_BASE_URL}/uploads`, () => {
+        return HttpResponse.json(
+          { code: 'FILE_TOO_LARGE', message: 'File vượt quá kích thước cho phép.' },
+          { status: 413 },
+        );
+      }),
+    );
+
+    const largeFile = new File(['x'.repeat(100)], 'huge.jpg', { type: 'image/jpeg' });
+    await expect(inventoryService.upload(largeFile)).rejects.toMatchObject({
+      status: 413,
+      code: 'FILE_TOO_LARGE',
+    });
+  });
+
+  it('API 39: downloads SKU barcode label PDF and produces object url', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/products/Q7-AO-000001/sku-label`, () => {
+        return new HttpResponse(new Uint8Array([37, 80, 68, 70, 45, 49, 46, 52]), {
+          headers: { 'Content-Type': 'application/pdf' },
+        });
+      }),
+    );
+
+    const res = await inventoryService.label('Q7-AO-000001');
+    expect(res).toHaveProperty('labelPdfUrl');
+    expect(typeof res.labelPdfUrl).toBe('string');
+    expect(res).toHaveProperty('blob');
+    expect(res.blob.type).toBe('application/pdf');
+  });
+
+  it('API 39: throws 403 PRODUCT_NOT_IN_YOUR_WAREHOUSE when product belongs to another warehouse', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/products/Q1-AO-000999/sku-label`, () => {
+        return HttpResponse.json(
+          { code: 'PRODUCT_NOT_IN_YOUR_WAREHOUSE', message: 'Sản phẩm không thuộc kho bạn quản lý.' },
+          { status: 403 },
+        );
+      }),
+    );
+
+    await expect(inventoryService.label('Q1-AO-000999')).rejects.toMatchObject({
+      status: 403,
+      code: 'PRODUCT_NOT_IN_YOUR_WAREHOUSE',
+    });
+  });
 });
