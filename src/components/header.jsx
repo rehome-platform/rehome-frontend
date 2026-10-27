@@ -34,7 +34,7 @@ export default function Header() {
         ]
       : [
           {
-            label: 'Cổng Vận hành Kho (Moderator)',
+            label: 'Cổng Vận hành Điểm kí gửi (Moderator)',
             icon: 'warehouse',
             onClick: () => navigate('/moderator/counter'),
           },
@@ -62,7 +62,7 @@ export default function Header() {
                 className="hover:text-[#006B2C] transition-colors flex items-center gap-1.5"
               >
                 <span className="material-symbols-outlined text-base">warehouse</span>
-                <span>Kho & Kiểm định</span>
+                <span>Điểm kí gửi & Kiểm định</span>
               </Link>
             )}
             {(!isAuthenticated || isAdmin) && (
@@ -92,7 +92,7 @@ export default function Header() {
                   <>
                     <span className="w-2 h-2 rounded-full bg-[#006B2C]"></span>
                     <span className="text-[#006B2C]">
-                      {user?.memberCode ? `${user.memberCode} • Moderator` : 'Nhân viên Kho (Mod)'}
+                      {user?.memberCode ? `${user.memberCode} • Moderator` : 'Nhân viên Điểm kí gửi (Mod)'}
                     </span>
                   </>
                 )}
@@ -116,17 +116,23 @@ export default function Header() {
               <Dropdown
                 trigger={
                   <button className="flex items-center space-x-2.5 p-1.5 rounded-xl hover:bg-[#F6F9F4] transition-colors border border-transparent hover:border-[#DDE5D9]">
-                    <img
-                      src={user?.avatarUrl || user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'}
-                      alt="Avatar"
-                      className="w-8 h-8 rounded-lg object-cover border border-[#006B2C]/20"
-                    />
+                    {user?.avatarUrl || user?.avatar ? (
+                      <img
+                        src={user.avatarUrl || user.avatar}
+                        alt="Avatar"
+                        className="w-8 h-8 rounded-lg object-cover border border-[#006B2C]/20"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-lg bg-[#E8F5E9] text-[#006B2C] border border-[#006B2C]/20 flex items-center justify-center font-bold text-xs">
+                        {(user?.fullName || user?.name || user?.email || 'U')[0].toUpperCase()}
+                      </div>
+                    )}
                     <div className="text-left hidden sm:block">
                       <div className="text-xs font-bold text-[#1F2A37] max-w-[120px] truncate leading-tight">
                         {user?.fullName || user?.name || user?.email || 'Nhân sự'}
                       </div>
                       <div className="text-[10px] text-[#5B6776] leading-tight">
-                        {isAdmin ? 'Quản trị viên' : 'Nhân viên kho'}
+                        {isAdmin ? 'Quản trị viên' : 'Nhân viên Điểm kí gửi'}
                       </div>
                     </div>
                     <span className="material-symbols-outlined text-sm text-[#5B6776]">expand_more</span>
