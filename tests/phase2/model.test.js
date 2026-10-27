@@ -112,12 +112,12 @@ describe('Phase 2 boundary rules', () => {
   });
   it('validates canCompleteInspection conditions accurately', () => {
     const checklist6 = { 0: true, 1: true, 2: true, 3: true, 4: true, 5: true };
-    expect(canCompleteInspection(checklist6, 6, '850000', '30', 'Hàng tốt')).toBe(true);
-    expect(canCompleteInspection({ ...checklist6, 5: false }, 6, '850000', '30', 'Hàng tốt')).toBe(false);
-    expect(canCompleteInspection(checklist6, 6, '0', '30', 'Hàng tốt')).toBe(false);
-    expect(canCompleteInspection(checklist6, 6, '-100', '30', 'Hàng tốt')).toBe(false);
-    expect(canCompleteInspection(checklist6, 6, '850000', '', 'Hàng tốt')).toBe(false);
-    expect(canCompleteInspection(checklist6, 6, '850000', '30', '   ')).toBe(false);
+    expect(canCompleteInspection({ checklist: checklist6, totalRequired: 6, price: '850000', term: '30', conditionNote: 'Hàng tốt' })).toBe(true);
+    expect(canCompleteInspection({ checklist: { ...checklist6, 5: false }, totalRequired: 6, price: '850000', term: '30', conditionNote: 'Hàng tốt' })).toBe(false);
+    expect(canCompleteInspection({ checklist: checklist6, totalRequired: 6, price: '0', term: '30', conditionNote: 'Hàng tốt' })).toBe(false);
+    expect(canCompleteInspection({ checklist: checklist6, totalRequired: 6, price: '-100', term: '30', conditionNote: 'Hàng tốt' })).toBe(false);
+    expect(canCompleteInspection({ checklist: checklist6, totalRequired: 6, price: '850000', term: '', conditionNote: 'Hàng tốt' })).toBe(false);
+    expect(canCompleteInspection({ checklist: checklist6, totalRequired: 6, price: '850000', term: '30', conditionNote: '   ' })).toBe(false);
   });
   it('extracts receipt ID and normalizes product response safely', () => {
     expect(extractReceiptId(null)).toBeNull();

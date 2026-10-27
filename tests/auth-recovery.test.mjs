@@ -11,6 +11,8 @@ function harness(query = '', reset = false, overrides = {}) {
   let cursor = 0;
   let calls = [];
   const React = {
+    // This harness exercises submit handlers; countdown effects are a browser concern.
+    useEffect() {},
     createElement: (type, props, ...children) => ({ type, props: props || {}, children: children.flat(Infinity) }),
     useState(initial) {
       const index = cursor++;
@@ -33,7 +35,11 @@ function harness(query = '', reset = false, overrides = {}) {
     module, exports: module.exports,
     require(name) {
       if (name === 'react') return React;
-      if (name === 'react-router-dom') return { Link: 'a', useSearchParams: () => [new URLSearchParams(query)] };
+      if (name === 'react-router-dom') return {
+        Link: 'a',
+        useNavigate: () => () => {},
+        useSearchParams: () => [new URLSearchParams(query)],
+      };
       if (name.includes('Logo')) return { default: 'logo', __esModule: true };
       if (name.includes('auth.service')) return { authService: api };
       if (name.includes('validators')) return validators;
