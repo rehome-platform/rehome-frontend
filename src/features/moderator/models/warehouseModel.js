@@ -364,4 +364,80 @@ export function filterCatalogItems(items = [], keyword = '') {
   });
 }
 
+/**
+ * =========================================================================
+ * TASK 9: Nghiệp vụ Hàng vô thừa nhận & Chuyển giao từ thiện (API 36 / 40)
+ * =========================================================================
+ */
+
+/**
+ * Xác thực tên tổ chức từ thiện nhận chuyển giao (API 36)
+ * @param {string} partnerName
+ * @returns {{ valid: boolean, message?: string, value?: string }}
+ */
+export function validatePartnerName(partnerName) {
+  if (typeof partnerName !== 'string') {
+    return { valid: false, message: 'Tên tổ chức từ thiện phải là chuỗi ký tự.' };
+  }
+  const trimmed = partnerName.trim();
+  if (!trimmed) {
+    return { valid: false, message: 'Vui lòng nhập tên tổ chức từ thiện tiếp nhận.' };
+  }
+  if (trimmed.length > 255) {
+    return { valid: false, message: 'Tên tổ chức không được vượt quá 255 ký tự.' };
+  }
+  return { valid: true, value: trimmed };
+}
+
+/**
+ * Kiểm tra xem sản phẩm có đủ điều kiện chuyển giao từ thiện không
+ * @param {object} product
+ * @returns {boolean}
+ */
+export function canTransferUnclaimed(product) {
+  if (!product) return false;
+  const statusMatch = product.status === 'UNCLAIMED';
+  const actionAllowed = !product.allowedActions || product.allowedActions.includes('TRANSFER');
+  return Boolean(statusMatch && actionAllowed);
+}
+
+/**
+ * Chuẩn hóa một item sản phẩm vô thừa nhận từ backend
+ * @param {object} item
+ * @returns {object}
+ */
+export function normalizeUnclaimedItem(item) {
+  if (!item) return null;
+  const sku = item.id || item.sku || '';
+  const status = item.status || 'UNCLAIMED';
+  return {
+    ...item,
+    id: sku,
+    sku,
+    name: item.name || 'Sản phẩm chưa đặt tên',
+    shelfLocation: item.shelfLocation || 'Chưa gán vị trí',
+    status,
+    decision: item.decision || 'UNCLAIMED',
+    deadline: item.deadline || null,
+    allowedActions: item.allowedActions || (status === 'UNCLAIMED' ? ['TRANSFER'] : []),
+  };
+}
+
+/**
+ * Lọc danh sách hàng vô thừa nhận theo từ khóa tìm kiếm (SKU hoặc Tên)
+ * @param {Array} items
+ * @param {string} keyword
+ * @returns {Array}
+ */
+export function filterUnclaimedItems(items = [], keyword = '') {
+  if (!keyword || !keyword.trim()) return items;
+  const term = keyword.trim().toLowerCase();
+  return items.filter((it) => {
+    const sku = String(it.sku || it.id || '').toLowerCase();
+    const name = String(it.name || '').toLowerCase();
+    const shelf = String(it.shelfLocation || '').toLowerCase();
+    return sku.includes(term) || name.includes(term) || shelf.includes(term);
+  });
+}
+
 
