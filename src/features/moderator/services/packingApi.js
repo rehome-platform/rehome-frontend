@@ -39,12 +39,12 @@ function requireOrderId(config, orderId) {
 }
 
 function validateScope(scope) {
-  if (!scope?.warehouseId || !scope.userId) throw new Phase2Error('Chưa xác định phiên và kho.', 403);
+  if (!scope?.warehouseId || !scope.userId) throw new Phase2Error('Chưa xác định phiên và điểm kí gửi.', 403);
 }
 
 function validateOrder(result, orderId, scope) {
       if (result?.warehouseId !== scope.warehouseId)
-        throw new Phase2Error('Dữ liệu không thuộc kho hiện tại.', 403);
+        throw new Phase2Error('Dữ liệu không thuộc điểm kí gửi hiện tại.', 403);
       if (result.orderId !== orderId || !hasOrderCollections(result))
         throw new Phase2Error('Dữ liệu đóng gói không đúng contract đã bàn giao.', 422, 'INVALID_CONTRACT');
 }
