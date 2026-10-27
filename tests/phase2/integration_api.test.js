@@ -741,5 +741,201 @@ describe('real API mode never substitutes warehouse fixtures', () => {
       expect(res[1].locationText).toBe('Kệ A1-02');
     });
   });
+
+  describe('Task 7: Categories & Brands management integration (API 44, 45, 46, 47, 48)', () => {
+    it('API 44: lists categories and brands by querying both ACTIVE and HIDDEN statuses', async () => {
+      server.use(
+        http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.CATEGORIES}`, ({ request }) => {
+          const url = new URL(request.url);
+          const status = url.searchParams.get('status');
+          if (status === 'HIDDEN') {
+            return HttpResponse.json([
+              { id: 'cat-old', name: 'Áo cổ trang', tryonSlot: 'TOP', status: 'HIDDEN' },
+            ]);
+          }
+          return HttpResponse.json([
+            { id: 'cat-1', name: 'Áo sơ mi', tryonSlot: 'TOP', status: 'ACTIVE' },
+            { id: 'cat-2', name: 'Quần jeans', tryonSlot: 'BOTTOM', status: 'ACTIVE' },
+          ]);
+        }),
+        http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.BRANDS}`, ({ request }) => {
+          const url = new URL(request.url);
+          const status = url.searchParams.get('status');
+          if (status === 'HIDDEN') {
+            return HttpResponse.json([
+              { id: 'brand-old', name: 'Old Brand', status: 'HIDDEN' },
+            ]);
+          }
+          return HttpResponse.json([
+            { id: 'brand-1', name: 'Uniqlo', status: 'ACTIVE' },
+            { id: 'brand-2', name: 'Zara', status: 'ACTIVE' },
+          ]);
+        }),
+      );
+
+      const res = await catalogService.list();
+      expect(res.categories).toHaveLength(3);
+      expect(res.brands).toHaveLength(3);
+
+      const hiddenCat = res.categories.find((c) => c.id === 'cat-old');
+      expect(hiddenCat).toBeDefined();
+      expect(hiddenCat.hidden).toBe(true);
+      expect(hiddenCat.status).toBe('HIDDEN');
+      expect(hiddenCat.slot).toBe('TOP');
+
+      const activeCat = res.categories.find((c) => c.id === 'cat-1');
+      expect(activeCat.hidden).toBe(false);
+      expect(activeCat.status).toBe('ACTIVE');
+
+      const hiddenBrand = res.brands.find((b) => b.id === 'brand-old');
+      expect(hiddenBrand.hidden).toBe(true);
+      expect(hiddenBrand.status).toBe('HIDDEN');
+    });
+
+    it('API 45: creates new category with name and tryonSlot', async () => {
+      server.use(
+        http.post(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.CATEGORIES}`, async ({ request }) => {
+          const body = await request.json();
+          expect(body.name).toBe('Áo khoác dạ');
+          expect(body.tryonSlot).toBe('TOP');
+          return HttpResponse.json(
+            {
+              id: 'cat-new-uuid',
+              name: 'Áo khoác dạ',
+              tryonSlot: 'TOP',
+              status: 'ACTIVE',
+            },
+            { status: 201 },
+          );
+        }),
+      );
+
+      const res = await catalogService.save('category', null, {
+        name: '  Áo  khoác   dạ  ',
+        tryonSlot: 'TOP',
+      });
+      expect(res.id).toBe('cat-new-uuid');
+      expect(res.name).toBe('Áo khoác dạ');
+      expect(res.tryonSlot).toBe('TOP');
+    });
+
+    it('API 45: throws 409 CATEGORY_NAME_ALREADY_EXISTS when category name is duplicate', async () => {
+      server.use(
+        http.post(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.CATEGORIES}`, () => {
+          return HttpResponse.json(
+            { code: 'CATEGORY_NAME_ALREADY_EXISTS', message: 'Tên danh mục đã tồn tại.' },
+            { status: 409 },
+          );
+        }),
+      );
+
+      await expect(
+        catalogService.save('category', null, { name: 'Áo sơ mi', tryonSlot: 'TOP' }),
+      ).rejects.toMatchObject({
+        status: 409,
+        code: 'CATEGORY_NAME_ALREADY_EXISTS',
+      });
+    });
+
+    it('API 46: creates new brand with name', async () => {
+      server.use(
+        http.post(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.BRANDS}`, async ({ request }) => {
+          const body = await request.json();
+          expect(body.name).toBe('H&M');
+          return HttpResponse.json(
+            { id: 'brand-hm-uuid', name: 'H&M', status: 'ACTIVE' },
+            { status: 201 },
+          );
+        }),
+      );
+
+      const res = await catalogService.save('brand', null, { name: '  H&M  ' });
+      expect(res.id).toBe('brand-hm-uuid');
+      expect(res.name).toBe('H&M');
+    });
+
+    it('API 46: throws 409 BRAND_NAME_ALREADY_EXISTS when brand name is duplicate', async () => {
+      server.use(
+        http.post(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.BRANDS}`, () => {
+          return HttpResponse.json(
+            { code: 'BRAND_NAME_ALREADY_EXISTS', message: 'Tên thương hiệu đã tồn tại.' },
+            { status: 409 },
+          );
+        }),
+      );
+
+      await expect(catalogService.save('brand', null, { name: 'Zara' })).rejects.toMatchObject({
+        status: 409,
+        code: 'BRAND_NAME_ALREADY_EXISTS',
+      });
+    });
+
+    it('API 47: updates category and unhides by sending status ACTIVE', async () => {
+      server.use(
+        http.put(`${API_BASE_URL}/categories/cat-1`, async ({ request }) => {
+          const body = await request.json();
+          expect(body.name).toBe('Áo sơ mi lụa');
+          expect(body.tryonSlot).toBe('TOP');
+          expect(body.status).toBe('ACTIVE');
+          return HttpResponse.json({
+            id: 'cat-1',
+            name: 'Áo sơ mi lụa',
+            tryonSlot: 'TOP',
+            status: 'ACTIVE',
+          });
+        }),
+      );
+
+      const res = await catalogService.save('category', 'cat-1', {
+        name: 'Áo sơ mi lụa',
+        slot: 'TOP',
+        hidden: false,
+      });
+      expect(res.name).toBe('Áo sơ mi lụa');
+      expect(res.status).toBe('ACTIVE');
+    });
+
+    it('API 47: updates brand name', async () => {
+      server.use(
+        http.put(`${API_BASE_URL}/brands/brand-1`, async ({ request }) => {
+          const body = await request.json();
+          expect(body.name).toBe('Zara Vietnam');
+          return HttpResponse.json({
+            id: 'brand-1',
+            name: 'Zara Vietnam',
+            status: 'ACTIVE',
+          });
+        }),
+      );
+
+      const res = await catalogService.save('brand', 'brand-1', {
+        name: 'Zara Vietnam',
+      });
+      expect(res.name).toBe('Zara Vietnam');
+    });
+
+    it('API 48: hides category by calling PATCH /categories/{id}/hide', async () => {
+      server.use(
+        http.patch(`${API_BASE_URL}/categories/cat-1/hide`, () => {
+          return HttpResponse.json({ status: 'HIDDEN' });
+        }),
+      );
+
+      const res = await catalogService.hide('category', 'cat-1');
+      expect(res.status).toBe('HIDDEN');
+    });
+
+    it('API 48: hides brand by calling PATCH /brands/{id}/hide', async () => {
+      server.use(
+        http.patch(`${API_BASE_URL}/brands/brand-1/hide`, () => {
+          return HttpResponse.json({ status: 'HIDDEN' });
+        }),
+      );
+
+      const res = await catalogService.hide('brand', 'brand-1');
+      expect(res.status).toBe('HIDDEN');
+    });
+  });
 });
+
 

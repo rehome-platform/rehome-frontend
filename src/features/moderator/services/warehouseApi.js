@@ -687,7 +687,8 @@ export const inventoryService = {
 };
 
 // =========================================================================
-// API 44, 45, 46, 47, 48: Quản lý Danh mục & Thương hiệu
+// =========================================================================
+// API 44, 45, 46, 47, 48: Quản lý Danh mục & Thương hiệu (Kèm Slot Thử đồ AI)
 // =========================================================================
 export const catalogService = {
   // API 44: GET /categories, GET /brands
@@ -700,26 +701,65 @@ export const catalogService = {
     if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     if (isFixtureMode) return fallback();
     try {
-      const [catsRes, brandsRes] = await Promise.all([
-        callBackend({ method: 'get', url: API_ENDPOINTS.MODERATOR.CATEGORIES }, { signal: options?.signal }),
-        callBackend({ method: 'get', url: API_ENDPOINTS.MODERATOR.BRANDS }, { signal: options?.signal }),
+      // Backend mặc định chỉ trả ACTIVE nếu không truyền status.
+      // Gọi song song cả ACTIVE và HIDDEN để gộp danh sách đầy đủ cho Moderator.
+      const [catsActive, catsHidden, brandsActive, brandsHidden] = await Promise.all([
+        callBackend(
+          { method: 'get', url: API_ENDPOINTS.MODERATOR.CATEGORIES, params: { status: 'ACTIVE' } },
+          { signal: options?.signal }
+        ),
+        callBackend(
+          { method: 'get', url: API_ENDPOINTS.MODERATOR.CATEGORIES, params: { status: 'HIDDEN' } },
+          { signal: options?.signal }
+        ).catch(() => []),
+        callBackend(
+          { method: 'get', url: API_ENDPOINTS.MODERATOR.BRANDS, params: { status: 'ACTIVE' } },
+          { signal: options?.signal }
+        ),
+        callBackend(
+          { method: 'get', url: API_ENDPOINTS.MODERATOR.BRANDS, params: { status: 'HIDDEN' } },
+          { signal: options?.signal }
+        ).catch(() => []),
       ]);
 
-      const categories = (Array.isArray(catsRes) ? catsRes : catsRes?.result || []).map((c) => ({
-        id: c.id,
-        name: c.name,
-        slot: c.tryonSlot,
-        tryonSlot: c.tryonSlot,
-        hidden: c.status === 'HIDDEN',
-        status: c.status,
-      }));
+      const rawCats = [
+        ...(Array.isArray(catsActive) ? catsActive : catsActive?.result || []),
+        ...(Array.isArray(catsHidden) ? catsHidden : catsHidden?.result || []),
+      ];
+      const rawBrands = [
+        ...(Array.isArray(brandsActive) ? brandsActive : brandsActive?.result || []),
+        ...(Array.isArray(brandsHidden) ? brandsHidden : brandsHidden?.result || []),
+      ];
 
-      const brands = (Array.isArray(brandsRes) ? brandsRes : brandsRes?.result || []).map((b) => ({
-        id: b.id,
-        name: b.name,
-        hidden: b.status === 'HIDDEN',
-        status: b.status,
-      }));
+      // Loại bỏ trùng lặp nếu có và chuẩn hóa dữ liệu
+      const catMap = new Map();
+      rawCats.forEach((c) => {
+        if (!catMap.has(c.id)) {
+          catMap.set(c.id, {
+            id: c.id,
+            name: c.name,
+            slot: c.tryonSlot,
+            tryonSlot: c.tryonSlot,
+            hidden: c.status === 'HIDDEN',
+            status: c.status || 'ACTIVE',
+          });
+        }
+      });
+
+      const brandMap = new Map();
+      rawBrands.forEach((b) => {
+        if (!brandMap.has(b.id)) {
+          brandMap.set(b.id, {
+            id: b.id,
+            name: b.name,
+            hidden: b.status === 'HIDDEN',
+            status: b.status || 'ACTIVE',
+          });
+        }
+      });
+
+      const categories = Array.from(catMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+      const brands = Array.from(brandMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
 
       return { categories, brands };
     } catch (err) {
@@ -742,15 +782,19 @@ export const catalogService = {
       ? (isCategory ? API_ENDPOINTS.MODERATOR.CATEGORY_DETAIL(id) : API_ENDPOINTS.MODERATOR.BRAND_DETAIL(id))
       : baseUrl;
 
+    const cleanedName = data.name ? String(data.name).trim().replace(/\s+/g, ' ') : '';
+    const status = data.status || (data.hidden === false ? 'ACTIVE' : data.hidden === true ? 'HIDDEN' : undefined);
+    const tryonSlot = data.tryonSlot || data.slot || (isCategory ? 'TOP' : undefined);
+
     const payload = isCategory
       ? {
-          name: data.name,
-          tryonSlot: data.slot || data.tryonSlot || null,
-          ...(id && data.status ? { status: data.status } : {}),
+          name: cleanedName,
+          tryonSlot,
+          ...(id && status ? { status } : {}),
         }
       : {
-          name: data.name,
-          ...(id && data.status ? { status: data.status } : {}),
+          name: cleanedName,
+          ...(id && status ? { status } : {}),
         };
 
     return callBackend(
