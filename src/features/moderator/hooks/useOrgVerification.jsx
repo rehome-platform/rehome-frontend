@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-import { orgVerificationService } from "../services/moderatorMockData.js";
+import { orgVerificationService } from "../services/orgVerificationApi.js";
 
 export function useOrgVerification() {
   const [activeMainTab, setActiveMainTab] = useState('NEW_ORGS'); // 'NEW_ORGS' | 'LEGAL_CHANGES'

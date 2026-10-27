@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 import { Button, Badge } from '../../../components/common/index.js';
-import { violationReportService } from '../services/moderatorMockData.js';
+import { violationReportService } from '../services/violationReportApi.js';
 
 /**
  * Trang Xử Lý Báo Cáo Vi Phạm & Kiểm Duyệt Nội Dung

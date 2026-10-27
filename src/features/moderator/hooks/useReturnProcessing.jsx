@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 
 import { formatCurrencyVND } from "../../../utils/formatters.js";
-import { returnService } from "../services/moderatorMockData.js";
+import { returnService } from "../services/returnApi.js";
 
 export function useReturnProcessing() {
   const [returnRequests, setReturnRequests] = useState([]);
