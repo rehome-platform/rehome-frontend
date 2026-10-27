@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 import { useAuth } from '../../../context/AuthContext.jsx';
-import { warehouseInboxService } from '../services/moderatorMockData.js';
+import { warehouseInboxService } from '../services/warehouseInboxApi.js';
 
 /**
  * Trang Hộp Thư Kho ReHome

@@ -4,13 +4,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useReturnProcessing } from '../../src/features/moderator/hooks/useReturnProcessing.jsx';
 import { useOrgVerification } from '../../src/features/moderator/hooks/useOrgVerification.jsx';
 import { VerificationChecklist } from '../../src/features/moderator/components/verification/VerificationSections.jsx';
-import { returnService, orgVerificationService } from '../../src/features/moderator/services/moderatorMockData.js';
+import { returnService } from '../../src/features/moderator/services/returnApi.js';
+import { orgVerificationService } from '../../src/features/moderator/services/orgVerificationApi.js';
 
-vi.mock('../../src/features/moderator/services/moderatorMockData.js', () => ({
+vi.mock('../../src/features/moderator/services/returnApi.js', () => ({
   returnService: {
     list: vi.fn(), approveReturnAndCreateWaybill: vi.fn(), rejectReturn: vi.fn(),
     resolveInvalid: vi.fn(), resolveValid: vi.fn(),
   },
+}));
+
+vi.mock('../../src/features/moderator/services/orgVerificationApi.js', () => ({
   orgVerificationService: {
     getQueue: vi.fn(), getLegalChanges: vi.fn(), approveOrg: vi.fn(), rejectOrg: vi.fn(),
     approveLegalChange: vi.fn(),

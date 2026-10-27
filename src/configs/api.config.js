@@ -100,22 +100,34 @@ export const API_ENDPOINTS = {
 
     // Xử lý hàng trả
     RETURNS: "/return-requests",
+    RETURN_QUEUE: "/return-requests/queue",
+    RETURN_DETAIL: (id) => `/return-requests/${moderatorId(id)}/detail`,
+    APPROVE_RETURN: (id) => `/return-requests/${moderatorId(id)}/approve`,
+    REJECT_RETURN: (id) => `/return-requests/${moderatorId(id)}/reject`,
     INSPECT_RETURN: (id) => `/return-requests/${moderatorId(id)}/inspect`,
+    RESOLVE_RETURN: (id) => `/return-requests/${moderatorId(id)}/resolve`,
     REPORT_COUNTERFEIT: (id) => `/return-requests/${moderatorId(id)}/flag-counterfeit`,
 
     // Xác minh tổ chức & Duyệt đổi pháp lý
     VERIFICATION_QUEUE: "/organizations/verifications",
+    ORG_VERIFICATION_DETAIL: (id) => `/organizations/${moderatorId(id)}/verification`,
     APPROVE_ORG: (id) => `/organizations/${moderatorId(id)}/verify`,
     REJECT_ORG: (id) => `/organizations/${moderatorId(id)}/reject`,
     LEGAL_CHANGES: "/organizations/legal-change-requests",
     APPROVE_LEGAL_CHANGE: (id) => `/organizations/legal-change-requests/${moderatorId(id)}/approve`,
+    REJECT_LEGAL_CHANGE: (id) => `/organizations/legal-change-requests/${moderatorId(id)}/reject`,
 
     // Báo cáo vi phạm nội dung
     VIOLATION_REPORTS: "/violation-reports",
+    VIOLATION_REPORT_DETAIL: (id) => `/violation-reports/${moderatorId(id)}`,
     RESOLVE_REPORT: (id) => `/violation-reports/${moderatorId(id)}/resolve`,
+    DISMISS_REPORT: (id) => `/violation-reports/${moderatorId(id)}/dismiss`,
 
     // Hộp thư hỗ trợ kho
     WAREHOUSE_INBOX: "/conversations",
+    WAREHOUSE_INBOX_DETAIL: (id) => `/conversations/${moderatorId(id)}`,
+    SEND_INBOX_MESSAGE: (id) => `/conversations/${moderatorId(id)}/messages`,
+    MARK_INBOX_DONE: (id) => `/conversations/${moderatorId(id)}/done`,
   },
 
   // 3. Admin (Quản trị viên nền tảng ReHome)
