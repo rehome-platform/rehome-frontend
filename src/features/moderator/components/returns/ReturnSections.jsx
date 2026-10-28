@@ -18,7 +18,7 @@ export function ReturnCompareDialog({ isCompareModalOpen, setIsCompareModalOpen,
               <div className="text-xs font-bold text-[#191C19] mb-2">Ảnh lưu trữ khi nhập kho</div>
               <img
                 src={selectedItem.stockInPhotos[0]}
-                alt="Kho"
+                alt="Điểm kí gửi"
                 className="w-full h-64 object-contain rounded border border-[#c4c4c4] bg-[#f9f9f9]"
               />
             </div>
@@ -358,7 +358,7 @@ export function ReturnInspectionProduct({ selectedItem, scannedSku, setScannedSk
           </div>
           <div className="flex gap-2">
             {selectedItem.stockInPhotos.map((src, i) => (
-              <img key={i} src={src} alt="Kho" className="w-20 h-24 object-cover rounded border border-[#c4c4c4]" />
+              <img key={i} src={src} alt="Điểm kí gửi" className="w-20 h-24 object-cover rounded border border-[#c4c4c4]" />
             ))}
           </div>
         </div>

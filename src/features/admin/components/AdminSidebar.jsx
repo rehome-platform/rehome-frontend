@@ -53,7 +53,7 @@ export default function AdminSidebar({
     {
       id: 'warehouses',
       path: '/admin/warehouses',
-      label: 'Quản lý chi nhánh kho',
+      label: 'Quản lý điểm kí gửi',
       icon: 'warehouse',
     },
     {

@@ -20,7 +20,7 @@ export default function Footer() {
               <span className="text-lg font-black font-heading text-[#006B2C]">ReHome Web</span>
             </div>
             <p className="text-[#717971] leading-relaxed">
-              Cổng điều hành và quản trị tập trung dành riêng cho Nhân viên Kho (Moderator) và Quản trị viên (Admin) nền tảng ReHome.
+              Cổng điều hành và quản trị tập trung dành riêng cho Nhân viên Điểm kí gửi (Moderator) và Quản trị viên (Admin) nền tảng ReHome.
             </p>
           </div>
 
@@ -31,7 +31,7 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2 text-[#717971]">
               {isModerator && <>
-                <li><Link to="/moderator/counter" className="hover:text-[#006B2C] transition-colors">Quầy Kho & Kiểm định (Moderator)</Link></li>
+                <li><Link to="/moderator/counter" className="hover:text-[#006B2C] transition-colors">Quầy Điểm kí gửi & Kiểm định (Moderator)</Link></li>
                 <li><Link to="/moderator/queue" className="hover:text-[#006B2C] transition-colors">Hàng đợi duyệt form online</Link></li>
               </>}
               {isAdmin && <>
@@ -50,16 +50,16 @@ export default function Footer() {
               <li><span className="text-[#414942]">Hoa hồng 3 kỳ: 10% - 15% - 20%</span></li>
               <li><span className="text-[#414942]">Giá sàn bảo vệ người bán (50% giá chốt)</span></li>
               <li><span className="text-[#414942]">Cửa sổ rút hàng miễn phí 7 ngày</span></li>
-              <li><span className="text-[#414942]">Kiểm định kho & Tem nhãn SKU dán áo</span></li>
+              <li><span className="text-[#414942]">Kiểm định điểm kí gửi & Tem nhãn SKU dán áo</span></li>
             </ul>
           </div>
 
           {/* Contact */}
           <div>
             <h4 className="font-bold text-[#191C19] mb-3 uppercase tracking-wider">
-              Chi Nhánh Kho ReHome
+              Chi Nhánh Điểm Kí Gửi ReHome
             </h4>
-            <p className="text-[#717971] mb-1">Kho Q7: Số 12 Nguyễn Thị Thập, P. Tân Phú, Q. 7, TP.HCM</p>
+            <p className="text-[#717971] mb-1">Điểm kí gửi Q7: Số 12 Nguyễn Thị Thập, P. Tân Phú, Q. 7, TP.HCM</p>
             <p className="text-[#717971] mb-1">Hotline: 1900 xxxx (8:00 - 18:00)</p>
             <p className="text-[#717971]">Email hỗ trợ: support@rehome.vn</p>
           </div>

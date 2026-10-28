@@ -15,11 +15,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const authRequestPending = useRef(false);
 
-  const { login, loginWithGoogle, isAuthenticated, user, loading } = useAuth();
+  const { login, isAuthenticated, user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -85,31 +84,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    if (authRequestPending.current) return;
-    authRequestPending.current = true;
-    setIsGoogleLoading(true);
-    setErrorMessage('');
-    try {
-      const res = await loginWithGoogle();
-      const userRole = res?.user?.role;
-      if (userRole === 'admin') {
-        navigate('/admin', { replace: true });
-      } else if (userRole === 'staff' || userRole === 'moderator') {
-        navigate('/moderator/counter', { replace: true });
-      } else {
-        setErrorMessage(
-          'Tài khoản Google này thuộc nhóm Thành viên/Tổ chức. Vui lòng đăng nhập trên ứng dụng Di Động ReHome.'
-        );
-      }
-    } catch (err) {
-      setErrorMessage(err.message || 'Không thể đăng nhập bằng Google lúc này.');
-    } finally {
-      authRequestPending.current = false;
-      setIsGoogleLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[#F6F9F4] flex flex-col justify-between items-center px-4 py-8 sm:py-12 select-none">
       {/* Main Login Card */}
@@ -149,7 +123,7 @@ export default function LoginPage() {
                 id="email-input"
                 type="email"
                 required
-                disabled={isLoading || isGoogleLoading}
+                disabled={isLoading}
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
@@ -188,7 +162,7 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 type={showPassword ? 'text' : 'password'}
                 required
-                disabled={isLoading || isGoogleLoading}
+                disabled={isLoading}
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
@@ -205,7 +179,7 @@ export default function LoginPage() {
                 aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                 aria-controls="password-input"
                 aria-pressed={showPassword}
-                disabled={isLoading || isGoogleLoading}
+                disabled={isLoading}
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5B6776] hover:text-[#1F2A37] transition-colors p-0.5 rounded"
                 title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
@@ -222,7 +196,7 @@ export default function LoginPage() {
             <button
               id="submit-login-button"
               type="submit"
-              disabled={isLoading || isGoogleLoading}
+              disabled={isLoading}
               className={`w-full py-3 px-4 rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 shadow-sm ${isLoading
                   ? 'bg-[#006B2C]/80 cursor-wait'
                   : 'bg-[#006B2C] hover:bg-[#005523] active:scale-[0.99] hover:shadow'
@@ -251,56 +225,13 @@ export default function LoginPage() {
           </div>
         </form>
 
-        {/* Đường phân cách */}
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-[#DDE5D9]"></div>
-          </div>
-          <div className="relative flex justify-center text-xs">
-            <span className="bg-white px-3 text-[#5B6776] font-medium">hoặc</span>
-          </div>
-        </div>
-
-        {/* Đăng nhập bằng Google */}
-        <button
-          type="button"
-          id="google-login-button"
-          onClick={handleGoogleLogin}
-          disabled={isLoading || isGoogleLoading}
-          className="w-full py-2.5 px-4 rounded-xl border border-[#DDE5D9] bg-white hover:bg-[#F6F9F4] text-xs font-bold text-[#1F2A37] transition-all flex items-center justify-center gap-3 shadow-xs hover:border-[#006B2C]/40"
-        >
-          {isGoogleLoading ? (
-            <span className="inline-block w-4 h-4 border-2 border-[#006B2C] border-t-transparent rounded-full animate-spin"></span>
-          ) : (
-            <svg className="w-4 h-4" viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-              />
-            </svg>
-          )}
-          <span>Đăng nhập với Google</span>
-        </button>
-
       </div>
 
       {/* Footer */}
       <div className="mt-6 text-center text-xs text-[#5B6776] flex items-center justify-center gap-2">
         <span>Cổng Điều Hành & Vận Hành Tập Trung ReHome</span>
         <span>•</span>
-        <span>Quản trị viên & Nhân viên Kho</span>
+        <span>Quản trị viên & Nhân viên Điểm kí gửi</span>
       </div>
     </div>
   );

@@ -145,7 +145,7 @@ function fillPasswords(h, oldPassword = ' fixture-current ', password = ' fixtur
 }
 
 test('Profile displays context identity, immutable email and existing role-specific fallbacks', () => {
-  for (const [role, code, badge] of [['admin', 'ADM-OFFICIAL', 'Quản trị viên'], ['staff', 'MOD-OFFICIAL', 'Nhân viên Kho'], ['moderator', 'MOD-OFFICIAL', 'Nhân viên Kho']]) {
+  for (const [role, code, badge] of [['admin', 'ADM-OFFICIAL', 'Quản trị viên'], ['staff', 'MOD-OFFICIAL', 'Nhân viên Điểm kí gửi'], ['moderator', 'MOD-OFFICIAL', 'Nhân viên Điểm kí gửi']]) {
     const h = harness({}, { ...defaultUser, role, memberCode: '', authorities: '', rawRole: '', emailVerified: false });
     assert.equal(h.byId('user-name-input').props.value, 'Profile User');
     assert.equal(h.byId('user-phone-input').props.value, '0912345678');
@@ -169,7 +169,7 @@ test('fresh profile loads once, exposes loading state and updates form fields wi
   assert.doesNotMatch(text(h.render()), /Đang tải/);
   assert.equal(h.byId('user-name-input').props.value, 'Fresh name');
   assert.equal(h.byId('user-phone-input').props.value, '0987654321');
-  assert.equal(h.all(node => node.type === 'img')[0].props.src, 'fresh-avatar');
+  assert.equal(h.all(node => node.type === 'img').length, 0);
   assert.equal(h.auth.user, defaultUser);
   assert.equal(h.calls.loads, 1);
 });
@@ -182,7 +182,7 @@ test('user changes resynchronize editable fields and preserve alias fallbacks', 
   h.render();
   assert.equal(h.byId('user-name-input').props.value, 'Replacement alias');
   assert.equal(h.byId('user-phone-input').props.value, '');
-  assert.equal(h.all(node => node.type === 'img')[0].props.src, 'alias-avatar');
+  assert.equal(h.all(node => node.type === 'img').length, 0);
   assert.equal(h.calls.loads, 1);
 });
 
@@ -220,17 +220,14 @@ test('profile validation rejects blank names and invalid phones but permits an o
   assert.equal(h.calls.profiles[0].fullName, 'A', 'Do not introduce the stricter validateFullName rule');
 });
 
-test('profile save preserves trimmed payload, selected avatar, pending state and four-second success timing', async () => {
+test('profile save preserves trimmed payload, pending state and four-second success timing', async () => {
   const pending = deferred();
   const h = harness({ updateProfile: () => pending.promise });
   await h.flush();
   h.input('user-name-input', ' Updated name ');
   h.input('user-phone-input', ' 0987654321 ');
-  const preset = h.all(node => node.type === 'button' && node.props.children.some(child => child?.type === 'img'))[1];
-  const avatar = preset.props.children[0].props.src;
-  preset.props.onClick();
   const request = h.submit();
-  assert.deepEqual(JSON.parse(JSON.stringify(h.calls.profiles[0])), { fullName: 'Updated name', name: 'Updated name', phone: '0987654321', avatarUrl: avatar, avatar });
+  assert.deepEqual(JSON.parse(JSON.stringify(h.calls.profiles[0])), { fullName: 'Updated name', name: 'Updated name', phone: '0987654321' });
   assert.equal(h.byId('btn-save-profile').props.disabled, true);
   assert.match(text(h.render()), /Đang lưu/);
   assert.doesNotMatch(text(h.render()), /Cập nhật thông tin hồ sơ trên máy chủ thành công/);

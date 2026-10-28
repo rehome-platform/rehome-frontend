@@ -1,4 +1,4 @@
-﻿// Run after npm run build. Actual routes/components with mocked auth/profile services.
+// Run after npm run build. Actual routes/components with mocked auth/profile services.
 import { build } from 'esbuild';
 import { readFileSync, readdirSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -159,7 +159,7 @@ const checks = async function () {
     }
     win.showPage('/login', 'admin', false);
     await delay(60);
-    verify('public login layout preserved', !!doc.querySelector('#google-login-button') && visibleText().includes('Cổng Điều Hành & Vận Hành Tập Trung ReHome'));
+    verify('public login layout preserved', !!doc.querySelector('#submit-login-button') && visibleText().includes('Cổng Điều Hành & Vận Hành Tập Trung ReHome'));
     win.showPage('/forgot-password', 'admin', false);
     await delay(60);
     verify('public recovery layout preserved', !!doc.querySelector('#recovery-email') && visibleText().includes('Quên mật khẩu'));

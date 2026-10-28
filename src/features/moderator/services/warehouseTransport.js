@@ -42,7 +42,7 @@ function contractReady(config) {
 
 function requireWarehouse(scope) {
   if (!scope?.warehouseId)
-    throw new Phase2Error('Tài khoản chưa có thông tin kho được backend xác nhận.', 403);
+    throw new Phase2Error('Tài khoản chưa có thông tin điểm kí gửi được backend xác nhận.', 403);
 }
 
 function resolvePath(path, ids) {

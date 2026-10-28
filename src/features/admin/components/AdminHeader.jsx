@@ -37,7 +37,7 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
     const path = location.pathname;
     if (path.startsWith('/admin/users')) return 'Quản lý Tài khoản (Member & Tổ chức)';
     if (path.startsWith('/admin/moderators')) return 'Quản lý Nhân sự Moderator';
-    if (path.startsWith('/admin/warehouses')) return 'Quản lý Chi nhánh Kho ReHome';
+    if (path.startsWith('/admin/warehouses')) return 'Quản lý Điểm kí gửi ReHome';
     if (path.startsWith('/admin/configs')) return 'Cấu hình Tham số Hệ thống';
     if (path.startsWith('/admin/audit-logs')) return 'Nhật ký kiểm toán hệ thống (Audit Log)';
     return 'Tổng quan điều hành & Quỹ nền tảng';

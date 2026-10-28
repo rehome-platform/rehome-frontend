@@ -12,15 +12,6 @@ import '../styles/profile-password.css';
  * Dành cho Admin & Moderator nội bộ trên Web
  * Kết nối hoàn toàn với Backend API thật tại https://re-backend-9a98.onrender.com
  */
-// Sample avatars for quick selection
-const avatarPresets = [
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-  'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
-  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-  'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-];
-
 export default function ProfilePage() {
   const { user, updateProfile, changePassword, logout } = useAuth();
 
@@ -31,7 +22,6 @@ export default function ProfilePage() {
   const initialProfile = profileFormValues(user);
   const [name, setName] = useState(initialProfile.name);
   const [phone, setPhone] = useState(initialProfile.phone);
-  const [avatar, setAvatar] = useState(initialProfile.avatar);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [profileSuccessMsg, setProfileSuccessMsg] = useState('');
@@ -60,7 +50,6 @@ export default function ProfilePage() {
       const values = profileFormValues(user);
       setName(values.name);
       setPhone(values.phone);
-      setAvatar(values.avatar);
     }
   }, [user]);
 
@@ -75,7 +64,6 @@ export default function ProfilePage() {
           const values = profileFormValues(freshUser);
           setName(values.name);
           setPhone(values.phone);
-          setAvatar(values.avatar);
         }
       } catch (err) {
         console.warn('Lỗi khi tải hồ sơ từ backend:', err);
@@ -115,8 +103,6 @@ export default function ProfilePage() {
         fullName: name.trim(),
         name: name.trim(),
         phone: phone.trim(),
-        avatarUrl: avatar,
-        avatar: avatar,
       });
       setProfileSuccessMsg('Cập nhật thông tin hồ sơ trên máy chủ thành công!');
       setTimeout(() => setProfileSuccessMsg(''), 4000);
@@ -199,7 +185,7 @@ export default function ProfilePage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Card Thông tin tóm tắt bên trái */}
           <div className="lg:col-span-1 space-y-6">
-            <ProfileSummary user={user} avatar={avatar} isAdmin={isAdmin} setActiveTab={setActiveTab} />
+            <ProfileSummary user={user} isAdmin={isAdmin} setActiveTab={setActiveTab} />
 
             {/* Quick Tips */}
             <div className="bg-[#EBF1E8] rounded-2xl p-4 border border-[#DDE5D9] text-xs space-y-2">
@@ -221,7 +207,7 @@ export default function ProfilePage() {
             {/* TAB 1: THÔNG TIN CÁ NHÂN (F-010) */}
             {activeTab === 'profile' && (
               <ProfileEditor user={user} profile={{
-                name, setName, phone, setPhone, avatar, setAvatar, isLoadingProfile,
+                name, setName, phone, setPhone, isLoadingProfile,
                 isSavingProfile, profileSuccessMsg, profileErrorMsg, handleSaveProfile,
               }} />
             )}
@@ -261,20 +247,10 @@ function passwordChangeError(currentPassword, newPassword, confirmPassword) {
   return validatePassword(newPassword) || validateConfirmPassword(confirmPassword, newPassword);
 }
 
-function ProfileAvatar({ user, avatar, setActiveTab }) {
+function ProfileAvatar({ user }) {
   return (
-    <div className="relative group mb-4">
-      <img
-        src={avatar || user?.avatarUrl || user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'}
-        alt={user?.name || 'Avatar'}
-        className="w-28 h-28 rounded-2xl object-cover border-2 border-[#006B2C]/20 shadow-md"
-      />
-      <div
-        onClick={() => setActiveTab('profile')}
-        className="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-medium cursor-pointer"
-      >
-        Đổi ảnh
-      </div>
+    <div className="w-24 h-24 rounded-2xl bg-[#E8F5E9] text-[#006B2C] border-2 border-[#006B2C]/20 shadow-sm flex items-center justify-center font-bold mb-4 select-none">
+      <span className="material-symbols-outlined text-4xl">person</span>
     </div>
   );
 }
@@ -317,12 +293,12 @@ function ProfileAccountFacts({ user, isAdmin }) {
   );
 }
 
-function ProfileSummary({ user, avatar, isAdmin, setActiveTab }) {
+function ProfileSummary({ user, isAdmin, setActiveTab }) {
   const account = user ?? {};
   return (
     <div className="bg-white rounded-2xl border border-[#DDE5D9] p-6 shadow-card flex flex-col items-center text-center">
       {/* Avatar */}
-      <ProfileAvatar user={account} avatar={avatar} setActiveTab={setActiveTab} />
+      <ProfileAvatar user={account} setActiveTab={setActiveTab} />
 
       {/* Tên & vai trò */}
       <h2 className="text-lg font-bold text-[#1F2A37]">
@@ -337,7 +313,7 @@ function ProfileSummary({ user, avatar, isAdmin, setActiveTab }) {
           </Badge>
         ) : (
           <Badge variant="success" className="bg-[#E8F5E9] text-[#006B2C] border-[#A5D6A7] font-bold">
-            Nhân viên Kho (Moderator)
+            Nhân viên Điểm kí gửi (Moderator)
           </Badge>
         )}
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#E8F5E9] text-[#006B2C]">
@@ -398,38 +374,9 @@ function ProfileTabs({ activeTab, setActiveTab }) {
   );
 }
 
-function ProfileAvatarPicker({ avatar, setAvatar }) {
-  return (
-    <div>
-      <label className="block text-xs font-semibold text-[#1F2A37] mb-2">
-        Chọn ảnh đại diện nhân sự:
-      </label>
-      <div className="flex items-center gap-3 overflow-x-auto pb-2">
-        {avatarPresets.map((imgUrl, index) => (
-          <button
-            key={index}
-            type="button"
-            onClick={() => setAvatar(imgUrl)}
-            className={`relative rounded-xl overflow-hidden shrink-0 transition-transform ${
-              avatar === imgUrl ? 'ring-2 ring-[#006B2C] scale-105' : 'opacity-70 hover:opacity-100'
-            }`}
-          >
-            <img src={imgUrl} alt="preset" className="w-12 h-12 object-cover rounded-xl" />
-            {avatar === imgUrl && (
-              <span className="absolute bottom-1 right-1 w-4 h-4 bg-[#006B2C] text-white rounded-full flex items-center justify-center text-[10px]">
-                ✓
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function ProfileEditor({ user, profile }) {
   const {
-    name, setName, phone, setPhone, avatar, setAvatar, isLoadingProfile,
+    name, setName, phone, setPhone, isLoadingProfile,
     isSavingProfile, profileSuccessMsg, profileErrorMsg, handleSaveProfile,
   } = profile;
   return (
@@ -464,9 +411,6 @@ function ProfileEditor({ user, profile }) {
       )}
 
       <form onSubmit={handleSaveProfile} className="space-y-4">
-        {/* Chọn Avatar mẫu */}
-        <ProfileAvatarPicker avatar={avatar} setAvatar={setAvatar} />
-
         {/* Họ tên */}
         <div>
           <label htmlFor="user-name-input" className="block text-xs font-semibold text-[#1F2A37] mb-1.5">
