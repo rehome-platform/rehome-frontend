@@ -40,7 +40,8 @@ test.beforeEach(async ({ page }) => {
 
 async function nav(page, name) {
   const link = page.getByRole('link', { name, exact: true });
-  if (!(await link.isVisible())) await page.getByRole('button', { name: 'Mở menu' }).click();
+  const menu = page.getByRole('button', { name: 'Mở menu' });
+  if (await menu.isVisible()) await menu.click();
   await link.click();
 }
 async function identify(page) {
@@ -48,7 +49,7 @@ async function identify(page) {
   await page.getByRole('button', { name: 'Tra cứu', exact: true }).click();
   await page.getByRole('button', { name: 'Chọn Member MB-001' }).click();
   await page.getByRole('button', { name: 'Tôi đã đối chiếu đúng Member' }).click();
-  await expect(page.getByRole('button', { name: 'Đã xác nhận danh tính' })).toBeVisible();
+  await expect(page.getByText('Đã xác nhận danh tính', { exact: true })).toBeVisible();
 }
 test('inspect → wait Member → stock-in → SKU → shelf history (fixtures)', async ({
   page,
@@ -57,15 +58,16 @@ test('inspect → wait Member → stock-in → SKU → shelf history (fixtures)'
   testInfo.annotations.push({ type: 'browser-version', description: browser.version() });
   await page.goto('/moderator/counter');
   await identify(page);
-  await nav(page, 'Hàng đợi ký gửi');
-  await page.getByLabel('Loại công việc').selectOption('INSPECTION');
+  await nav(page, 'Hàng đợi công việc');
+  await page.getByRole('tab', { name: 'Kiểm định', exact: true }).click();
   await page.getByRole('button', { name: 'Nhận việc', exact: true }).click();
-  await page.getByRole('link', { name: 'Mở chi tiết' }).click();
-  await page.getByRole('button', { name: 'Bắt đầu kiểm định' }).click();
-  await page.getByLabel('Ghi chú tình trạng').fill('Đường may nguyên vẹn');
-  await page.getByLabel('Giá chốt (VND, số nguyên)').fill('250000');
-  await page.getByLabel('Độ dài kỳ', { exact: true }).selectOption('30');
-  await page.getByRole('button', { name: 'Hoàn tất PASS · tạo biên nhận' }).click();
+  await page.getByRole('link', { name: 'Mở', exact: true }).click();
+  await page.getByRole('button', { name: 'Bắt đầu kiểm định tại quầy' }).click();
+  for (const checkbox of await page.getByRole('checkbox').all()) await checkbox.check();
+  await page.getByLabel('Ghi chú tình trạng thực tế').fill('Đường may nguyên vẹn');
+  await page.getByLabel('Giá chốt thỏa thuận (VND)').fill('250000');
+  await page.getByLabel('Độ dài kỳ ký gửi', { exact: true }).selectOption('30');
+  await page.getByRole('button', { name: 'Đạt kiểm định — Tạo biên nhận ký gửi' }).click();
   await expect(page.getByText(/Đang chờ Member xác nhận/)).toBeVisible();
   await expect(page.getByLabel('Tên sản phẩm')).toHaveCount(0);
   await page.evaluate(async () => {
@@ -90,13 +92,14 @@ test('inspect → wait Member → stock-in → SKU → shelf history (fixtures)'
     });
   await page.getByRole('button', { name: 'Nhập kho · tạo SKU' }).click();
   await page.getByRole('link', { name: /Đã nhập kho · TEST-SKU-4/ }).click();
-  await expect(page.getByText('SKU: TEST-SKU-4')).toBeVisible();
-  await page.getByLabel('Kệ mới').fill('B2');
+  await expect(page.getByText('SKU: TEST-SKU-4', { exact: true })).toBeVisible();
+  await page.getByLabel('Vị trí kệ mới').fill('B2');
   await page.getByRole('button', { name: 'Lưu vị trí kệ' }).click();
-  await expect(page.getByText('SHELF_CHANGED · B2')).toBeVisible();
-  await page.getByRole('button', { name: 'Mở / in lại tem' }).click();
+  await expect(page.getByText('SHELF_CHANGED', { exact: true })).toBeVisible();
+  await expect(page.getByText('Kệ B2', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Mở / In lại tem SKU' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
-  await expect(page.getByText(/Chưa có PDF hợp lệ/)).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Mở PDF tem để xem và in' })).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).not.toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
@@ -116,13 +119,15 @@ test('shared phone selection, catalog modal and all end-of-term branches (fixtur
   await expect(page.getByRole('button', { name: 'Tôi đã đối chiếu đúng Member' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Chọn Member MB-001' }).click();
   await page.getByRole('button', { name: 'Tôi đã đối chiếu đúng Member' }).click();
-  await nav(page, 'Danh mục & Thương hiệu');
+  await nav(page, 'Danh mục & thương hiệu');
   await page.getByRole('button', { name: 'Thêm danh mục' }).click();
-  await page.getByLabel('Tên', { exact: true }).fill('Áo mới');
-  await page.getByLabel('Slot', { exact: true }).selectOption('TOP');
-  await page.getByRole('button', { name: 'Lưu', exact: true }).click();
+  await page.getByLabel('Tên danh mục', { exact: true }).fill('Áo mới');
+  await page.getByLabel('Slot thử đồ AI (Bắt buộc)', { exact: true }).selectOption('TOP');
+  await page.getByRole('button', { name: 'Lưu danh mục', exact: true }).click();
   await expect(page.getByText('Áo mới', { exact: true })).toBeVisible();
-  await nav(page, 'Xử lý cuối kỳ');
+  await nav(page, 'Quầy tiếp nhận');
+  await identify(page);
+  await page.getByRole('link', { name: 'Mở trang Hàng cuối kỳ' }).click();
   await page.getByRole('button', { name: 'Mở xử lý' }).nth(0).click();
   await page.getByRole('button', { name: 'Bàn giao nhận lại cuối kỳ' }).click();
   await page.getByRole('button', { name: 'Xác nhận', exact: true }).click();
@@ -136,5 +141,5 @@ test('shared phone selection, catalog modal and all end-of-term branches (fixtur
   await page.getByLabel('Tên tổ chức đối tác nhận chuyển giao').fill('Đối tác thử');
   await page.getByRole('button', { name: 'Chuyển giao hàng vô thừa nhận' }).click();
   await page.getByRole('button', { name: 'Xác nhận', exact: true }).click();
-  await expect(page.getByText('Đã chuyển giao', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Đã chuyển giao thành công sản phẩm SKU/)).toBeVisible();
 });

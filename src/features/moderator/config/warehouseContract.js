@@ -1,55 +1,82 @@
 /**
- * Integration hand-off, NOT an assertion that the backend implements these APIs.
- * Replace null paths with reviewed contracts and record approval before enabling a gate.
- * Auth/Admin endpoints are intentionally independent of this manifest.
+ * Phase 2 routes verified against the Spring controllers in re-backend.
+ * A path does not grant access: form/receipt reads still enforce backend ownership.
+ * Composite or unavailable operations are explicit so adapters never invent routes.
  */
 export const phase2Contract = {
-  revision: null,
-  gates: { A: false, B: false, C: false, D: false },
+  revision: '1.0',
+  gates: { A: true, B: true, C: true, D: true },
   operations: {
-    queueList: { gate: 'A', method: 'get', path: '/api/v1/queues' },
-    queueClaim: { gate: 'A', method: 'post', path: null },
-    queueRelease: { gate: 'A', method: 'post', path: null },
-    formRead: { gate: 'A', method: 'get', path: null },
-    formApprove: { gate: 'A', method: 'post', path: null },
-    formReject: { gate: 'A', method: 'post', path: null },
-    memberLookup: { gate: 'A', method: 'get', path: null },
-    identityConfirm: { gate: 'A', method: 'post', path: null },
-    memberTasks: { gate: 'A', method: 'get', path: null },
-    inspectionStart: { gate: 'B', method: 'post', path: null },
-    inspectionComplete: { gate: 'B', method: 'post', path: null },
-    returnOnsite: { gate: 'B', method: 'post', path: null },
-    receiptRead: { gate: 'B', method: 'get', path: null },
-    productCreate: { gate: 'C', method: 'post', path: '/api/v1/products' },
-    productByReceipt: { gate: 'C', method: 'get', path: null },
-    inventoryList: { gate: 'C', method: 'get', path: null },
-    productRead: { gate: 'C', method: 'get', path: null },
-    productPhotos: { gate: 'C', method: 'post', path: null },
-    photoUpload: { gate: 'C', method: 'post', path: null },
-    shelfUpdate: { gate: 'C', method: 'patch', path: null },
-    stockMovements: { gate: 'C', method: 'get', path: '/api/v1/products/:sku/stock-movements' },
-    skuLabel: { gate: 'C', method: 'get', path: '/api/v1/products/:sku/sku-label' },
-    catalogList: { gate: 'D', method: 'get', path: null },
-    categoryCreate: { gate: 'D', method: 'post', path: null },
-    categoryUpdate: { gate: 'D', method: 'patch', path: null },
-    categoryHide: { gate: 'D', method: 'post', path: null },
-    brandCreate: { gate: 'D', method: 'post', path: null },
-    brandUpdate: { gate: 'D', method: 'patch', path: null },
-    brandHide: { gate: 'D', method: 'post', path: null },
-    endTermList: { gate: 'D', method: 'get', path: null },
-    endTermRead: { gate: 'D', method: 'get', path: null },
-    endTermHandover: { gate: 'D', method: 'post', path: null },
-    endTermReconsign: { gate: 'D', method: 'post', path: null },
+    queueList: { gate: 'A', method: 'get', path: '/queues' },
+    queueClaim: { gate: 'A', method: 'post', path: '/queues/:queueId/claim' },
+    queueRelease: { gate: 'A', method: 'post', path: '/queues/:queueId/release' },
+    formRead: {
+      gate: 'A', method: 'get', path: '/consignment-forms/:formId',
+      limitation: 'Backend currently restricts this read to the owning Member.',
+    },
+    formApprove: { gate: 'A', method: 'post', path: '/consignment-forms/:formId/approve' },
+    formReject: { gate: 'A', method: 'post', path: '/consignment-forms/:formId/reject' },
+    memberLookup: { gate: 'A', method: 'post', path: '/counter/lookup' },
+    // memberId is the accountId accepted by CounterController.
+    identityConfirm: { gate: 'A', method: 'post', path: '/counter/members/:memberId/confirm-identity' },
+    memberTasks: { gate: 'A', method: 'get', path: '/counter/members/:memberId/tasks' },
+    inspectionStart: { gate: 'B', method: 'post', path: '/consignment-forms/:formId/inspection/start' },
+    inspectionComplete: { gate: 'B', method: 'post', path: '/consignment-forms/:formId/inspection/complete' },
+    returnOnsite: { gate: 'B', method: 'post', path: '/consignment-forms/:formId/return-onsite' },
+    receiptRead: {
+      gate: 'B', method: 'get', path: '/consignment-receipts/:receiptId',
+      limitation: 'Backend currently restricts this read to the owning Member.',
+    },
+    receiptPdf: { gate: 'B', method: 'get', path: '/consignment-receipts/:receiptId/pdf', responseType: 'blob' },
+    productCreate: { gate: 'C', method: 'post', path: '/products' },
+    productByReceipt: {
+      gate: 'C', method: 'get', path: null, supported: false,
+      reason: 'Backend chưa hỗ trợ tra cứu sản phẩm theo biên nhận.',
+    },
+    inventoryList: { gate: 'C', method: 'get', path: '/inventory' },
+    productRead: { gate: 'C', method: 'get', path: '/products/:sku' },
+    productPhotos: {
+      gate: 'C', method: 'post', path: null, supported: false,
+      reason: 'Backend chưa hỗ trợ thêm ảnh vào sản phẩm đã nhập kho.',
+    },
+    photoUpload: { gate: 'C', method: 'post', path: '/uploads', params: { folder: 'PRODUCTS' } },
+    shelfUpdate: { gate: 'C', method: 'patch', path: '/products/:sku/shelf-location' },
+    stockMovements: { gate: 'C', method: 'get', path: '/products/:sku/stock-movements' },
+    skuLabel: { gate: 'C', method: 'get', path: '/products/:sku/sku-label', responseType: 'blob' },
+    catalogList: {
+      gate: 'D', method: 'get', path: null, supported: false,
+      reason: 'Dùng catalogService.list để tổng hợp /categories và /brands.',
+    },
+    categoryList: { gate: 'D', method: 'get', path: '/categories' },
+    brandList: { gate: 'D', method: 'get', path: '/brands' },
+    categoryCreate: { gate: 'D', method: 'post', path: '/categories' },
+    categoryUpdate: { gate: 'D', method: 'put', path: '/categories/:id' },
+    categoryHide: { gate: 'D', method: 'patch', path: '/categories/:id/hide' },
+    brandCreate: { gate: 'D', method: 'post', path: '/brands' },
+    brandUpdate: { gate: 'D', method: 'put', path: '/brands/:id' },
+    brandHide: { gate: 'D', method: 'patch', path: '/brands/:id/hide' },
+    endTermList: { gate: 'D', method: 'get', path: '/inventory', params: { status: 'UNCLAIMED' } },
+    endTermRead: { gate: 'D', method: 'get', path: '/products/:sku' },
+    endTermHandover: { gate: 'D', method: 'post', path: '/counter/handover' },
+    endTermReconsign: {
+      gate: 'D', method: 'post', path: null, supported: false,
+      reason: 'Backend chưa hỗ trợ tái ký gửi tại quầy.',
+    },
     unclaimedTransfer: {
       gate: 'D',
       method: 'post',
-      path: '/api/v1/products/:sku/unclaimed/confirm-transfer',
+      path: '/products/:sku/unclaimed/confirm-transfer',
     },
   },
-  // These are populated ONLY from reviewed BE configuration/enums.
+  // Free-form return reasons and configurable term lengths stay empty until integrated.
   options: {
-    inspectionReturnReasons: [],
-    categorySlots: [],
+    inspectionReturnReasons: [
+      'Không đạt tiêu chí chất lượng kiểm định',
+      'Nghi ngờ hàng giả, hàng nhái thương hiệu',
+      'Nghi ngờ hàng cấm hoặc vi phạm pháp luật',
+      'Không thống nhất giá chốt thỏa thuận',
+    ],
+    categorySlots: ['TOP', 'BOTTOM', 'DRESS'],
     inventoryStatuses: [
       'ON_SALE',
       'RESERVED',
@@ -59,8 +86,9 @@ export const phase2Contract = {
       'DONATED',
       'DESTROYED',
     ],
-    termLengthDays: [],
+    termLengthDays: [30, 60, 90],
   },
 };
 
+// Explicit opt-in for local fixture development; API mode never falls back to fixtures.
 export const isFixtureMode = import.meta.env.DEV && import.meta.env.VITE_PHASE2_MOCK === 'true';

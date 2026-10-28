@@ -153,13 +153,14 @@ baseApi.interceptors.response.use(
 
       isRefreshing = true;
       try {
-        const res = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
+        const res = await axios.post(`${API_BASE_URL}${API_ENDPOINTS.AUTH.REFRESH}`, {
           refreshToken,
         });
-        const newAccessToken =
-          res.data?.accessToken || res.data?.token || res.data?.data?.accessToken;
-        const newRefreshToken =
-          res.data?.refreshToken || res.data?.data?.refreshToken;
+        // Spring ApiResponse wraps AuthResponse in result. Keep legacy envelopes
+        // compatible without changing the Axios response returned to callers.
+        const tokens = res.data?.result ?? res.data?.data ?? res.data;
+        const newAccessToken = tokens?.accessToken || tokens?.token;
+        const newRefreshToken = tokens?.refreshToken;
 
         if (newAccessToken) {
           saveToken(newAccessToken);

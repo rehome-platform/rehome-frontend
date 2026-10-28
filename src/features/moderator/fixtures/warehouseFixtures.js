@@ -305,6 +305,11 @@ export async function fixtureRequest(
       result = receipt;
       break;
     }
+    case 'receiptPdf': {
+      find(db.receipts, 'receiptId', ids.receiptId, scope);
+      result = { pdfUrl: null };
+      break;
+    }
     case 'photoUpload':
       result = { url: URL.createObjectURL(data.get('file')), status: 'ORIGINAL' };
       break;

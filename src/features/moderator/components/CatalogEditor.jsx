@@ -4,21 +4,70 @@ import Button from '../../../components/common/Button.jsx';
 import { catalogService } from '../services/warehouseApi.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
 import { Field, ResourceState } from './WarehouseUi.jsx';
+import {
+  SUPPORTED_TRYON_SLOTS,
+  TRYON_SLOT_CONFIG,
+  validateCatalogInput,
+} from '../models/warehouseModel.js';
 
 export default function CatalogEditor({ kind, item, slots = [], onClose, onSaved }) {
   const isCategory = kind === 'category';
   const labelText = isCategory ? 'danh mục' : 'thương hiệu';
+  const availableSlots = slots.length > 0 ? slots : SUPPORTED_TRYON_SLOTS;
+
   const [name, setName] = useState(item?.name || '');
-  const [slot, setSlot] = useState(item?.slot || '');
+  const [slot, setSlot] = useState(item?.slot || item?.tryonSlot || 'TOP');
+  const [clientError, setClientError] = useState('');
   const mutation = useResource(async () => null, [], { enabled: false });
 
-  // Kiểm tra lỗi trùng tên từ backend error
-  const duplicateError =
-    mutation.error?.message?.toLowerCase().includes('tồn tại') ||
-    mutation.error?.fields?.name?.toLowerCase().includes('tồn tại') ||
-    mutation.error?.code === 'DUPLICATE'
-      ? `${isCategory ? 'Danh mục' : 'Thương hiệu'} "${name}" đã tồn tại, chọn tên khác.`
-      : mutation.error?.fields?.name;
+  // Kiểm tra lỗi trùng tên từ backend error (409 Conflict hoặc ErrorCode)
+  const isDuplicate =
+    mutation.error?.code === 'CATEGORY_NAME_ALREADY_EXISTS' ||
+    mutation.error?.code === 'BRAND_NAME_ALREADY_EXISTS' ||
+    mutation.error?.code === 'DUPLICATE' ||
+    mutation.error?.status === 409 ||
+    mutation.error?.message?.toLowerCase().includes('đã tồn tại') ||
+    mutation.error?.message?.toLowerCase().includes('already exists') ||
+    mutation.error?.fields?.name?.toLowerCase().includes('tồn tại');
+
+  const errorMessage = isDuplicate
+    ? `${isCategory ? 'Danh mục' : 'Thương hiệu'} "${name.trim()}" đã tồn tại trên hệ thống, vui lòng chọn tên khác.`
+    : clientError || mutation.error?.fields?.name || (mutation.error?.status === 400 ? mutation.error?.message : null);
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    setClientError('');
+
+    const validation = validateCatalogInput(kind, {
+      name,
+      tryonSlot: isCategory ? slot : undefined,
+    });
+
+    if (!validation.valid) {
+      setClientError(validation.message);
+      return;
+    }
+
+    mutation.mutate(
+      (options) =>
+        catalogService.save(
+          kind,
+          item?.id,
+          {
+            name: validation.value.name,
+            ...(isCategory ? { tryonSlot: validation.value.tryonSlot, slot: validation.value.tryonSlot } : {}),
+            ...(item?.status ? { status: item.status } : {}),
+          },
+          options,
+        ),
+      {
+        onSuccess: (result) => {
+          onSaved(result);
+          onClose();
+        },
+      },
+    );
+  };
 
   return (
     <Modal
@@ -28,29 +77,11 @@ export default function CatalogEditor({ kind, item, slots = [], onClose, onSaved
         if (!mutation.busy) onClose();
       }}
     >
-      <form
-        className="space-y-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          mutation.mutate(
-            (options) =>
-              catalogService.save(
-                kind,
-                item?.id,
-                { name: name.trim(), ...(isCategory ? { slot: slot || undefined } : {}) },
-                options,
-              ),
-            {
-              onSuccess: (result) => {
-                onSaved(result);
-                onClose();
-              },
-            },
-          );
-        }}
-      >
+      <form className="space-y-4" onSubmit={handleSubmit}>
         <p className="text-xs text-[#5f5f5f] leading-relaxed">
-          Modal này dùng chung cho Thêm mới và Sửa — sửa thì chỉ đổi tiêu đề và điền sẵn giá trị cũ, bố cục giữ nguyên.
+          {item
+            ? `Chỉnh sửa thông tin ${labelText}. Các sản phẩm cũ đã liên kết vẫn được bảo toàn nguyên vẹn.`
+            : `Thêm mới ${labelText} vào hệ thống để áp dụng cho các sản phẩm ký gửi.`}
         </p>
 
         <ResourceState resource={mutation} />
@@ -61,36 +92,40 @@ export default function CatalogEditor({ kind, item, slots = [], onClose, onSaved
             label={`Tên ${labelText}`}
             value={name}
             required
-            onChange={(event) => setName(event.target.value)}
-            error={duplicateError}
+            onChange={(event) => {
+              setName(event.target.value);
+              if (clientError) setClientError('');
+            }}
+            error={errorMessage}
             placeholder={`VD: ${isCategory ? 'Áo khoác dạ' : 'Uniqlo'}`}
           />
-          {duplicateError && (
-            <p className="mt-1 text-xs font-bold text-[#BA1A1A]">
-              {duplicateError}
-            </p>
-          )}
         </div>
 
         {/* Dropdown Slot thử đồ AI (DM-02) */}
         {isCategory && (
           <div>
-            <Field label="Slot thử đồ AI">
+            <Field label="Slot thử đồ AI (Bắt buộc)">
               <select
-                className="w-full rounded-xl border-neutral"
+                className="w-full rounded-xl border-[#8a8a8a] text-xs py-2 px-3 focus:border-[#2b2b2b] focus:ring-1 focus:ring-[#2b2b2b]"
                 value={slot}
-                onChange={(event) => setSlot(event.target.value)}
+                onChange={(event) => {
+                  setSlot(event.target.value);
+                  if (clientError) setClientError('');
+                }}
               >
-                <option value="">Không áp dụng thử đồ</option>
-                {slots.map((value) => (
-                  <option key={value} value={value}>
-                    Slot {value}
-                  </option>
-                ))}
+                {availableSlots.map((value) => {
+                  const key = String(value).toUpperCase();
+                  const config = TRYON_SLOT_CONFIG[key] || { label: `Slot ${value}`, description: '' };
+                  return (
+                    <option key={value} value={key}>
+                      {config.label} {config.description ? `— ${config.description}` : ''}
+                    </option>
+                  );
+                })}
               </select>
             </Field>
             <p className="mt-1 text-[11px] text-[#717971]">
-              Chọn "Không áp dụng" nếu danh mục này không dùng được cho thử đồ AI (ví dụ túi xách, giày)
+              Slot thử đồ AI xác định vị trí trang phục trên cơ thể người mẫu khi khách hàng thử đồ ảo trên web/app.
             </p>
           </div>
         )}
@@ -109,7 +144,7 @@ export default function CatalogEditor({ kind, item, slots = [], onClose, onSaved
             type="submit"
             className="flex-1 py-2.5 bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs"
             loading={mutation.busy}
-            disabled={!name.trim()}
+            disabled={!name.trim() || (isCategory && !slot)}
           >
             Lưu {labelText}
           </Button>
