@@ -60,7 +60,7 @@ function ScopedSession({ user, warehouse, children }) {
       signal: controller.signal,
       warehouse: {
         ...warehouse,
-        name: warehouse.name || (isFixtureMode ? 'Kho A · dữ liệu thử' : 'Chưa có thông tin kho'),
+        name: warehouse.name || (isFixtureMode ? 'Điểm kí gửi A · dữ liệu thử' : 'Chưa có thông tin điểm kí gửi'),
       },
     }),
     [scope, user, identity, controller, warehouse.id, warehouse.name],

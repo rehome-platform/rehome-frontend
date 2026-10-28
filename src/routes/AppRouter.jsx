@@ -13,7 +13,7 @@ import ResetPassword from '../features/auth/pages/ResetPassword.jsx';
 import MomoReturnPage from '../features/payment/pages/MomoReturnPage.jsx';
 import VnpayReturnPage from '../features/payment/pages/VnpayReturnPage.jsx';
 
-// Moderator Pages (Cổng Vận Hành Kho & Kiểm Duyệt)
+// Moderator Pages (Cổng Vận Hành Điểm Kí Gửi & Kiểm Duyệt)
 import {
   CounterPage,
   ConsignmentDetailPage,
@@ -95,7 +95,7 @@ export default function AppRouter() {
         }
       />
 
-      {/* 2. Moderator Routes (Chi nhánh kho & Kiểm duyệt) */}
+      {/* 2. Moderator Routes (Điểm kí gửi & Kiểm duyệt) */}
       <Route
         path="/moderator"
         element={

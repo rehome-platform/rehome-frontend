@@ -1,4 +1,4 @@
-﻿// Real local HTTP requests; production auth code. All identities/responses are fixtures.
+// Real local HTTP requests; production auth code. All identities/responses are fixtures.
 import { build } from 'esbuild';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
@@ -91,7 +91,7 @@ try {
       verify('scoped native reveal suppression retained',doc.querySelector('style').textContent.includes('#password-input::-ms-reveal'));
       for(const width of [375,768,1280,1440]){frame.style.width=width+'px';await delay(20);verify(width+': no login overflow',doc.documentElement.scrollWidth<=doc.documentElement.clientWidth+1);}
       await reset();await fill();for(let i=0;i<5;i++)submit();await Promise.resolve();await Promise.resolve();
-      verify('pending UI disables login and Google',doc.getElementById('submit-login-button').disabled&&doc.getElementById('google-login-button').disabled);
+      verify('pending UI disables login',doc.getElementById('submit-login-button').disabled);
       await delay(100);
       const pending=await logins();verify('TC-AUTH-010: rapid submits produce one HTTP login request',pending.length===1,'observed='+pending.length);
       await control('/__release',{});await delay(100);

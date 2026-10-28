@@ -3,8 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
 /**
- * Layout chuyên biệt dành cho Nhân viên Kho / Kiểm duyệt viên (Moderator)
- * Thao tác nghiệp vụ tại kho tập trung ReHome
+ * Layout chuyên biệt dành cho Nhân viên Điểm kí gửi / Kiểm duyệt viên (Moderator)
+ * Thao tác nghiệp vụ tại điểm kí gửi tập trung ReHome
  */
 export default function ModeratorLayout({ children, apiColors = false }) {
   const location = useLocation();
@@ -12,15 +12,15 @@ export default function ModeratorLayout({ children, apiColors = false }) {
   const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [skuQuery, setSkuQuery] = useState('');
-  const warehouseName = user?.warehouseName || user?.warehouse?.name || 'Chưa có thông tin kho';
+  const warehouseName = user?.warehouseName || user?.warehouse?.name || 'Chưa có thông tin điểm kí gửi';
   const searchParams = typeof URLSearchParams !== 'undefined' ? new URLSearchParams(location.search || '') : null;
   const queueType = searchParams ? searchParams.get('type') : null;
   const onPath = (...prefixes) =>
     prefixes.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`));
 
-  // Điều hướng phẳng theo wireframe "Bảng điều khiển kho" (MA-04 / HQ-01).
+  // Điều hướng phẳng theo wireframe "Bảng điều khiển điểm kí gửi" (MA-04 / HQ-01).
   const navItems = [
-    { to: '/moderator', label: 'Trang chủ kho', icon: 'dashboard', active: location.pathname === '/moderator' },
+    { to: '/moderator', label: 'Trang chủ điểm kí gửi', icon: 'dashboard', active: location.pathname === '/moderator' },
     {
       to: '/moderator/queue',
       label: 'Hàng đợi công việc',
@@ -40,9 +40,9 @@ export default function ModeratorLayout({ children, apiColors = false }) {
     { to: '/moderator/verifications', label: 'Hồ sơ tổ chức', icon: 'verified_user', active: onPath('/moderator/verifications') },
     { to: '/moderator/reports', label: 'Báo cáo vi phạm', icon: 'flag', active: onPath('/moderator/reports') },
     { to: '/moderator/categories', label: 'Danh mục & thương hiệu', icon: 'category', active: onPath('/moderator/categories') },
-    { to: '/moderator/inbox', label: 'Hộp thư kho', icon: 'chat', active: onPath('/moderator/inbox') },
+    { to: '/moderator/inbox', label: 'Hộp thư điểm kí gửi', icon: 'chat', active: onPath('/moderator/inbox') },
   ];
-  const currentLabel = navItems.find((item) => item.active)?.label || 'Bảng điều khiển kho';
+  const currentLabel = navItems.find((item) => item.active)?.label || 'Bảng điều khiển điểm kí gửi';
   const submitSearch = (event) => {
     event.preventDefault();
     const value = skuQuery.trim();
@@ -65,14 +65,14 @@ export default function ModeratorLayout({ children, apiColors = false }) {
                 ReHome
               </span>
               <span className="text-[10px] font-medium uppercase tracking-wider text-[#717971] block leading-tight">
-                Bảng điều khiển kho
+                Bảng điều khiển điểm kí gửi
               </span>
             </div>
           </Link>
         </div>
 
         {/* Navigation list */}
-        <nav aria-label="Điều hướng kho" className="flex-1 p-4 space-y-1.5 overflow-y-auto">
+        <nav aria-label="Điều hướng điểm kí gửi" className="flex-1 p-4 space-y-1.5 overflow-y-auto">
           {navItems.map((item) => (
             <Link
               key={item.to}
@@ -116,8 +116,8 @@ export default function ModeratorLayout({ children, apiColors = false }) {
                 type="search"
                 value={skuQuery}
                 onChange={(event) => setSkuQuery(event.target.value)}
-                aria-label="Tìm SKU trong kho"
-                placeholder="Tìm SKU trong kho…"
+                aria-label="Tìm SKU tại điểm kí gửi"
+                placeholder="Tìm SKU tại điểm kí gửi…"
                 className="w-60 rounded-lg border border-[#E2E8E0] px-3 py-1.5 text-[11px] focus:border-[#006B2C] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/20"
               />
             </form>
@@ -130,7 +130,7 @@ export default function ModeratorLayout({ children, apiColors = false }) {
                 )}
               </div>
               <div className="hidden sm:block leading-tight">
-                <p className="text-[11px] font-semibold text-[#191C19]">{user?.fullName || user?.name || 'Nhân viên Kho'}</p>
+                <p className="text-[11px] font-semibold text-[#191C19]">{user?.fullName || user?.name || 'Nhân viên Điểm kí gửi'}</p>
                 <p className="text-[10px] text-[#717971]">{user?.memberCode || user?.email || 'Moderator ReHome'}</p>
               </div>
             </Link>

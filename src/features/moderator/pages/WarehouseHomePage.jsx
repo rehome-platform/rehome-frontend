@@ -93,7 +93,7 @@ export default function WarehouseHomePage() {
   return (
     <Page
       title="Tổng quan hôm nay"
-      subtitle={`${today} · mọi số liệu chỉ tính trong ${warehouse?.name || 'kho hiện tại'}`}
+      subtitle={`${today} · mọi số liệu chỉ tính trong ${warehouse?.name || 'điểm kí gửi hiện tại'}`}
       actions={
         <>
           <Button variant="outline" onClick={refresh}>Tải lại</Button>

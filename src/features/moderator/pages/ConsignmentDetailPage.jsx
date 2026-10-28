@@ -26,7 +26,7 @@ export default function ConsignmentDetailPage() {
   return (
     <Page
       title={model.form?.name ? `Chi tiết ký gửi · ${model.form.name}` : `Chi tiết ký gửi ${model.formId}`}
-      subtitle={`Mã đơn: ${model.formId} · Kho ReHome`}
+      subtitle={`Mã đơn: ${model.formId} · Điểm kí gửi ReHome`}
       actions={
         <div className="flex gap-2">
           <Link to="/moderator/queue">

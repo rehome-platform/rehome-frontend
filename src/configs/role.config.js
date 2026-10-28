@@ -22,7 +22,7 @@ export const ROLES = {
 
 export const ROLE_LABELS = {
   [ROLES.ADMIN]: "Quản trị viên (Admin)",
-  [ROLES.MODERATOR]: "Nhân viên Kho / Kiểm duyệt (Moderator)",
+  [ROLES.MODERATOR]: "Nhân viên Điểm kí gửi / Kiểm duyệt (Moderator)",
   [ROLES.ORGANIZER]: "Tổ chức từ thiện (Mobile)",
   [ROLES.MEMBER]: "Thành viên (Mobile)",
 };

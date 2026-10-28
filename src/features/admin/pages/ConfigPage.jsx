@@ -364,7 +364,7 @@ export default function ConfigPage() {
           {activeTab === 'operations' && (
             <div className="space-y-5">
               <div>
-                <h3 className="text-base font-bold text-[#191C19]">Vận Hành Kho, Tổ Chức & Cộng Đồng</h3>
+                <h3 className="text-base font-bold text-[#191C19]">Vận Hành Điểm Kí Gửi, Tổ Chức & Cộng Đồng</h3>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

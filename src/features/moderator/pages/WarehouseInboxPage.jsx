@@ -5,9 +5,9 @@ import { useAuth } from '../../../context/AuthContext.jsx';
 import { warehouseInboxService } from '../services/warehouseInboxApi.js';
 
 /**
- * Trang Hộp Thư Kho ReHome
+ * Trang Hộp Thư Điểm Kí Gửi ReHome
  * Chuẩn hóa 100% theo các wireframe:
- * - MC-01: Hộp thư kho — danh sách hội thoại chung, phân loại chưa trả lời / tất cả / đã xong
+ * - MC-01: Hộp thư điểm kí gửi — danh sách hội thoại chung, phân loại chưa trả lời / tất cả / đã xong
  * - MC-02: Phòng chat với Member — 3 cột (danh sách | hội thoại chat | thông tin member & SKU liên quan)
  */
 export default function WarehouseInboxPage() {
@@ -31,7 +31,7 @@ export default function WarehouseInboxPage() {
         setSelectedConv(res.data[0]);
       }
     } catch (err) {
-      setError('Không thể tải danh sách hộp thư kho.');
+      setError('Không thể tải danh sách hộp thư điểm kí gửi.');
     } finally {
       setLoading(false);
     }
@@ -91,11 +91,11 @@ export default function WarehouseInboxPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E2E8E0] pb-3">
           <div>
             <h1 className="text-xl font-bold font-heading text-[#191C19]">
-              Hộp thư kho
+              Hộp thư điểm kí gửi
             </h1>
           </div>
           <div className="text-xs text-[#5f5f5f] font-medium">
-            Hộp thư chung — mọi Moderator trong kho đều thấy
+            Hộp thư chung — mọi Moderator trong điểm kí gửi đều thấy
           </div>
         </div>
 
@@ -248,7 +248,7 @@ export default function WarehouseInboxPage() {
                   );
                 })}
                 <div className="text-center text-[10px] text-[#7a7a7a] pt-3">
-                  Member chỉ thấy "Nhân viên ReHome"; tên từng Moderator chỉ hiện ở phía kho
+                  Member chỉ thấy "Nhân viên ReHome"; tên từng Moderator chỉ hiện ở phía điểm kí gửi
                 </div>
               </div>
 
