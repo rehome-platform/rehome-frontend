@@ -63,15 +63,18 @@ export function ConsignmentInspectionForm({ price, term, conditionNote, allCheck
             value={term}
             onChange={(e) => setTerm(e.target.value)}
           >
-            <option value="">Chọn kỳ</option>
-            {termOptions.map((days) => (
+            <option value="">Chọn độ dài mỗi kỳ</option>
+            {(termOptions || [30]).map((days) => (
               <option key={days} value={days}>
-                Kỳ {days === 30 ? '1' : days === 60 ? '2' : '3'} ({days} ngày)
+                {days} ngày / kỳ (tối đa 2 lần gia hạn)
               </option>
             ))}
           </select>
         </Field>
       </div>
+      <p className="text-[11px] text-[#5B6776]">
+        Mặc định mỗi kỳ {Number(term) || termOptions?.[0] || 30} ngày, tối đa 2 lần gia hạn (tổng 3 kỳ · {(Number(term) || termOptions?.[0] || 30) * 3} ngày).
+      </p>
     
       <Button
         type="submit"

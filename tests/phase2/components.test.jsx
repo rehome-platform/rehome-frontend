@@ -549,6 +549,9 @@ describe('ConsignmentDetailPage component behaviors', () => {
 
     const termSelect = screen.getByLabelText(/Độ dài kỳ ký gửi/);
     await user.selectOptions(termSelect, '30');
+    expect(Array.from(termSelect.options).map((o) => o.value).filter(Boolean)).toEqual(['30']);
+    expect(termSelect.textContent).toContain('30 ngày / kỳ (tối đa 2 lần gia hạn)');
+    expect(termSelect.textContent).not.toMatch(/Kỳ [123]/);
 
     const submitBtn = screen.getByRole('button', { name: /Đạt kiểm định/ });
     expect(submitBtn).toBeEnabled();

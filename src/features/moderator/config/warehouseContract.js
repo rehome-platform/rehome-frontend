@@ -86,7 +86,8 @@ export const phase2Contract = {
       'DONATED',
       'DESTROYED',
     ],
-    termLengthDays: [30, 60, 90],
+    termLengthDays: [30],
+    maxRenewals: 2,
   },
 };
 
