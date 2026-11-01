@@ -72,9 +72,6 @@ export const API_ENDPOINTS = {
     RETURN_ONSITE: (id) => `/consignment-forms/${moderatorId(id)}/return-onsite`,
     CONSIGNMENT_FORMS: "/moderator/consignment-forms",
     CONSIGNMENT_FORM_DETAIL: (id) => `/moderator/consignment-forms/${moderatorId(id)}`,
-    SKU_LABELS: "/moderator/sku-labels",
-    SKU_LABELS_PDF: "/moderator/sku-labels/pdf",
-    SKU_LABELS_PRINTED: "/moderator/sku-labels/printed",
     RECEIPT_DETAIL: (id) => `/consignment-receipts/${moderatorId(id)}`,
     RECEIPT_PDF: (id) => `/consignment-receipts/${moderatorId(id)}/pdf`,
 
@@ -82,6 +79,7 @@ export const API_ENDPOINTS = {
     CREATE_PRODUCT: "/products",
     CONFIRM_UNCLAIMED_TRANSFER: (id) => `/products/${moderatorId(id)}/unclaimed/confirm-transfer`,
     PRODUCT_SKU_LABEL: (id) => `/products/${moderatorId(id)}/sku-label`,
+    PRODUCT_DETAIL: (id) => `/products/detail/${moderatorId(id)}`,
     INVENTORY: "/inventory",
     PRODUCT_BY_SKU: (sku) => `/products/${moderatorId(sku)}`,
     UPDATE_SHELF_LOCATION: (id) => `/products/${moderatorId(id)}/shelf-location`,
