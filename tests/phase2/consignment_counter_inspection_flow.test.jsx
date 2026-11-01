@@ -10,7 +10,8 @@ import ReceiptPanel from '../../src/features/moderator/components/ReceiptPanel.j
 import BrandQuickAddModal from '../../src/features/moderator/components/BrandQuickAddModal.jsx';
 import StockInForm from '../../src/features/moderator/components/StockInForm.jsx';
 
-import { counterService, consignmentService, catalogService, inventoryService } from '../../src/features/moderator/services/warehouseApi.js';
+import { counterService, consignmentService, catalogService, inventoryService, skuLabelService } from '../../src/features/moderator/services/warehouseApi.js';
+import * as labelDownload from '../../src/features/moderator/services/skuLabelApi.js';
 import { Phase2Provider } from '../../src/features/moderator/hooks/warehouseHooks.jsx';
 
 const auth = vi.hoisted(() => ({
@@ -143,10 +144,11 @@ describe('Luồng 2 - Bước 3: Quầy tiếp nhận, Kiểm định tại qu�
 
   describe('3. Nhập kho & Thêm nhanh thương hiệu ', () => {
     it('hiển thị slot thử đồ AI khi chọn danh mục quần áo, và khối không cần tách nền khi chọn danh mục khác', async () => {
+      vi.spyOn(consignmentService, 'receipt').mockResolvedValue({ id: 'rcpt-test', confirmedAt: '2026-11-01T10:00:00Z' });
       vi.spyOn(catalogService, 'list').mockResolvedValue({
         categories: [
-          { id: 'cat-coat', name: 'Áo khoác', hidden: false },
-          { id: 'cat-bag', name: 'Túi xách', hidden: false },
+          { id: 'cat-coat', name: 'Áo khoác', tryonSlot: 'TOP', hidden: false },
+          { id: 'cat-bag', name: 'Túi xách', tryonSlot: 'NONE', hidden: false },
         ],
         brands: [{ id: 'b1', name: 'Uniqlo', hidden: false }],
       });
@@ -165,12 +167,12 @@ describe('Luồng 2 - Bước 3: Quầy tiếp nhận, Kiểm định tại qu�
       // Chọn Áo khoác -> Hiện Slot thử đồ AI
       await user.selectOptions(catSelect, 'cat-coat');
       expect(await screen.findByText(/Ảnh dùng cho thử đồ AI/i)).toBeInTheDocument();
-      expect(screen.getByText(/DANH MỤC ÁO KHOÁC · SLOT ÁO/i)).toBeInTheDocument();
+      expect(screen.getByText(/Ảnh dùng cho thử đồ AI · SLOT ÁO/i)).toBeInTheDocument();
 
       // Đổi sang Túi xách -> Hiện Không cần tách nền
       await user.selectOptions(catSelect, 'cat-bag');
       expect(await screen.findByText(/Không cần tách nền/i)).toBeInTheDocument();
-      expect(screen.getByText(/DANH MỤC TÚI XÁCH · KHÔNG CÓ SLOT/i)).toBeInTheDocument();
+      expect(screen.getByText(/Không cần tách nền · KHÔNG CÓ SLOT/i)).toBeInTheDocument();
     });
 
     it('BrandQuickAddModal: phát hiện trùng tên thương hiệu và vô hiệu hóa nút Lưu ', async () => {
@@ -210,23 +212,29 @@ describe('Luồng 2 - Bước 3: Quầy tiếp nhận, Kiểm định tại qu�
 
   describe('4. Hàng đợi in tem  ', () => {
     it('hiển thị danh sách tem chờ in, xem trước tem 70x37mm, cập nhật bộ đếm và tải PDF', async () => {
+      let items = [{ sku: 'Q7-AK-000846', name: 'Áo khoác', brandName: 'Zara', warehouseName: 'KHO QUẬN 7' }];
+      vi.spyOn(skuLabelService, 'list').mockImplementation(async () => items);
+      const pdf = vi.spyOn(skuLabelService, 'pdf').mockResolvedValue(new Blob(['%PDF-1.4'], { type: 'application/pdf' }));
+      vi.spyOn(skuLabelService, 'markPrinted').mockImplementation(async () => { items = []; });
+      vi.spyOn(labelDownload, 'downloadLabelPdf').mockImplementation(() => {});
       const user = userEvent.setup();
       renderWithProviders(<ConsignmentPrintQueuePage />);
 
-      expect(screen.getByText(/Hàng đợi in tem/i)).toBeInTheDocument();
-      expect(screen.getByText(/đã chọn 5 \/ 6 món/i)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Hàng đợi in tem' })).toBeInTheDocument();
+      await user.click(await screen.findByRole('checkbox', { name: 'Chọn Q7-AK-000846' }));
+      expect(screen.getByText(/đã chọn 1 \/ 1 món/i)).toBeInTheDocument();
       expect(screen.getByText(/Xem trước một tem · 70 × 37 mm/i)).toBeInTheDocument();
       expect(screen.getByText(/REHOME · KHO QUẬN 7/i)).toBeInTheDocument();
       expect(screen.getByText(/Bố cục tờ in/i)).toBeInTheDocument();
 
-      // Bấm nút Tải PDF 5 tem
-      const downloadBtn = screen.getByRole('button', { name: /Tải PDF 5 tem/i });
+      const downloadBtn = screen.getByRole('button', { name: /Tải PDF 1 tem/i });
       await user.click(downloadBtn);
 
       // Sau khi tải xong, hiển thị thông báo và các món đã in rời hàng đợi
       await waitFor(() => {
-        expect(screen.getByText(/Đã tạo PDF thành công cho 5 tem/i)).toBeInTheDocument();
+        expect(screen.getByText(/Đã tải PDF 1 tem và cập nhật hàng đợi/i)).toBeInTheDocument();
       }, { timeout: 2000 });
+      expect(pdf).toHaveBeenCalledWith(['Q7-AK-000846'], expect.anything());
     });
   });
 });

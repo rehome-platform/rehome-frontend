@@ -97,7 +97,8 @@ describe('Phase 2 boundary rules', () => {
     const pending = normalizeConsignmentForm({ id: 'form-1', productName: 'Áo gió', status: 'PENDING' }, 'mod-1');
     expect(pending.name).toBe('Áo gió');
     expect(pending.allowedActions).toEqual(['APPROVE', 'REJECT']);
-    expect(pending.claimedBy).toBe('mod-1');
+    expect(pending.claimedBy).toBeNull();
+    expect(normalizeConsignmentForm({ id: 'assigned', claimedBy: 'mod-2' }, 'mod-1').claimedBy).toBe('mod-2');
 
     const approved = normalizeConsignmentForm({ id: 'form-2', status: 'APPROVED', bringInDeadline: '2026-11-01' });
     expect(approved.allowedActions).toEqual(['START_INSPECTION']);

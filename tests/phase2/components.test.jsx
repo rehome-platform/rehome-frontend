@@ -57,6 +57,7 @@ const member1 = {
     phone: '0900000001',
   };
 beforeEach(() => {
+  vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
   auth.user = { id: 'mod-a', role: 'staff', warehouseId: 'warehouse-a', warehouseName: 'Kho A' };
   auth.isAuthenticated = true;
 });
@@ -170,11 +171,12 @@ describe('receipt and recovery gates', () => {
     vi.spyOn(consignmentService, 'receipt').mockResolvedValue({
       receiptId: 'r1',
       confirmedAt: '2026-10-18',
+      sku: 'RECOVERED-SKU',
     });
     vi.spyOn(catalogService, 'list').mockResolvedValue({ categories: [], brands: [] });
     vi.spyOn(inventoryService, 'byReceipt').mockResolvedValue({ sku: 'RECOVERED-SKU' });
     render(<ReceiptPanel receiptId="r1" allowStockIn />, { wrapper: Wrapper });
-    await screen.findByRole('link', { name: /Sản phẩm đã tồn tại · RECOVERED-SKU/ });
+    await screen.findByRole('link', { name: /Đã nhập kho · RECOVERED-SKU/ });
     expect(screen.queryByRole('button', { name: 'Nhập kho · tạo SKU' })).not.toBeInTheDocument();
   });
 });
@@ -657,7 +659,8 @@ describe('ConsignmentDetailPage component behaviors', () => {
   });
 
   describe('Task 5: StockInForm & BarcodePrintModal behaviors', () => {
-    it('StockInForm: fills required fields and successfully stocks in product, showing generated SKU and Barcode modal button', async () => {
+    it('StockInForm: fills required fields and successfully stocks in product before navigating to the print queue', async () => {
+      vi.spyOn(consignmentService, 'receipt').mockResolvedValue({ id: 'rcpt-uuid-99', confirmedAt: '2026-10-26T12:00:00Z' });
       vi.spyOn(catalogService, 'list').mockResolvedValue({
         categories: [{ id: 'cat-1', name: 'Áo', hidden: false }],
         brands: [{ id: 'brand-1', name: 'Zara', hidden: false }],
@@ -710,16 +713,14 @@ describe('ConsignmentDetailPage component behaviors', () => {
         );
       });
 
-      expect(await screen.findByText(/Nhập kho thành công · SKU:/)).toBeInTheDocument();
-      expect(screen.getByText('Q7-AO-000001')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'In tem mã vạch SKU' })).toBeInTheDocument();
-      expect(onSuccess).toHaveBeenCalledWith(
+      await waitFor(() => expect(onSuccess).toHaveBeenCalledWith(
         expect.objectContaining({ sku: 'Q7-AO-000001', status: 'ON_SALE' }),
-      );
+      ));
     });
 
     it('StockInForm: displays friendly error message when backend returns 409 RECEIPT_NOT_CONFIRMED', async () => {
-      vi.spyOn(catalogService, 'list').mockResolvedValue({ categories: [], brands: [] });
+      vi.spyOn(consignmentService, 'receipt').mockResolvedValue({ id: 'rcpt-unconfirmed', confirmedAt: '2026-10-26T12:00:00Z' });
+      vi.spyOn(catalogService, 'list').mockResolvedValue({ categories: [{ id: 'c1', name: 'Quần' }], brands: [{ id: 'b1', name: 'Zara' }] });
       vi.spyOn(inventoryService, 'byReceipt').mockResolvedValue(null);
       vi.spyOn(inventoryService, 'upload').mockResolvedValue({ url: 'https://cdn.test/p.jpg' });
       vi.spyOn(inventoryService, 'create').mockRejectedValue(
@@ -738,6 +739,8 @@ describe('ConsignmentDetailPage component behaviors', () => {
       await user.type(await screen.findByLabelText('Tên sản phẩm'), 'Quần jean');
       await user.type(screen.getByLabelText('Size'), '32');
       await user.type(screen.getByLabelText('Vị trí kệ'), 'B1-05');
+      await user.selectOptions(screen.getByLabelText('Danh mục'), 'c1');
+      await user.selectOptions(screen.getByLabelText('Thương hiệu'), 'b1');
       const file = new File(['p'], 'jean.jpg', { type: 'image/jpeg' });
       await user.upload(screen.getByLabelText('Ảnh sản phẩm'), file);
       await screen.findByText('jean.jpg · Đã tải ảnh gốc');
