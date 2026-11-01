@@ -54,24 +54,70 @@ export function isMemberRole(rawRole) {
 /**
  * Lấy thông tin chi tiết tài khoản từ backend
  */
-async function fetchUserProfileFromBackend(claims) {
+async function fetchUserProfileFromBackend(claims, loginHint = {}) {
   const accountMeData = await fetchAccount();
-  const rawRole = accountMeData?.authorities || claims?.roles || '';
+  const rawRole =
+    accountMeData?.authorities || accountMeData?.role || claims?.roles || loginHint?.role || '';
   const isMember = isMemberRole(rawRole);
   const memberData = isMember ? await fetchMemberProfile() : null;
-  const user = buildUser(memberData ?? {}, accountMeData ?? {}, claims ?? {});
+  const normalizedRole = normalizeRole(rawRole);
+  const hasWarehouse =
+    Boolean(accountMeData?.warehouseId ?? accountMeData?.warehouse?.id) &&
+    Boolean(accountMeData?.warehouseName ?? accountMeData?.warehouse?.name);
+  const moderatorWarehouse =
+    normalizedRole === 'staff' && !hasWarehouse ? await fetchModeratorWarehouse() : null;
+  const mergedAccountData = {
+    ...(loginHint || {}),
+    ...(moderatorWarehouse || {}),
+    ...(accountMeData || {}),
+    id: accountMeData?.id ?? loginHint?.id ?? null,
+    warehouseId:
+      accountMeData?.warehouseId ??
+      accountMeData?.warehouse?.id ??
+      moderatorWarehouse?.warehouseId ??
+      loginHint?.warehouseId ??
+      null,
+    warehouseName:
+      accountMeData?.warehouseName ??
+      accountMeData?.warehouse?.name ??
+      moderatorWarehouse?.warehouseName ??
+      loginHint?.warehouseName ??
+      '',
+  };
+  const user = buildUser(memberData ?? {}, mergedAccountData, claims ?? {});
   saveUser(user);
   return user;
 }
 
 async function fetchAccount() {
-  // 1. Gọi /api/account/me để lấy email và authorities chính thức từ backend
+  // 1. Gọi /api/account/me để lấy thông tin tài khoản, quyền hạn và điểm kí gửi từ backend
   try {
     const res = await baseApi.get(API_ENDPOINTS.AUTH.ME);
-    return res.data;
+    const result = unwrapResponse(res.data);
+    if (result && typeof result === 'object') {
+      return result;
+    }
   } catch (err) {
     if ([401, 403].includes(err.response?.status)) throw err;
     console.warn('[authService] Không thể gọi /api/account/me:', err.message);
+  }
+  return null;
+}
+
+async function fetchModeratorWarehouse() {
+  // Fallback gọi /warehouses/moderator khi /api/account/me chưa đính kèm thông tin điểm kí gửi
+  try {
+    const res = await baseApi.get(API_ENDPOINTS.MODERATOR.MY_WAREHOUSES);
+    const result = unwrapResponse(res.data);
+    const first = Array.isArray(result) ? result[0] : result;
+    if (first && typeof first === 'object') {
+      return {
+        warehouseId: first.id ?? first.warehouseId ?? null,
+        warehouseName: first.name ?? first.warehouseName ?? '',
+      };
+    }
+  } catch (err) {
+    // Không chặn luồng đăng nhập nếu endpoint kho không trả dữ liệu
   }
   return null;
 }
@@ -97,7 +143,7 @@ async function fetchMemberProfile() {
 
 function buildUser(memberData, accountMeData, claims) {
   const email = memberData.email || accountMeData.email || claims.sub || '';
-  const rawRole = accountMeData.authorities || claims.roles || '';
+  const rawRole = accountMeData.authorities || accountMeData.role || claims.roles || '';
   const normalizedRole = normalizeRole(rawRole);
 
   return {
@@ -121,7 +167,8 @@ function memberProfileFields(memberData, email, accountMeData = {}) {
     phone: memberData.phone || accountMeData.phone || '',
     avatar: memberData.avatarUrl || accountMeData.avatarUrl || '',
     avatarUrl: memberData.avatarUrl || accountMeData.avatarUrl || '',
-    memberCode: memberData.memberCode || accountMeData.memberCode || '',
+    memberCode:
+      memberData.memberCode || accountMeData.memberCode || accountMeData.moderatorCode || '',
     emailVerified: memberData.emailVerified ?? accountMeData.emailVerified ?? true,
   };
 }
@@ -164,7 +211,13 @@ async function createSession(request, message, errorContext) {
     saveToken(accessToken);
     receivedTokens = true;
     if (refreshToken) saveRefreshToken(refreshToken);
-    const user = await fetchUserProfileFromBackend(parseJwt(accessToken));
+    const loginHint = {
+      id: result.id ?? result.accountId ?? null,
+      role: result.role ?? null,
+      warehouseId: result.warehouseId ?? result.warehouse?.id ?? null,
+      warehouseName: result.warehouseName ?? result.warehouse?.name ?? '',
+    };
+    const user = await fetchUserProfileFromBackend(parseJwt(accessToken), loginHint);
     return { token: accessToken, accessToken, refreshToken, user, message };
   } catch (err) {
     if (receivedTokens) removeTokens();
@@ -254,7 +307,13 @@ export const authService = {
 
     try {
       const claims = parseJwt(token);
-      const user = await fetchUserProfileFromBackend(claims);
+      const cached = getUser() || {};
+      const loginHint = {
+        id: cached.accountId ?? null,
+        warehouseId: cached.warehouseId ?? null,
+        warehouseName: cached.warehouseName ?? '',
+      };
+      const user = await fetchUserProfileFromBackend(claims, loginHint);
       return user;
     } catch (err) {
       if ([401, 403].includes(err.response?.status)) {

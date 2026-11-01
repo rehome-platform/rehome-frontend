@@ -54,6 +54,7 @@ export const API_ENDPOINTS = {
   MODERATOR: {
     // API 25, 26, 27: Quầy tiếp nhận & Tra cứu Member
     COUNTER_LOOKUP: "/counter/lookup",
+    MY_WAREHOUSES: "/warehouses/moderator",
     COUNTER_CONFIRM_IDENTITY: (accountId) => `/counter/members/${moderatorId(accountId)}/confirm-identity`,
     COUNTER_TASKS: (accountId) => `/counter/members/${moderatorId(accountId)}/tasks`,
     COUNTER_HANDOVER: "/counter/handover",
