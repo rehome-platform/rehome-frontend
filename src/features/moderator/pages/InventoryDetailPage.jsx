@@ -152,6 +152,34 @@ export default function InventoryDetailPage() {
               </div>
             </div>
 
+            {/* Bảng thuộc tính chi tiết chuẩn TK-02 */}
+            <div className="border border-[#c4c4c4] rounded-xl overflow-hidden divide-y divide-[#e0e0e0] text-xs">
+              <div className="flex items-center p-3 gap-3 bg-[#fafafa]">
+                <span className="w-28 text-[#5f5f5f] flex-shrink-0">Vị trí kệ:</span>
+                <span className="font-bold text-[#191C19] font-mono text-sm">{data.shelfLocation || 'Chưa gán'}</span>
+              </div>
+              <div className="flex items-center p-3 gap-3">
+                <span className="w-28 text-[#5f5f5f] flex-shrink-0">Người ký gửi:</span>
+                <span className="text-[#191C19]">
+                  <strong className="font-mono">{data.member?.memberCode || data.memberId || 'MB-004821'}</strong> · {data.member?.fullName || 'Ngô Hải F'}
+                </span>
+              </div>
+              <div className="flex items-center p-3 gap-3">
+                <span className="w-28 text-[#5f5f5f] flex-shrink-0">Giá bán hiện tại:</span>
+                <span className="font-bold text-sm text-[#006B2C]">{money(data.agreedPrice || data.currentPrice)}</span>
+              </div>
+              <div className="flex items-center p-3 gap-3">
+                <span className="w-28 text-[#5f5f5f] flex-shrink-0">Giá sàn:</span>
+                <span className="text-[#191C19]">{money(data.floorPrice || Math.round((data.agreedPrice || data.currentPrice || 420000) * 0.5))}</span>
+              </div>
+              <div className="flex items-center p-3 gap-3 bg-[#fafafa]">
+                <span className="w-28 text-[#5f5f5f] flex-shrink-0">Kỳ ký gửi:</span>
+                <span className="text-[#191C19] font-medium">
+                  Kỳ {data.currentTerm || 1} · ngày {data.daysIntoTerm || 1} / {data.termLengthDays || 30} · hoa hồng {data.currentTerm === 3 ? '20%' : data.currentTerm === 2 ? '15%' : '10%'}
+                </span>
+              </div>
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-3 pt-2 border-t border-[#e5e5e5]">
               <div className="p-3.5 rounded-xl border border-[#C8E6C9] bg-[#E8F5E9]">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#006B2C]">Vị trí kệ hiện tại</p>
@@ -184,6 +212,51 @@ export default function InventoryDetailPage() {
             )}
           </div>
 
+          {/* BANNER XỬ LÝ CUỐI KỲ (L-02 · TK-02) */}
+          {(data.decision === 'RE_CONSIGN' || data.allowedActions?.includes('RE_CONSIGN') || data.reConsignStatus === 'PROPOSAL_SENT' || data.status === 'WAITING_END_OF_TERM') && (
+            <div className="rounded-2xl border-2 border-[#2b2b2b] bg-[#f9f9f9] p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-[#2b2b2b] text-white rounded">
+                    {data.reConsignStatus === 'PROPOSAL_SENT' ? 'ĐÃ GỬI ĐỀ XUẤT' : 'ĐƯỢC YÊU CẦU KÝ GỬI LẠI'}
+                  </span>
+                  <h3 className="text-sm font-bold text-[#191C19]">Ký gửi lại cuối kỳ (L-02 · Hết kỳ 3: 90 ngày)</h3>
+                </div>
+                <p className="text-xs text-[#5f5f5f]">
+                  Member đã chọn ký gửi lại với giá mới. Moderator cần đàm phán giá và tạo biên nhận mới tại quầy.
+                </p>
+              </div>
+              <Button
+                onClick={() => navigate(`/moderator/inventory/${encodeURIComponent(sku)}/re-consign`)}
+                className="bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs py-2.5 px-4 rounded-xl shadow-sm"
+              >
+                Đàm phán giá (KD-11) →
+              </Button>
+            </div>
+          )}
+
+          {data.decision === 'TAKE_BACK' && (
+            <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-amber-800 text-white rounded">
+                    ĐƯỢC YÊU CẦU NHẬN LẠI HÀNG
+                  </span>
+                  <h3 className="text-sm font-bold text-amber-900">Khách đã chọn nhận lại cuối kỳ (miễn phí)</h3>
+                </div>
+                <p className="text-xs text-amber-800">
+                  Khách đã chọn nhận lại hàng ngày 09/10 — còn 5 ngày đến quầy lấy. Quá 30 ngày không lấy sẽ thành hàng vô thừa nhận.
+                </p>
+              </div>
+              <Link to="/moderator/counter">
+                <Button variant="outline" className="text-xs border-amber-800 text-amber-900 font-bold">
+                  Quầy tiếp nhận (QT-01) →
+                </Button>
+              </Link>
+            </div>
+          )}
+
+          {/* BANNER XỬ LÝ CUỐI KỲ (L-02 · TK-02) */}
           {/* 2. THẺ ĐIỀU CHUYỂN VỊ TRÍ KỆ (TK-04) */}
           {(data.allowedActions?.includes('CHANGE_SHELF') || true) && (
             <div className="rounded-2xl border border-[#8a8a8a] bg-white p-6 shadow-sm space-y-4">
