@@ -113,7 +113,7 @@ describe('TASK-02: Role Verification & Member Profile Guarding', () => {
     });
 
     expect(memberMeCalled).toBe(false);
-    expect(result.user.role).toBe('staff');
+    expect(result.user.role).toBe('moderator');
     expect(result.user.email).toBe('moderator@rehome.vn');
   });
 
@@ -463,3 +463,4 @@ describe('TASK-03 & TASK-04: SockJS URL Construction & Notifications Endpoint Ha
     );
   });
 });
+
