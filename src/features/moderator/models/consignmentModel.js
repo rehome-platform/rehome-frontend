@@ -25,13 +25,13 @@ function normalizePhotos(data) {
   return Array.isArray(rawPhotos)
     ? rawPhotos.map((p) => (typeof p === 'string' ? { url: p } : p))
     : [];
-
 }
 
 function formIdentity(data) {
   return {
     id: data.id || data.formId,
     formId: data.formId || data.id,
+    formNo: data.formNo || data.id || data.formId,
     name: data.name || data.productName || 'Sản phẩm ký gửi',
     productName: data.productName || data.name || 'Sản phẩm ký gửi',
   };
@@ -43,6 +43,15 @@ function formTerms(data) {
     bringDeadline: data.bringInDeadline || data.bringDeadline || null,
     rejectReason: data.rejectReason || null,
     receiptId: data.receiptId || null,
+    receiptConfirmed: Boolean(data.receiptConfirmed),
+    category: data.category?.name || data.category || data.categoryName || '',
+    categoryName: data.categoryName || data.category?.name || data.category || '',
+    brand: data.brand?.name || data.brand || data.brandName || '',
+    brandName: data.brandName || data.brand?.name || data.brand || '',
+    size: data.size || '',
+    condition: data.condition || data.itemCondition || '',
+    memberId: data.memberId || data.member?.id || data.member?.accountId || data.member?.memberId || null,
+    member: data.member || null,
   };
 }
 
