@@ -101,6 +101,9 @@ export default function ConsignmentListPage() {
       </div>
 
       {/* 2. KHUNG LƯU Ý HƯỚNG DẪN DUYỆT TRÊN ẢNH (KD-01) */}
+      <div className="p-3.5 rounded-xl border-[1.5px] border-[#2b2b2b] bg-[#f4f4f4] text-xs text-[#2b2b2b] leading-relaxed shadow-sm">
+        <strong>Ở bước này bạn duyệt trên ảnh, chưa thấy hàng thật.</strong> Duyệt nghĩa là mời Member mang đồ đến kho trong 7 ngày, chưa phải cam kết nhận hàng. Kiểm định thật diễn ra tại quầy.
+      </div>
 
       <ResourceState resource={resource} empty={!rawItems.length} />
 
@@ -184,6 +187,11 @@ export default function ConsignmentListPage() {
       {totalPages > 1 && (
         <Pager page={page} totalPages={totalPages} onChange={handlePageChange} />
       )}
+
+      {/* 4. GHI CHÚ CHÂN TRANG (KD-01) */}
+      <div className="p-3.5 rounded-xl border border-dashed border-[#9a9a9a] text-xs text-[#4a4a4a] leading-relaxed">
+        Member chỉ được giữ tối đa <strong>5 form chờ duyệt</strong> cùng lúc. Form đã duyệt mà quá 7 ngày không mang đồ đến sẽ tự hết hạn và nhả chỗ.
+      </div>
     </Page>
   );
 }
