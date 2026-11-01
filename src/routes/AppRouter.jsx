@@ -16,6 +16,7 @@ import VnpayReturnPage from '../features/payment/pages/VnpayReturnPage.jsx';
 // Moderator Pages (Cổng Vận Hành Điểm Kí Gửi & Kiểm Duyệt)
 import {
   CounterPage,
+  ConsignmentListPage,
   ConsignmentDetailPage,
   InventoryDetailPage,
   EndOfTermPage,
@@ -121,6 +122,14 @@ export default function AppRouter() {
         }
       />
       <Route
+        path="/moderator/consignments"
+        element={
+          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
+            <ConsignmentListPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
         path="/moderator/inventory"
         element={
           <PrivateRoute roles={['moderator', 'staff', 'admin']}>
@@ -203,4 +212,3 @@ export default function AppRouter() {
     </Routes>
   );
 }
-

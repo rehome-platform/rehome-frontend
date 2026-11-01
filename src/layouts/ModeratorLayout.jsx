@@ -13,26 +13,24 @@ export default function ModeratorLayout({ children, apiColors = false }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [skuQuery, setSkuQuery] = useState('');
   const warehouseName = user?.warehouseName || user?.warehouse?.name || 'Chưa có thông tin điểm kí gửi';
-  const searchParams = typeof URLSearchParams !== 'undefined' ? new URLSearchParams(location.search || '') : null;
-  const queueType = searchParams ? searchParams.get('type') : null;
   const onPath = (...prefixes) =>
     prefixes.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`));
 
-  // Điều hướng phẳng theo wireframe "Bảng điều khiển điểm kí gửi" (MA-04 / HQ-01).
+  // Điều hướng phẳng theo wireframe "Bảng điều khiển điểm kí gửi" (MA-04 / HQ-01 / KD-01).
   const navItems = [
     { to: '/moderator', label: 'Trang chủ điểm kí gửi', icon: 'dashboard', active: location.pathname === '/moderator' },
     {
       to: '/moderator/queue',
       label: 'Hàng đợi công việc',
       icon: 'pending_actions',
-      active: onPath('/moderator/queue') && queueType !== 'INSPECTION',
+      active: onPath('/moderator/queue'),
     },
     { to: '/moderator/counter', label: 'Quầy tiếp nhận', icon: 'storefront', active: onPath('/moderator/counter') },
     {
-      to: '/moderator/queue?type=INSPECTION',
+      to: '/moderator/consignments',
       label: 'Kiểm định & nhập kho',
       icon: 'fact_check',
-      active: (onPath('/moderator/queue') && queueType === 'INSPECTION') || onPath('/moderator/consignments'),
+      active: onPath('/moderator/consignments'),
     },
     { to: '/moderator/inventory', label: 'Tồn kho', icon: 'inventory_2', active: onPath('/moderator/inventory', '/moderator/end-of-term') },
     { to: '/moderator/packing', label: 'Đóng gói đơn hàng', icon: 'package_2', active: onPath('/moderator/packing') },
