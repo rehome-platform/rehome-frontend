@@ -53,6 +53,10 @@ export default function ConsignmentQueuePage() {
       )}
 
       <ResourceState resource={model.resource} empty={!model.filteredItems.length} />
+      {model.focusedQueueId && model.resource.data != null && !model.resource.loading && !model.resource.error &&
+        !model.filteredItems.some((item) => item.queueId === model.focusedQueueId) && (
+          <p role="status">Công việc không còn trong hàng đợi hiện tại</p>
+        )}
 
       {/* 3. BẢNG HÀNG ĐỢI CÔNG VIỆC CHUẨN WIREFRAME (HQ-01) */}
       {!!model.filteredItems.length && (
@@ -94,6 +98,7 @@ export default function ConsignmentQueuePage() {
                     <QueueTaskRow
                       key={item.queueId}
                       item={item}
+                      isFocused={item.queueId === model.focusedQueueId}
                       isSelected={isSelected}
                       toggleSelectRow={model.toggleSelectRow}
                       isMine={isMine}

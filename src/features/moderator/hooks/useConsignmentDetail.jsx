@@ -21,7 +21,7 @@ export function useConsignmentDetail() {
   const passedForm = location.state?.form
     ? normalizeConsignmentForm(location.state.form, scope.userId)
     : null;
-  const rawForm = resource.data || passedForm;
+  const rawForm = resource.data || (resource.error ? null : passedForm);
 
   const form = React.useMemo(() => {
     if (!rawForm) return null;

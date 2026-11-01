@@ -12,6 +12,7 @@ export function useConsignmentQueue() {
   const [search, setSearch] = useSearchParams();
 
   const typeParam = search.get('type') || 'ALL';
+  const focusedQueueId = search.get('queueId');
   const claimParam = search.get('claim') || '';
   const statusFilter = search.get('status') || '';
   const overdueOnly = search.get('overdue') === '1';
@@ -101,6 +102,7 @@ export function useConsignmentQueue() {
   const handleRelease = item => mutateTask(item, true);
 
   return {
+    focusedQueueId,
     setFeedback,
     resource,
     typeParam,

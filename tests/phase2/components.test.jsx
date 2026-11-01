@@ -620,9 +620,10 @@ describe('ConsignmentDetailPage component behaviors', () => {
 
     renderDetailRoute(<ConsignmentDetailPage />);
     expect(
-      await screen.findByText(/Backend giới hạn quyền đọc chi tiết form trực tiếp/),
+      await screen.findByText('Tài khoản hiện tại chưa được phép xem chi tiết ký gửi này'),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Mở Hàng đợi công việc' })).toBeInTheDocument();
+    expect(screen.queryByText('BẠN ĐANG NHẬN VIỆC NÀY')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Quầy tiếp nhận Member' })).toBeInTheDocument();
   });
 

@@ -4,10 +4,10 @@ import Button from '../../../components/common/Button.jsx';
 import { catalogService, inventoryService } from '../services/warehouseApi.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
 import { canStockIn, extractReceiptId } from '../models/warehouseModel.js';
-import { Card, Field, ResourceState } from './WarehouseUi.jsx';
+import { Card, Field, ResourceState, money } from './WarehouseUi.jsx';
 import PhotoUpload from './PhotoUpload.jsx';
-import CatalogEditor from './CatalogEditor.jsx';
 import BarcodePrintModal from './BarcodePrintModal.jsx';
+import BrandQuickAddModal from './BrandQuickAddModal.jsx';
 
 export default function StockInForm({ receipt, onSuccess }) {
   const receiptId = extractReceiptId(receipt);
@@ -47,6 +47,11 @@ export default function StockInForm({ receipt, onSuccess }) {
   const categories = catalog.data?.categories?.filter((item) => !item.hidden) || [];
   const brands = catalog.data?.brands?.filter((item) => !item.hidden) || [];
 
+  const selectedCategory = categories.find((c) => c.id === categoryId);
+  const selectedCatName = selectedCategory?.name || '';
+  const isClothing =
+    /áo|quần|váy|đầm|khoác|jacket|shirt|pant|dress/i.test(selectedCatName);
+
   const valid =
     canStockIn(receipt) &&
     recovery.data?.checked &&
@@ -77,8 +82,10 @@ export default function StockInForm({ receipt, onSuccess }) {
     return err.message || 'Lỗi khi nhập kho sản phẩm.';
   };
 
+  const agreedPrice = receipt?.agreedPrice ?? receipt?.snapshot?.agreedPrice;
+
   return (
-    <Card title="Nhập kho từ biên nhận đã xác nhận">
+    <Card title="Nhập thông tin sản phẩm và nhập kho">
       <ResourceState resource={catalog} />
       <ResourceState resource={recovery} />
 
@@ -183,6 +190,26 @@ export default function StockInForm({ receipt, onSuccess }) {
             );
           }}
         >
+          {/* Header tóm tắt giá đã chốt & SKU dự kiến */}
+          <div className="grid gap-3 sm:grid-cols-2 p-3 bg-[#f8faf8] border border-[#8a8a8a] rounded-xl text-xs">
+            <div>
+              <span className="text-[#5f5f5f] block text-[10px] uppercase font-bold tracking-wider">
+                Giá đã chốt với khách
+              </span>
+              <span className="text-base font-bold text-[#191C19]">
+                {agreedPrice ? money(agreedPrice) : 'Theo biên nhận'}
+              </span>
+            </div>
+            <div>
+              <span className="text-[#5f5f5f] block text-[10px] uppercase font-bold tracking-wider">
+                Mã SKU hệ thống cấp
+              </span>
+              <span className="text-base font-bold font-mono text-[#006B2C]">
+                Tự sinh khi lưu
+              </span>
+            </div>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <Field
               label="Tên sản phẩm"
@@ -239,9 +266,47 @@ export default function StockInForm({ receipt, onSuccess }) {
               </select>
             </Field>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setQuickAdd(true)}>
-            Thêm nhanh thương hiệu
-          </Button>
+
+          <div className="flex justify-start">
+            <Button variant="outline" size="sm" type="button" onClick={() => setQuickAdd(true)}>
+              + Thêm nhanh thương hiệu
+            </Button>
+          </div>
+
+          {/* Slot thử đồ AI / Không cần tách nền (KD-08 & KD-08-KhongThuDo) */}
+          {selectedCatName && (
+            isClothing ? (
+              <div className="border-2 border-[#2b2b2b] p-3.5 rounded-xl space-y-2 text-xs bg-white">
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-[#191C19]">Ảnh dùng cho thử đồ AI</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 border border-[#2b2b2b] rounded bg-white">
+                    DANH MỤC {selectedCatName.toUpperCase()} · SLOT {/quần|pant/i.test(selectedCatName) ? 'QUẦN' : 'ÁO'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#5f5f5f] leading-relaxed">
+                  Chụp phẳng, nền trơn, thẳng góc — tách nền ra kết quả tốt hơn ảnh có bối cảnh.
+                </p>
+                <div className="flex h-1.5 border border-[#8a8a8a] rounded-full overflow-hidden bg-white">
+                  <div className="bg-[#2b2b2b] w-2/5" />
+                </div>
+                <p className="text-[10px] text-[#717971]">
+                  Đang tách nền, chạy nền không phải chờ. Tách lỗi hay bỏ qua thì sản phẩm vẫn lên sàn.
+                </p>
+              </div>
+            ) : (
+              <div className="border border-dashed border-[#9a9a9a] bg-[#fafafa] p-3.5 rounded-xl space-y-2 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-[#4a4a4a]">Không cần tách nền</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 border border-[#a8a8a8] text-[#5f5f5f] rounded">
+                    DANH MỤC {selectedCatName.toUpperCase()} · KHÔNG CÓ SLOT
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#5f5f5f] leading-relaxed">
+                  Phòng thử đồ chỉ có hai slot Áo và Quần. Danh mục này không mặc lên người mẫu được nên hệ thống bỏ qua bước tách nền, tiết kiệm thời gian xử lý.
+                </p>
+              </div>
+            )
+          )}
 
           <PhotoUpload disabled={recovery.busy} onChange={onPhotos} />
 
@@ -264,19 +329,20 @@ export default function StockInForm({ receipt, onSuccess }) {
             </div>
           )}
 
-          <Button type="submit" disabled={!valid} loading={recovery.busy} className="w-full sm:w-auto font-bold">
+          <Button type="submit" disabled={!valid} loading={recovery.busy} className="w-full sm:w-auto font-bold bg-[#2b2b2b] text-white hover:bg-black">
             Nhập kho · tạo SKU
           </Button>
         </form>
       )}
 
       {quickAdd && (
-        <CatalogEditor
-          kind="brand"
+        <BrandQuickAddModal
+          isOpen={quickAdd}
+          existingBrands={brands}
           onClose={() => setQuickAdd(false)}
-          onSaved={(item) => {
+          onCreated={(item) => {
             catalog.refresh();
-            setBrand(item.id);
+            if (item?.id) setBrand(item.id);
           }}
         />
       )}

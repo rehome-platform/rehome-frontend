@@ -29,7 +29,7 @@ export default function ConsignmentDetailPage() {
       subtitle={`Mã đơn: ${model.formId} · Điểm kí gửi ReHome`}
       actions={
         <div className="flex items-center gap-2">
-          {model.owned && (
+          {model.form?.claimedBy && model.owned && !model.resource.error && (
             <span className="text-[10px] font-bold tracking-wider px-2.5 py-1.5 border border-[#2b2b2b] bg-white text-[#2b2b2b] rounded">
               BẠN ĐANG NHẬN VIỆC NÀY
             </span>

@@ -168,7 +168,14 @@ export function CounterConsignmentTasks({ taskGroups }) {
                 {task.desiredPrice ? `Giá mong muốn: ${money(task.desiredPrice)}` : 'Đang có mặt tại quầy'}
               </p>
             </div>
-            <DetailLink formId={task.formId} state={{ form: task }} />
+            <Link
+              to={`/moderator/consignments/${encodeURIComponent(task.formId)}`}
+              state={{ form: task, identified: true }}
+            >
+              <Button className="bg-[#2b2b2b] text-white hover:bg-black text-xs font-bold px-4 py-2">
+                Bắt đầu kiểm định
+              </Button>
+            </Link>
           </div>
         </div>
       ))}

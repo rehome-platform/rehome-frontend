@@ -26,12 +26,12 @@ function Wrapper({ children }) {
   );
 }
 
-describe('KD-01: ConsignmentListPage & Flow separation', () => {
+describe('ConsignmentListPage & Flow separation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('renders KD-01 with tabs, notice banner, footer note and form table with "Mở duyệt" button', async () => {
+  it('renders with tabs, notice banner, footer note and form table with "Mở duyệt" button', async () => {
     vi.spyOn(consignmentService, 'listForms').mockResolvedValue([
       {
         formId: 'KG-F-002318',

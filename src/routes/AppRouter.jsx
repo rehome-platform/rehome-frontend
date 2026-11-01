@@ -18,6 +18,7 @@ import {
   CounterPage,
   ConsignmentListPage,
   ConsignmentDetailPage,
+  ConsignmentPrintQueuePage,
   InventoryDetailPage,
   EndOfTermPage,
   ConsignmentQueuePage,
@@ -126,6 +127,22 @@ export default function AppRouter() {
         element={
           <PrivateRoute roles={['moderator', 'staff', 'admin']}>
             <ConsignmentListPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/moderator/consignments/print-queue"
+        element={
+          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
+            <ConsignmentPrintQueuePage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/moderator/print-queue"
+        element={
+          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
+            <ConsignmentPrintQueuePage />
           </PrivateRoute>
         }
       />

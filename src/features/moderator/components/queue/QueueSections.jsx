@@ -99,13 +99,21 @@ export function QueueReleaseDialog({ releaseTarget, resource, setReleaseTarget, 
   );
 }
 
-export function QueueTaskRow({ item, isSelected, toggleSelectRow, isMine, isClaimedByOther, resource, handleClaim, setClaimTarget, linkTarget, setFeedback, setReleaseTarget }) {
+export function QueueTaskRow({ item, isFocused, isSelected, toggleSelectRow, isMine, isClaimedByOther, resource, handleClaim, setClaimTarget, linkTarget, setFeedback, setReleaseTarget }) {
+  const rowRef = React.useRef(null);
+  React.useEffect(() => {
+    if (isFocused && !resource.loading) {
+      rowRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    }
+  }, [isFocused, resource.loading]);
+
   return (
     <tr
+      ref={rowRef}
       key={item.queueId}
       className={`transition-colors hover:bg-[#F9FAF9] ${
         item.isOverdue ? 'border-l-4 border-l-[#2b2b2b] bg-[#fafafa]' : ''
-      } ${isSelected ? 'bg-[#F0F5EE]' : ''}`}
+      } ${isSelected || isFocused ? 'bg-[#F0F5EE]' : ''} ${isFocused ? 'ring-2 ring-inset ring-primary' : ''}`}
     >
       <td className="py-3 px-3.5 text-center">
         <input
@@ -121,6 +129,7 @@ export function QueueTaskRow({ item, isSelected, toggleSelectRow, isMine, isClai
       </td>
       <td className="py-3 px-3 font-medium text-[#191C19]">
         {item.formId || item.orderId || item.queueId}
+        {isFocused && <span className="ml-2 inline-block rounded bg-primary px-2 py-1 text-[10px] text-white">Việc vừa mở</span>}
       </td>
       <td className="py-3 px-3 text-[#414942]">
         {item.name || item.memberName || '—'}

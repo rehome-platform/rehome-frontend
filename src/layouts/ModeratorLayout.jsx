@@ -30,7 +30,14 @@ export default function ModeratorLayout({ children, apiColors = false }) {
       to: '/moderator/consignments',
       label: 'Kiểm định & nhập kho',
       icon: 'fact_check',
-      active: onPath('/moderator/consignments'),
+      active: location.pathname === '/moderator/consignments' || (location.pathname.startsWith('/moderator/consignments/') && !location.pathname.includes('print-queue')),
+    },
+    {
+      to: '/moderator/consignments/print-queue',
+      label: 'Hàng đợi in tem',
+      icon: 'print',
+      subItem: true,
+      active: onPath('/moderator/consignments/print-queue', '/moderator/print-queue'),
     },
     { to: '/moderator/inventory', label: 'Tồn kho', icon: 'inventory_2', active: onPath('/moderator/inventory', '/moderator/end-of-term') },
     { to: '/moderator/packing', label: 'Đóng gói đơn hàng', icon: 'package_2', active: onPath('/moderator/packing') },
@@ -77,13 +84,13 @@ export default function ModeratorLayout({ children, apiColors = false }) {
               to={item.to}
               aria-current={item.active ? 'page' : undefined}
               onClick={() => setIsMobileMenuOpen(false)}
-              className={`flex items-center px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
+              className={`flex items-center ${item.subItem ? 'pl-7 pr-3 py-2 text-[11px]' : 'px-3.5 py-2.5 text-xs'} rounded-xl font-semibold transition-all duration-150 ${
                 item.active
                   ? 'bg-[#006B2C] text-white shadow-sm'
                   : 'text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
               }`}
             >
-              <span aria-hidden="true" className={`material-symbols-outlined text-[20px] mr-3 ${item.active ? 'text-white' : 'text-[#717971]'}`}>
+              <span aria-hidden="true" className={`material-symbols-outlined ${item.subItem ? 'text-[18px] mr-2.5' : 'text-[20px] mr-3'} ${item.active ? 'text-white' : 'text-[#717971]'}`}>
                 {item.icon}
               </span>
               <span>{item.label}</span>
