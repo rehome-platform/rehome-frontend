@@ -17,8 +17,9 @@ export function ConsignmentInspectionForm({ price, term, conditionNote, allCheck
         e.preventDefault();
         if (!validMoney(price) || !term || !conditionNote.trim() || !allChecked) return;
         resource.mutate(
-          (opts) =>
-            consignmentService.complete(
+          async (opts) => {
+            try {
+              const result = await consignmentService.complete(
               formId,
               {
                 ...proof,
@@ -27,7 +28,19 @@ export function ConsignmentInspectionForm({ price, term, conditionNote, allCheck
                 termLengthDays: Number(term),
               },
               opts,
-            ),
+              );
+              if (result?.receiptId) return result;
+              const latest = await consignmentService.read(formId, opts);
+              if (!latest?.receiptId) throw new Error('Không tìm thấy biên nhận đã tạo. Vui lòng tải lại trạng thái.');
+              return { receiptId: latest.receiptId };
+            } catch (error) {
+              if (error.status === 409 && ['CONSIGNMENT_RECEIPT_ALREADY_EXISTS', 'RECEIPT_ALREADY_EXISTS'].includes(error.code)) {
+                const latest = await consignmentService.read(formId, opts);
+                if (latest?.receiptId) return { receiptId: latest.receiptId };
+              }
+              throw error;
+            }
+          },
           {
             onSuccess: (res) => {
               setFeedback({

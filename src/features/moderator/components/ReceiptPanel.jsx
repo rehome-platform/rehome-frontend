@@ -7,23 +7,29 @@ import { canStockIn } from '../models/warehouseModel.js';
 import { Card, ResourceState, DocumentLink, money, date } from './WarehouseUi.jsx';
 import StockInForm from './StockInForm.jsx';
 
-export default function ReceiptPanel({ receiptId, allowStockIn = false, onStocked }) {
+export default function ReceiptPanel({ receiptId, form, allowStockIn = false, onStocked }) {
   const receipt = useResource(
     (options) => consignmentService.receipt(receiptId, options),
     [receiptId],
     { poll: true, done: (value) => !!value?.confirmedAt },
   );
-  const data = receipt.data;
+  const data = receipt.data ? { ...receipt.data, productSku: receipt.data.productSku || receipt.data.sku || null } : null;
   const snapshot = data?.snapshot;
 
   const [downloadingPdf, setDownloadingPdf] = React.useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = React.useState(null);
+  React.useEffect(() => () => {
+    if (pdfBlobUrl?.startsWith('blob:')) URL.revokeObjectURL?.(pdfBlobUrl);
+  }, [pdfBlobUrl]);
 
   const agreedPrice = data?.agreedPrice ?? snapshot?.agreedPrice;
   const floorPrice = data?.floorPrice ?? snapshot?.floorPrice;
   const termDays = data?.termLengthDays ?? snapshot?.termLengthDays;
   const commission = data?.commissionRateTerm1 ?? snapshot?.commissionRate;
   const fee = data?.withdrawalFee ?? snapshot?.fee;
+  const rateText = value => value == null ? '—' : `${Math.round(Number(value) * (Number(value) <= 1 ? 100 : 1))}%`;
+  const commissions = [data?.commissionRateTerm1 ?? snapshot?.commissionRate, data?.commissionRateTerm2, data?.commissionRateTerm3]
+    .map(rateText).join(' → ');
 
   const handleOpenPdf = async () => {
     if (pdfBlobUrl) {
@@ -62,7 +68,7 @@ export default function ReceiptPanel({ receiptId, allowStockIn = false, onStocke
         )}
       </div>
 
-      {data && (
+      {data && !receipt.error && (
         <div className="space-y-6 pt-2">
           {/* KD-07: MÀN HÌNH CHỜ MEMBER XÁC NHẬN */}
           {!data.confirmedAt ? (
@@ -125,9 +131,9 @@ export default function ReceiptPanel({ receiptId, allowStockIn = false, onStocke
                     )}
                     <div className="flex justify-between">
                       <span className="text-[#5f5f5f]">
-                        Hoa hồng: {commission != null ? `${Math.round(commission * (commission <= 1 ? 100 : 1))}%` : '10%'}
+                        Hoa hồng: {rateText(commission)}
                       </span>
-                      <span className="font-bold">3 kỳ: 10% → 15% → 20%</span>
+                      <span className="font-bold">3 kỳ: {commissions}</span>
                     </div>
                     {termDays && (
                       <div className="flex justify-between">
@@ -187,30 +193,30 @@ export default function ReceiptPanel({ receiptId, allowStockIn = false, onStocke
                   <div>Giá sàn: <strong>{money(floorPrice)}</strong></div>
                   <div>
                     Hoa hồng:{' '}
-                    <strong>{commission == null ? '10% → 15% → 20%' : `${Number(commission) * 100}%`}</strong>
+                    <strong>{commissions}</strong>
                   </div>
-                  <div>Độ dài kỳ: <strong>{termDays ?? 30} ngày</strong></div>
+                  <div>Độ dài kỳ: <strong>{termDays != null ? `${termDays} ngày` : '—'}</strong></div>
                   {fee != null && <div>Phí rút: {money(fee)}</div>}
                 </dl>
               )}
 
               {data.productSku && (
-                <Link
-                  className="block text-primary underline font-bold text-xs"
-                  to={`/moderator/inventory/${encodeURIComponent(data.productSku)}`}
-                >
-                  Đã nhập kho · {data.productSku}
-                </Link>
+                <div className="space-y-3">
+                  <Link className="block text-primary underline font-bold text-xs" to={`/moderator/inventory/${encodeURIComponent(data.productSku)}`}>
+                    Đã nhập kho · {data.productSku}
+                  </Link>
+                  <Link className="inline-block rounded-xl bg-primary p-3 text-sm font-semibold text-white" to={`/moderator/consignments/print-queue?sku=${encodeURIComponent(data.productSku)}`}>
+                    Đến hàng đợi in tem
+                  </Link>
+                </div>
               )}
 
               {allowStockIn && canStockIn(data) && (
                 <StockInForm
                   key={receiptId}
                   receipt={data}
-                  onSuccess={() => {
-                    receipt.refresh();
-                    onStocked?.();
-                  }}
+                  form={form}
+                  onSuccess={onStocked}
                 />
               )}
             </div>

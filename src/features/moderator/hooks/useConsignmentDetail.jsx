@@ -59,6 +59,16 @@ export function useConsignmentDetail() {
   const [returnReason, setReturnReason] = useState('');
   const [returnNote, setReturnNote] = useState('');
   const [resultReceiptId, setReceiptId] = useState(null);
+  const completedForm = React.useRef(null);
+  const receiptId = resultReceiptId || form?.receiptId;
+  const receiptStep = !!receiptId || ['WAITING_CONFIRMATION', 'STOCK_IN', 'PRINT'].includes(form?.resumeStep);
+  const receiptCreated = (id) => {
+    completedForm.current = form;
+    setReceiptId(id);
+  };
+  React.useEffect(() => {
+    if (receiptStep) window.scrollTo?.({ top: 0, behavior: 'smooth' });
+  }, [receiptStep]);
 
   const optionsResource = useResource(
     async () =>
@@ -119,6 +129,9 @@ export function useConsignmentDetail() {
   return {
     form,
     formId,
+    receiptId,
+    receiptStep,
+    receiptForm: form || completedForm.current,
     setFeedback,
     resource,
     feedback,
@@ -158,7 +171,7 @@ export function useConsignmentDetail() {
       ConsignmentPhotoViewer: { photos, activePhotoIdx, photoUrl, setActivePhotoIdx },
       ConsignmentReviewPanel: { decision, setDecision, setRejectReason, rejectReason, errors, resource, formId, setFeedback },
       ConsignmentStartPanel: { resource, formId, proof, setFeedback },
-      ConsignmentInspectionPanel: { allChecked, checkedCount, checklist, toggleCheck, price, term, conditionNote, resource, formId, proof, setFeedback, setReceiptId, setCondition, errors, setPrice, setTerm, termOptions },
+      ConsignmentInspectionPanel: { allChecked, checkedCount, checklist, toggleCheck, price, term, conditionNote, resource, formId, proof, setFeedback, setReceiptId: receiptCreated, setCondition, errors, setPrice, setTerm, termOptions },
       ConsignmentReturnPanel: { resource, formId, proof, returnReason, returnNote, setFeedback, setReturnReason, returnReasons, setReturnNote, errors },
     },
   };
