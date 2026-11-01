@@ -99,7 +99,7 @@ export default function AppRouter() {
       <Route
         path="/moderator"
         element={
-          <PrivateRoute roles={['staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
             <WarehouseHomePage />
           </PrivateRoute>
         }
@@ -107,7 +107,7 @@ export default function AppRouter() {
       <Route
         path="/moderator/counter"
         element={
-          <PrivateRoute roles={['staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
             <CounterPage />
           </PrivateRoute>
         }
@@ -115,7 +115,7 @@ export default function AppRouter() {
       <Route
         path="/moderator/queue"
         element={
-          <PrivateRoute roles={['staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
             <ConsignmentQueuePage />
           </PrivateRoute>
         }
@@ -123,7 +123,7 @@ export default function AppRouter() {
       <Route
         path="/moderator/inventory"
         element={
-          <PrivateRoute roles={['staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
             <WarehouseInventoryPage />
           </PrivateRoute>
         }
@@ -131,18 +131,18 @@ export default function AppRouter() {
       <Route
         path="/moderator/packing"
         element={
-          <PrivateRoute roles={['staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
             <PackingOrdersPage />
           </PrivateRoute>
         }
       />
-      <Route path="/moderator/consignments/:formId" element={<PrivateRoute roles={['staff', 'admin']}><ConsignmentDetailPage key={location.pathname} /></PrivateRoute>} />
-      <Route path="/moderator/inventory/:sku" element={<PrivateRoute roles={['staff', 'admin']}><InventoryDetailPage key={location.pathname} /></PrivateRoute>} />
-      <Route path="/moderator/end-of-term" element={<PrivateRoute roles={['staff', 'admin']}><EndOfTermPage /></PrivateRoute>} />
+      <Route path="/moderator/consignments/:formId" element={<PrivateRoute roles={['moderator', 'staff', 'admin']}><ConsignmentDetailPage key={location.pathname} /></PrivateRoute>} />
+      <Route path="/moderator/inventory/:sku" element={<PrivateRoute roles={['moderator', 'staff', 'admin']}><InventoryDetailPage key={location.pathname} /></PrivateRoute>} />
+      <Route path="/moderator/end-of-term" element={<PrivateRoute roles={['moderator', 'staff', 'admin']}><EndOfTermPage /></PrivateRoute>} />
       <Route
         path="/moderator/returns"
         element={
-          <PrivateRoute roles={['staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
             <ReturnProcessingPage />
           </PrivateRoute>
         }
@@ -150,7 +150,7 @@ export default function AppRouter() {
       <Route
         path="/moderator/verifications"
         element={
-          <PrivateRoute roles={['staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
             <OrgVerificationPage />
           </PrivateRoute>
         }
@@ -158,7 +158,7 @@ export default function AppRouter() {
       <Route
         path="/moderator/reports"
         element={
-          <PrivateRoute roles={['staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
             <ViolationReportsPage />
           </PrivateRoute>
         }
@@ -166,7 +166,7 @@ export default function AppRouter() {
       <Route
         path="/moderator/categories"
         element={
-          <PrivateRoute roles={['staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
             <CategoryBrandPage />
           </PrivateRoute>
         }
@@ -174,7 +174,7 @@ export default function AppRouter() {
       <Route
         path="/moderator/inbox"
         element={
-          <PrivateRoute roles={['staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
             <WarehouseInboxPage />
           </PrivateRoute>
         }
@@ -203,3 +203,4 @@ export default function AppRouter() {
     </Routes>
   );
 }
+
