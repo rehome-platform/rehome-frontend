@@ -7,6 +7,7 @@ export default function BrandQuickAddModal({ isOpen, onClose, existingBrands = [
   const [originCountry, setOriginCountry] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const saving = React.useRef(false);
 
   if (!isOpen) return null;
 
@@ -18,7 +19,8 @@ export default function BrandQuickAddModal({ isOpen, onClose, existingBrands = [
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!trimmedName || isDuplicate) return;
+    if (!trimmedName || isDuplicate || saving.current) return;
+    saving.current = true;
 
     try {
       setLoading(true);
@@ -27,18 +29,20 @@ export default function BrandQuickAddModal({ isOpen, onClose, existingBrands = [
         name: trimmedName,
         originCountry: originCountry.trim() || undefined,
       });
-      onCreated?.(res || { id: trimmedName, name: trimmedName });
+      if (!res?.id) throw new Error('Chưa nhận được mã thương hiệu đã tạo. Vui lòng tải lại danh mục.');
+      onCreated?.(res);
       onClose();
     } catch (err) {
-      setError(err?.message || 'Không thể tạo thương hiệu mới.');
+      setError(err?.status === 409 ? 'Thương hiệu này đã có trong danh mục. Hãy chọn thương hiệu có sẵn.' : err?.message || 'Không thể tạo thương hiệu mới.');
     } finally {
       setLoading(false);
+      saving.current = false;
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white border-2 border-[#2b2b2b] p-6 shadow-xl space-y-4">
+      <div role="dialog" aria-modal="true" aria-label="Thêm nhanh thương hiệu" className="w-full max-w-md rounded-2xl bg-white border-2 border-[#2b2b2b] p-6 shadow-xl space-y-4">
         <div>
           <h3 className="text-base font-bold text-[#191C19]">Thêm nhanh thương hiệu</h3>
           <p className="text-xs text-[#5f5f5f] mt-1 leading-relaxed">
@@ -58,6 +62,7 @@ export default function BrandQuickAddModal({ isOpen, onClose, existingBrands = [
               Tên thương hiệu
             </label>
             <input
+              aria-label="Tên thương hiệu"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
