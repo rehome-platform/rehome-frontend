@@ -27,7 +27,7 @@ export function normalizeRole(rawRole) {
   if (!rawRole) return 'member';
   const str = String(rawRole).toUpperCase();
   if (str.includes('ADMIN')) return 'admin';
-  if (str.includes('MODERATOR') || str.includes('STAFF')) return 'staff';
+  if (str.includes('MODERATOR') || str.includes('STAFF')) return 'moderator';
   if (str.includes('ORGANIZATION')) return 'organization';
   if (str.includes('MEMBER')) return 'member';
   return 'member';
@@ -64,8 +64,9 @@ async function fetchUserProfileFromBackend(claims, loginHint = {}) {
   const hasWarehouse =
     Boolean(accountMeData?.warehouseId ?? accountMeData?.warehouse?.id) &&
     Boolean(accountMeData?.warehouseName ?? accountMeData?.warehouse?.name);
+  const isModRole = normalizedRole === 'moderator' || normalizedRole === 'staff';
   const moderatorWarehouse =
-    normalizedRole === 'staff' && !hasWarehouse ? await fetchModeratorWarehouse() : null;
+    isModRole && !hasWarehouse ? await fetchModeratorWarehouse() : null;
   const mergedAccountData = {
     ...(loginHint || {}),
     ...(moderatorWarehouse || {}),

@@ -14,7 +14,8 @@
 
 export const ROLES = {
   ADMIN: "admin",
-  MODERATOR: "staff",
+  MODERATOR: "moderator",
+  STAFF: "moderator", // Alias cho nhân viên điểm kí gửi
   // Các đối tượng tài khoản được quản lý trong hệ thống Admin/Moderator:
   ORGANIZER: "organization",
   MEMBER: "member",
@@ -23,6 +24,7 @@ export const ROLES = {
 export const ROLE_LABELS = {
   [ROLES.ADMIN]: "Quản trị viên (Admin)",
   [ROLES.MODERATOR]: "Nhân viên Điểm kí gửi / Kiểm duyệt (Moderator)",
+  staff: "Nhân viên Điểm kí gửi / Kiểm duyệt (Moderator)",
   [ROLES.ORGANIZER]: "Tổ chức từ thiện (Mobile)",
   [ROLES.MEMBER]: "Thành viên (Mobile)",
 };
@@ -30,4 +32,5 @@ export const ROLE_LABELS = {
 export const ROLE_HOME_ROUTES = {
   [ROLES.ADMIN]: "/admin",
   [ROLES.MODERATOR]: "/moderator/counter",
+  staff: "/moderator/counter",
 };
