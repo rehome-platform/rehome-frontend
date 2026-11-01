@@ -168,7 +168,7 @@ export function CounterConsignmentTasks({ taskGroups }) {
                 {task.desiredPrice ? `Giá mong muốn: ${money(task.desiredPrice)}` : 'Đang có mặt tại quầy'}
               </p>
             </div>
-            <DetailLink formId={task.formId} />
+            <DetailLink formId={task.formId} state={{ form: task }} />
           </div>
         </div>
       ))}

@@ -110,6 +110,7 @@ export function QueueTaskRow({ item, isSelected, toggleSelectRow, isMine, isClai
             <>
               <Link
                 to={linkTarget}
+                state={{ form: item }}
                 className="px-3 py-1.5 rounded border border-[#8a8a8a] bg-white text-xs font-semibold text-[#191C19] hover:bg-[#F0F5EE]"
               >
                 Mở
