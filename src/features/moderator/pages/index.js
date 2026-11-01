@@ -1,6 +1,8 @@
 export { default as CounterPage } from './CounterPage.jsx';
 export { default as WarehouseHomePage } from './WarehouseHomePage.jsx';
+export { default as ConsignmentListPage } from './ConsignmentListPage.jsx';
 export { default as ConsignmentDetailPage } from './ConsignmentDetailPage.jsx';
+export { default as ConsignmentPrintQueuePage } from './ConsignmentPrintQueuePage.jsx';
 export { default as InventoryDetailPage } from './InventoryDetailPage.jsx';
 export { default as EndOfTermPage } from './EndOfTermPage.jsx';
 export { default as ConsignmentQueuePage } from './ConsignmentQueuePage.jsx';

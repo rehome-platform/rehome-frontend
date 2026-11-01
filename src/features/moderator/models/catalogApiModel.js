@@ -37,5 +37,6 @@ export function catalogPayload(kind, id, data) {
   const status = catalogStatus(data);
   const payload = { name, ...(id && status ? { status } : {}) };
   if (kind === 'category') payload.tryonSlot = data.tryonSlot || data.slot || 'TOP';
+  if (kind === 'brand' && data.originCountry?.trim()) payload.originCountry = data.originCountry.trim();
   return payload;
 }

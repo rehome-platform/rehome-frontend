@@ -11,7 +11,7 @@ export function ConsignmentClaimBanner({ form, owned, resource }) {
       <div className="flex items-center gap-3">
         <Status>{form.status}</Status>
         <span className="text-[#5B6776]">
-          {form.claimedBy ? (owned ? 'Bạn đang giữ việc này' : 'Người khác đang xử lý') : 'Chưa có ai nhận việc'}
+          {form.claimedBy ? (owned ? 'Bạn đang nhận việc này' : 'Người khác đang xử lý') : 'Chưa có ai nhận việc'}
         </span>
       </div>
       <div className="flex gap-2">
@@ -37,10 +37,10 @@ export function ConsignmentAccessNotice({  }) {
         <span className="text-2xl">⚠️</span>
         <div className="space-y-1">
           <h3 className="font-bold text-sm text-amber-900">
-            Backend giới hạn quyền đọc chi tiết form trực tiếp (API 17)
+            Tài khoản hiện tại chưa được phép xem chi tiết ký gửi này
           </h3>
           <p className="text-xs text-amber-800 leading-relaxed">
-            Theo phân quyền hiện tại của backend, endpoint <code>GET /consignment-forms/:id</code> chỉ cho phép tài khoản Member sở hữu truy cập. Moderator cần thao tác thông qua Hàng đợi công việc hoặc Quầy tiếp nhận.
+            Vui lòng kiểm tra quyền truy cập và điểm ký gửi được phân công. Bạn có thể quay lại Hàng đợi công việc hoặc Quầy tiếp nhận.
           </p>
         </div>
       </div>

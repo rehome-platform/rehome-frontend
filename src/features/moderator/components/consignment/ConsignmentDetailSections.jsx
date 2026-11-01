@@ -8,12 +8,22 @@ import { Field, money, date } from "../WarehouseUi.jsx";
 
 import { CHECKLIST_ITEMS, SAMPLE_REASONS } from "../../pages/ConsignmentDetailPage.config.js";
 
-export function ConsignmentReturnPanel({ resource, formId, proof, returnReason, returnNote, setFeedback, setReturnReason, returnReasons, setReturnNote, errors }) {
+export function ConsignmentReturnPanel({ resource, formId, proof, returnReason, returnNote, setFeedback, setReturnReason, returnReasons, setReturnNote, errors, onClose }) {
   return (
     <div className="rounded-2xl border border-[#BA1A1A] bg-white p-5 space-y-4 shadow-sm">
-      <h3 className="text-xs font-bold text-[#BA1A1A] uppercase tracking-wide">
-        Không đạt kiểm định — Trả đồ tại chỗ (KD-06)
-      </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-bold text-[#BA1A1A] uppercase tracking-wide">
+          Trả đồ tại chỗ cho khách
+        </h3>
+        {onClose && (
+          <button type="button" onClick={onClose} className="text-xs text-[#5f5f5f] hover:underline">
+            Đóng
+          </button>
+        )}
+      </div>
+      <p className="text-[11px] text-[#5f5f5f] leading-relaxed">
+        Hàng được trả lại ngay, <strong>không nhập kho</strong>. Ca kiểm định này đóng, không tính vào lịch sử ký gửi của khách.
+      </p>
       <form
         className="space-y-3"
         onSubmit={(e) => {
@@ -36,7 +46,7 @@ export function ConsignmentReturnPanel({ resource, formId, proof, returnReason, 
           );
         }}
       >
-        <Field label="Lý do không nhận">
+        <Field label="Lý do không nhận / trả đồ">
           <select
             required
             className="rounded-xl border-neutral"
@@ -52,22 +62,34 @@ export function ConsignmentReturnPanel({ resource, formId, proof, returnReason, 
           </select>
         </Field>
         <Field
-          label="Ghi chú biên bản trả tại chỗ"
+          label="Ghi chú thêm · tuỳ chọn"
           required
           value={returnNote}
           onChange={(e) => setReturnNote(e.target.value)}
           error={errors.note}
           placeholder="Mô tả vết bẩn, lỗi rách..."
         />
-        <Button
-          variant="danger"
-          type="submit"
-          disabled={!returnReason || !returnNote.trim()}
-          loading={resource.busy}
-          className="w-full text-xs font-bold py-2.5"
-        >
-          Xác nhận trả đồ tại chỗ cho Member
-        </Button>
+        <div className="flex gap-2 pt-1">
+          {onClose && (
+            <Button
+              variant="outline"
+              type="button"
+              onClick={onClose}
+              className="flex-1 text-xs"
+            >
+              Hủy, quay lại
+            </Button>
+          )}
+          <Button
+            variant="danger"
+            type="submit"
+            disabled={!returnReason || !returnNote.trim()}
+            loading={resource.busy}
+            className="flex-1 text-xs font-bold py-2.5"
+          >
+            Xác nhận trả đồ tại chỗ cho Member
+          </Button>
+        </div>
       </form>
     </div>
   );
@@ -86,7 +108,7 @@ export function ConsignmentInspectionPanel({ allChecked, checkedCount, checklist
             {checkedCount} / {CHECKLIST_ITEMS.length} đã tích
           </span>
         </div>
-    
+
         <div className="space-y-2">
           {CHECKLIST_ITEMS.map((item, idx) => (
             <label key={idx} className="flex items-start gap-2.5 text-xs text-[#191C19] cursor-pointer hover:bg-[#F9FAF9] p-1.5 rounded">
@@ -100,12 +122,12 @@ export function ConsignmentInspectionPanel({ allChecked, checkedCount, checklist
             </label>
           ))}
         </div>
-    
+
         <p className="text-[11px] text-[#5f5f5f] bg-[#f4f5f4] p-2.5 rounded border border-[#d4d4d4]">
           Phải tích đủ {CHECKLIST_ITEMS.length} mục mới chọn được kết luận <strong>Đạt</strong>. Nếu có tiêu chí không đạt, chọn Trả đồ tại chỗ.
         </p>
       </div>
-    
+
       {/* Kết luận & Chốt giá (KD-05) */}
       <ConsignmentInspectionForm
         price={price}
@@ -127,32 +149,101 @@ export function ConsignmentInspectionPanel({ allChecked, checkedCount, checklist
   );
 }
 
-export function ConsignmentStartPanel({ resource, formId, proof, setFeedback }) {
+export function ConsignmentStartPanel({ resource, formId, proof, setFeedback, onOpenReturn }) {
+  const [quickChecks, setQuickChecks] = React.useState({
+    itemMatch: true,
+    brandSizeMatch: true,
+    conditionMatch: true,
+    notProhibited: true,
+  });
+
+  const toggle = (k) => setQuickChecks((p) => ({ ...p, [k]: !p[k] }));
+
   return (
-    <div className="rounded-2xl border-2 border-[#2b2b2b] bg-white p-5 space-y-3 shadow-sm">
-      <h3 className="text-sm font-bold text-[#191C19]">Khách đã có mặt tại quầy</h3>
+    <div className="rounded-2xl border-2 border-[#2b2b2b] bg-white p-5 space-y-4 shadow-sm">
+      <div className="flex items-center justify-between border-b border-[#e0e0e0] pb-2">
+        <h3 className="text-sm font-bold text-[#191C19]">Hàng thật có khớp không</h3>
+        <span className="text-[10px] text-[#5B6776]">Đối chiếu nhanh tại quầy</span>
+      </div>
+
       <p className="text-xs text-[#5B6776]">
-        Đối chiếu món đồ thực tế khách mang tới trước mặt bạn với form đăng ký.
+        Khách đang đứng ở quầy với món hàng. Lệch nhiều thì trả lại ngay, đỡ mất công kiểm định.
       </p>
-      <Button
-        className="w-full py-3 bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs"
-        loading={resource.busy}
-        onClick={() =>
-          resource.mutate(
-            (opts) => consignmentService.start(formId, proof, opts),
-            {
-              onSuccess: () => {
-                setFeedback({
-                  type: 'success',
-                  message: 'Đã bắt đầu kiểm định tại quầy. Mời đối chiếu sản phẩm theo checklist.',
-                });
+
+      <div className="border border-[#8a8a8a] rounded divide-y divide-[#e0e0e0] text-xs">
+        <label className="flex items-center gap-3 p-3 cursor-pointer hover:bg-[#fafafa]">
+          <input
+            type="checkbox"
+            checked={quickChecks.itemMatch}
+            onChange={() => toggle('itemMatch')}
+            className="rounded text-[#2b2b2b]"
+          />
+          <span>Đúng món như ảnh trong form</span>
+        </label>
+        <label className="flex items-center gap-3 p-3 cursor-pointer hover:bg-[#fafafa]">
+          <input
+            type="checkbox"
+            checked={quickChecks.brandSizeMatch}
+            onChange={() => toggle('brandSizeMatch')}
+            className="rounded text-[#2b2b2b]"
+          />
+          <span>Đúng thương hiệu và size đã khai</span>
+        </label>
+        <label className="flex items-center gap-3 p-3 cursor-pointer hover:bg-[#fafafa]">
+          <input
+            type="checkbox"
+            checked={quickChecks.conditionMatch}
+            onChange={() => toggle('conditionMatch')}
+            className="rounded text-[#2b2b2b]"
+          />
+          <span>Tình trạng tương đương mức Member tự đánh giá</span>
+        </label>
+        <label className="flex items-center gap-3 p-3 cursor-pointer hover:bg-[#fafafa]">
+          <input
+            type="checkbox"
+            checked={quickChecks.notProhibited}
+            onChange={() => toggle('notProhibited')}
+            className="rounded text-[#2b2b2b]"
+          />
+          <span>Không thuộc nhóm hàng không nhận</span>
+        </label>
+      </div>
+
+      <div className="p-3 border border-dashed border-[#9a9a9a] rounded text-[11px] text-[#4a4a4a]">
+        Màn này <strong>chưa ghi kết luận gì</strong>. Bấm tiếp mới mở biên bản kiểm định, nơi chốt tình trạng thật và giá.
+      </div>
+
+      <div className="flex flex-wrap gap-2 pt-1">
+        <Button
+          className="flex-1 py-3 bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs"
+          loading={resource.busy}
+          onClick={() =>
+            resource.mutate(
+              (opts) => consignmentService.start(formId, proof, opts),
+              {
+                onSuccess: () => {
+                  setFeedback({
+                    type: 'success',
+                    message: 'Đã bắt đầu kiểm định tại quầy. Mời đối chiếu sản phẩm theo checklist.',
+                  });
+                },
               },
-            },
-          )
-        }
-      >
-        Bắt đầu kiểm định tại quầy
-      </Button>
+            )
+          }
+        >
+          Bắt đầu kiểm định tại quầy
+        </Button>
+        {onOpenReturn && (
+          <Button
+            variant="outline"
+            type="button"
+            className="py-3 text-xs"
+            onClick={onOpenReturn}
+          >
+            Trả đồ tại chỗ
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
@@ -161,7 +252,7 @@ export function ConsignmentReviewPanel({ decision, setDecision, setRejectReason,
   return (
     <div className="rounded-2xl border-2 border-[#2b2b2b] bg-white p-5 space-y-4 shadow-sm">
       <h3 className="text-sm font-bold text-[#191C19]">Kết luận duyệt form</h3>
-    
+
       {/* Radio 1: Duyệt */}
       <label
         className={`block p-3.5 rounded-xl border-2 cursor-pointer transition-colors ${decision === 'APPROVE' ? 'border-[#2b2b2b] bg-[#fafafa]' : 'border-[#d4d4d4]'}`}
@@ -181,7 +272,7 @@ export function ConsignmentReviewPanel({ decision, setDecision, setRejectReason,
           </div>
         </div>
       </label>
-    
+
       {/* Radio 2: Từ chối */}
       <label
         className={`block p-3.5 rounded-xl border-2 cursor-pointer transition-colors ${decision === 'REJECT' ? 'border-[#2b2b2b] bg-[#fafafa]' : 'border-[#d4d4d4]'}`}
@@ -201,7 +292,7 @@ export function ConsignmentReviewPanel({ decision, setDecision, setRejectReason,
           </div>
         </div>
       </label>
-    
+
       {/* Lý do mẫu (KD-02) */}
       {decision === 'REJECT' && (
         <div className="space-y-2 pt-1">
@@ -227,7 +318,7 @@ export function ConsignmentReviewPanel({ decision, setDecision, setRejectReason,
           />
         </div>
       )}
-    
+
       <div className="flex gap-3 pt-2">
         {decision === 'APPROVE' ? (
           <Button
@@ -330,7 +421,7 @@ export function ConsignmentPhotoViewer({ photos, activePhotoIdx, photoUrl, setAc
           Ảnh {photos.length ? activePhotoIdx + 1 : 0} / {photos.length}
         </span>
       </div>
-    
+
       {/* Ảnh to xem trước */}
       <div className="aspect-[4/3] rounded-xl border border-[#c4c4c4] bg-[#f9faf9] flex items-center justify-center overflow-hidden relative">
         {photoUrl ? (
@@ -342,7 +433,7 @@ export function ConsignmentPhotoViewer({ photos, activePhotoIdx, photoUrl, setAc
           {activePhotoIdx === 0 ? 'Mặt trước' : activePhotoIdx === 1 ? 'Mặt sau' : activePhotoIdx === 2 ? 'Nhãn mác' : 'Tem thương hiệu'}
         </span>
       </div>
-    
+
       {/* Thumbnails 4 góc */}
       {photos.length > 0 && (
         <div className="grid grid-cols-4 gap-2.5">
@@ -378,7 +469,7 @@ export function ConsignmentProgress({ identified, form }) {
         <span className={identified ? 'font-semibold' : 'text-[#717971]'}>1. Đối chiếu tại quầy</span>
       </div>
       <span className="w-8 h-px bg-[#d4d4d4] hidden sm:block" />
-    
+
       <div className="flex items-center gap-2">
         <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] ${form.status === 'INSPECTING' ? 'border-2 border-[#2b2b2b] bg-[#2b2b2b] text-white' : form.status === 'WAITING_CONFIRMATION' || form.status === 'STOCKED' ? 'bg-[#2b2b2b] text-white' : 'border border-[#c4c4c4] text-[#9a9a9a]'}`}>
           {form.status === 'WAITING_CONFIRMATION' || form.status === 'STOCKED' ? '✓' : '2'}
@@ -386,7 +477,7 @@ export function ConsignmentProgress({ identified, form }) {
         <span className={form.status === 'INSPECTING' ? 'font-bold text-[#191C19]' : 'text-[#717971]'}>2. Ghi kết quả kiểm định</span>
       </div>
       <span className="w-8 h-px bg-[#d4d4d4] hidden sm:block" />
-    
+
       <div className="flex items-center gap-2">
         <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] ${form.status === 'WAITING_CONFIRMATION' ? 'border-2 border-[#2b2b2b] bg-[#2b2b2b] text-white' : form.status === 'STOCKED' ? 'bg-[#2b2b2b] text-white' : 'border border-[#c4c4c4] text-[#9a9a9a]'}`}>
           {form.status === 'STOCKED' ? '✓' : '3'}
@@ -394,7 +485,7 @@ export function ConsignmentProgress({ identified, form }) {
         <span className={form.status === 'WAITING_CONFIRMATION' ? 'font-bold text-[#191C19]' : 'text-[#717971]'}>3. Chốt giá & kỳ</span>
       </div>
       <span className="w-8 h-px bg-[#d4d4d4] hidden sm:block" />
-    
+
       <div className="flex items-center gap-2">
         <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] ${form.status === 'STOCKED' ? 'bg-[#006B2C] text-white' : 'border border-[#c4c4c4] text-[#9a9a9a]'}`}>
           4

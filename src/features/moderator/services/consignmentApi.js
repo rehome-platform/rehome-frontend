@@ -7,13 +7,47 @@ import { callBackend } from './warehouseTransport.js';
 import { queueService } from './queueApi.js';
 
 export const consignmentService = {
+  // KD-01: Moderator form list is independent from queue membership.
+  listForms: async (params, options) => {
+    const fallback = async () => {
+      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
+      return fixtureRequest('formList', { params, ...options });
+    };
+
+    // Backend chỉ nhận stage PENDING | APPROVED | INSPECTING | STOCKED_TODAY (bỏ trống = mọi form trừ nháp)
+    const requested = params?.status || 'PENDING';
+    const stage = requested === 'REJECTED' ? undefined : (requested === 'STOCKED' ? 'STOCKED_TODAY' : requested);
+    const clientStatus = requested === 'REJECTED' ? 'REJECTED' : null;
+
+    const res = await callBackend(
+      {
+        method: 'get',
+        url: API_ENDPOINTS.MODERATOR.CONSIGNMENT_FORMS,
+        params: { ...(stage ? { stage } : {}), page: params?.page || 0, size: params?.size || 20 },
+      },
+      { fallback, signal: options?.signal }
+    );
+
+    const keep = item => !clientStatus || item.status === clientStatus;
+    if (Array.isArray(res)) return res.map(item => normalizeConsignmentForm(item)).filter(keep);
+    if (res && (Array.isArray(res.content) || Array.isArray(res.items))) {
+      const items = (res.content || res.items).map(item => normalizeConsignmentForm(item)).filter(keep);
+      return {
+        ...res,
+        content: items,
+        items,
+      };
+    }
+    return res;
+  },
+
   // API 31: POST /consignment-forms/{id}/approve
   approve: (formId, options) => queueService.approve(formId, options),
 
   // API 32: POST /consignment-forms/{id}/reject
   reject: (formId, reason, options) => queueService.reject(formId, reason, options),
 
-  // API 17: GET /consignment-forms/{id}
+  // Moderator detail includes the receipt, assignee and resumeStep.
   read: async (formId, options) => {
     const fallback = async () => {
       const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
@@ -28,7 +62,7 @@ export const consignmentService = {
       },
       { fallback, signal: options?.signal }
     );
-    return normalizeConsignmentForm(res, options?.scope?.userId);
+    return normalizeConsignmentForm(res);
   },
 
   // API 33: POST /consignment-forms/{id}/inspection/start
@@ -92,13 +126,14 @@ export const consignmentService = {
   receipt: async (receiptId, options) => {
     const fallback = fixtureFallback('receiptRead', { ids: { receiptId }, ...options });
 
-    return callBackend(
+    const result = await callBackend(
       {
         method: 'get',
         url: API_ENDPOINTS.MODERATOR.RECEIPT_DETAIL(receiptId),
       },
       { fallback, signal: options?.signal }
     );
+    return result ? { ...result, productSku: result.productSku || result.sku || null } : result;
   },
 
   // API 19 (F-023): GET /consignment-receipts/{id}/pdf

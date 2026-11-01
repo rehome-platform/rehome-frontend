@@ -152,7 +152,7 @@ export default function WarehouseHomePage() {
                     const mine = ownsClaim(task, scope.userId);
                     const link = task.kind === 'PACKING'
                       ? `/moderator/packing?orderId=${encodeURIComponent(task.orderId || task.refId || '')}`
-                      : `/moderator/consignments/${encodeURIComponent(task.formId || '')}`;
+                      : `/moderator/queue?${new URLSearchParams({ type: task.kind, queueId: task.queueId })}`;
                     return (
                       <tr key={`${task.kind}-${task.queueId}`} className={`border-b border-neutral ${(task.hours ?? 0) >= OVERDUE_HOURS ? 'border-l-4 border-l-primary' : ''}`}>
                         <td className="py-3 font-medium">{task.kindLabel}</td>

@@ -170,7 +170,7 @@ describe('real API mode never substitutes warehouse fixtures', () => {
   const reads = [
     ['member lookup', 'post', '/counter/lookup', options => counterService.lookup({ phone: '0900000001' }, options)],
     ['member tasks', 'get', '/counter/members/member-a/tasks', options => counterService.tasks('member-a', options)],
-    ['consignment form', 'get', '/consignment-forms/form-a', options => consignmentService.read('form-a', options)],
+    ['consignment form', 'get', '/moderator/consignment-forms/form-a', options => consignmentService.read('form-a', options)],
     ['consignment receipt', 'get', '/consignment-receipts/receipt-a', options => consignmentService.receipt('receipt-a', options)],
   ];
 
@@ -200,7 +200,7 @@ describe('real API mode never substitutes warehouse fixtures', () => {
     let finishResponse;
     let notifyStarted;
     const started = new Promise(resolve => { notifyStarted = resolve; });
-    server.use(http.get(`${API_BASE_URL}/consignment-forms/form-a`, async () => {
+    server.use(http.get(`${API_BASE_URL}/moderator/consignment-forms/form-a`, async () => {
       await new Promise(resolve => {
         finishResponse = resolve;
         notifyStarted();
@@ -236,7 +236,7 @@ describe('real API mode never substitutes warehouse fixtures', () => {
   });
 
   it.each([
-    ['form', '/consignment-forms/form-a', () => consignmentService.read('form-a')],
+    ['form', '/moderator/consignment-forms/form-a', () => consignmentService.read('form-a')],
     ['receipt', '/consignment-receipts/receipt-a', () => consignmentService.receipt('receipt-a')],
   ])('preserves an empty %s result', async (_, path, read) => {
     server.use(http.get(`${API_BASE_URL}${path}`, () => HttpResponse.json({ result: null })));

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { Phase2Provider } from '../../src/features/moderator/hooks/warehouseHooks.jsx';
-import { catalogService, inventoryService } from '../../src/features/moderator/services/warehouseApi.js';
+import { catalogService, consignmentService, inventoryService } from '../../src/features/moderator/services/warehouseApi.js';
 import { Phase2Error } from '../../src/features/moderator/models/warehouseModel.js';
 import PhotoUpload from '../../src/features/moderator/components/PhotoUpload.jsx';
 import StockInForm from '../../src/features/moderator/components/StockInForm.jsx';
@@ -44,9 +44,10 @@ describe('photo upload and ambiguous stock-in recovery', () => {
       categories: [{ id: 'cat', name: 'Áo', hidden: false }],
       brands: [{ id: 'brand', name: 'Brand', hidden: false }],
     });
-    vi.spyOn(inventoryService, 'byReceipt')
-      .mockResolvedValueOnce(null)
-      .mockResolvedValue({ sku: 'ONE-SKU' });
+    vi.spyOn(consignmentService, 'receipt')
+      .mockResolvedValueOnce({ id: 'r1', confirmedAt: '2026-10-18' })
+      .mockResolvedValueOnce({ id: 'r1', confirmedAt: '2026-10-18' })
+      .mockResolvedValue({ id: 'r1', confirmedAt: '2026-10-18', sku: 'ONE-SKU' });
     vi.spyOn(inventoryService, 'upload').mockResolvedValue({
       url: 'https://example.test/item.png',
     });
@@ -69,7 +70,8 @@ describe('photo upload and ambiguous stock-in recovery', () => {
     expect(screen.getByRole('button', { name: 'Nhập kho · tạo SKU' })).toBeDisabled();
     expect(create).toHaveBeenCalledOnce();
     await user.click(screen.getByRole('button', { name: 'Kiểm tra kết quả theo biên nhận' }));
-    await screen.findByRole('link', { name: /Sản phẩm đã tồn tại · ONE-SKU/ });
+    await screen.findByText(/Sản phẩm đã tồn tại · ONE-SKU/);
+    expect(screen.getByRole('link', { name: 'Đến hàng đợi in tem' })).toHaveAttribute('href', '/moderator/consignments/print-queue?sku=ONE-SKU');
     expect(create).toHaveBeenCalledOnce();
   });
 });

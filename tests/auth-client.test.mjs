@@ -102,7 +102,7 @@ test('credential exchange does not send a previous session bearer token', async 
 });
 
 test('verified admin/moderator identity and optional member-profile denial preserve login', async () => {
-  for (const [authority, expected] of [['[ROLE_ADMIN]', 'admin'], ['[ROLE_MODERATOR]', 'staff']]) {
+  for (const [authority, expected] of [['[ROLE_ADMIN]', 'admin'], ['[ROLE_MODERATOR]', 'moderator']]) {
     const h = fixture(config => {
       if (config.url === '/api/auth/login') return ok(config, { accessToken: 'opaque-access', refreshToken: 'opaque-refresh', tokenType: 'Bearer' });
       if (config.url === '/api/account/me') return ok(config, { email: 'fixture@example.test', authorities: authority });
@@ -254,7 +254,7 @@ test('invalid member data and malformed JWT preserve account identity and defaul
     assert.equal(user.fullName, '');
     assert.equal(user.avatar, '');
     assert.equal(user.emailVerified, true);
-    assert.equal(user.role, 'staff');
+    assert.equal(user.role, 'moderator');
   }
   const h = fixture(config => config.url === '/api/auth/google' ? ok(config, { accessToken: 'malformed' }) : ok(config, null));
   const { user } = await h.service.loginWithGoogle('google-token');
@@ -351,3 +351,5 @@ test('shared request error contexts retain the original localized transport feed
     });
   }
 });
+
+

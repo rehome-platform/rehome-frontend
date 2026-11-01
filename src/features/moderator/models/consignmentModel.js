@@ -21,17 +21,17 @@ function defaultActions(status) {
 }
 
 function normalizePhotos(data) {
-  const rawPhotos = data.photos || data.photoUrls || [];
+  const rawPhotos = data.photos || data.photoUrls || (data.thumbnailUrl ? [data.thumbnailUrl] : []);
   return Array.isArray(rawPhotos)
     ? rawPhotos.map((p) => (typeof p === 'string' ? { url: p } : p))
     : [];
-
 }
 
 function formIdentity(data) {
   return {
     id: data.id || data.formId,
     formId: data.formId || data.id,
+    formNo: data.formNo || data.id || data.formId,
     name: data.name || data.productName || 'Sản phẩm ký gửi',
     productName: data.productName || data.name || 'Sản phẩm ký gửi',
   };
@@ -42,7 +42,16 @@ function formTerms(data) {
     desiredPrice: Number(data.desiredPrice || 0),
     bringDeadline: data.bringInDeadline || data.bringDeadline || null,
     rejectReason: data.rejectReason || null,
-    receiptId: data.receiptId || null,
+    receiptId: data.receiptId || data.receipt?.id || null,
+    receiptConfirmed: Boolean(data.receiptConfirmed || data.confirmedAt || data.receipt?.confirmedAt),
+    category: data.category?.name || data.category || data.categoryName || '',
+    categoryName: data.categoryName || data.category?.name || data.category || '',
+    brand: data.brand?.name || data.brand || data.brandName || '',
+    brandName: data.brandName || data.brand?.name || data.brand || '',
+    size: data.size || '',
+    condition: data.condition || data.itemCondition || '',
+    memberId: data.memberId || data.member?.id || data.member?.accountId || data.member?.memberId || null,
+    member: data.member || null,
   };
 }
 
@@ -54,7 +63,9 @@ export function normalizeConsignmentForm(data, currentUserId) {
     ...formIdentity(data),
     status,
     allowedActions: data.allowedActions || defaultActions(status),
-    claimedBy: data.claimedBy ?? currentUserId ?? null,
+    // Backend trả người phụ trách trong moderator (claim hàng đợi hoặc moderator trên biên nhận)
+    claimedBy: data.claimedBy ?? data.moderator?.id ?? null,
+    productSku: data.productSku || data.product?.sku || data.sku || null,
     photos: normalizePhotos(data),
     ...formTerms(data),
   };

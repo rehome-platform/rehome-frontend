@@ -132,6 +132,11 @@ export function useResource(
     const load = async () => {
       clearTimeout(timer);
       if (controller.signal.aborted || inFlight) return;
+      if (poll && document.visibilityState === 'hidden') return;
+      if (poll && Date.now() - started >= 600000) {
+        setPollExpired(true);
+        return;
+      }
       inFlight = true;
       try {
         const data = await loaderRef.current({ signal: controller.signal, scope: session.scope });
@@ -171,12 +176,14 @@ export function useResource(
     };
     const visibility = () => {
       clearTimeout(timer);
-      if (document.visibilityState !== 'hidden' && !terminal) {
+      if (document.visibilityState !== 'hidden' && !terminal && (!poll || !complete)) {
         if (poll && Date.now() - started >= 600000) setPollExpired(true);
         else load();
       }
     };
-    load();
+    if (poll && document.visibilityState === 'hidden') {
+      setState({ data: null, loading: false, error: null });
+    } else load();
     document.addEventListener('visibilitychange', visibility);
     return () => {
       abort();

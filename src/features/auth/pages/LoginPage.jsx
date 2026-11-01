@@ -7,7 +7,7 @@ import { validateEmail, validatePassword } from '../../../utils/validators.js';
 /**
  * Trang Đăng nhập Hệ thống Quản trị & Vận hành ReHome (Web)
  * Phase 1 — Auth & Hồ sơ (F-004, F-005)
- * Kết nối hoàn toàn với Backend API thật tại https://re-backend-9a98.onrender.com
+ * Kết nối hoàn toàn với Backend API thật tại https://rehome-a4gae8cqhvf7cmd8.eastasia-01.azurewebsites.net
  * Không có tài khoản demo, không hardcode credentials, điều hướng chuẩn theo role.
  */
 export default function LoginPage() {

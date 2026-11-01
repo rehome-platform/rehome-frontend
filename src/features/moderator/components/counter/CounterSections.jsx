@@ -3,8 +3,6 @@ import React from "react";
 import { Link } from "react-router-dom";
 import Button from "../../../../components/common/Button.jsx";
 
-import { counterService } from "../../services/warehouseApi.js";
-
 import { Status, DetailLink, money } from "../WarehouseUi.jsx";
 
 export function CounterHandoverDialog({ confirmHandover, selected, handoverLoading, setConfirmHandover, executeHandover }) {
@@ -47,15 +45,18 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
   );
 }
 
-export function CounterWorkflowGuide({ recentServed, choose }) {
+export function CounterWorkflowGuide({ recentServed, reopen, loading }) {
   return (
     <div className="rounded-2xl border border-[#8a8a8a] bg-white overflow-hidden shadow-sm">
       <div className="bg-[#f4f4f4] border-b border-[#8a8a8a] px-4 py-3 text-xs font-bold text-[#191C19]">
         Đã phục vụ gần đây
       </div>
       <div className="divide-y divide-[#E2E8E0]">
-        {recentServed.map((item, idx) => (
-          <div key={idx} className="p-3.5 flex items-center justify-between text-xs">
+        {!recentServed.length && (
+          <p className="p-3.5 text-xs text-[#717971]">Chưa có Member được phục vụ trong phiên này</p>
+        )}
+        {recentServed.map((item) => (
+          <div key={item.memberCode} className="p-3.5 flex items-center justify-between text-xs">
             <div>
               <p className="font-semibold text-[#191C19]">
                 {item.name} · {item.memberCode}
@@ -64,14 +65,8 @@ export function CounterWorkflowGuide({ recentServed, choose }) {
             </div>
             <button
               type="button"
-              onClick={() => {
-                choose({
-                  memberId: item.memberId || item.memberCode,
-                  memberCode: item.memberCode,
-                  fullName: item.name,
-                  phone: item.phone,
-                });
-              }}
+              disabled={loading}
+              onClick={() => reopen(item)}
               className="px-2.5 py-1 text-xs border border-[#8a8a8a] rounded bg-white hover:bg-[#F0F5EE] font-semibold cursor-pointer"
             >
               Mở lại
@@ -168,7 +163,14 @@ export function CounterConsignmentTasks({ taskGroups }) {
                 {task.desiredPrice ? `Giá mong muốn: ${money(task.desiredPrice)}` : 'Đang có mặt tại quầy'}
               </p>
             </div>
-            <DetailLink formId={task.formId} />
+            <Link
+              to={`/moderator/consignments/${encodeURIComponent(task.formId)}`}
+              state={{ form: task, identified: true }}
+            >
+              <Button className="bg-[#2b2b2b] text-white hover:bg-black text-xs font-bold px-4 py-2">
+                Bắt đầu kiểm định
+              </Button>
+            </Link>
           </div>
         </div>
       ))}
@@ -207,7 +209,7 @@ export function CounterMemberSummary({ selected }) {
   );
 }
 
-export function CounterIdentityPanel({ selected, results, confirmed, selectedRef, setIdentity, reset }) {
+export function CounterIdentityPanel({ selected, results, confirmed, confirmIdentity, reset }) {
   return (
     <div className="rounded-2xl border-2 border-[#2b2b2b] bg-white p-6 shadow-sm space-y-5">
       <div className="border-b border-[#d4d4d4] pb-4">
@@ -273,13 +275,7 @@ export function CounterIdentityPanel({ selected, results, confirmed, selectedRef
           className="flex-[2] py-3.5 text-sm font-bold bg-[#2b2b2b] text-white hover:bg-black"
           loading={results.busy}
           disabled={confirmed}
-          onClick={() =>
-            results.mutate((options) => counterService.confirm(selected.memberId, options), {
-              onSuccess: (proof) => {
-                if (proof?.memberId === selectedRef.current?.memberId) setIdentity(proof);
-              },
-            })
-          }
+          onClick={confirmIdentity}
         >
           Tôi đã đối chiếu đúng Member
         </Button>

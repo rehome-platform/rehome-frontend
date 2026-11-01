@@ -1,6 +1,6 @@
 import { useConsignmentQueue } from '../hooks/useConsignmentQueue.jsx';
 
-import { QueueReleaseDialog, QueueTaskRow, QueueFilters, QueueTabs } from '../components/queue/QueueSections.jsx';
+import { QueueClaimDialog, QueueReleaseDialog, QueueTaskRow, QueueFilters, QueueTabs } from '../components/queue/QueueSections.jsx';
 import React from "react";
 
 import Button from '../../../components/common/Button.jsx';
@@ -53,6 +53,10 @@ export default function ConsignmentQueuePage() {
       )}
 
       <ResourceState resource={model.resource} empty={!model.filteredItems.length} />
+      {model.focusedQueueId && model.resource.data != null && !model.resource.loading && !model.resource.error &&
+        !model.filteredItems.some((item) => item.queueId === model.focusedQueueId) && (
+          <p role="status">Công việc không còn trong hàng đợi hiện tại</p>
+        )}
 
       {/* 3. BẢNG HÀNG ĐỢI CÔNG VIỆC CHUẨN WIREFRAME (HQ-01) */}
       {!!model.filteredItems.length && (
@@ -94,12 +98,14 @@ export default function ConsignmentQueuePage() {
                     <QueueTaskRow
                       key={item.queueId}
                       item={item}
+                      isFocused={item.queueId === model.focusedQueueId}
                       isSelected={isSelected}
                       toggleSelectRow={model.toggleSelectRow}
                       isMine={isMine}
                       isClaimedByOther={isClaimedByOther}
                       resource={model.resource}
                       handleClaim={model.handleClaim}
+                      setClaimTarget={model.setClaimTarget}
                       linkTarget={linkTarget}
                       setFeedback={model.setFeedback}
                       setReleaseTarget={model.setReleaseTarget}
@@ -121,7 +127,8 @@ export default function ConsignmentQueuePage() {
         />
       )}
 
-      {/* 4. MODAL NHẢ VIỆC (HQ-02-NhaViec.dc.html) */}
+      {/* 4. MODAL NHẬN VIỆC (HQ-02-NhanViec.dc.html) & MODAL NHẢ VIỆC (HQ-02-NhaViec.dc.html) */}
+      <QueueClaimDialog {...model.sections.QueueClaimDialog} />
       <QueueReleaseDialog {...model.sections.QueueReleaseDialog} />
     </Page>
   );
