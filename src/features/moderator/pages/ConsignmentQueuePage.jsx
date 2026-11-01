@@ -1,6 +1,6 @@
 import { useConsignmentQueue } from '../hooks/useConsignmentQueue.jsx';
 
-import { QueueReleaseDialog, QueueTaskRow, QueueFilters, QueueTabs } from '../components/queue/QueueSections.jsx';
+import { QueueClaimDialog, QueueReleaseDialog, QueueTaskRow, QueueFilters, QueueTabs } from '../components/queue/QueueSections.jsx';
 import React from "react";
 
 import Button from '../../../components/common/Button.jsx';
@@ -100,6 +100,7 @@ export default function ConsignmentQueuePage() {
                       isClaimedByOther={isClaimedByOther}
                       resource={model.resource}
                       handleClaim={model.handleClaim}
+                      setClaimTarget={model.setClaimTarget}
                       linkTarget={linkTarget}
                       setFeedback={model.setFeedback}
                       setReleaseTarget={model.setReleaseTarget}
@@ -121,7 +122,8 @@ export default function ConsignmentQueuePage() {
         />
       )}
 
-      {/* 4. MODAL NHẢ VIỆC (HQ-02-NhaViec.dc.html) */}
+      {/* 4. MODAL NHẬN VIỆC (HQ-02-NhanViec.dc.html) & MODAL NHẢ VIỆC (HQ-02-NhaViec.dc.html) */}
+      <QueueClaimDialog {...model.sections.QueueClaimDialog} />
       <QueueReleaseDialog {...model.sections.QueueReleaseDialog} />
     </Page>
   );

@@ -5,6 +5,53 @@ import Modal from "../../../../components/common/Modal.jsx";
 
 import { WORK_TYPES } from "../../pages/ConsignmentQueuePage.config.js";
 
+export function QueueClaimDialog({ claimTarget, resource, setClaimTarget, handleClaim }) {
+  return (
+    <Modal
+      isOpen={!!claimTarget}
+      title="Nhận việc này?"
+      onClose={() => {
+        if (!resource.busy) setClaimTarget(null);
+      }}
+    >
+      {claimTarget && (
+        <div className="space-y-4 text-xs">
+          <div className="p-3.5 rounded-xl border border-[#8a8a8a] bg-[#fafafa]">
+            <p className="font-bold text-sm text-[#191C19]">
+              {claimTarget.typeLabel} · {claimTarget.formId || claimTarget.orderId || claimTarget.queueId}
+            </p>
+            <p className="text-[#5f5f5f] mt-1">
+              {claimTarget.name || claimTarget.memberName || '—'} · chờ {claimTarget.hours || 0} giờ
+            </p>
+          </div>
+
+          <p className="text-[#4a4a4a] leading-relaxed">
+            Nhận xong thì <strong>chỉ bạn xử lý được</strong> việc này — Moderator khác không nhận được nữa.
+            Không giới hạn thời gian giữ, nhưng quá 48 giờ không xử lý sẽ tự nhả về hàng đợi và báo Admin.
+          </p>
+
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="outline"
+              className="flex-1 py-2.5"
+              onClick={() => setClaimTarget(null)}
+            >
+              Hủy
+            </Button>
+            <Button
+              className="flex-1 py-2.5 bg-[#2b2b2b] text-white hover:bg-black font-semibold"
+              loading={resource.busy}
+              onClick={() => handleClaim(claimTarget)}
+            >
+              Nhận việc
+            </Button>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 export function QueueReleaseDialog({ releaseTarget, resource, setReleaseTarget, handleRelease }) {
   return (
     <Modal
@@ -21,7 +68,7 @@ export function QueueReleaseDialog({ releaseTarget, resource, setReleaseTarget, 
               {releaseTarget.typeLabel} · {releaseTarget.formId || releaseTarget.orderId || releaseTarget.queueId}
             </p>
             <p className="text-[#5f5f5f] mt-1">
-              {releaseTarget.name || '—'} · bạn đang giữ {releaseTarget.hours} giờ
+              {releaseTarget.name || releaseTarget.memberName || '—'} · Bạn đang nhận việc này {releaseTarget.hours || 0} giờ
             </p>
           </div>
     
@@ -52,7 +99,7 @@ export function QueueReleaseDialog({ releaseTarget, resource, setReleaseTarget, 
   );
 }
 
-export function QueueTaskRow({ item, isSelected, toggleSelectRow, isMine, isClaimedByOther, resource, handleClaim, linkTarget, setFeedback, setReleaseTarget }) {
+export function QueueTaskRow({ item, isSelected, toggleSelectRow, isMine, isClaimedByOther, resource, handleClaim, setClaimTarget, linkTarget, setFeedback, setReleaseTarget }) {
   return (
     <tr
       key={item.queueId}
@@ -88,7 +135,7 @@ export function QueueTaskRow({ item, isSelected, toggleSelectRow, isMine, isClai
       </td>
       <td className="py-3 px-3 text-[#5f5f5f]">
         {isMine ? (
-          <span className="font-bold text-[#006B2C]">bạn đang giữ</span>
+          <span className="font-bold text-[#006B2C]">Bạn đang nhận việc này</span>
         ) : isClaimedByOther ? (
           <span>người khác giữ</span>
         ) : (
@@ -107,25 +154,16 @@ export function QueueTaskRow({ item, isSelected, toggleSelectRow, isMine, isClai
             </Button>
           )}
           {isMine && (
-            <>
-              <Link
-                to={linkTarget}
-                state={{ form: item }}
-                className="px-3 py-1.5 rounded border border-[#8a8a8a] bg-white text-xs font-semibold text-[#191C19] hover:bg-[#F0F5EE]"
-              >
-                Mở
-              </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  setFeedback(null);
-                  setReleaseTarget(item);
-                }}
-                className="px-2 py-1 text-xs text-[#BA1A1A] hover:underline font-semibold"
-              >
-                Nhả việc
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={() => {
+                setFeedback?.(null);
+                setReleaseTarget(item);
+              }}
+              className="text-[11px] py-1.5 px-3 border border-[#8a8a8a] bg-white text-[#2b2b2b] hover:bg-[#f4f4f4] rounded font-semibold transition-colors"
+            >
+              Nhả việc
+            </button>
           )}
           {isClaimedByOther && (
             <button
