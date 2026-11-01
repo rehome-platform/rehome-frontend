@@ -112,6 +112,151 @@ export function resetFixtures() {
       ],
     });
   }
+
+  // Wireframe products for L-02 & TK-01..TK-04
+  db.products.push(
+    {
+      sku: 'RH-M4T19B',
+      id: 'RH-M4T19B',
+      warehouseId: 'warehouse-a',
+      memberId: 'member-1',
+      receiptId: 'KG-2026-000189',
+      name: 'Áo khoác bomber',
+      brand: 'Adidas',
+      brandName: 'Adidas',
+      size: 'L',
+      shelfLocation: 'C2-11',
+      status: 'WAITING_END_OF_TERM',
+      decision: 'RE_CONSIGN',
+      agreedPrice: 850000,
+      currentPrice: 520000,
+      floorPrice: 425000,
+      marketMinPrice: 520000,
+      marketMaxPrice: 700000,
+      currentTerm: 3,
+      daysIntoTerm: 90,
+      photos: [],
+      deadline: '2026-11-15T00:00:00Z',
+      allowedActions: ['RE_CONSIGN', 'CHANGE_SHELF'],
+    },
+    {
+      sku: 'RH-AL-000298',
+      id: 'RH-AL-000298',
+      warehouseId: 'warehouse-a',
+      memberId: 'member-2',
+      receiptId: 'KG-2026-000140',
+      name: 'Áo len cổ lọ',
+      brand: 'Muji',
+      brandName: 'Muji',
+      size: 'L',
+      shelfLocation: 'A2-09',
+      status: 'WAITING_END_OF_TERM',
+      decision: 'TAKE_BACK',
+      agreedPrice: 850000,
+      currentPrice: 550000,
+      floorPrice: 275000,
+      currentTerm: 3,
+      daysIntoTerm: 90,
+      photos: [],
+      deadline: '2026-11-07T00:00:00Z',
+      takeBackDeadline: '2026-10-18T00:00:00Z',
+      allowedActions: ['HANDOVER', 'CHANGE_SHELF'],
+    },
+    {
+      sku: 'RH-K9B47T',
+      id: 'RH-K9B47T',
+      warehouseId: 'warehouse-a',
+      memberId: 'member-1',
+      name: 'Áo khoác denim',
+      brand: 'Zara',
+      brandName: 'Zara',
+      size: 'L',
+      shelfLocation: 'A3-07',
+      status: 'RESERVED',
+      currentTerm: 2,
+      daysIntoTerm: 41,
+      agreedPrice: 350000,
+      currentPrice: 350000,
+      photos: [],
+      allowedActions: ['CHANGE_SHELF'],
+    },
+    {
+      sku: 'RH-C2M08P',
+      id: 'RH-C2M08P',
+      warehouseId: 'warehouse-a',
+      memberId: 'member-2',
+      name: 'Quần jeans ống rộng',
+      brand: "Levi's",
+      brandName: "Levi's",
+      size: '29',
+      shelfLocation: 'B1-22',
+      status: 'SOLD',
+      currentTerm: 2,
+      daysIntoTerm: 46,
+      agreedPrice: 420000,
+      currentPrice: 420000,
+      floorPrice: 210000,
+      photos: [],
+      allowedActions: ['CHANGE_SHELF'],
+    },
+    {
+      sku: 'RH-T3N77F',
+      id: 'RH-T3N77F',
+      warehouseId: 'warehouse-a',
+      memberId: 'member-2',
+      name: 'Áo len cổ lọ',
+      brand: 'Muji',
+      brandName: 'Muji',
+      size: 'L',
+      shelfLocation: 'A2-09',
+      status: 'UNCLAIMED',
+      agreedPrice: 550000,
+      currentPrice: 550000,
+      photos: [],
+      allowedActions: ['TRANSFER', 'CHANGE_SHELF'],
+    },
+    {
+      sku: 'RH-D6P23L',
+      id: 'RH-D6P23L',
+      warehouseId: 'warehouse-b',
+      warehouseName: 'Kho Thủ Đức',
+      memberId: 'member-1',
+      name: 'Áo khoác gió',
+      brand: 'Uniqlo',
+      brandName: 'Uniqlo',
+      size: 'M',
+      shelfLocation: 'D1-01',
+      status: 'ON_SALE',
+      currentPrice: 320000,
+      photos: [],
+      allowedActions: [],
+    }
+  );
+
+  // Initial movements for RH-M4T19B
+  db.movements.push(
+    {
+      sku: 'RH-M4T19B',
+      type: 'STOCK_IN',
+      label: 'Nhập kho · gán SKU · in tem',
+      shelfLocation: 'C2-11',
+      createdAt: '2026-07-15T09:00:00Z',
+    },
+    {
+      sku: 'RH-M4T19B',
+      type: 'TERM_CHANGED',
+      label: 'Hết kỳ 3 · chuyển sang Chờ xử lý cuối kỳ',
+      shelfLocation: 'C2-11',
+      createdAt: '2026-10-15T09:00:00Z',
+    },
+    {
+      sku: 'RH-M4T19B',
+      type: 'DECISION_MADE',
+      label: 'Member yêu cầu ký gửi lại với giá mới',
+      shelfLocation: 'C2-11',
+      createdAt: '2026-10-18T14:20:00Z',
+    }
+  );
 }
 resetFixtures();
 const fail = (message, status = 409) => {
@@ -456,6 +601,68 @@ export async function fixtureRequest(
       product.status = 'RETURNED';
       product.allowedActions = [];
       result = null;
+      break;
+    }
+    case 'endTermReconsignTerms': {
+      const product = find(db.products, 'sku', ids.sku || ids.decisionId, scope);
+      const agreedPrice = Number(data.agreedPrice);
+      if (!Number.isSafeInteger(agreedPrice) || agreedPrice <= 0) {
+        fail('Giá bán đề xuất không hợp lệ.', 400);
+      }
+      const receiptId = `KG-2026-${String(db.receipts.length + 214).padStart(6, '0')}`;
+      const receipt = {
+        id: receiptId,
+        receiptId,
+        receiptNo: receiptId,
+        sku: product.sku,
+        formId: product.formId || 'form-qa',
+        productName: product.name,
+        size: product.size,
+        agreedPrice,
+        floorPrice: data.floorPrice || Math.round(agreedPrice * 0.5),
+        conditionNote: data.conditionNote || product.conditionNote,
+        moderatorNote: data.moderatorNote || 'Món hàng còn tốt, đề xuất mức giá mới dễ bán hơn.',
+        commissionRateTerm1: 0.1,
+        commissionRateTerm2: 0.15,
+        commissionRateTerm3: 0.2,
+        termLengthDays: 30,
+        confirmedAt: null,
+      };
+      db.receipts.push(receipt);
+      product.newReceiptId = receiptId;
+      product.proposedPrice = agreedPrice;
+      product.moderatorNote = data.moderatorNote;
+      product.reConsignStatus = 'PROPOSAL_SENT';
+      db.movements.push({
+        sku: product.sku,
+        type: 'PRICE_PROPOSED',
+        label: `Moderator đề xuất giá mới ${agreedPrice.toLocaleString('vi-VN')} đ`,
+        shelfLocation: product.shelfLocation,
+        createdAt: new Date().toISOString(),
+      });
+      result = { decisionId: product.sku, receiptId, newReceiptId: receiptId };
+      break;
+    }
+    case 'endTermConfirmReceipt': {
+      const receipt = db.receipts.find(r => r.receiptId === ids.receiptId || r.id === ids.receiptId);
+      const product = db.products.find(p => p.newReceiptId === ids.receiptId || p.sku === ids.receiptId || p.sku === receipt?.sku);
+      if (!product) fail('Không tìm thấy sản phẩm.', 404);
+      if (receipt) receipt.confirmedAt = new Date().toISOString();
+      product.status = 'ON_SALE';
+      product.currentTerm = 1;
+      product.daysIntoTerm = 1;
+      product.currentPrice = product.proposedPrice || product.agreedPrice;
+      product.agreedPrice = product.proposedPrice || product.agreedPrice;
+      product.decision = null;
+      product.reConsignStatus = 'CONFIRMED';
+      db.movements.push({
+        sku: product.sku,
+        type: 'RE_CONSIGNED',
+        label: `Member đồng ý giá mới · Bắt đầu Kỳ 1 · hoa hồng 10%`,
+        shelfLocation: product.shelfLocation,
+        createdAt: new Date().toISOString(),
+      });
+      result = { success: true, receiptId: ids.receiptId, product };
       break;
     }
     case 'endTermReconsign': {
