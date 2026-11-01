@@ -5,18 +5,40 @@ import {
 } from "../pages/ConsignmentDetailPage.config.js";
 
 import React, { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 
 import { consignmentService } from "../services/warehouseApi.js";
 import { phase2Contract, isFixtureMode } from "../config/warehouseContract.js";
 import { usePhase2, useResource } from "./warehouseHooks.jsx";
-import { ownsClaim } from "../models/warehouseModel.js";
+import { ownsClaim, normalizeConsignmentForm } from "../models/warehouseModel.js";
 
 export function useConsignmentDetail() {
   const { formId } = useParams();
-  const { identity, scope } = usePhase2();
+  const location = useLocation();
+  const { identity, scope, user } = usePhase2();
   const resource = useResource((options) => consignmentService.read(formId, options), [formId]);
-  const form = resource.data;
+
+  const passedForm = location.state?.form
+    ? normalizeConsignmentForm(location.state.form, scope.userId)
+    : null;
+  const rawForm = resource.data || passedForm;
+
+  const form = React.useMemo(() => {
+    if (!rawForm) return null;
+    if (!rawForm.member && identity) {
+      return {
+        ...rawForm,
+        member: {
+          id: identity.memberId || identity.accountId,
+          memberId: identity.memberId || identity.accountId,
+          memberCode: identity.memberCode,
+          fullName: identity.fullName || identity.name,
+          phone: identity.phone,
+        },
+      };
+    }
+    return rawForm;
+  }, [rawForm, identity]);
 
   // Banner phản hồi người dùng
   const [feedback, setFeedback] = useState(null);
@@ -55,7 +77,13 @@ export function useConsignmentDetail() {
       ? options.inspectionReturnReasons
       : DEFAULT_RETURN_REASONS;
 
-  const owned = ownsClaim(form, scope.userId);
+  const owned =
+    !form?.claimedBy ||
+    ownsClaim(form, scope.userId) ||
+    ownsClaim(form, user?.accountId) ||
+    ownsClaim(form, user?.id) ||
+    ownsClaim(form, user?.email);
+
   const memberId = form?.memberId || form?.member?.id || form?.member?.memberId;
   const identified = Boolean(
     identity &&
@@ -88,7 +116,7 @@ export function useConsignmentDetail() {
     }
   }, [resource.actionError]);
 
-    return {
+  return {
     form,
     formId,
     setFeedback,
@@ -125,7 +153,7 @@ export function useConsignmentDetail() {
     returnReasons,
     setReturnNote,
     resultReceiptId,
-      sections: {
+    sections: {
       ConsignmentClaimBanner: { form, owned, resource },
       ConsignmentPhotoViewer: { photos, activePhotoIdx, photoUrl, setActivePhotoIdx },
       ConsignmentReviewPanel: { decision, setDecision, setRejectReason, rejectReason, errors, resource, formId, setFeedback },
