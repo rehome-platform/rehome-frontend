@@ -194,6 +194,14 @@ export async function fixtureRequest(
       result = null;
       break;
     }
+    case 'formList': {
+      const status = params?.status;
+      const items = db.forms
+        .filter((row) => row.warehouseId === scope.warehouseId && (!status || row.status === status))
+        .map((row) => formView(row, scope));
+      result = page(items, params);
+      break;
+    }
     case 'formRead':
       result = formView(find(db.forms, 'formId', ids.formId, scope), scope);
       break;

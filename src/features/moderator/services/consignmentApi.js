@@ -7,6 +7,35 @@ import { callBackend } from './warehouseTransport.js';
 import { queueService } from './queueApi.js';
 
 export const consignmentService = {
+  // KD-01: GET /consignment-forms danh sách form ký gửi
+  listForms: async (params, options) => {
+    const fallback = async () => {
+      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
+      return fixtureRequest('formList', { params, ...options });
+    };
+
+    const statusParam = params?.status || 'PENDING';
+    const queueType = statusParam === 'APPROVED' ? 'INSPECTION' : 'FORM_REVIEW';
+
+    const res = await callBackend(
+      {
+        method: 'get',
+        url: API_ENDPOINTS.MODERATOR.QUEUES,
+        params: { type: queueType },
+      },
+      { fallback, signal: options?.signal }
+    );
+
+    if (Array.isArray(res)) return res.map(item => normalizeConsignmentForm(item, options?.scope?.userId));
+    if (res?.items && Array.isArray(res.items)) {
+      return {
+        ...res,
+        items: res.items.map(item => normalizeConsignmentForm(item, options?.scope?.userId)),
+      };
+    }
+    return res;
+  },
+
   // API 31: POST /consignment-forms/{id}/approve
   approve: (formId, options) => queueService.approve(formId, options),
 
