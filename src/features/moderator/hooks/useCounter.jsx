@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 
 import { counterService } from "../services/warehouseApi.js";
 import { usePhase2, useResource } from "./warehouseHooks.jsx";
-import { listItems, lookupParams, normalizeMemberTasks } from "../models/warehouseModel.js";
+import { listItems, lookupParams, normalizeMemberTasks, Phase2Error } from "../models/warehouseModel.js";
 
 export function useCounter() {
   const { identity, setIdentity } = usePhase2();
@@ -14,11 +14,9 @@ export function useCounter() {
   const [confirmHandover, setConfirmHandover] = useState(null);
   const [handoverLoading, setHandoverLoading] = useState(false);
   const [handoverFeedback, setHandoverFeedback] = useState(null);
-  const [recentServed, setRecentServed] = useState([
-    { name: 'Trần Thị Seller 1', memberCode: 'MB000903', memberId: 'a0000000-0000-0000-0000-000000000903', phone: '0911111103', taskNote: 'Kiểm định ký gửi · 08:05' },
-    { name: 'Lê Văn Seller 2', memberCode: 'MB000904', memberId: 'a0000000-0000-0000-0000-000000000904', phone: '0911111104', taskNote: 'Bàn giao hàng rút về · 07:40' },
-    { name: 'Nguyễn Văn Buyer 1', memberCode: 'MB000901', memberId: 'a0000000-0000-0000-0000-000000000901', phone: '0911111101', taskNote: 'Nhận lại hàng cuối kỳ · hôm qua 16:20' },
-  ]);
+  const [recentServed, setRecentServed] = useState([]);
+  const lookupRequestRef = useRef(null);
+  const selectionVersionRef = useRef(0);
 
   const memberCodeInputRef = useRef(null);
   const selectedRef = useRef(selected);
@@ -30,9 +28,15 @@ export function useCounter() {
     }
   }, [selected]);
 
-  const results = useResource((options) => counterService.lookup(submitted, options), [submitted], {
-    enabled: !!submitted,
-  });
+  const results = useResource(async (options) => {
+    const members = await counterService.lookup(submitted.params, options);
+    if (submitted.reopen && !options.signal.aborted && lookupRequestRef.current === submitted) {
+      const member = listItems(members).find((item) => item.memberCode === submitted.params.memberCode && item.memberId);
+      if (!member) throw new Phase2Error('Không tìm thấy Member phù hợp với thông tin đã nhập.', 404);
+      choose(member);
+    }
+    return members;
+  }, [submitted], { enabled: !!submitted });
 
   const tasks = useResource(
     (options) => counterService.tasks(selected.memberId, options),
@@ -41,6 +45,8 @@ export function useCounter() {
   );
 
   const reset = () => {
+    selectionVersionRef.current += 1;
+    lookupRequestRef.current = null;
     selectedRef.current = null;
     setSelected(null);
     setIdentity(null);
@@ -52,7 +58,19 @@ export function useCounter() {
 
   const executeLookup = (lookupKind, value) => {
     reset();
-    setSubmitted(lookupParams(lookupKind, value));
+    const request = { params: lookupParams(lookupKind, value), reopen: false };
+    lookupRequestRef.current = request;
+    setSubmitted(request);
+  };
+
+  const reopen = (member) => {
+    if (results.loading) return;
+    reset();
+    const request = { params: lookupParams('memberCode', member.memberCode), reopen: true };
+    lookupRequestRef.current = request;
+    setSubmitted(request);
+    setKind('memberCode');
+    setQuery(member.memberCode);
   };
 
   const handleFormSubmit = (event) => {
@@ -63,26 +81,40 @@ export function useCounter() {
   };
 
   const choose = (member) => {
+    selectionVersionRef.current += 1;
+    lookupRequestRef.current = null;
     selectedRef.current = member;
     setIdentity(null);
     setSelected(member);
     setConfirmHandover(null);
     setHandoverFeedback(null);
-    if (member?.fullName || member?.name) {
-      setRecentServed((prev) => {
-        const next = prev.filter((p) => p.memberCode !== member.memberCode);
-        return [
-          {
-            name: member.fullName || member.name,
-            memberCode: member.memberCode,
-            memberId: member.memberId || member.accountId,
-            phone: member.phone || '',
-            taskNote: 'Vừa phục vụ tại quầy',
-          },
-          ...next.slice(0, 4),
-        ];
-      });
-    }
+    results.clearActionError();
+  };
+
+  const rememberServed = (member, taskNote = 'Vừa phục vụ tại quầy') => {
+    setRecentServed((prev) => [
+      {
+        name: member.fullName || member.name,
+        memberCode: member.memberCode,
+        memberId: member.memberId,
+        phone: member.phone || '',
+        taskNote,
+      },
+      ...prev.filter((item) => item.memberCode !== member.memberCode).slice(0, 4),
+    ]);
+  };
+
+  const confirmIdentity = () => {
+    const member = selectedRef.current;
+    const version = selectionVersionRef.current;
+    if (!member?.memberId) return;
+    return results.mutate((options) => counterService.confirm(member.memberId, options), {
+      onSuccess: (proof) => {
+        if (selectionVersionRef.current !== version || proof?.memberId !== member.memberId) return;
+        setIdentity(proof);
+        rememberServed(member);
+      },
+    });
   };
 
   const executeHandover = async (item, context) => {
@@ -98,19 +130,7 @@ export function useCounter() {
         type: 'success',
         message: `Đã bàn giao thành công "${item.productName || item.productId}" cho khách hàng!`,
       });
-      setRecentServed((prev) => {
-        const next = prev.filter((p) => p.memberCode !== selected.memberCode);
-        return [
-          {
-            name: selected.fullName || selected.name,
-            memberCode: selected.memberCode,
-            memberId: selected.memberId,
-            phone: selected.phone || '',
-            taskNote: `Bàn giao hàng · ${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`,
-          },
-          ...next.slice(0, 4),
-        ];
-      });
+      rememberServed(selected, `Bàn giao hàng · ${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`);
       setConfirmHandover(null);
       tasks.refresh();
     } catch (err) {
@@ -154,6 +174,7 @@ export function useCounter() {
     resultList,
     choose,
     recentServed,
+    reopen,
     scanner,
     executeLookup,
     confirmHandover,
@@ -161,7 +182,7 @@ export function useCounter() {
     executeHandover,
       sections: {
       CounterLookupForm: { handleFormSubmit, kind, setKind, memberCodeInputRef, query, setQuery, setScanner },
-      CounterIdentityPanel: { selected, results, confirmed, selectedRef, setIdentity, reset },
+      CounterIdentityPanel: { selected, results, confirmed, confirmIdentity, reset },
       CounterMemberResults: { submitted, results, resultList, selected, choose },
       CounterHandoverDialog: { confirmHandover, selected, handoverLoading, setConfirmHandover, executeHandover },
     },
