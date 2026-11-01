@@ -28,9 +28,14 @@ export default function ConsignmentDetailPage() {
       title={model.form?.name ? `Chi tiết ký gửi · ${model.form.name}` : `Chi tiết ký gửi ${model.formId}`}
       subtitle={`Mã đơn: ${model.formId} · Điểm kí gửi ReHome`}
       actions={
-        <div className="flex gap-2">
-          <Link to="/moderator/queue">
-            <Button variant="outline">Quay lại hàng đợi</Button>
+        <div className="flex items-center gap-2">
+          {model.form?.claimedBy && model.owned && !model.resource.error && (
+            <span className="text-[10px] font-bold tracking-wider px-2.5 py-1.5 border border-[#2b2b2b] bg-white text-[#2b2b2b] rounded">
+              BẠN ĐANG NHẬN VIỆC NÀY
+            </span>
+          )}
+          <Link to="/moderator/consignments">
+            <Button variant="outline">Danh sách form</Button>
           </Link>
           <Button
             variant="outline"
@@ -45,7 +50,7 @@ export default function ConsignmentDetailPage() {
         </div>
       }
     >
-      <ResourceState resource={model.resource} />
+      {!model.receiptStep && <ResourceState resource={{ ...model.resource, error: model.resource.actionError ? null : model.resource.error }} />}
 
       {model.feedback && (
         <ConsignmentFeedback feedback={model.feedback} setFeedback={model.setFeedback} />
@@ -55,7 +60,16 @@ export default function ConsignmentDetailPage() {
         <ConsignmentAccessNotice />
       )}
 
-      {model.form && (
+      {model.receiptStep && (
+        <div className="space-y-5">
+          <Link className="inline-block text-sm font-semibold text-primary underline" to="/moderator/consignments?status=INSPECTING">Thoát về danh sách</Link>
+          {model.receiptId ? <ReceiptPanel key={model.receiptId} receiptId={model.receiptId} form={model.receiptForm} allowStockIn /> : (
+            <div role="alert" className="rounded-xl border p-4">Chưa có mã biên nhận để tiếp tục. Vui lòng tải lại trạng thái.</div>
+          )}
+        </div>
+      )}
+
+      {model.form && !model.receiptStep && (
         <div className="space-y-6">
           {/* STEPPER QUY TRÌNH KIỂM ĐỊNH (KD-03, KD-04, KD-05, KD-07) */}
           {(model.form.status === 'APPROVED' || model.form.status === 'INSPECTING' || model.form.status === 'WAITING_CONFIRMATION' || model.form.status === 'STOCKED') && (
@@ -127,16 +141,6 @@ export default function ConsignmentDetailPage() {
             </div>
           </div>
 
-          {/* ================= BIÊN NHẬN & NHẬP KHO (KD-07, KD-08, KD-10) ================= */}
-          {(model.form.receiptId || model.resultReceiptId) && (
-            <div className="pt-4 border-t border-[#d4d4d4]">
-              <ReceiptPanel
-                receiptId={model.form.receiptId || model.resultReceiptId}
-                allowStockIn
-                onStocked={model.resource.refresh}
-              />
-            </div>
-          )}
         </div>
       )}
     </Page>

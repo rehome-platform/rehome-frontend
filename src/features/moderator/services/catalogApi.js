@@ -7,6 +7,7 @@ import { isFixtureMode } from "../config/warehouseContract.js";
 import { callBackend } from './warehouseTransport.js';
 
 export const catalogService = {
+  createBrand: (data, options) => catalogService.save('brand', null, data, options),
   // API 44: GET /categories, GET /brands
   list: async (options) => {
     const fallback = fixtureFallback('catalogList', options);

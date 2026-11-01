@@ -12,12 +12,14 @@ export function useConsignmentQueue() {
   const [search, setSearch] = useSearchParams();
 
   const typeParam = search.get('type') || 'ALL';
+  const focusedQueueId = search.get('queueId');
   const claimParam = search.get('claim') || '';
   const statusFilter = search.get('status') || '';
   const overdueOnly = search.get('overdue') === '1';
   const page = Math.max(0, Number(search.get('page')) || 0);
 
-  // Modal nhả việc (HQ-02-NhaViec)
+  // Modal nhận việc & nhả việc (HQ-02-NhanViec & HQ-02-NhaViec)
+  const [claimTarget, setClaimTarget] = useState(null);
   const [releaseTarget, setReleaseTarget] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [feedback, setFeedback] = useState(null);
@@ -82,15 +84,25 @@ export function useConsignmentQueue() {
     const action = release ? queueService.release : queueService.claim;
     resource.mutate(options => action(item.queueId, options), {
       onSuccess: () => {
-        if (release) setReleaseTarget(null);
-        setFeedback({ type: 'success', message: release ? `Đã nhả việc "${item.typeLabel}" (${item.formId || item.orderId || item.queueId}) về hàng đợi thành công.` : `Đã nhận việc "${item.typeLabel}" (${item.formId || item.orderId || item.queueId}) thành công! Bạn có thể bấm "Mở" để xử lý ngay.` });
+        if (release) {
+          setReleaseTarget(null);
+        } else {
+          setClaimTarget(null);
+        }
+        setFeedback({
+          type: 'success',
+          message: release
+            ? `Đã nhả việc "${item.typeLabel}" (${item.formId || item.orderId || item.queueId}) về hàng đợi thành công.`
+            : `Đã nhận việc "${item.typeLabel}" (${item.formId || item.orderId || item.queueId}) thành công! Bạn có thể chuyển sang tab "Kiểm định & nhập kho" để mở duyệt.`,
+        });
       },
     });
   };
   const handleClaim = item => mutateTask(item, false);
   const handleRelease = item => mutateTask(item, true);
 
-    return {
+  return {
+    focusedQueueId,
     setFeedback,
     resource,
     typeParam,
@@ -107,12 +119,15 @@ export function useConsignmentQueue() {
     scope,
     toggleSelectRow,
     handleClaim,
+    claimTarget,
+    setClaimTarget,
     setReleaseTarget,
     page,
     releaseTarget,
     handleRelease,
-      sections: {
+    sections: {
       QueueFilters: { statusFilter, changeFilter, claimParam, toggleOverdue, overdueOnly, filteredItems, rawItems },
+      QueueClaimDialog: { claimTarget, resource, setClaimTarget, handleClaim },
       QueueReleaseDialog: { releaseTarget, resource, setReleaseTarget, handleRelease },
     },
   };

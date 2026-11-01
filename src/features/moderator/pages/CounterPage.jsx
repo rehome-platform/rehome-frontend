@@ -142,7 +142,7 @@ export default function CounterPage() {
           <CounterMemberResults {...model.sections.CounterMemberResults} />
 
           {/* Card: Đã phục vụ gần đây */}
-          <CounterWorkflowGuide recentServed={model.recentServed} choose={model.choose} />
+          <CounterWorkflowGuide recentServed={model.recentServed} reopen={model.reopen} loading={model.results.loading} />
         </div>
       </div>
 

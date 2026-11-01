@@ -6,7 +6,7 @@ import { ROLES } from '../configs/role.config.js';
 export default function Footer() {
   const { user, isAuthenticated } = useAuth();
   const isAdmin = isAuthenticated && user?.role === ROLES.ADMIN;
-  const isModerator = isAuthenticated && (user?.role === ROLES.MODERATOR || user?.role === 'moderator');
+  const isModerator = isAuthenticated && (user?.role === ROLES.MODERATOR || user?.role === 'moderator' || user?.role === 'staff');
   return (
     <footer className="w-full bg-white border-t border-[#DDE5D9] py-8 mt-auto text-[#191C19]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

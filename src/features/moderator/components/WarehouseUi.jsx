@@ -214,13 +214,15 @@ export function Pager({ page, totalPages = 1, onChange }) {
     </nav>
   );
 }
-export function DetailLink({ formId }) {
+export function DetailLink({ formId, state }) {
   return (
     <Link
       className="text-primary underline"
       to={`/moderator/consignments/${encodeURIComponent(formId)}`}
+      state={state}
     >
       Mở chi tiết
     </Link>
   );
 }
+

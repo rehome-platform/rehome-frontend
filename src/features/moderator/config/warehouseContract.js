@@ -11,8 +11,8 @@ export const phase2Contract = {
     queueClaim: { gate: 'A', method: 'post', path: '/queues/:queueId/claim' },
     queueRelease: { gate: 'A', method: 'post', path: '/queues/:queueId/release' },
     formRead: {
-      gate: 'A', method: 'get', path: '/consignment-forms/:formId',
-      limitation: 'Backend currently restricts this read to the owning Member.',
+      gate: 'A', method: 'get', path: '/moderator/consignment-forms/:formId',
+      limitation: 'Member: own forms; Moderator: non-draft forms in the assigned warehouse; Admin: all forms. Access depends on the deployed backend.',
     },
     formApprove: { gate: 'A', method: 'post', path: '/consignment-forms/:formId/approve' },
     formReject: { gate: 'A', method: 'post', path: '/consignment-forms/:formId/reject' },
@@ -86,7 +86,8 @@ export const phase2Contract = {
       'DONATED',
       'DESTROYED',
     ],
-    termLengthDays: [30, 60, 90],
+    termLengthDays: [30],
+    maxRenewals: 2,
   },
 };
 

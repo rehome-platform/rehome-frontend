@@ -31,6 +31,9 @@ beforeEach(() => {
     http.get(`${API_BASE_URL}/ws/info`, () => {
       return HttpResponse.json({ websocket: false, origins: ['*:*'], cookie_needed: false });
     }),
+    http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.MY_WAREHOUSES}`, () => {
+      return HttpResponse.json([]);
+    }),
   );
   localStorage.clear();
 });
@@ -43,9 +46,9 @@ const mockModeratorAuth = {
   logout: vi.fn(),
 };
 
-function ModeratorWrapper({ children }) {
+function ModeratorWrapper({ children, auth = mockModeratorAuth }) {
   return (
-    <AuthContext.Provider value={mockModeratorAuth}>
+    <AuthContext.Provider value={auth}>
       <MemoryRouter>
         <Phase2Provider>{children}</Phase2Provider>
       </MemoryRouter>
@@ -110,8 +113,107 @@ describe('TASK-02: Role Verification & Member Profile Guarding', () => {
     });
 
     expect(memberMeCalled).toBe(false);
-    expect(result.user.role).toBe('staff');
+    expect(result.user.role).toBe('moderator');
     expect(result.user.email).toBe('moderator@rehome.vn');
+  });
+
+  it('Moderator login maps id, warehouseId, warehouseName, fullName and moderatorCode from /api/account/me', async () => {
+    let myWarehousesCalled = false;
+
+    server.use(
+      http.post(`${API_BASE_URL}${API_ENDPOINTS.AUTH.LOGIN}`, () => {
+        return HttpResponse.json({
+          accessToken: 'test-moderator-token',
+          refreshToken: 'test-refresh-token',
+          id: '11111111-2222-3333-4444-555555555555',
+          role: 'MODERATOR',
+        });
+      }),
+      http.get(`${API_BASE_URL}${API_ENDPOINTS.AUTH.ME}`, () => {
+        return HttpResponse.json({
+          id: '11111111-2222-3333-4444-555555555555',
+          email: 'moderator1@rehome.test',
+          authorities: '[ROLE_MODERATOR]',
+          role: 'MODERATOR',
+          warehouseId: 'wh-q7-uuid',
+          warehouseName: 'Địa điểm ký gửi - TPHCM',
+          fullName: 'Phạm Thị Moderator 1',
+          moderatorCode: 'MOD-SEED-0001',
+        });
+      }),
+      http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.MY_WAREHOUSES}`, () => {
+        myWarehousesCalled = true;
+        return HttpResponse.json([]);
+      }),
+      http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.QUEUES}`, () => {
+        return HttpResponse.json([]);
+      }),
+      http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.INVENTORY}`, () => {
+        return HttpResponse.json({ content: [], totalElements: 0 });
+      }),
+    );
+
+    const result = await authService.login({
+      email: 'moderator1@rehome.test',
+      password: '123456',
+    });
+
+    expect(myWarehousesCalled).toBe(false);
+    expect(result.user.id).toBe('11111111-2222-3333-4444-555555555555');
+    expect(result.user.accountId).toBe('11111111-2222-3333-4444-555555555555');
+    expect(result.user.warehouseId).toBe('wh-q7-uuid');
+    expect(result.user.warehouseName).toBe('Địa điểm ký gửi - TPHCM');
+    expect(result.user.fullName).toBe('Phạm Thị Moderator 1');
+    expect(result.user.memberCode).toBe('MOD-SEED-0001');
+
+    render(
+      <ModeratorWrapper auth={{ user: result.user, isAuthenticated: true, logout: vi.fn() }}>
+        <WarehouseHomePage />
+      </ModeratorWrapper>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Địa điểm ký gửi - TPHCM').length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByText('Chưa có thông tin điểm kí gửi')).not.toBeInTheDocument();
+  });
+
+  it('Moderator login falls back to GET /warehouses/moderator and login response id when /api/account/me omits warehouse', async () => {
+    let myWarehousesCalled = false;
+
+    server.use(
+      http.post(`${API_BASE_URL}${API_ENDPOINTS.AUTH.LOGIN}`, () => {
+        return HttpResponse.json({
+          accessToken: 'test-moderator-token',
+          refreshToken: 'test-refresh-token',
+          id: 'mod-uuid-fallback',
+          role: 'MODERATOR',
+        });
+      }),
+      http.get(`${API_BASE_URL}${API_ENDPOINTS.AUTH.ME}`, () => {
+        return HttpResponse.json({
+          email: 'moderator1@rehome.test',
+          authorities: '[ROLE_MODERATOR]',
+        });
+      }),
+      http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.MY_WAREHOUSES}`, () => {
+        myWarehousesCalled = true;
+        return HttpResponse.json([
+          { id: 'wh-cg-uuid', name: 'Địa điểm ký gửi - Hà Nội' },
+        ]);
+      }),
+    );
+
+    const result = await authService.login({
+      email: 'moderator1@rehome.test',
+      password: '123456',
+    });
+
+    expect(myWarehousesCalled).toBe(true);
+    expect(result.user.id).toBe('mod-uuid-fallback');
+    expect(result.user.accountId).toBe('mod-uuid-fallback');
+    expect(result.user.warehouseId).toBe('wh-cg-uuid');
+    expect(result.user.warehouseName).toBe('Địa điểm ký gửi - Hà Nội');
   });
 
   it('Admin login does NOT trigger GET /members/me', async () => {
@@ -288,16 +390,16 @@ describe('TASK-01: Stop Sending Unsupported WAITING_END_OF_TERM Status', () => {
 
 describe('TASK-03 & TASK-04: SockJS URL Construction & Notifications Endpoint Handling', () => {
   it('getSockJsUrl constructs HTTP(S) URL and never returns ws: or wss:', () => {
-    expect(getSockJsUrl('https://re-backend-9a98.onrender.com')).toBe(
-      'https://re-backend-9a98.onrender.com/ws',
+    expect(getSockJsUrl('https://rehome-a4gae8cqhvf7cmd8.eastasia-01.azurewebsites.net')).toBe(
+      'https://rehome-a4gae8cqhvf7cmd8.eastasia-01.azurewebsites.net/ws',
     );
     expect(getSockJsUrl('http://localhost:8080')).toBe('http://localhost:8080/ws');
-    expect(getSockJsUrl('wss://re-backend-9a98.onrender.com')).toBe(
-      'https://re-backend-9a98.onrender.com/ws',
+    expect(getSockJsUrl('wss://rehome-a4gae8cqhvf7cmd8.eastasia-01.azurewebsites.net')).toBe(
+      'https://rehome-a4gae8cqhvf7cmd8.eastasia-01.azurewebsites.net/ws',
     );
     expect(getSockJsUrl('ws://localhost:8080')).toBe('http://localhost:8080/ws');
-    expect(getSockJsUrl('https://re-backend-9a98.onrender.com/')).toBe(
-      'https://re-backend-9a98.onrender.com/ws',
+    expect(getSockJsUrl('https://rehome-a4gae8cqhvf7cmd8.eastasia-01.azurewebsites.net/')).toBe(
+      'https://rehome-a4gae8cqhvf7cmd8.eastasia-01.azurewebsites.net/ws',
     );
 
     const result = getSockJsUrl('https://api.test.com');
@@ -361,3 +463,4 @@ describe('TASK-03 & TASK-04: SockJS URL Construction & Notifications Endpoint Ha
     );
   });
 });
+

@@ -76,6 +76,10 @@ export function productPayload(data) {
     size: optionalText(data?.size),
     shelfLocation: optionalText(data?.shelfLocation),
     photoUrls: Array.isArray(data?.photoUrls) ? data.photoUrls : [],
+      ...(data?.categoryId ? { categoryId: data.categoryId } : {}),
+      ...(data?.brandId ? { brandId: data.brandId } : {}),
+      ...(data?.color ? { color: optionalText(data.color) } : {}),
+      ...(data?.description ? { description: optionalText(data.description) } : {}),
   };
 }
 

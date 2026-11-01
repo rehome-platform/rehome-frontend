@@ -15,7 +15,8 @@ export const SAMPLE_REASONS = [
   'Hàng có dấu hiệu hư hỏng nặng',
 ];
 
-export const DEFAULT_TERM_OPTIONS = [30, 60, 90];
+export const DEFAULT_TERM_OPTIONS = [30];
+export const DEFAULT_MAX_RENEWALS = 2;
 
 export const DEFAULT_RETURN_REASONS = [
   'Không đạt tiêu chí chất lượng kiểm định',

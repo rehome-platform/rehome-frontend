@@ -9,7 +9,7 @@ export function normalizeApiBaseUrl(value) {
 }
 
 export const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL) ||
-  "https://re-backend-9a98.onrender.com";
+  "https://rehome-a4gae8cqhvf7cmd8.eastasia-01.azurewebsites.net";
 
 const moderatorId = (value) => encodeURIComponent(value);
 
@@ -54,6 +54,7 @@ export const API_ENDPOINTS = {
   MODERATOR: {
     // API 25, 26, 27: Quầy tiếp nhận & Tra cứu Member
     COUNTER_LOOKUP: "/counter/lookup",
+    MY_WAREHOUSES: "/warehouses/moderator",
     COUNTER_CONFIRM_IDENTITY: (accountId) => `/counter/members/${moderatorId(accountId)}/confirm-identity`,
     COUNTER_TASKS: (accountId) => `/counter/members/${moderatorId(accountId)}/tasks`,
     COUNTER_HANDOVER: "/counter/handover",
@@ -69,7 +70,8 @@ export const API_ENDPOINTS = {
     START_INSPECTION: (id) => `/consignment-forms/${moderatorId(id)}/inspection/start`,
     COMPLETE_INSPECTION: (id) => `/consignment-forms/${moderatorId(id)}/inspection/complete`,
     RETURN_ONSITE: (id) => `/consignment-forms/${moderatorId(id)}/return-onsite`,
-    CONSIGNMENT_FORM_DETAIL: (id) => `/consignment-forms/${moderatorId(id)}`,
+    CONSIGNMENT_FORMS: "/moderator/consignment-forms",
+    CONSIGNMENT_FORM_DETAIL: (id) => `/moderator/consignment-forms/${moderatorId(id)}`,
     RECEIPT_DETAIL: (id) => `/consignment-receipts/${moderatorId(id)}`,
     RECEIPT_PDF: (id) => `/consignment-receipts/${moderatorId(id)}/pdf`,
 
@@ -77,6 +79,7 @@ export const API_ENDPOINTS = {
     CREATE_PRODUCT: "/products",
     CONFIRM_UNCLAIMED_TRANSFER: (id) => `/products/${moderatorId(id)}/unclaimed/confirm-transfer`,
     PRODUCT_SKU_LABEL: (id) => `/products/${moderatorId(id)}/sku-label`,
+    PRODUCT_DETAIL: (id) => `/products/detail/${moderatorId(id)}`,
     INVENTORY: "/inventory",
     PRODUCT_BY_SKU: (sku) => `/products/${moderatorId(sku)}`,
     UPDATE_SHELF_LOCATION: (id) => `/products/${moderatorId(id)}/shelf-location`,

@@ -12,12 +12,12 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/api": {
-        target: "https://re-backend-9a98.onrender.com",
+        target: "https://rehome-a4gae8cqhvf7cmd8.eastasia-01.azurewebsites.net",
         changeOrigin: true,
         secure: true,
       },
       "/ws": {
-        target: "https://re-backend-9a98.onrender.com",
+        target: "https://rehome-a4gae8cqhvf7cmd8.eastasia-01.azurewebsites.net",
         ws: true,
         changeOrigin: true,
         secure: true,
