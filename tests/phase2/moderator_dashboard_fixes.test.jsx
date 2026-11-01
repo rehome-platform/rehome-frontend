@@ -288,16 +288,16 @@ describe('TASK-01: Stop Sending Unsupported WAITING_END_OF_TERM Status', () => {
 
 describe('TASK-03 & TASK-04: SockJS URL Construction & Notifications Endpoint Handling', () => {
   it('getSockJsUrl constructs HTTP(S) URL and never returns ws: or wss:', () => {
-    expect(getSockJsUrl('https://re-backend-9a98.onrender.com')).toBe(
-      'https://re-backend-9a98.onrender.com/ws',
+    expect(getSockJsUrl('https://rehome-a4gae8cqhvf7cmd8.eastasia-01.azurewebsites.net')).toBe(
+      'https://rehome-a4gae8cqhvf7cmd8.eastasia-01.azurewebsites.net/ws',
     );
     expect(getSockJsUrl('http://localhost:8080')).toBe('http://localhost:8080/ws');
-    expect(getSockJsUrl('wss://re-backend-9a98.onrender.com')).toBe(
-      'https://re-backend-9a98.onrender.com/ws',
+    expect(getSockJsUrl('wss://rehome-a4gae8cqhvf7cmd8.eastasia-01.azurewebsites.net')).toBe(
+      'https://rehome-a4gae8cqhvf7cmd8.eastasia-01.azurewebsites.net/ws',
     );
     expect(getSockJsUrl('ws://localhost:8080')).toBe('http://localhost:8080/ws');
-    expect(getSockJsUrl('https://re-backend-9a98.onrender.com/')).toBe(
-      'https://re-backend-9a98.onrender.com/ws',
+    expect(getSockJsUrl('https://rehome-a4gae8cqhvf7cmd8.eastasia-01.azurewebsites.net/')).toBe(
+      'https://rehome-a4gae8cqhvf7cmd8.eastasia-01.azurewebsites.net/ws',
     );
 
     const result = getSockJsUrl('https://api.test.com');

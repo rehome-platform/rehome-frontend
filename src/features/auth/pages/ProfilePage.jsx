@@ -10,7 +10,7 @@ import '../styles/profile-password.css';
  * Trang Hồ Sơ Cá Nhân & Quản Trị Tài Khoản Nhân Sự
  * Phase 1 — Auth & Hồ sơ (F-008: Đổi mật khẩu, F-009: Xem hồ sơ, F-010: Cập nhật hồ sơ)
  * Dành cho Admin & Moderator nội bộ trên Web
- * Kết nối hoàn toàn với Backend API thật tại https://re-backend-9a98.onrender.com
+ * Kết nối hoàn toàn với Backend API thật tại https://rehome-a4gae8cqhvf7cmd8.eastasia-01.azurewebsites.net
  */
 export default function ProfilePage() {
   const { user, updateProfile, changePassword, logout } = useAuth();

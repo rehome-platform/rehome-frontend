@@ -1,7 +1,7 @@
 /**
  * ReHome - Authentication & Profile Service
  * Phase 1 — Auth & Hồ sơ (F-004, F-006, F-007, F-008, F-009, F-010)
- * Hoàn toàn kết nối với Backend API thật tại https://re-backend-9a98.onrender.com
+ * Hoàn toàn kết nối với Backend API thật tại https://rehome-a4gae8cqhvf7cmd8.eastasia-01.azurewebsites.net
  * Không sử dụng mock data, fake fallback hay hardcoded credentials.
  */
 import baseApi, {

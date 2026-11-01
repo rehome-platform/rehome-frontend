@@ -9,7 +9,7 @@ export function normalizeApiBaseUrl(value) {
 }
 
 export const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL) ||
-  "https://re-backend-9a98.onrender.com";
+  "https://rehome-a4gae8cqhvf7cmd8.eastasia-01.azurewebsites.net";
 
 const moderatorId = (value) => encodeURIComponent(value);
 
