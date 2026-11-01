@@ -74,9 +74,10 @@ export default function PhotoUpload({ onChange, disabled = false }) {
           }}
         />
       </label>
-      {files.map((item) => (
+      {files.map((item, index) => (
         <div key={item.key} className="rounded-xl border border-neutral p-3 text-sm space-y-2">
           <p>
+            {index === 0 && <strong>Ảnh chính · </strong>}
             {item.file.name} ·{' '}
             {item.status === 'DONE'
               ? 'Đã tải ảnh gốc'
@@ -108,6 +109,16 @@ export default function PhotoUpload({ onChange, disabled = false }) {
               Bỏ ảnh
             </Button>
           )}
+          <div className="flex gap-2">
+            {[-1, 1].map(offset => <Button key={offset} type="button" variant="outline"
+              aria-label={`${offset < 0 ? 'Đưa lên' : 'Đưa xuống'} ${item.file.name}`}
+              disabled={disabled || index + offset < 0 || index + offset >= files.length}
+              onClick={() => setFiles(previous => {
+                const next = [...previous];
+                [next[index], next[index + offset]] = [next[index + offset], next[index]];
+                return next;
+              })}>{offset < 0 ? 'Đưa lên' : 'Đưa xuống'}</Button>)}
+          </div>
         </div>
       ))}
     </div>
