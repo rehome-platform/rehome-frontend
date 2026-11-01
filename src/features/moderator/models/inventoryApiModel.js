@@ -43,7 +43,13 @@ export function inventoryResult(result, params) {
 }
 
 function inventoryActions(res) {
-  return res.allowedActions || (res.status === 'UNCLAIMED' ? ['TRANSFER', 'CHANGE_SHELF'] : ['CHANGE_SHELF']);
+  const actions = Array.isArray(res?.allowedActions) ? [...res.allowedActions] : [];
+  if (res?.decision === 'RE_CONSIGN' || res?.reConsignStatus === 'PROPOSAL_SENT' || res?.status === 'WAITING_END_OF_TERM') {
+    if (!actions.includes('RE_CONSIGN')) actions.push('RE_CONSIGN');
+  }
+  if (!actions.includes('CHANGE_SHELF')) actions.push('CHANGE_SHELF');
+  if (res?.status === 'UNCLAIMED' && !actions.includes('TRANSFER')) actions.push('TRANSFER');
+  return actions;
 }
 
 export function inventoryDetail(res, sku) {

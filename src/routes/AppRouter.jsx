@@ -30,6 +30,7 @@ import {
   CategoryBrandPage,
   WarehouseInboxPage,
   WarehouseHomePage,
+  ReConsignNegotiationPage,
 } from '../features/moderator/pages/index.js';
 
 // Admin Pages & Shared Layout (Cổng Quản Trị Hệ Thống)
@@ -164,6 +165,10 @@ export default function AppRouter() {
       />
       <Route path="/moderator/consignments/:formId" element={<PrivateRoute roles={['moderator', 'staff', 'admin']}><ConsignmentDetailPage key={location.pathname} /></PrivateRoute>} />
       <Route path="/moderator/inventory/:sku" element={<PrivateRoute roles={['moderator', 'staff', 'admin']}><InventoryDetailPage key={location.pathname} /></PrivateRoute>} />
+      <Route path="/moderator/inventory/:sku/re-consign" element={<PrivateRoute roles={['moderator', 'staff', 'admin']}><ReConsignNegotiationPage key={location.pathname} /></PrivateRoute>} />
+      <Route path="/moderator/consignments/re-consign/:sku" element={<PrivateRoute roles={['moderator', 'staff', 'admin']}><ReConsignNegotiationPage key={location.pathname} /></PrivateRoute>} />
+      <Route path="/moderator/inventory/:sku/re-consign" element={<PrivateRoute roles={['moderator', 'staff', 'admin']}><ReConsignNegotiationPage key={location.pathname} /></PrivateRoute>} />
+      <Route path="/moderator/consignments/re-consign/:sku" element={<PrivateRoute roles={['moderator', 'staff', 'admin']}><ReConsignNegotiationPage key={location.pathname} /></PrivateRoute>} />
       <Route path="/moderator/end-of-term" element={<PrivateRoute roles={['moderator', 'staff', 'admin']}><EndOfTermPage /></PrivateRoute>} />
       <Route
         path="/moderator/returns"
