@@ -327,7 +327,7 @@ describe('ConsignmentQueuePage component behaviors', () => {
     render(<ConsignmentQueuePage />, { wrapper: Wrapper });
     expect(await screen.findByText('Áo khoác dạ')).toBeInTheDocument();
     expect(screen.getByText('chưa ai nhận')).toBeInTheDocument();
-    expect(screen.getByText('bạn đang giữ')).toBeInTheDocument();
+    expect(screen.getByText('Bạn đang nhận việc này')).toBeInTheDocument();
 
     const claimBtn = screen.getByRole('button', { name: 'Nhận việc' });
     fireEvent.click(claimBtn);
