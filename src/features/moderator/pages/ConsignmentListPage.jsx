@@ -139,21 +139,21 @@ export default function ConsignmentListPage() {
                         )}
                       </td>
                       <td className="py-3 px-3 font-bold text-[#191C19]">
-                        {form.name || form.productName || 'Áo khoác dạ nữ'}
+                        {form.name || form.productName || '—'}
                       </td>
                       <td className="py-3 px-3 text-[#414942]">
-                        {form.brand || form.brandName || 'Uniqlo'}
+                        {form.brand || form.brandName || '—'}
                       </td>
                       <td className="py-3 px-3 text-[#414942]">
-                        {form.member?.fullName || form.memberName || 'Lê Minh C'}
+                        {form.member?.fullName || form.memberName || '—'}
                       </td>
                       <td className="py-3 px-3 font-bold text-[#191C19]">
-                        {money(form.desiredPrice || form.price || 1000000)}
+                        {money(form.desiredPrice ?? form.price)}
                       </td>
                       <td className="py-3 px-3 text-[#5f5f5f]">
                         {form.createdAt ? new Date(form.createdAt).toLocaleDateString('vi-VN', {
                           day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
-                        }) : '11/10 03:30'}
+                        }) : '—'}
                       </td>
                       <td className="py-3 px-3 text-right">
                         <Link
@@ -161,7 +161,7 @@ export default function ConsignmentListPage() {
                           state={{ form }}
                           className="inline-block font-semibold text-[11px] py-1.5 px-3 bg-[#2b2b2b] text-white hover:bg-black rounded shadow-sm transition-colors"
                         >
-                          Mở duyệt
+                          {{ WAITING_CONFIRMATION: 'Chờ xác nhận', STOCK_IN: 'Tiếp tục nhập kho', PRINT: 'In tem', INSPECTION: 'Tiếp tục kiểm định' }[form.resumeStep] || 'Mở duyệt'}
                         </Link>
                       </td>
                     </tr>

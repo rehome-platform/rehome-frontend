@@ -63,7 +63,8 @@ export function normalizeConsignmentForm(data, currentUserId) {
     ...formIdentity(data),
     status,
     allowedActions: data.allowedActions || defaultActions(status),
-    claimedBy: data.claimedBy ?? currentUserId ?? null,
+    claimedBy: data.claimedBy ?? null,
+    productSku: data.productSku || data.sku || null,
     photos: normalizePhotos(data),
     ...formTerms(data),
   };

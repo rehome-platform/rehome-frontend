@@ -70,7 +70,11 @@ export const API_ENDPOINTS = {
     START_INSPECTION: (id) => `/consignment-forms/${moderatorId(id)}/inspection/start`,
     COMPLETE_INSPECTION: (id) => `/consignment-forms/${moderatorId(id)}/inspection/complete`,
     RETURN_ONSITE: (id) => `/consignment-forms/${moderatorId(id)}/return-onsite`,
-    CONSIGNMENT_FORM_DETAIL: (id) => `/consignment-forms/${moderatorId(id)}`,
+    CONSIGNMENT_FORMS: "/moderator/consignment-forms",
+    CONSIGNMENT_FORM_DETAIL: (id) => `/moderator/consignment-forms/${moderatorId(id)}`,
+    SKU_LABELS: "/moderator/sku-labels",
+    SKU_LABELS_PDF: "/moderator/sku-labels/pdf",
+    SKU_LABELS_PRINTED: "/moderator/sku-labels/printed",
     RECEIPT_DETAIL: (id) => `/consignment-receipts/${moderatorId(id)}`,
     RECEIPT_PDF: (id) => `/consignment-receipts/${moderatorId(id)}/pdf`,
 
