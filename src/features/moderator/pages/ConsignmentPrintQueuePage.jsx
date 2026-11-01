@@ -11,7 +11,7 @@ export default function ConsignmentPrintQueuePage() {
   const [searchParams] = useSearchParams();
   const focusedSku = searchParams.get('sku');
   const { signal } = usePhase2();
-  const resource = useResource(options => skuLabelService.list(options), []);
+  const resource = useResource(options => skuLabelService.list({ ...options, sku: focusedSku }), [focusedSku]);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState([]);
   const [pendingMark, setPendingMark] = useState([]);
@@ -30,6 +30,11 @@ export default function ConsignmentPrintQueuePage() {
   useEffect(() => {
     if (!resource.loading) focusRef.current?.scrollIntoView?.({ block: 'center' });
   }, [resource.loading, focusedSku]);
+  // Món vừa nhập kho (mở từ bước nhập kho qua ?sku=) được chọn sẵn để in ngay
+  const focusedReady = !!focusedSku && items.some(item => item.sku === focusedSku);
+  useEffect(() => {
+    if (focusedReady) setSelected(previous => (previous.length ? previous : [focusedSku]));
+  }, [focusedReady, focusedSku]);
   useEffect(() => () => activeRequest.current?.abort(), []);
 
   const download = async () => {
