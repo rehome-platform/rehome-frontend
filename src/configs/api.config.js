@@ -48,10 +48,17 @@ export const API_ENDPOINTS = {
   MEMBER: {
     ME: "/members/me",
     CODE: "/members/me/code",
+    MY_PRODUCTS: "/products/mine",
+    DECIDE_END_OF_TERM: (id) => `/end-of-term-decisions/${id}/decide`,
+    CONFIRM_RECEIPT: (id) => `/consignment-receipts/${id}/confirm`,
   },
 
   // 2. Moderator (Nhân viên vận hành kho & Kiểm duyệt viên tại chi nhánh kho) - API 25 -> 48
   MODERATOR: {
+    // Ký gửi lại & Xử lý cuối kỳ (KD-11)
+    RECONSIGN_TERMS: (decisionId) => `/end-of-term-decisions/${moderatorId(decisionId)}/re-consign-terms`,
+    PENDING_PRICING: "/end-of-term-decisions/pending-pricing",
+    CONFIRM_RECEIPT: (id) => `/consignment-receipts/${moderatorId(id)}/confirm`,
     // API 25, 26, 27: Quầy tiếp nhận & Tra cứu Member
     COUNTER_LOOKUP: "/counter/lookup",
     MY_WAREHOUSES: "/warehouses/moderator",
