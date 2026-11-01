@@ -61,7 +61,7 @@ export function useConsignmentDetail() {
   const [resultReceiptId, setReceiptId] = useState(null);
   const completedForm = React.useRef(null);
   const receiptId = resultReceiptId || form?.receiptId;
-  const receiptStep = !!receiptId || ['WAITING_CONFIRMATION', 'STOCK_IN', 'PRINT'].includes(form?.resumeStep);
+  const receiptStep = !!receiptId || ['WAITING_CONFIRMATION', 'AWAIT_MEMBER_CONFIRM', 'STOCK_IN', 'PRINT', 'COMPLETED'].includes(form?.resumeStep);
   const receiptCreated = (id) => {
     completedForm.current = form;
     setReceiptId(id);

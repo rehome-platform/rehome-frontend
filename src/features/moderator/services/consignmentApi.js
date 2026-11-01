@@ -14,18 +14,24 @@ export const consignmentService = {
       return fixtureRequest('formList', { params, ...options });
     };
 
+    // Backend chỉ nhận stage PENDING | APPROVED | INSPECTING | STOCKED_TODAY (bỏ trống = mọi form trừ nháp)
+    const requested = params?.status || 'PENDING';
+    const stage = requested === 'REJECTED' ? undefined : (requested === 'STOCKED' ? 'STOCKED_TODAY' : requested);
+    const clientStatus = requested === 'REJECTED' ? 'REJECTED' : null;
+
     const res = await callBackend(
       {
         method: 'get',
         url: API_ENDPOINTS.MODERATOR.CONSIGNMENT_FORMS,
-        params: { stage: params?.status || 'PENDING', page: params?.page || 0, size: params?.size || 20 },
+        params: { ...(stage ? { stage } : {}), page: params?.page || 0, size: params?.size || 20 },
       },
       { fallback, signal: options?.signal }
     );
 
-    if (Array.isArray(res)) return res.map(item => normalizeConsignmentForm(item));
+    const keep = item => !clientStatus || item.status === clientStatus;
+    if (Array.isArray(res)) return res.map(item => normalizeConsignmentForm(item)).filter(keep);
     if (res && (Array.isArray(res.content) || Array.isArray(res.items))) {
-      const items = (res.content || res.items).map(item => normalizeConsignmentForm(item));
+      const items = (res.content || res.items).map(item => normalizeConsignmentForm(item)).filter(keep);
       return {
         ...res,
         content: items,

@@ -21,7 +21,7 @@ function defaultActions(status) {
 }
 
 function normalizePhotos(data) {
-  const rawPhotos = data.photos || data.photoUrls || [];
+  const rawPhotos = data.photos || data.photoUrls || (data.thumbnailUrl ? [data.thumbnailUrl] : []);
   return Array.isArray(rawPhotos)
     ? rawPhotos.map((p) => (typeof p === 'string' ? { url: p } : p))
     : [];
@@ -42,8 +42,8 @@ function formTerms(data) {
     desiredPrice: Number(data.desiredPrice || 0),
     bringDeadline: data.bringInDeadline || data.bringDeadline || null,
     rejectReason: data.rejectReason || null,
-    receiptId: data.receiptId || null,
-    receiptConfirmed: Boolean(data.receiptConfirmed),
+    receiptId: data.receiptId || data.receipt?.id || null,
+    receiptConfirmed: Boolean(data.receiptConfirmed || data.confirmedAt || data.receipt?.confirmedAt),
     category: data.category?.name || data.category || data.categoryName || '',
     categoryName: data.categoryName || data.category?.name || data.category || '',
     brand: data.brand?.name || data.brand || data.brandName || '',
@@ -63,8 +63,9 @@ export function normalizeConsignmentForm(data, currentUserId) {
     ...formIdentity(data),
     status,
     allowedActions: data.allowedActions || defaultActions(status),
-    claimedBy: data.claimedBy ?? null,
-    productSku: data.productSku || data.sku || null,
+    // Backend trả người phụ trách trong moderator (claim hàng đợi hoặc moderator trên biên nhận)
+    claimedBy: data.claimedBy ?? data.moderator?.id ?? null,
+    productSku: data.productSku || data.product?.sku || data.sku || null,
     photos: normalizePhotos(data),
     ...formTerms(data),
   };

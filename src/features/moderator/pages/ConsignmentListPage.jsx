@@ -15,6 +15,17 @@ const TABS = [
 ];
 
 export default function ConsignmentListPage() {
+  // Nhãn nút theo resumeStep của backend (ModeratorResumeStep) và tên cũ còn dùng trong fixture
+  const RESUME_LABELS = {
+    REVIEW_FORM: 'Mở duyệt',
+    START_INSPECTION: 'Bắt đầu kiểm định',
+    INSPECTION: 'Tiếp tục kiểm định',
+    AWAIT_MEMBER_CONFIRM: 'Chờ xác nhận',
+    WAITING_CONFIRMATION: 'Chờ xác nhận',
+    STOCK_IN: 'Tiếp tục nhập kho',
+    COMPLETED: 'Xem kết quả',
+    PRINT: 'In tem',
+  };
   const { scope } = usePhase2();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentStatus = searchParams.get('status') || 'PENDING';
@@ -158,7 +169,7 @@ export default function ConsignmentListPage() {
                           state={{ form }}
                           className="inline-block font-semibold text-[11px] py-1.5 px-3 bg-[#2b2b2b] text-white hover:bg-black rounded shadow-sm transition-colors"
                         >
-                          {{ WAITING_CONFIRMATION: 'Chờ xác nhận', STOCK_IN: 'Tiếp tục nhập kho', PRINT: 'In tem', INSPECTION: 'Tiếp tục kiểm định' }[form.resumeStep] || 'Mở duyệt'}
+                          {RESUME_LABELS[form.resumeStep] || 'Mở duyệt'}
                         </Link>
                       </td>
                     </tr>
