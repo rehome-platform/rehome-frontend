@@ -11,7 +11,7 @@ export function ConsignmentClaimBanner({ form, owned, resource }) {
       <div className="flex items-center gap-3">
         <Status>{form.status}</Status>
         <span className="text-[#5B6776]">
-          {form.claimedBy ? (owned ? 'Bạn đang giữ việc này' : 'Người khác đang xử lý') : 'Chưa có ai nhận việc'}
+          {form.claimedBy ? (owned ? 'Bạn đang nhận việc này' : 'Người khác đang xử lý') : 'Chưa có ai nhận việc'}
         </span>
       </div>
       <div className="flex gap-2">

@@ -28,9 +28,14 @@ export default function ConsignmentDetailPage() {
       title={model.form?.name ? `Chi tiết ký gửi · ${model.form.name}` : `Chi tiết ký gửi ${model.formId}`}
       subtitle={`Mã đơn: ${model.formId} · Điểm kí gửi ReHome`}
       actions={
-        <div className="flex gap-2">
-          <Link to="/moderator/queue">
-            <Button variant="outline">Quay lại hàng đợi</Button>
+        <div className="flex items-center gap-2">
+          {model.owned && (
+            <span className="text-[10px] font-bold tracking-wider px-2.5 py-1.5 border border-[#2b2b2b] bg-white text-[#2b2b2b] rounded">
+              BẠN ĐANG NHẬN VIỆC NÀY
+            </span>
+          )}
+          <Link to="/moderator/consignments">
+            <Button variant="outline">Danh sách form</Button>
           </Link>
           <Button
             variant="outline"
