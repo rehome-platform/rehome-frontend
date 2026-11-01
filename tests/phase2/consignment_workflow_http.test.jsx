@@ -11,7 +11,7 @@ import ConsignmentDetailPage from '../../src/features/moderator/pages/Consignmen
 import ConsignmentListPage from '../../src/features/moderator/pages/ConsignmentListPage.jsx';
 import ConsignmentPrintQueuePage from '../../src/features/moderator/pages/ConsignmentPrintQueuePage.jsx';
 import ReceiptPanel from '../../src/features/moderator/components/ReceiptPanel.jsx';
-import { consignmentService } from '../../src/features/moderator/services/warehouseApi.js';
+import { consignmentService, skuLabelService } from '../../src/features/moderator/services/warehouseApi.js';
 
 const auth = vi.hoisted(() => ({ isAuthenticated: true, user: { id: 'mod-a', role: 'staff', warehouseId: 'wh-a' } }));
 vi.mock('../../src/context/AuthContext.jsx', () => ({ useAuth: () => auth }));
@@ -45,14 +45,19 @@ const receipt = () => ({ id: 'receipt-1', formId: 'form-1', receiptNo: 'KG-001',
   confirmedAt: state.confirmed ? '2026-11-01T03:00:00Z' : null, sku: state.sku });
 const label = { sku: 'Q7-AO-000001', name: 'Áo Zara', brandName: 'Zara', categoryName: 'Áo', size: 'M', warehouseName: 'Kho A' };
 beforeEach(() => {
-  state = { created: false, confirmed: false, sku: null, printed: false };
+  state = { created: false, confirmed: false, sku: null };
+  localStorage.clear();
   requests = { complete: 0, create: [], stages: [], pdf: 0, mark: 0, receipt: 0 };
   downloadClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
   server.use(
     http.get(detailPath, () => json(form())),
     http.get(`${base}/moderator/consignment-forms`, ({ request }) => {
-      requests.stages.push(new URL(request.url).searchParams.get('stage'));
+      const stage = new URL(request.url).searchParams.get('stage');
+      requests.stages.push(stage);
+      if (stage === 'STOCKED_TODAY') {
+        return json({ content: state.sku ? [form()] : [], totalElements: state.sku ? 1 : 0, totalPages: 1, page: 0 });
+      }
       return json({ content: [form()], totalElements: 1, totalPages: 1, page: 0 });
     }),
     http.post(`${base}/consignment-forms/form-1/inspection/complete`, async ({ request }) => {
@@ -68,13 +73,9 @@ beforeEach(() => {
     http.post(`${base}/products`, async ({ request }) => {
       requests.create.push(await request.json()); state.sku = label.sku; return json({ id: label.sku });
     }),
-    http.get(`${base}/moderator/sku-labels`, () => json(state.sku && !state.printed ? [label] : [])),
-    http.post(`${base}/moderator/sku-labels/pdf`, async ({ request }) => {
-      expect(await request.json()).toEqual({ skus: [label.sku] }); requests.pdf++;
+    http.get(`${base}/products/:sku/sku-label`, ({ params }) => {
+      expect(params.sku).toBe(label.sku); requests.pdf++;
       return new HttpResponse('%PDF-1.4\n%%EOF', { headers: { 'Content-Type': 'application/pdf' } });
-    }),
-    http.post(`${base}/moderator/sku-labels/printed`, async ({ request }) => {
-      expect(await request.json()).toEqual({ skus: [label.sku] }); requests.mark++; state.printed = true; return json(null);
     }),
   );
 });
@@ -131,11 +132,15 @@ describe('L-02 HTTP workflow', () => {
     await stock(user);
     await screen.findByRole('heading', { name: 'Hàng đợi in tem' });
     expect(screen.getByTestId('location')).toHaveTextContent(`print-queue?sku=${label.sku}`);
-    await user.click(await screen.findByRole('checkbox', { name: `Chọn ${label.sku}` }));
+    // Món vừa nhập kho được chọn sẵn khi mở từ bước nhập kho
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: `Chọn ${label.sku}` })).toBeChecked());
     await user.click(screen.getByRole('button', { name: 'Tải PDF 1 tem' }));
     await screen.findByText('Đã tải PDF 1 tem và cập nhật hàng đợi.');
     expect(requests.create).toEqual([expect.objectContaining({ receiptId: 'receipt-1', categoryId: 'cat-1', brandId: 'brand-1', color: 'Be', description: 'Ghi chú bán hàng', photoUrls: ['https://cdn.test/photo.jpg'] })]);
-    expect(requests.pdf).toBe(1); expect(requests.mark).toBe(1); expect(downloadClick).toHaveBeenCalledOnce();
+    expect(requests.pdf).toBe(1); expect(downloadClick).toHaveBeenCalledOnce();
+    expect(requests.stages).toContain('STOCKED_TODAY');
+    expect(JSON.parse(localStorage.getItem('rehome_printed_sku_labels'))).toEqual([label.sku]);
+    await waitFor(() => expect(screen.queryByRole('checkbox', { name: `Chọn ${label.sku}` })).not.toBeInTheDocument());
   });
 
   it('recovers an existing receipt on the specific 409 without submitting twice', async () => {
@@ -192,31 +197,38 @@ describe('L-02 HTTP workflow', () => {
 
   it('keeps selection on PDF failure and retries marking without generating a second PDF', async () => {
     state.sku = label.sku;
-    let failPdf = true, failMark = true;
+    let failPdf = true;
     server.use(
-      http.post(`${base}/moderator/sku-labels/pdf`, () => {
+      http.get(`${base}/products/:sku/sku-label`, () => {
         requests.pdf++;
         return failPdf ? new HttpResponse(null, { status: 500 }) : new HttpResponse('%PDF-1.4', { headers: { 'Content-Type': 'application/pdf' } });
       }),
-      http.post(`${base}/moderator/sku-labels/printed`, () => {
-        requests.mark++;
-        if (failMark) return new HttpResponse(null, { status: 500 });
-        state.printed = true; return json(null);
-      }),
     );
+    const mark = vi.spyOn(skuLabelService, 'markPrinted').mockRejectedValueOnce(new Error('storage unavailable'));
     const user = userEvent.setup(); app('/moderator/consignments/print-queue');
     await user.click(await screen.findByRole('checkbox', { name: `Chọn ${label.sku}` }));
     await user.click(screen.getByRole('button', { name: 'Tải PDF 1 tem' }));
     await screen.findByRole('alert');
     expect(screen.getByRole('checkbox', { name: `Chọn ${label.sku}` })).toBeChecked();
-    expect(requests.mark).toBe(0);
+    expect(mark).not.toHaveBeenCalled();
     failPdf = false;
     await user.click(screen.getByRole('button', { name: 'Tải PDF 1 tem' }));
     await screen.findByText(/Đã tải PDF nhưng chưa cập nhật hàng đợi/);
-    failMark = false;
     await user.click(screen.getByRole('button', { name: 'Thử lại cập nhật hàng đợi' }));
     await screen.findByText('Đã tải PDF 1 tem và cập nhật hàng đợi.');
-    expect(requests.pdf).toBe(2); expect(requests.mark).toBe(2);
+    expect(requests.pdf).toBe(2); expect(mark).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the stage valid for every tab (STOCKED -> STOCKED_TODAY, REJECTED filtered client-side)', async () => {
+    const seen = [];
+    server.use(http.get(`${base}/moderator/consignment-forms`, ({ request }) => {
+      seen.push(new URL(request.url).searchParams.get('stage'));
+      return json({ content: [{ ...form(), status: 'REJECTED' }, { ...form(), id: 'form-2', status: 'PENDING' }], totalPages: 1 });
+    }));
+    expect(await consignmentService.listForms({ status: 'STOCKED' })).toMatchObject({ items: expect.any(Array) });
+    const rejected = await consignmentService.listForms({ status: 'REJECTED' });
+    expect(rejected.items.map(item => item.status)).toEqual(['REJECTED']);
+    expect(seen).toEqual(['STOCKED_TODAY', null]);
   });
 
   it('normalizes receipt SKU and does not invent an assignee', async () => {
