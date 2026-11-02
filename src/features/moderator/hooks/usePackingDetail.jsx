@@ -85,6 +85,9 @@ export function usePackingDetail({ orderId, onChanged }) {
   };
 
   const create = async (customPayload = {}) => {
+    const extra = (customPayload && typeof customPayload === 'object' && !customPayload.nativeEvent && !customPayload.target)
+      ? customPayload
+      : {};
     if (actionBlocked('shipment', { lock, uncertain, resource })) return;
     if (!canShip(order, scope, now)) return;
     lock.current = true;
@@ -95,7 +98,7 @@ export function usePackingDetail({ orderId, onChanged }) {
         weightGrams: packageWeight,
         dimensions: packageDimensions,
         shipperNote,
-        ...customPayload,
+        ...extra,
       };
       await resource.mutate(options => packingService.shipment(orderId, { ...options, data: payload }), {
         onSuccess: () => {

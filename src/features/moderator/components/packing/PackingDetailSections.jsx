@@ -360,7 +360,7 @@ export function PackingScanPanel({
       <div className="flex flex-wrap gap-3 pt-2">
         <Button
           disabled={!operationReady('shipment') || resource.busy || resource.loading || uncertain || !canShip(order, scope, now)}
-          onClick={create}
+          onClick={() => create()}
           className="py-3 px-6 bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs"
         >
           Tạo vận đơn GHN
