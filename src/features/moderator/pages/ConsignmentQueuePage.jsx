@@ -8,6 +8,29 @@ import Button from '../../../components/common/Button.jsx';
 import { ownsClaim } from "../models/warehouseModel.js";
 import { Page, Pager, ResourceState } from "../components/WarehouseUi.jsx";
 
+function getQueueLinkTarget(item, typeParam) {
+  const type = item?.type || typeParam;
+  if (type === 'PACKING') {
+    return `/moderator/packing?orderId=${encodeURIComponent(item.orderId || item.refId || '')}`;
+  }
+  if (type === 'FORM_REVIEW' || type === 'INSPECTION') {
+    return `/moderator/consignments/${encodeURIComponent(item.formId || item.refId || '')}`;
+  }
+  if (type === 'RETURN') {
+    return `/moderator/returns`;
+  }
+  if (type === 'ORG_VERIFICATION') {
+    return `/moderator/verifications`;
+  }
+  if (type === 'LEGAL_CHANGE') {
+    return `/moderator/verifications?tab=LEGAL_CHANGES`;
+  }
+  if (type === 'VIOLATION_REPORT') {
+    return `/moderator/reports`;
+  }
+  return `/moderator/consignments/${encodeURIComponent(item.formId || item.refId || '')}`;
+}
+
 export default function ConsignmentQueuePage() {
   const model = useConsignmentQueue();
   return (
@@ -89,10 +112,7 @@ export default function ConsignmentQueuePage() {
                   const isClaimedByOther = item.claimedBy && !isMine;
                   const isSelected = model.selectedIds.includes(item.queueId);
 
-                  const linkTarget =
-                    model.typeParam === 'PACKING' || item.type === 'PACKING'
-                      ? `/moderator/packing?orderId=${encodeURIComponent(item.orderId || item.refId || '')}`
-                      : `/moderator/consignments/${encodeURIComponent(item.formId || '')}`;
+                  const linkTarget = getQueueLinkTarget(item, model.typeParam);
 
                   return (
                     <QueueTaskRow
