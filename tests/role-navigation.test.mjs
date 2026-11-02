@@ -113,16 +113,26 @@ function routeConfigs() {
 
 test('TC-B-004/005/007/008: Actual route configuration and guard preserve explicit role policy', () => {
   const routes = routeConfigs().filter(n => n.props.path?.startsWith('/admin') || n.props.path?.startsWith('/moderator'));
-  assert.equal(routes.length, 17);
+  assert.equal(routes.length, 19);
   for (const route of routes) {
     const roles = route.props.element.props.roles;
     for (const role of ['admin', 'staff', 'moderator']) {
       const h = harness('routes/PrivateRoute.jsx', role);
       const result = h.render({ roles, children: 'protected' });
-      if (route.props.path.startsWith('/moderator') || role === 'admin') assert.equal(result, 'protected');
-      else {
-        assert.equal(result.type, 'Navigate');
-        assert.ok(result.props.to !== '/admin');
+      if (route.props.path.startsWith('/moderator')) {
+        if (role === 'staff' || role === 'moderator') {
+          assert.equal(result, 'protected');
+        } else {
+          assert.equal(result.type, 'Navigate');
+          assert.equal(result.props.to, '/admin');
+        }
+      } else {
+        if (role === 'admin') {
+          assert.equal(result, 'protected');
+        } else {
+          assert.equal(result.type, 'Navigate');
+          assert.equal(result.props.to, '/moderator/counter');
+        }
       }
     }
     const anonymous = harness('routes/PrivateRoute.jsx', null, false);

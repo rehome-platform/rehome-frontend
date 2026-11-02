@@ -102,7 +102,7 @@ export default function AppRouter() {
       <Route
         path="/moderator"
         element={
-          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff']}>
             <WarehouseHomePage />
           </PrivateRoute>
         }
@@ -110,7 +110,7 @@ export default function AppRouter() {
       <Route
         path="/moderator/counter"
         element={
-          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff']}>
             <CounterPage />
           </PrivateRoute>
         }
@@ -118,7 +118,7 @@ export default function AppRouter() {
       <Route
         path="/moderator/queue"
         element={
-          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff']}>
             <ConsignmentQueuePage />
           </PrivateRoute>
         }
@@ -126,7 +126,7 @@ export default function AppRouter() {
       <Route
         path="/moderator/consignments"
         element={
-          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff']}>
             <ConsignmentListPage />
           </PrivateRoute>
         }
@@ -134,7 +134,7 @@ export default function AppRouter() {
       <Route
         path="/moderator/consignments/print-queue"
         element={
-          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff']}>
             <ConsignmentPrintQueuePage />
           </PrivateRoute>
         }
@@ -142,7 +142,7 @@ export default function AppRouter() {
       <Route
         path="/moderator/print-queue"
         element={
-          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff']}>
             <ConsignmentPrintQueuePage />
           </PrivateRoute>
         }
@@ -150,7 +150,7 @@ export default function AppRouter() {
       <Route
         path="/moderator/inventory"
         element={
-          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff']}>
             <WarehouseInventoryPage />
           </PrivateRoute>
         }
@@ -158,22 +158,20 @@ export default function AppRouter() {
       <Route
         path="/moderator/packing"
         element={
-          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff']}>
             <PackingOrdersPage />
           </PrivateRoute>
         }
       />
-      <Route path="/moderator/consignments/:formId" element={<PrivateRoute roles={['moderator', 'staff', 'admin']}><ConsignmentDetailPage key={location.pathname} /></PrivateRoute>} />
-      <Route path="/moderator/inventory/:sku" element={<PrivateRoute roles={['moderator', 'staff', 'admin']}><InventoryDetailPage key={location.pathname} /></PrivateRoute>} />
-      <Route path="/moderator/inventory/:sku/re-consign" element={<PrivateRoute roles={['moderator', 'staff', 'admin']}><ReConsignNegotiationPage key={location.pathname} /></PrivateRoute>} />
-      <Route path="/moderator/consignments/re-consign/:sku" element={<PrivateRoute roles={['moderator', 'staff', 'admin']}><ReConsignNegotiationPage key={location.pathname} /></PrivateRoute>} />
-      <Route path="/moderator/inventory/:sku/re-consign" element={<PrivateRoute roles={['moderator', 'staff', 'admin']}><ReConsignNegotiationPage key={location.pathname} /></PrivateRoute>} />
-      <Route path="/moderator/consignments/re-consign/:sku" element={<PrivateRoute roles={['moderator', 'staff', 'admin']}><ReConsignNegotiationPage key={location.pathname} /></PrivateRoute>} />
-      <Route path="/moderator/end-of-term" element={<PrivateRoute roles={['moderator', 'staff', 'admin']}><EndOfTermPage /></PrivateRoute>} />
+      <Route path="/moderator/consignments/:formId" element={<PrivateRoute roles={['moderator', 'staff']}><ConsignmentDetailPage key={location.pathname} /></PrivateRoute>} />
+      <Route path="/moderator/inventory/:sku" element={<PrivateRoute roles={['moderator', 'staff']}><InventoryDetailPage key={location.pathname} /></PrivateRoute>} />
+            <Route path="/moderator/inventory/:sku/re-consign" element={<PrivateRoute roles={['moderator', 'staff']}><ReConsignNegotiationPage key={location.pathname} /></PrivateRoute>} />
+      <Route path="/moderator/consignments/re-consign/:sku" element={<PrivateRoute roles={['moderator', 'staff']}><ReConsignNegotiationPage key={location.pathname} /></PrivateRoute>} />
+      <Route path="/moderator/end-of-term" element={<PrivateRoute roles={['moderator', 'staff']}><EndOfTermPage /></PrivateRoute>} />
       <Route
         path="/moderator/returns"
         element={
-          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff']}>
             <ReturnProcessingPage />
           </PrivateRoute>
         }
@@ -181,7 +179,7 @@ export default function AppRouter() {
       <Route
         path="/moderator/verifications"
         element={
-          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff']}>
             <OrgVerificationPage />
           </PrivateRoute>
         }
@@ -189,7 +187,7 @@ export default function AppRouter() {
       <Route
         path="/moderator/reports"
         element={
-          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff']}>
             <ViolationReportsPage />
           </PrivateRoute>
         }
@@ -197,7 +195,7 @@ export default function AppRouter() {
       <Route
         path="/moderator/categories"
         element={
-          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff']}>
             <CategoryBrandPage />
           </PrivateRoute>
         }
@@ -205,7 +203,7 @@ export default function AppRouter() {
       <Route
         path="/moderator/inbox"
         element={
-          <PrivateRoute roles={['moderator', 'staff', 'admin']}>
+          <PrivateRoute roles={['moderator', 'staff']}>
             <WarehouseInboxPage />
           </PrivateRoute>
         }
