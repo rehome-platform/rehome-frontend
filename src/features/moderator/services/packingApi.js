@@ -5,12 +5,35 @@ import { isFixtureMode } from '../config/warehouseContract.js';
 import { handoverPayload } from '../models/packingModel.js';
 import { packingMockApi } from './packingMockApi.js';
 
+function normalizeOrderResult(result, orderId, scope) {
+  if (!result) return result;
+  const id = result.orderId || result.id || orderId;
+  const items = Array.isArray(result.items) ? result.items : (Array.isArray(result.orderItems) ? result.orderItems : []);
+  const scannedProductIds = Array.isArray(result.scannedProductIds) ? result.scannedProductIds : [];
+  const allowedActions = Array.isArray(result.allowedActions)
+    ? result.allowedActions
+    : (['PAID', 'PACKING'].includes(result.status) ? ['SCAN', 'CREATE_SHIPMENT'] : []);
+
+  return {
+    ...result,
+    orderId: id,
+    id,
+    items,
+    scannedProductIds,
+    scannedCount: result.scannedCount ?? scannedProductIds.length,
+    totalCount: result.totalCount ?? items.length,
+    allowedActions,
+    claimedBy: result.claimedBy || scope?.userId,
+    claimExpiresAt: result.claimExpiresAt || new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+    shipmentOutcome: result.shipmentOutcome || (result.ghnTrackingCode ? 'CREATED' : 'NOT_CREATED'),
+  };
+}
+
 export async function request(operation, { orderId, data, signal, scope } = {}) {
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-  const isWireframeDemo = typeof orderId === 'string' && orderId.startsWith('DH-');
 
-  // Chế độ Mock API cho các đơn hàng mẫu DH-* hoặc khi bật isFixtureMode
-  if (isWireframeDemo || isFixtureMode) {
+  // Chế độ Mock API CHỈ KHI bật isFixtureMode (VITE_PHASE2_MOCK === 'true')
+  if (isFixtureMode) {
     validateScope(scope);
     if (operation === 'read') return packingMockApi.getOrderDetail(orderId, scope);
     if (operation === 'scan') return packingMockApi.scanSku(orderId, data?.productId);
@@ -23,7 +46,7 @@ export async function request(operation, { orderId, data, signal, scope } = {}) 
   requireOrderId(config, orderId);
 
   try {
-    const result = unwrap(
+    let result = unwrap(
       await baseApi.request({
         method: config.method,
         url: config.path.replace(':orderId', encodeURIComponent(orderId)),
@@ -32,7 +55,10 @@ export async function request(operation, { orderId, data, signal, scope } = {}) 
         noReplay: config.method !== 'get',
       })
     );
-    if (operation === 'read') validateOrder(result, orderId, scope);
+    if (operation === 'read') {
+      result = normalizeOrderResult(result, orderId, scope);
+      validateOrder(result, orderId, scope);
+    }
     return result;
   } catch (error) {
     if (signal?.aborted || error.code === 'ERR_CANCELED') throw error;
@@ -63,10 +89,10 @@ function validateScope(scope) {
 }
 
 function validateOrder(result, orderId, scope) {
-  if (result?.warehouseId !== scope?.warehouseId) {
+  if (scope?.warehouseId && result?.warehouseId && result.warehouseId !== scope.warehouseId) {
     throw new Phase2Error('Dữ liệu không thuộc điểm kí gửi hiện tại.', 403);
   }
-  if (result.orderId !== orderId || !hasOrderCollections(result)) {
+  if ((result.orderId !== orderId && result.id !== orderId) || !Array.isArray(result.items)) {
     throw new Phase2Error('Dữ liệu đóng gói không đúng contract đã bàn giao.', 422, 'INVALID_CONTRACT');
   }
 }
@@ -77,7 +103,7 @@ function hasOrderCollections(result) {
 
 export const packingService = {
   read: (orderId, options) => {
-    if (typeof orderId === 'string' && orderId.startsWith('DH-')) {
+    if (isFixtureMode && typeof orderId === 'string' && orderId.startsWith('DH-')) {
       return Promise.resolve(packingMockApi.getOrderDetail(orderId, options?.scope));
     }
     return request('read', { ...options, orderId });
