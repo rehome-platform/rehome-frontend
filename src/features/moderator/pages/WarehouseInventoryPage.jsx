@@ -19,6 +19,18 @@ export const SUPPORTED_INVENTORY_STATUSES = [
   'DESTROYED',
 ];
 
+export const INVENTORY_STATUS_LABELS = {
+  ON_SALE: 'Đang bán',
+  RESERVED: 'Đang giữ',
+  SOLD: 'Đã bán, chờ đóng gói',
+  WAITING_END_OF_TERM: 'Chờ xử lý cuối kỳ',
+  WITHDRAWN: 'Đã rút hàng',
+  UNCLAIMED: 'Vô thừa nhận',
+  DONATED: 'Đã chuyển giao từ thiện',
+  DESTROYED: 'Đã tiêu huỷ',
+  RETURNED: 'Đã hoàn trả',
+};
+
 export default function WarehouseInventoryPage() {
   const [search, setSearch] = useSearchParams();
   const navigate = useNavigate();
@@ -223,12 +235,14 @@ export default function WarehouseInventoryPage() {
               onChange={(e) => change('status', e.target.value)}
             >
               <option value="">Tất cả trạng thái</option>
-              {(Array.isArray(enums.data?.inventoryStatuses) && enums.data.inventoryStatuses.length > 0
-                ? enums.data.inventoryStatuses.filter((s) => SUPPORTED_INVENTORY_STATUSES.includes(s))
-                : SUPPORTED_INVENTORY_STATUSES
+              {Array.from(
+                new Set([
+                  ...SUPPORTED_INVENTORY_STATUSES,
+                  ...(Array.isArray(enums.data?.inventoryStatuses) ? enums.data.inventoryStatuses : []),
+                ])
               ).map((value) => (
                 <option key={value} value={value}>
-                  {value}
+                  {INVENTORY_STATUS_LABELS[value] || value}
                 </option>
               ))}
             </select>
@@ -472,6 +486,62 @@ export default function WarehouseInventoryPage() {
         </div>
       </Modal>
 
+
+            {/* Modal Đổi kệ */}
+      <Modal
+        isOpen={!!shelfModal}
+        onClose={() => setShelfModal(null)}
+        title="Đổi vị trí kệ"
+      >
+        {shelfModal && (
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!shelfModal.newShelf?.trim()) return;
+              try {
+                await inventoryService.shelf(shelfModal.item.sku, shelfModal.newShelf.trim(), {});
+                setShelfModal(null);
+                resource.refresh();
+              } catch (err) {
+                alert(err.message || 'Không thể cập nhật kệ');
+              }
+            }}
+            className="space-y-4"
+          >
+            <div>
+              <label htmlFor="new-shelf-input" className="block text-xs font-bold text-[#191C19] mb-1">
+                Vị trí kệ mới
+              </label>
+              <input
+                id="new-shelf-input"
+                aria-label="Vị trí kệ mới"
+                type="text"
+                value={shelfModal.newShelf}
+                onChange={(e) => setShelfModal({ ...shelfModal, newShelf: e.target.value })}
+                placeholder="VD: B2-10"
+                className="w-full rounded-xl border border-[#8a8a8a] px-3.5 py-2 text-xs font-mono font-bold focus:border-[#006B2C] focus:outline-none"
+              />
+            </div>
+            {conflictingItem && (
+              <p className="text-xs text-amber-600">
+                Chú ý: Kệ {shelfModal.newShelf} đang có sản phẩm {conflictingItem.sku}.
+              </p>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setShelfModal(null)}>
+                Hủy
+              </Button>
+              <Button
+                type="submit"
+                disabled={!shelfModal.newShelf?.trim()}
+                className="bg-[#006B2C] text-white hover:bg-[#005221] font-bold text-xs"
+              >
+                Lưu vị trí kệ
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
 
       {/* Modal Quét QR SKU */}
       <QRScannerModal

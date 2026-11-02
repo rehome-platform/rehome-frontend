@@ -508,7 +508,7 @@ export async function fixtureRequest(
         db.products.filter(
           (row) =>
             row.warehouseId === scope.warehouseId &&
-            (!params.status || row.status === params.status) &&
+            (!params.status || (params.status === 'WAITING_END_OF_TERM' ? (row.status === 'WAITING_END_OF_TERM' || row.status === 'WITHDRAWN' || row.status === 'UNCLAIMED') : row.status === params.status)) &&
             (!params.shelf || row.shelfLocation.includes(params.shelf)) &&
             (!params.sku || row.sku.includes(params.sku)),
         ),

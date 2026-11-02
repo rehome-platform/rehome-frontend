@@ -13,6 +13,48 @@ export const inventoryService = {
     const fallback = fixtureFallback('inventoryList', { params, ...options });
 
     try {
+      if (params?.status === 'WAITING_END_OF_TERM') {
+        if (isFixtureMode && fallback) return fallback();
+
+        const queryWithdrawn = inventoryQuery({ ...params, status: 'WITHDRAWN' });
+        const queryUnclaimed = inventoryQuery({ ...params, status: 'UNCLAIMED' });
+
+        const [resWithdrawn, resUnclaimed] = await Promise.all([
+          callBackend(
+            {
+              method: 'get',
+              url: API_ENDPOINTS.MODERATOR.INVENTORY,
+              params: queryWithdrawn,
+            },
+            { fallback, signal: options?.signal }
+          ),
+          callBackend(
+            {
+              method: 'get',
+              url: API_ENDPOINTS.MODERATOR.INVENTORY,
+              params: queryUnclaimed,
+            },
+            { fallback, signal: options?.signal }
+          ),
+        ]);
+
+        const itemsWithdrawn = resWithdrawn?.content || resWithdrawn?.items || (Array.isArray(resWithdrawn) ? resWithdrawn : []);
+        const itemsUnclaimed = resUnclaimed?.content || resUnclaimed?.items || (Array.isArray(resUnclaimed) ? resUnclaimed : []);
+        const combined = [...itemsWithdrawn, ...itemsUnclaimed];
+        const totalElements = (resWithdrawn?.totalElements ?? itemsWithdrawn.length) + (resUnclaimed?.totalElements ?? itemsUnclaimed.length);
+
+        return inventoryResult(
+          {
+            ...resWithdrawn,
+            content: combined,
+            items: combined,
+            totalElements,
+            totalPages: Math.ceil(totalElements / (params?.size ?? 20)),
+          },
+          params
+        );
+      }
+
       // Backend ProductStatus enum does not support WAITING_END_OF_TERM
       const queryParams = inventoryQuery(params);
 
