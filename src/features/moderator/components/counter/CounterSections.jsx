@@ -1,44 +1,153 @@
 import { CounterHandoverTask } from './CounterHandoverTask.jsx';
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import Button from "../../../../components/common/Button.jsx";
 
 import { Status, DetailLink, money } from "../WarehouseUi.jsx";
 
 export function CounterHandoverDialog({ confirmHandover, selected, handoverLoading, setConfirmHandover, executeHandover }) {
+  const item = confirmHandover?.item || {};
+  const context = confirmHandover?.context || 'ITEM_WITHDRAWAL';
+  const targetSku = item.sku || item.productId || item.returnId || '';
+
+  const [skuInput, setSkuInput] = useState('');
+  const [isIdentityConfirmed, setIsIdentityConfirmed] = useState(false);
+
+  const isSkuMatched = !targetSku || skuInput.trim().toUpperCase() === targetSku.toUpperCase();
+  const canHandover = isSkuMatched && isIdentityConfirmed;
+
+  const reasonLabels = {
+    ITEM_WITHDRAWAL: 'Member rút hàng',
+    END_OF_TERM_TAKE_BACK: 'Nhận lại cuối kỳ',
+    INVALID_RETURN_PICKUP: 'Người mua nhận hàng trả',
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl space-y-4">
-        <h3 className="text-base font-bold text-[#191C19]">
-          Xác nhận bàn giao hiện vật tại quầy
-        </h3>
-        <p className="text-xs text-[#5B6776] leading-relaxed">
-          Bạn có chắc chắn đã trao tận tay sản phẩm{' '}
-          <strong className="text-[#191C19]">
-            {confirmHandover.item.productName || confirmHandover.item.productId}
-          </strong>{' '}
-          cho khách hàng <strong className="text-[#191C19]">{selected.fullName || selected.name}</strong>?
-        </p>
-        <div className="rounded-xl bg-[#F0F5EE] p-3 text-xs text-[#414942]">
-          Hệ thống sẽ cập nhật trạng thái đã hoàn tất bàn giao. Thao tác này không thể hoàn tác.
+      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl space-y-4">
+        <div className="flex items-center justify-between border-b border-[#E2E8E0] pb-3">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[#2b2b2b] text-white">
+              {reasonLabels[context] || 'Bàn giao tại quầy'}
+            </span>
+            <h3 className="text-base font-bold text-[#191C19] mt-1">
+              BG-01 · Bàn giao hiện vật tại quầy
+            </h3>
+          </div>
+          <span className="text-xs font-semibold text-[#5B6776]">
+            {selected?.memberCode}
+          </span>
         </div>
-        <div className="flex justify-end gap-3 pt-2">
-          <Button
-            variant="outline"
-            type="button"
-            disabled={handoverLoading}
-            onClick={() => setConfirmHandover(null)}
-          >
-            Hủy bỏ
-          </Button>
-          <Button
-            type="button"
-            loading={handoverLoading}
-            className="bg-[#006B2C] text-white hover:bg-[#005221] font-bold"
-            onClick={() => executeHandover(confirmHandover.item, confirmHandover.context)}
-          >
-            Xác nhận đã bàn giao
-          </Button>
+
+        {/* Thông tin người nhận */}
+        <div className="rounded-xl border border-[#c4c4c4] bg-[#f9faf9] p-3 text-xs space-y-1">
+          <div className="flex justify-between">
+            <span className="text-[#5B6776]">Người nhận:</span>
+            <span className="font-bold text-[#191C19]">{selected?.fullName || selected?.name}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-[#5B6776]">Số điện thoại:</span>
+            <span className="font-medium text-[#191C19]">{selected?.phone || '09xx xxx xxx'}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-[#5B6776]">Sản phẩm:</span>
+            <span className="font-bold text-[#006B2C]">{item.productName || item.name || item.productId}</span>
+          </div>
+        </div>
+
+        {/* Bước 2: Đối chiếu mã SKU */}
+        <div className="rounded-xl border-2 border-[#2b2b2b] p-3.5 space-y-2">
+          <div className="flex items-center justify-between">
+            <label htmlFor="counter-sku-verify" className="text-xs font-bold text-[#191C19] uppercase tracking-wide">
+              Nhập mã SKU để đối chiếu
+            </label>
+            {targetSku && (
+              <span className="text-[11px] font-mono text-[#5B6776]">
+                SKU cần so khớp: <strong className="text-[#191C19]">{targetSku}</strong>
+              </span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <input
+              id="counter-sku-verify"
+              type="text"
+              placeholder={targetSku ? `Nhập ${targetSku}` : 'Nhập mã SKU...'}
+              value={skuInput}
+              onChange={(e) => setSkuInput(e.target.value)}
+              className={`flex-1 rounded-lg border-2 px-3 py-2 text-sm font-mono font-bold focus:outline-none ${
+                skuInput.trim()
+                  ? isSkuMatched
+                    ? 'border-[#006B2C] bg-[#E8F5E9]/30 text-[#006B2C]'
+                    : 'border-[#BA1A1A] bg-[#FFEBEE]/30 text-[#BA1A1A]'
+                  : 'border-[#2b2b2b] bg-white text-[#191C19]'
+              }`}
+            />
+            {targetSku && !isSkuMatched && (
+              <Button
+                type="button"
+                variant="outline"
+                className="text-xs px-2.5 py-1 whitespace-nowrap"
+                onClick={() => setSkuInput(targetSku)}
+              >
+                Khớp nhanh
+              </Button>
+            )}
+          </div>
+          {targetSku && (
+            <p className="text-[11px] text-[#5B6776]">
+              {isSkuMatched
+                ? '✓ Đã đối chiếu khớp mã SKU sản phẩm'
+                : 'Vui lòng quét hoặc gõ đúng mã SKU dán trên hiện vật để tránh giao nhầm'}
+            </p>
+          )}
+        </div>
+
+        {/* Bước 3: Xác nhận danh tính */}
+        <div className="rounded-xl border border-[#8a8a8a] p-3.5 space-y-2 bg-[#fcfdfc]">
+          <label className="flex items-start gap-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isIdentityConfirmed}
+              onChange={(e) => setIsIdentityConfirmed(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-[#8a8a8a] text-[#006B2C] focus:ring-[#006B2C]"
+            />
+            <span className="text-xs font-bold text-[#191C19] leading-snug">
+              Tôi đã hỏi và xác nhận đúng người nhận
+            </span>
+          </label>
+          <p className="text-[11px] text-[#717971] pl-6.5">
+            Chưa tích thì nút bàn giao vẫn khoá. Thao tác được ghi nhận vào audit log kèm tài khoản của bạn.
+          </p>
+        </div>
+
+        {/* Footer actions */}
+        <div className="flex items-center justify-between pt-2 border-t border-[#E2E8E0]">
+          <span className="text-[11px] text-[#5B6776]">
+            {!canHandover ? 'Cần đối chiếu SKU và tích xác nhận để hoàn tất' : 'Sẵn sàng bàn giao'}
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              type="button"
+              disabled={handoverLoading}
+              onClick={() => setConfirmHandover(null)}
+            >
+              Hủy bỏ
+            </Button>
+            <Button
+              type="button"
+              loading={handoverLoading}
+              disabled={!canHandover}
+              className={`font-bold ${
+                canHandover
+                  ? 'bg-[#006B2C] text-white hover:bg-[#005221]'
+                  : 'bg-[#efefef] text-[#9a9a9a] cursor-not-allowed'
+              }`}
+              onClick={() => executeHandover(confirmHandover.item, confirmHandover.context)}
+            >
+              Xác nhận đã bàn giao
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -127,10 +236,6 @@ export function CounterMemberResults({ submitted, results, resultList, selected,
     </div>
   );
 }
-
-
-
-
 
 export function CounterConsignmentTasks({ taskGroups }) {
   return (

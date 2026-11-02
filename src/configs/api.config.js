@@ -109,7 +109,7 @@ export const API_ENDPOINTS = {
     CREATE_GHN_SHIPMENT: (orderId) => `/orders/${moderatorId(orderId)}/shipment`,
 
     // Xử lý hàng trả
-    RETURNS: "/return-requests",
+    RETURNS: "/return-requests/queue",
     RETURN_QUEUE: "/return-requests/queue",
     RETURN_DETAIL: (id) => `/return-requests/${moderatorId(id)}/detail`,
     APPROVE_RETURN: (id) => `/return-requests/${moderatorId(id)}/approve`,
@@ -117,6 +117,12 @@ export const API_ENDPOINTS = {
     INSPECT_RETURN: (id) => `/return-requests/${moderatorId(id)}/inspect`,
     RESOLVE_RETURN: (id) => `/return-requests/${moderatorId(id)}/resolve`,
     REPORT_COUNTERFEIT: (id) => `/return-requests/${moderatorId(id)}/flag-counterfeit`,
+    FLAG_COUNTERFEIT: (id) => `/return-requests/${moderatorId(id)}/flag-counterfeit`,
+    COUNTERFEIT_CONCLUSION: (id) => `/return-requests/${moderatorId(id)}/counterfeit-conclusion`,
+    MARK_LOST: (id) => `/return-requests/${moderatorId(id)}/mark-lost`,
+    DEGRADED_CASES: "/degraded-item-cases",
+    CREATE_DEGRADED_CASE: "/degraded-item-cases",
+    DEGRADED_CASE_DETAIL: (id) => `/degraded-item-cases/${moderatorId(id)}`,
 
     // Xác minh tổ chức & Duyệt đổi pháp lý
     VERIFICATION_QUEUE: "/organizations/verifications",

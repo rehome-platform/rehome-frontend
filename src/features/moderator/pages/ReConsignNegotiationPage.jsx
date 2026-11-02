@@ -105,7 +105,7 @@ export default function ReConsignNegotiationPage() {
           <Button variant="outline" onClick={() => navigate(`/moderator/inventory/${sku}`)} className="text-xs py-1.5 px-3">
             ← Quay lại sản phẩm
           </Button>
-          <span>Tồn kho · hết kỳ 3 · Ký gửi lại — chốt giá mới (KD-11)</span>
+          <span>Tồn kho · hết kỳ 3 · Ký gửi lại — chốt giá mới</span>
         </div>
       }
       subtitle={`Mã SKU: ${sku} · Sản phẩm đang lưu giữ tại kho`}
@@ -248,7 +248,7 @@ export default function ReConsignNegotiationPage() {
                       loading={isSubmitting}
                       className="w-full py-3.5 text-sm font-bold bg-[#2b2b2b] text-white hover:bg-black rounded-xl"
                     >
-                      Gửi đề xuất giá mới cho Member (KD-11)
+                      Gửi đề xuất giá mới cho Member
                     </Button>
                   ) : (
                     <div className="space-y-3">
@@ -271,13 +271,13 @@ export default function ReConsignNegotiationPage() {
                       {/* Nút mô phỏng Member duyệt */}
                       <div className="p-3 bg-[#E8F5E9] border border-[#C8E6C9] rounded-xl flex items-center justify-between">
                         <span className="text-xs font-semibold text-[#006B2C]">
-                          Mô phỏng app Member (KG-12):
+                          Mô phỏng app Member:
                         </span>
                         <Button
                           onClick={() => setShowMemberModal(true)}
                           className="bg-[#006B2C] text-white hover:bg-[#005221] text-xs py-1.5 px-3 font-bold"
                         >
-                          Mở duyệt giá KG-12 →
+                          Mở duyệt giá →
                         </Button>
                       </div>
                     </div>
@@ -313,14 +313,14 @@ export default function ReConsignNegotiationPage() {
                       onClick={() => navigate(`/moderator/inventory/${sku}`)}
                       className="flex-1 py-2.5 text-xs"
                     >
-                      Chi tiết sản phẩm (TK-02)
+                      Chi tiết sản phẩm
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() => navigate('/moderator/inventory')}
                       className="flex-1 py-2.5 text-xs"
                     >
-                      Về danh sách tồn kho (TK-01)
+                      Về danh sách tồn kho
                     </Button>
                   </div>
                 </div>

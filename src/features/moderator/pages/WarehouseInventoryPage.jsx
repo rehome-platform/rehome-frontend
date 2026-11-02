@@ -142,7 +142,7 @@ export default function WarehouseInventoryPage() {
             }}
             className="text-xs font-bold border-[#2b2b2b] text-[#2b2b2b]"
           >
-            Tra cứu SKU (TK-03)
+            Tra cứu SKU
           </Button>
           <Button variant="outline" onClick={() => setScanner(true)}>
             Quét QR SKU
@@ -164,11 +164,10 @@ export default function WarehouseInventoryPage() {
                 key={tab.label}
                 type="button"
                 onClick={() => change('status', tab.value)}
-                className={`text-xs px-3.5 py-1.5 rounded-lg border font-semibold transition-colors ${
-                  isActive
+                className={`text-xs px-3.5 py-1.5 rounded-lg border font-semibold transition-colors ${isActive
                     ? 'bg-[#2b2b2b] text-white border-[#2b2b2b]'
                     : 'bg-white text-[#4a4a4a] border-[#a8a8a8] hover:bg-[#f4f4f4]'
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
@@ -266,11 +265,10 @@ export default function WarehouseInventoryPage() {
                     return (
                       <tr
                         key={item.sku}
-                        className={`transition-colors ${
-                          isActionNeeded
+                        className={`transition-colors ${isActionNeeded
                             ? 'bg-[#f8f9fa] border-l-4 border-l-[#2b2b2b]'
                             : 'hover:bg-[#fcfdfc]'
-                        }`}
+                          }`}
                       >
                         <td className="py-3.5 px-4 font-mono font-bold text-[#191C19]">
                           <Link
@@ -369,7 +367,7 @@ export default function WarehouseInventoryPage() {
       {/* MODAL TRA CỨU SKU CHUẨN WIREFRAME (TK-03) */}
       <Modal
         isOpen={skuLookupModal}
-        title="Tra cứu sản phẩm bằng mã SKU (TK-03)"
+        title="Tra cứu sản phẩm bằng mã SKU"
         onClose={() => setSkuLookupModal(false)}
         maxWidth="max-w-xl"
       >
@@ -405,7 +403,7 @@ export default function WarehouseInventoryPage() {
           {!lookupResult && (
             /* TK-03-ChoNhap */
             <div className="p-6 border border-dashed border-[#c4c4c4] rounded-xl text-center space-y-1 text-[#7a7a7a]">
-              <div className="font-bold text-sm text-[#5f5f5f]">Chưa có kết quả (TK-03-ChoNhap)</div>
+              <div className="font-bold text-sm text-[#5f5f5f]">Chưa có kết quả</div>
               <p className="text-[11px]">Nhập đủ mã SKU rồi bấm Tra cứu, hoặc Enter.</p>
             </div>
           )}
@@ -414,7 +412,7 @@ export default function WarehouseInventoryPage() {
             /* TK-03-TimThay */
             <div className="border-2 border-[#2b2b2b] p-4 rounded-xl bg-white space-y-3">
               <span className="text-[10px] font-bold tracking-wider px-2.5 py-1 bg-[#2b2b2b] text-white rounded">
-                TÌM THẤY (TK-03-TimThay)
+                TÌM THẤY
               </span>
               <div className="flex gap-4 items-start pt-2">
                 <div className="w-16 h-16 rounded-lg border border-[#c4c4c4] bg-[#f9f9f9] flex items-center justify-center font-bold text-xs text-[#8a8a8a]">
@@ -437,7 +435,7 @@ export default function WarehouseInventoryPage() {
                 }}
                 className="w-full py-2.5 bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs rounded-xl"
               >
-                Mở chi tiết sản phẩm (TK-02) →
+                Mở chi tiết sản phẩm →
               </Button>
             </div>
           )}
@@ -446,7 +444,7 @@ export default function WarehouseInventoryPage() {
             /* TK-03-KhongThuocKho */
             <div className="border-2 border-[#2b2b2b] p-4 rounded-xl bg-white space-y-2">
               <span className="text-[10px] font-bold tracking-wider px-2.5 py-1 border border-[#2b2b2b] text-[#2b2b2b] rounded">
-                THUỘC KHO KHÁC (TK-03-KhongThuocKho)
+                THUỘC KHO KHÁC
               </span>
               <h4 className="font-bold text-sm text-[#191C19] pt-1">
                 {lookupResult.sku} không ở kho này
@@ -461,7 +459,7 @@ export default function WarehouseInventoryPage() {
             /* TK-03-KhongTonTai */
             <div className="border-2 border-dashed border-[#8a8a8a] p-4 rounded-xl bg-white space-y-2">
               <span className="text-[10px] font-bold tracking-wider px-2.5 py-1 border border-[#8a8a8a] text-[#4a4a4a] rounded">
-                KHÔNG TỒN TẠI (TK-03-KhongTonTai)
+                KHÔNG TỒN TẠI
               </span>
               <h4 className="font-bold text-sm text-[#191C19] pt-1">
                 Không tìm thấy mã SKU này
@@ -474,94 +472,6 @@ export default function WarehouseInventoryPage() {
         </div>
       </Modal>
 
-      {/* MODAL CẬP NHẬT VỊ TRÍ KỆ (TK-04) - CÓ KIỂM TRA TRÙNG KỆ */}
-      <Modal
-        isOpen={!!shelfModal}
-        title="Cập nhật vị trí kệ kho (TK-04)"
-        onClose={() => setShelfModal(null)}
-      >
-        {shelfModal && (
-          <form
-            className="space-y-4 text-xs"
-            onSubmit={(e) => {
-              e.preventDefault();
-              resource.mutate(
-                (opts) => inventoryService.shelf(shelfModal.item.sku, shelfModal.newShelf.trim(), opts),
-                {
-                  onSuccess: () => {
-                    setShelfModal(null);
-                    resource.refresh();
-                  },
-                },
-              );
-            }}
-          >
-            <div className="p-3 rounded-xl border border-[#c4c4c4] bg-[#fafafa]">
-              <p className="font-bold text-sm text-[#191C19]">{shelfModal.item.name}</p>
-              <p className="font-mono text-[#5f5f5f] mt-0.5">SKU: {shelfModal.item.sku}</p>
-              <p className="text-[11px] text-[#717971] mt-1">
-                Vị trí hiện tại: <strong>{shelfModal.item.shelfLocation || 'Chưa gán kệ'}</strong>
-              </p>
-            </div>
-
-            <div>
-              <label htmlFor="modal-new-shelf" className="block text-xs font-bold text-[#191C19] mb-1">
-                Vị trí kệ mới
-              </label>
-              <input
-                id="modal-new-shelf"
-                type="text"
-                required
-                value={shelfModal.newShelf}
-                onChange={(e) => setShelfModal((prev) => ({ ...prev, newShelf: e.target.value }))}
-                placeholder="VD: B1-18, A3-07..."
-                className={`w-full rounded-xl border px-3.5 py-2 text-xs font-bold focus:outline-none ${
-                  shelfModal.newShelf.trim() && !validateNewShelf(shelfModal.newShelf, shelfModal.item.shelfLocation).valid
-                    ? 'border-red-500 focus:border-red-600'
-                    : 'border-[#8a8a8a] focus:border-[#006B2C]'
-                }`}
-              />
-              {shelfModal.newShelf.trim() && !validateNewShelf(shelfModal.newShelf, shelfModal.item.shelfLocation).valid && (
-                <p className="text-[11px] text-red-600 mt-1 font-semibold">
-                  {validateNewShelf(shelfModal.newShelf, shelfModal.item.shelfLocation).message}
-                </p>
-              )}
-            </div>
-
-            {/* CẢNH BÁO TRÙNG KỆ THEO WIREFRAME TK-04-CapNhatKe-TrungKe */}
-            {conflictingItem && (
-              <div className="p-3 bg-[#fff7ed] border border-[#ea580c] rounded-xl text-xs text-[#9a3412] font-semibold leading-relaxed">
-                ⚠️ Kệ <strong>{shelfModal.newShelf.trim()}</strong> hiện đang chứa{' '}
-                <strong>{conflictingItem.sku}</strong> ({conflictingItem.name}). Xác nhận vẫn đổi thì hai mã SKU cùng ghi một vị trí — nên chọn kệ khác hoặc dời món cũ trước.
-              </div>
-            )}
-
-            {!conflictingItem && (
-              <p className="text-[11px] text-[#5f5f5f] bg-[#f4f5f4] p-2.5 rounded border border-[#d4d4d4] leading-relaxed">
-                Nếu vị trí này đã có sản phẩm khác, hệ thống sẽ lưu chung vào cùng một kệ. Hãy kiểm tra nhãn dán trên sản phẩm để tránh nhầm lẫn.
-              </p>
-            )}
-
-            <div className="flex gap-3 pt-2">
-              <Button type="button" variant="outline" className="flex-1 py-2" onClick={() => setShelfModal(null)}>
-                Hủy
-              </Button>
-              <Button
-                type="submit"
-                className={`flex-1 py-2 font-bold ${
-                  conflictingItem
-                    ? 'border-2 border-[#2b2b2b] bg-white text-[#2b2b2b] hover:bg-black hover:text-white'
-                    : 'bg-[#2b2b2b] text-white hover:bg-black'
-                }`}
-                loading={resource.busy}
-                disabled={!validateNewShelf(shelfModal.newShelf, shelfModal.item.shelfLocation).valid}
-              >
-                {conflictingItem ? 'Vẫn đổi, chấp nhận trùng kệ' : 'Lưu vị trí kệ'}
-              </Button>
-            </div>
-          </form>
-        )}
-      </Modal>
 
       {/* Modal Quét QR SKU */}
       <QRScannerModal

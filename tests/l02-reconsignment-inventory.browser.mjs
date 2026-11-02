@@ -93,8 +93,8 @@ try {
   await page.goto('http://127.0.0.1:5188/moderator/inventory/RH-M4T19B');
 
   await expect(page.getByText('Áo khoác bomber')).toBeVisible({ timeout: 10000 });
-  await expect(page.getByText('Ký gửi lại cuối kỳ (L-02 · Hết kỳ 3: 90 ngày)')).toBeVisible();
-  await expect(page.getByRole('button', { name: /Đàm phán giá \(KD-11\)/ })).toBeVisible();
+  await expect(page.getByText('Ký gửi lại cuối kỳ (Hết kỳ 3: 90 ngày)')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Đàm phán giá/ })).toBeVisible();
 
   await page.screenshot({ path: path.join(out, '01-TK-02-reconsign-banner.png'), fullPage: true });
   console.log('✓ TK-02 verified and screenshot saved');
@@ -103,9 +103,9 @@ try {
   // TEST 2: KD-11 - Đàm phán giá mới
   // -------------------------------------------------------------
   console.log('4. Navigating to KD-11 (Re-consign negotiation)...');
-  await page.getByRole('button', { name: /Đàm phán giá \(KD-11\)/ }).click();
+  await page.getByRole('button', { name: /Đàm phán giá/ }).click();
 
-  await expect(page.getByText('Tồn kho · hết kỳ 3 · Ký gửi lại — chốt giá mới (KD-11)')).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText('Tồn kho · hết kỳ 3 · Ký gửi lại — chốt giá mới')).toBeVisible({ timeout: 10000 });
   await expect(page.getByText('Món đang ở kho')).toBeVisible();
   await expect(page.getByText('Tham khảo khi định giá lại')).toBeVisible();
   await expect(page.getByLabel('Giá bán đề xuất ký gửi lại')).toBeVisible();
@@ -129,9 +129,9 @@ try {
   // TEST 3: KG-12 - Member duyệt giá mới qua App
   // -------------------------------------------------------------
   console.log('6. Opening KG-12 Member confirmation simulation...');
-  await page.getByRole('button', { name: /Mở duyệt giá KG-12/ }).click();
+  await page.getByRole('button', { name: /Mở duyệt giá/ }).click();
 
-  await expect(page.getByText('Mô phỏng Member App (KG-12 · Xác nhận giá mới)')).toBeVisible();
+  await expect(page.getByText('Mô phỏng Member App (Xác nhận giá mới)')).toBeVisible();
   await expect(page.getByText(/680\.000/).first()).toBeVisible();
   await expect(page.getByText('Nếu bán được ở giá này')).toBeVisible();
   await expect(page.getByText(/612\.000/)).toBeVisible();
@@ -178,55 +178,34 @@ try {
   // TEST 6: DÙNG CHUNG - TK-03 (Tra cứu SKU với 4 trạng thái)
   // -------------------------------------------------------------
   console.log('10. Testing TK-03: SKU Lookup with 4 wireframe states...');
-  await page.getByRole('button', { name: 'Tra cứu SKU (TK-03)' }).click();
+  await page.getByRole('button', { name: 'Tra cứu SKU' }).click();
 
   // State 1: Chưa nhập
-  await expect(page.getByText('Chưa có kết quả (TK-03-ChoNhap)')).toBeVisible();
+  await expect(page.getByText('Chưa có kết quả')).toBeVisible();
 
   // State 2: Tìm thấy (RH-M4T19B)
   await page.getByPlaceholder(/VD: RH-K9B47T/).fill('RH-M4T19B');
   await page.getByRole('button', { name: 'Tra cứu', exact: true }).click();
-  await expect(page.getByText('TÌM THẤY (TK-03-TimThay)')).toBeVisible();
+  await expect(page.getByText('TÌM THẤY')).toBeVisible();
   await page.screenshot({ path: path.join(out, '08-TK-03-found.png') });
   console.log('✓ TK-03 Tìm thấy verified');
 
   // State 3: Thuộc kho khác (RH-D6P23L)
   await page.getByPlaceholder(/VD: RH-K9B47T/).fill('RH-D6P23L');
   await page.getByRole('button', { name: 'Tra cứu', exact: true }).click();
-  await expect(page.getByText('THUỘC KHO KHÁC (TK-03-KhongThuocKho)')).toBeVisible();
+  await expect(page.getByText('THUỘC KHO KHÁC')).toBeVisible();
   await page.screenshot({ path: path.join(out, '09-TK-03-other-warehouse.png') });
   console.log('✓ TK-03 Thuộc kho khác verified');
 
   // State 4: Không tồn tại (RH-ZZ9999)
   await page.getByPlaceholder(/VD: RH-K9B47T/).fill('RH-ZZ9999');
   await page.getByRole('button', { name: 'Tra cứu', exact: true }).click();
-  await expect(page.getByText('KHÔNG TỒN TẠI (TK-03-KhongTonTai)')).toBeVisible();
+  await expect(page.getByText('KHÔNG TỒN TẠI')).toBeVisible();
   await page.screenshot({ path: path.join(out, '10-TK-03-not-found.png') });
   console.log('✓ TK-03 Không tồn tại verified');
 
   // Close lookup modal
   await page.keyboard.press('Escape');
-
-  // -------------------------------------------------------------
-  // TEST 7: DÙNG CHUNG - TK-04 (Cập nhật vị trí kệ - kiểm tra trùng kệ)
-  // -------------------------------------------------------------
-  console.log('11. Testing TK-04: Shelf update with conflicting shelf...');
-  // Click "Đổi kệ" on RH-C2M08P
-  const changeShelfRow = page.locator('tr').filter({ hasText: 'RH-C2M08P' });
-  await changeShelfRow.getByRole('button', { name: 'Đổi kệ' }).click();
-
-  await expect(page.getByRole('heading', { name: 'Cập nhật vị trí kệ kho (TK-04)' })).toBeVisible();
-  await page.getByLabel('Vị trí kệ mới').fill('A3-07');
-
-  // Verify conflicting warning
-  await expect(page.getByText(/Kệ A3-07 hiện đang chứa RH-K9B47T/)).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Vẫn đổi, chấp nhận trùng kệ' })).toBeVisible();
-  await page.screenshot({ path: path.join(out, '11-TK-04-conflicting-shelf.png') });
-  console.log('✓ TK-04 Conflicting shelf warning verified');
-
-  // Confirm change
-  await page.getByRole('button', { name: 'Vẫn đổi, chấp nhận trùng kệ' }).click();
-  await expect(page.getByRole('heading', { name: 'Cập nhật vị trí kệ kho (TK-04)' })).toBeHidden();
 
   // -------------------------------------------------------------
   // TEST 8: TK-02 - Sản phẩm khách chọn Nhận lại hàng

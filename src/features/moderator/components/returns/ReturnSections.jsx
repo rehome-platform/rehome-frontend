@@ -47,7 +47,7 @@ export function ReturnOutcomeDialog({ isOutcomeModalOpen, setIsOutcomeModalOpen,
     <Modal
       isOpen={isOutcomeModalOpen}
       onClose={() => setIsOutcomeModalOpen(false)}
-      title="Chọn phương án xử lý món hàng (TH-04)"
+      title="Chọn phương án xử lý món hàng"
     >
       <div className="space-y-4 text-xs">
         <p className="text-[#4a4a4a]">

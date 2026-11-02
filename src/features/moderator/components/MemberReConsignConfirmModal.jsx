@@ -30,7 +30,7 @@ export default function MemberReConsignConfirmModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Mô phỏng Member App (KG-12 · Xác nhận giá mới)"
+      title="Mô phỏng Member App (Xác nhận giá mới)"
       maxWidth="max-w-lg"
     >
       <div className="space-y-4 text-[#2b2b2b] text-sm">
