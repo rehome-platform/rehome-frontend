@@ -7,7 +7,12 @@ export function listItems(data) {
 }
 
 function taskGroups(data) {
-  return [data?.pendingForms || [], data?.pendingWithdrawals || [], data?.pendingEndOfTerm || []];
+  return [
+    data?.pendingForms || [],
+    data?.pendingWithdrawals || [],
+    data?.pendingEndOfTerm || [],
+    data?.pendingInvalidReturns || [],
+  ];
 }
 
 function normalizeLegacyForm(item) {
@@ -36,15 +41,21 @@ function normalizeReferencedTask(task) {
 }
 
 export function normalizeMemberTasks(data) {
-  const [forms, withdrawals, endOfTerm] = taskGroups(data);
+  const [forms, withdrawals, endOfTerm, invalidReturns = []] = taskGroups(data);
   const pendingForms = Array.isArray(data) ? data.map(normalizeLegacyForm) : forms.map(normalizeTaskForm);
   const pendingWithdrawals = withdrawals.map(normalizeReferencedTask);
   const pendingEndOfTerm = endOfTerm.map(normalizeReferencedTask);
+  const pendingInvalidReturns = invalidReturns.map(normalizeReferencedTask);
   return {
     pendingForms,
     pendingWithdrawals,
     pendingEndOfTerm,
-    totalCount: pendingForms.length + pendingWithdrawals.length + pendingEndOfTerm.length,
+    pendingInvalidReturns,
+    totalCount:
+      pendingForms.length +
+      pendingWithdrawals.length +
+      pendingEndOfTerm.length +
+      pendingInvalidReturns.length,
   };
 }
 

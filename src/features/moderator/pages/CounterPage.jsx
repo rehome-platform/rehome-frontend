@@ -111,6 +111,15 @@ export default function CounterPage() {
                         setConfirmHandover={model.setConfirmHandover}
                       />
                     )}
+
+                    {/* 4. Nhận lại hàng trả không hợp lệ (L-05 RT-04 WAREHOUSE_PICKUP) */}
+                    {model.taskGroups.pendingInvalidReturns?.length > 0 && (
+                      <CounterHandoverTasks
+                        items={model.taskGroups.pendingInvalidReturns}
+                        context="INVALID_RETURN_PICKUP"
+                        setConfirmHandover={model.setConfirmHandover}
+                      />
+                    )}
                   </div>
                 </ResourceState>
 

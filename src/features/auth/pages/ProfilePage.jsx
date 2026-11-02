@@ -385,7 +385,7 @@ function ProfileEditor({ user, profile }) {
         <div>
           <h3 className="text-base font-bold text-[#1F2A37]">Cập nhật thông tin tài khoản</h3>
           <p className="text-xs text-[#5B6776] mt-0.5">
-            Dữ liệu được lưu trữ và đồng bộ trực tiếp qua Backend API (PATCH /members/me).
+            Dữ liệu hồ sơ tài khoản được đồng bộ và bảo vệ theo phân quyền hệ thống.
           </p>
         </div>
         {isLoadingProfile && (

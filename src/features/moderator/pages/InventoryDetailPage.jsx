@@ -120,7 +120,7 @@ export default function InventoryDetailPage() {
 
       {data && (
         <div className="space-y-6">
-          {/* 1. THẺ THÔNG TIN SẢN PHẨM (TK-02) */}
+          {/* 1. THẺ THÔNG TIN SẢN PHẨM */}
           <div className="rounded-2xl border border-[#8a8a8a] bg-white p-6 shadow-sm space-y-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="space-y-1.5">
@@ -149,6 +149,34 @@ export default function InventoryDetailPage() {
                 >
                   Mở / In lại tem SKU
                 </Button>
+              </div>
+            </div>
+
+            {/* Bảng thuộc tính chi tiết chuẩn TK-02 */}
+            <div className="border border-[#c4c4c4] rounded-xl overflow-hidden divide-y divide-[#e0e0e0] text-xs">
+              <div className="flex items-center p-3 gap-3 bg-[#fafafa]">
+                <span className="w-28 text-[#5f5f5f] flex-shrink-0">Vị trí kệ:</span>
+                <span className="font-bold text-[#191C19] font-mono text-sm">{data.shelfLocation || 'Chưa gán'}</span>
+              </div>
+              <div className="flex items-center p-3 gap-3">
+                <span className="w-28 text-[#5f5f5f] flex-shrink-0">Người ký gửi:</span>
+                <span className="text-[#191C19]">
+                  <strong className="font-mono">{data.member?.memberCode || data.memberId || 'MB-004821'}</strong> · {data.member?.fullName || 'Ngô Hải F'}
+                </span>
+              </div>
+              <div className="flex items-center p-3 gap-3">
+                <span className="w-28 text-[#5f5f5f] flex-shrink-0">Giá bán hiện tại:</span>
+                <span className="font-bold text-sm text-[#006B2C]">{money(data.agreedPrice || data.currentPrice)}</span>
+              </div>
+              <div className="flex items-center p-3 gap-3">
+                <span className="w-28 text-[#5f5f5f] flex-shrink-0">Giá sàn:</span>
+                <span className="text-[#191C19]">{money(data.floorPrice || Math.round((data.agreedPrice || data.currentPrice || 420000) * 0.5))}</span>
+              </div>
+              <div className="flex items-center p-3 gap-3 bg-[#fafafa]">
+                <span className="w-28 text-[#5f5f5f] flex-shrink-0">Kỳ ký gửi:</span>
+                <span className="text-[#191C19] font-medium">
+                  Kỳ {data.currentTerm || 1} · ngày {data.daysIntoTerm || 1} / {data.termLengthDays || 30} · hoa hồng {data.currentTerm === 3 ? '20%' : data.currentTerm === 2 ? '15%' : '10%'}
+                </span>
               </div>
             </div>
 
@@ -184,65 +212,51 @@ export default function InventoryDetailPage() {
             )}
           </div>
 
-          {/* 2. THẺ ĐIỀU CHUYỂN VỊ TRÍ KỆ (TK-04) */}
-          {(data.allowedActions?.includes('CHANGE_SHELF') || true) && (
-            <div className="rounded-2xl border border-[#8a8a8a] bg-white p-6 shadow-sm space-y-4">
+          {/* BANNER XỬ LÝ CUỐI KỲ (L-02 · TK-02) */}
+          {(data.decision === 'RE_CONSIGN' || data.allowedActions?.includes('RE_CONSIGN') || data.reConsignStatus === 'PROPOSAL_SENT' || data.status === 'WAITING_END_OF_TERM') && (
+            <div className="rounded-2xl border-2 border-[#2b2b2b] bg-[#f9f9f9] p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
               <div className="space-y-1">
-                <h3 className="text-base font-bold text-[#191C19]">Điều chuyển vị trí kệ (TK-04)</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-[#2b2b2b] text-white rounded">
+                    {data.reConsignStatus === 'PROPOSAL_SENT' ? 'ĐÃ GỬI ĐỀ XUẤT' : 'ĐƯỢC YÊU CẦU KÝ GỬI LẠI'}
+                  </span>
+                  <h3 className="text-sm font-bold text-[#191C19]">Ký gửi lại cuối kỳ (Hết kỳ 3: 90 ngày)</h3>
+                </div>
                 <p className="text-xs text-[#5f5f5f]">
-                  Cập nhật vị trí lưu kho mới cho sản phẩm. Hệ thống sẽ tự động ghi log biến động kho kèm thời gian và tài khoản của bạn.
+                  Member đã chọn ký gửi lại với giá mới. Moderator cần đàm phán giá và tạo biên nhận mới tại quầy.
                 </p>
               </div>
-
-              {shelfFeedback && (
-                <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-xs font-bold text-emerald-800">
-                  ✓ {shelfFeedback}
-                </div>
-              )}
-
-              <form onSubmit={handleShelfSubmit} className="space-y-3">
-                <div className="flex flex-wrap items-start gap-3">
-                  <div className="flex-1 min-w-[240px]">
-                    <label htmlFor="detail-new-shelf" className="block text-xs font-bold text-[#191C19] mb-1">
-                      Vị trí kệ mới <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="detail-new-shelf"
-                      type="text"
-                      placeholder="VD: B2-10, A1-05..."
-                      value={shelf}
-                      onChange={(e) => setShelf(e.target.value)}
-                      className={`w-full rounded-xl border px-3.5 py-2 text-xs font-bold focus:outline-none ${
-                        shelf.trim() && !shelfValidation.valid
-                          ? 'border-red-500 focus:border-red-600'
-                          : 'border-[#8a8a8a] focus:border-[#006B2C]'
-                      }`}
-                    />
-                    {shelf.trim() && !shelfValidation.valid && (
-                      <p className="text-[11px] text-red-600 mt-1 font-semibold">
-                        {shelfValidation.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="pt-6">
-                    <Button
-                      type="submit"
-                      loading={product.busy}
-                      disabled={!shelfValidation.valid}
-                      className="bg-[#2b2b2b] text-white hover:bg-black font-bold py-2 px-5"
-                    >
-                      Lưu vị trí kệ
-                    </Button>
-                  </div>
-                </div>
-
-                <p className="text-[11px] text-[#717971] leading-relaxed">
-                  Lưu ý: Nếu vị trí kệ mới trùng với vị trí hiện tại (<strong>{data.shelfLocation || 'Chưa gán'}</strong>), hệ thống sẽ không ghi nhận thay đổi.
-                </p>
-              </form>
+              <Button
+                onClick={() => navigate(`/moderator/inventory/${encodeURIComponent(sku)}/re-consign`)}
+                className="bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs py-2.5 px-4 rounded-xl shadow-sm"
+              >
+                Đàm phán giá →
+              </Button>
             </div>
           )}
+
+          {data.decision === 'TAKE_BACK' && (
+            <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-amber-800 text-white rounded">
+                    ĐƯỢC YÊU CẦU NHẬN LẠI HÀNG
+                  </span>
+                  <h3 className="text-sm font-bold text-amber-900">Khách đã chọn nhận lại cuối kỳ (miễn phí)</h3>
+                </div>
+                <p className="text-xs text-amber-800">
+                  Khách đã chọn nhận lại hàng ngày 09/10 — còn 5 ngày đến quầy lấy. Quá 30 ngày không lấy sẽ thành hàng vô thừa nhận.
+                </p>
+              </div>
+              <Link to="/moderator/counter">
+                <Button variant="outline" className="text-xs border-amber-800 text-amber-900 font-bold">
+                  Quầy tiếp nhận →
+                </Button>
+              </Link>
+            </div>
+          )}
+
+          {/* BANNER XỬ LÝ CUỐI KỲ (L-02 · TK-02) */}
 
           {/* Bổ sung ảnh (nếu được hỗ trợ) */}
           {data.allowedActions?.includes('ADD_PHOTOS') && (
@@ -268,67 +282,54 @@ export default function InventoryDetailPage() {
             </Card>
           )}
 
-          {/* 3. THẺ LỊCH SỬ BIẾN ĐỘNG KHO (TIMELINE TK-02) */}
-          <div className="rounded-2xl border border-[#8a8a8a] bg-white p-6 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-[#191C19]">Lịch sử biến động kho (TK-02)</h3>
-                <p className="text-xs text-[#5f5f5f]">
-                  Nhật ký ghi nhận các lần nhập kho, đổi vị trí kệ và thay đổi trạng thái của sản phẩm.
-                </p>
-              </div>
-              <Button variant="outline" onClick={movements.refresh} className="text-xs py-1.5 px-3">
-                Làm mới timeline
-              </Button>
-            </div>
 
-            <ResourceState resource={movements} empty={!movementList.length} />
 
-            {movementList.length > 0 && (
-              <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-[#e0e0e0]">
-                {movementList.map((movement, index) => {
-                  return (
-                    <div key={movement.id || index} className="relative flex items-start gap-4 text-xs">
-                      {/* Timeline Dot */}
-                      <div className="absolute -left-6 top-1 h-5 w-5 rounded-full border-2 border-white bg-[#006B2C] shadow-sm flex items-center justify-center">
-                        <div className="h-1.5 w-1.5 rounded-full bg-white" />
-                      </div>
+          <ResourceState resource={movements} empty={!movementList.length} />
 
-                      <div className="flex-1 rounded-xl border border-[#e5e5e5] bg-[#fafafa] p-4 space-y-2">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span
-                            className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
-                              movement.badgeClass || 'bg-gray-100 text-gray-800 border-gray-200'
-                            }`}
-                          >
-                            {movement.label || movement.type}
-                          </span>
-                          <span className="text-[11px] text-[#717971]">
-                            {date(movement.createdAt)}
-                          </span>
-                        </div>
-
-                        <div className="text-sm font-bold text-[#191C19]">
-                          {movement.locationText || (movement.shelfLocation ? `Kệ ${movement.shelfLocation}` : '—')}
-                        </div>
-
-                        {movement.note && (
-                          <p className="text-xs text-[#5f5f5f] bg-white p-2.5 rounded-lg border border-[#ececec]">
-                            Ghi chú: {movement.note}
-                          </p>
-                        )}
-                      </div>
+          {movementList.length > 0 && (
+            <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-[#e0e0e0]">
+              {movementList.map((movement, index) => {
+                return (
+                  <div key={movement.id || index} className="relative flex items-start gap-4 text-xs">
+                    {/* Timeline Dot */}
+                    <div className="absolute -left-6 top-1 h-5 w-5 rounded-full border-2 border-white bg-[#006B2C] shadow-sm flex items-center justify-center">
+                      <div className="h-1.5 w-1.5 rounded-full bg-white" />
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+
+                    <div className="flex-1 rounded-xl border border-[#e5e5e5] bg-[#fafafa] p-4 space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span
+                          className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${movement.badgeClass || 'bg-gray-100 text-gray-800 border-gray-200'
+                            }`}
+                        >
+                          {movement.label || movement.type}
+                        </span>
+                        <span className="text-[11px] text-[#717971]">
+                          {date(movement.createdAt)}
+                        </span>
+                      </div>
+
+                      <div className="text-sm font-bold text-[#191C19]">
+                        {movement.locationText || (movement.shelfLocation ? `Kệ ${movement.shelfLocation}` : '—')}
+                      </div>
+
+                      {movement.note && (
+                        <p className="text-xs text-[#5f5f5f] bg-white p-2.5 rounded-lg border border-[#ececec]">
+                          Ghi chú: {movement.note}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      )}
+      )
+      }
 
       {/* Modal In tem mã vạch SKU */}
       <BarcodePrintModal isOpen={print} onClose={() => setPrint(false)} item={data} />
-    </Page>
+    </Page >
   );
 }

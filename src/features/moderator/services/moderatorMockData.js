@@ -282,6 +282,97 @@ export const returnService = {
 
 export const returnMockApi = returnService;
 
+returnService.inspect = async function(retId, inspectionData) {
+  await delay();
+  returnRequestsData = returnRequestsData.map((r) =>
+    r.id === retId
+      ? {
+          ...r,
+          ...inspectionData,
+          status: 'RECEIVED_INSPECT',
+          carrierStatus: 'Hàng đã về kho · Đang kiểm định',
+        }
+      : r
+  );
+  return returnRequestsData.find((r) => r.id === retId);
+};
+
+returnService.flagCounterfeit = async function(retId) {
+  await delay();
+  returnRequestsData = returnRequestsData.map((r) =>
+    r.id === retId
+      ? {
+          ...r,
+          counterfeitSuspected: true,
+          carrierStatus: 'Nghi vấn hàng giả · Chờ Moderator 2 kiểm định',
+        }
+      : r
+  );
+  return returnRequestsData.find((r) => r.id === retId);
+};
+
+returnService.counterfeitConclusion = async function(retId, { conclusion, note, secondModerator } = {}) {
+  await delay();
+  const isConfirmed = conclusion === 'CONFIRMED' || conclusion === 'COUNTERFEIT';
+  returnRequestsData = returnRequestsData.map((r) =>
+    r.id === retId
+      ? {
+          ...r,
+          counterfeitSuspected: isConfirmed,
+          counterfeitConclusion: isConfirmed ? 'CONFIRMED' : 'DISMISSED',
+          secondModerator: secondModerator || 'MOD-07-005',
+          secondModNote: note,
+          status: isConfirmed ? 'RESOLVED' : r.status,
+          outcome: isConfirmed ? 'DISCARD' : r.outcome,
+          carrierStatus: isConfirmed
+            ? `Xác nhận hàng giả · Tiêu hủy & Đã hoàn ${r.amount + r.shippingFee}đ vào ví người mua`
+            : 'Đã bác bỏ nghi vấn hàng giả',
+        }
+      : r
+  );
+  return returnRequestsData.find((r) => r.id === retId);
+};
+
+returnService.markLost = async function(retId, note) {
+  await delay();
+  returnRequestsData = returnRequestsData.map((r) =>
+    r.id === retId
+      ? {
+          ...r,
+          status: 'RESOLVED',
+          outcome: 'LOST',
+          carrierStatus: `GHN báo thất lạc · Đã hoàn ${r.amount + r.shippingFee}đ vào ví người mua`,
+          resolutionNote: note || 'GHN làm thất lạc trên đường vận chuyển về kho',
+        }
+      : r
+  );
+  return returnRequestsData.find((r) => r.id === retId);
+};
+
+returnService.createDegradedCase = async function(payload) {
+  await delay();
+  return {
+    id: `dic-${Date.now()}`,
+    productId: payload?.productId || 'RH-M4T19B',
+    returnRequestId: payload?.returnRequestId,
+    compensationAmount: payload?.compensationAmount || 442000,
+    status: 'PENDING_DECISION',
+    createdAt: new Date().toISOString(),
+  };
+};
+
+returnService.getDegradedCase = async function(id) {
+  await delay();
+  return {
+    id,
+    productId: 'RH-M4T19B',
+    productName: 'Áo khoác bomber Adidas',
+    compensationAmount: 442000,
+    status: 'PENDING_DECISION',
+    createdAt: new Date().toISOString(),
+  };
+};
+
 // ==========================================
 // 2. ORG VERIFICATION (TC-01..06)
 // ==========================================

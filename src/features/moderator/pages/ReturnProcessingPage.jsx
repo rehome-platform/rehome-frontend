@@ -9,7 +9,9 @@ import {
   ReturnRequestDetails,
   ReturnQueueTable,
   ReturnQueueTabs,
+  DegradedCaseModal,
 } from "../components/returns/ReturnSections.jsx";
+import SuspiciousCounterfeitModal from '../components/SuspiciousCounterfeitModal.jsx';
 import React from "react";
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 
@@ -19,8 +21,9 @@ import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
  * - TH-01: Hàng đợi yêu cầu trả hàng
  * - TH-02: Chi tiết yêu cầu trả & duyệt form
  * - TH-03: Kiểm tra hàng trả về kho (checklist đối chiếu SKU & ảnh nhập kho)
- * - TH-04: Xử lý món hàng (Đăng bán lại / Trả người ký gửi)
- * - TH-08: Xác nhận hoàn tiền vào ví người mua
+ * - TH-04: Xử lý món hàng (Đăng bán lại / Trả người ký gửi / Hàng xuống cấp)
+ * - TH-08: Hàng thất lạc & hoàn tiền ví người mua
+ * - F-134, F-135: Quy trình hội chẩn 2 Moderator khi nghi hàng giả
  */
 export default function ReturnProcessingPage() {
   const model = useReturnProcessing();
@@ -86,7 +89,7 @@ export default function ReturnProcessingPage() {
                   </span>
                 )}
                 <span className="text-xs font-semibold px-2.5 py-1 rounded bg-[#E8F5E9] text-[#006B2C]">
-                  {model.selectedItem.carrierStatus}
+                  {model.selectedItem.carrierStatus || 'Chờ xử lý'}
                 </span>
               </div>
             </div>
@@ -124,7 +127,7 @@ export default function ReturnProcessingPage() {
                 </div>
               </div>
               <span className="text-xs font-bold px-2.5 py-1 border border-[#2b2b2b] rounded bg-white">
-                HÀNG VỀ 16/10 10:05
+                HÀNG VỀ {model.selectedItem.stockInDate || 'Hôm nay'}
               </span>
             </div>
 
@@ -147,6 +150,12 @@ export default function ReturnProcessingPage() {
 
         {/* MODAL: So sánh ảnh cạnh nhau */}
         <ReturnCompareDialog {...model.sections.ReturnCompareDialog} />
+
+        {/* MODAL: Hội chẩn hàng nghi giả 2 Moderator (F-134, F-135) */}
+        <SuspiciousCounterfeitModal {...model.sections.SuspiciousCounterfeitModal} />
+
+        {/* MODAL: Lập biên bản hàng xuống cấp (TH-04 / KG-16) */}
+        <DegradedCaseModal {...model.sections.DegradedCaseModal} />
       </div>
     </ModeratorLayout>
   );

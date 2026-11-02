@@ -1,6 +1,12 @@
 import React from "react";
 
-export function ReturnQueueRow({ r, isOverdueItem, handleOpenReview, handleOpenInspect }) {
+export function ReturnQueueRow({
+  r,
+  isOverdueItem,
+  handleOpenReview,
+  handleOpenInspect,
+  handleMarkLost,
+}) {
   return (
     <tr
       key={r.id}
@@ -47,13 +53,25 @@ export function ReturnQueueRow({ r, isOverdueItem, handleOpenReview, handleOpenI
           </button>
         )}
         {(r.status === 'RETURNING' || r.status === 'WAITING_BUYER_DISPATCH') && (
-          <button
-            type="button"
-            onClick={() => handleOpenReview(r)}
-            className="text-[10px] px-3 py-1.5 rounded border border-[#8a8a8a] text-[#4a4a4a] hover:bg-[#f4f4f4] transition-colors"
-          >
-            Theo dõi
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => handleOpenReview(r)}
+              className="text-[10px] px-3 py-1.5 rounded border border-[#8a8a8a] text-[#4a4a4a] hover:bg-[#f4f4f4] transition-colors"
+            >
+              Theo dõi
+            </button>
+            {handleMarkLost && (
+              <button
+                type="button"
+                onClick={() => handleMarkLost(r)}
+                className="text-[10px] px-2.5 py-1.5 rounded border border-[#BA1A1A] text-[#BA1A1A] hover:bg-[#FFEBEE] transition-colors"
+                title="Báo bưu kiện thất lạc bởi đơn vị giao vận (TH-08)"
+              >
+                Báo thất lạc
+              </button>
+            )}
+          </>
         )}
         {r.status === 'RESOLVED' && (
           <button

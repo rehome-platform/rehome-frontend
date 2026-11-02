@@ -71,6 +71,7 @@ describe('Phase 2 boundary rules', () => {
       pendingForms: [],
       pendingWithdrawals: [],
       pendingEndOfTerm: [],
+      pendingInvalidReturns: [],
       totalCount: 0,
     });
     const legacyArray = [{ formId: 'f1', name: 'Áo thun', status: 'PENDING' }];
@@ -78,6 +79,7 @@ describe('Phase 2 boundary rules', () => {
       pendingForms: [{ formId: 'f1', id: 'f1', name: 'Áo thun', productName: 'Áo thun', status: 'PENDING' }],
       pendingWithdrawals: [],
       pendingEndOfTerm: [],
+      pendingInvalidReturns: [],
       totalCount: 1,
     });
     const backendData = {
