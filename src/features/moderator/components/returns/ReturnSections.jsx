@@ -17,7 +17,7 @@ export function ReturnCompareDialog({ isCompareModalOpen, setIsCompareModalOpen,
             <div>
               <div className="text-xs font-bold text-[#191C19] mb-2">Ảnh lưu trữ khi nhập kho</div>
               <img
-                src={selectedItem.stockInPhotos[0]}
+                src={selectedItem.stockInPhotos?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400'}
                 alt="Điểm kí gửi"
                 className="w-full h-64 object-contain rounded border border-[#c4c4c4] bg-[#f9f9f9]"
               />
@@ -25,7 +25,7 @@ export function ReturnCompareDialog({ isCompareModalOpen, setIsCompareModalOpen,
             <div>
               <div className="text-xs font-bold text-[#191C19] mb-2">Ảnh người mua chụp gửi</div>
               <img
-                src={selectedItem.buyerPhotos[0]}
+                src={selectedItem.buyerPhotos?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400'}
                 alt="Khách"
                 className="w-full h-64 object-contain rounded border border-[#c4c4c4] bg-[#f9f9f9]"
               />
@@ -47,7 +47,7 @@ export function ReturnOutcomeDialog({ isOutcomeModalOpen, setIsOutcomeModalOpen,
     <Modal
       isOpen={isOutcomeModalOpen}
       onClose={() => setIsOutcomeModalOpen(false)}
-      title="Chọn phương án xử lý món hàng"
+      title="Chọn phương án xử lý món hàng (TH-04)"
     >
       <div className="space-y-4 text-xs">
         <p className="text-[#4a4a4a]">
@@ -66,7 +66,7 @@ export function ReturnOutcomeDialog({ isOutcomeModalOpen, setIsOutcomeModalOpen,
           </button>
           <button
             type="button"
-            onClick={() => handleConfirmOutcome('RETURN_SELLER')}
+            onClick={() => handleConfirmOutcome('RETURN_TO_SELLER')}
             className="p-3 border border-[#8a8a8a] rounded-lg text-left hover:bg-[#F8FAF8] transition-colors"
           >
             <div className="font-bold text-[#191C19] text-sm">Hoàn trả cho người ký gửi</div>
@@ -80,12 +80,91 @@ export function ReturnOutcomeDialog({ isOutcomeModalOpen, setIsOutcomeModalOpen,
   );
 }
 
+export function DegradedCaseModal({
+  isOpen,
+  onClose,
+  selectedItem,
+  degradedNotes,
+  setDegradedNotes,
+  degradedConditionRate,
+  setDegradedConditionRate,
+  handleCreateDegradedCase,
+}) {
+  if (!selectedItem) return null;
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Lập biên bản hàng xuống cấp (TH-04 / KG-16)"
+    >
+      <div className="space-y-4 text-xs">
+        <div className="p-3 bg-[#FFF3E0] border border-[#FED7AA] rounded-xl text-[#B45309] leading-relaxed">
+          <strong>Lưu ý:</strong> Khi hàng trả về bị xuống cấp đáng kể so với ảnh nhập kho, hệ thống lập biên bản để người ký gửi chọn nhận lại món hàng cùng bồi thường một phần hoặc nhận bồi thường toàn bộ (KG-16).
+        </div>
+
+        <div className="rounded-xl border border-[#E2E8E0] bg-[#f8faf8] p-3 space-y-1">
+          <p><strong>Yêu cầu trả:</strong> {selectedItem.code}</p>
+          <p><strong>Món hàng:</strong> {selectedItem.itemName} ({selectedItem.sku})</p>
+          <p><strong>Giá bán ban đầu:</strong> {formatCurrencyVND(selectedItem.amount || 0)}</p>
+        </div>
+
+        <div className="space-y-2">
+          <label className="block font-bold text-[#191C19]">
+            Tỷ lệ chất lượng còn lại hiện tại (%):
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min="20"
+              max="80"
+              step="5"
+              value={degradedConditionRate}
+              onChange={(e) => setDegradedConditionRate(Number(e.target.value))}
+              className="flex-1"
+            />
+            <span className="font-bold font-mono text-sm px-2.5 py-1 rounded border border-[#2b2b2b] bg-white text-[#191C19]">
+              {degradedConditionRate}%
+            </span>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="block font-bold text-[#191C19]">
+            Ghi chú chi tiết về tình trạng xuống cấp:
+          </label>
+          <textarea
+            rows={3}
+            value={degradedNotes}
+            onChange={(e) => setDegradedNotes(e.target.value)}
+            className="w-full p-2.5 rounded-lg border border-[#8a8a8a] text-xs"
+            placeholder="Mô tả cụ thể vết bẩn, rách vải, phai màu, đứt khuy..."
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2 border-t border-[#E2E8E0]">
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Hủy
+          </Button>
+          <Button
+            size="sm"
+            className="bg-[#2b2b2b] text-white hover:bg-black font-bold"
+            onClick={handleCreateDegradedCase}
+          >
+            Lập hồ sơ & Thông báo Seller
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function ReturnRejectDialog({ isRejectModalOpen, setIsRejectModalOpen, rejectReason, setRejectReason, handleConfirmRejectRequest }) {
   return (
     <Modal
       isOpen={isRejectModalOpen}
       onClose={() => setIsRejectModalOpen(false)}
-      title="Từ chối yêu cầu trả hàng"
+      title="Từ chối yêu cầu trả hàng (TH-02)"
     >
       <div className="space-y-4 text-xs">
         <p className="text-[#4a4a4a]">
@@ -163,11 +242,20 @@ export function ReturnVerdictForm({ inspectionVerdict, setInspectionVerdict, inv
   );
 }
 
-export function ReturnInspectionVerdict({ selectedItem, inspectionVerdict, setInspectionVerdict, invalidReason, setInvalidReason, handleSaveInspection }) {
+export function ReturnInspectionVerdict({
+  selectedItem,
+  inspectionVerdict,
+  setInspectionVerdict,
+  invalidReason,
+  setInvalidReason,
+  handleSaveInspection,
+  handleFlagCounterfeit,
+  handleOpenDegradedCase,
+}) {
   return (
     <div className="lg:col-span-6 space-y-4">
       {/* Cảnh báo kiểm định viên */}
-      {selectedItem.isInspectorSelf && (
+      {selectedItem?.isInspectorSelf && (
         <div className="border-2 border-[#2b2b2b] bg-[#f4f4f4] p-3 rounded-lg flex justify-between items-center gap-3">
           <div className="text-xs">
             <div className="font-bold text-[#191C19] mb-1">
@@ -186,6 +274,33 @@ export function ReturnInspectionVerdict({ selectedItem, inspectionVerdict, setIn
           </button>
         </div>
       )}
+
+      {/* Các trường hợp đặc biệt: Nghi hàng giả (F-134) & Hàng xuống cấp (KG-16) */}
+      <div className="rounded-xl border border-[#c4c4c4] bg-[#f9faf9] p-3 space-y-2">
+        <div className="text-[10px] uppercase font-bold text-[#6b6b6b] tracking-wider">
+          Quy trình phát hiện bất thường
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {handleFlagCounterfeit && (
+            <button
+              type="button"
+              onClick={handleFlagCounterfeit}
+              className="px-3 py-1.5 rounded-lg border border-[#BA1A1A] bg-[#FFEBEE] text-[#BA1A1A] text-xs font-bold hover:bg-[#FFCDD2] transition-colors"
+            >
+              ⚠️ Báo nghi hàng giả (2 Moderator)
+            </button>
+          )}
+          {handleOpenDegradedCase && (
+            <button
+              type="button"
+              onClick={handleOpenDegradedCase}
+              className="px-3 py-1.5 rounded-lg border border-[#B45309] bg-[#FFF3E0] text-[#B45309] text-xs font-bold hover:bg-[#FED7AA] transition-colors"
+            >
+              📉 Báo hàng xuống cấp (TH-04 / KG-16)
+            </button>
+          )}
+        </div>
+      </div>
     
       {/* Bước 3: Kết luận */}
       <ReturnVerdictForm
@@ -202,11 +317,11 @@ export function ReturnInspectionVerdict({ selectedItem, inspectionVerdict, setIn
         </div>
         <div className="flex justify-between">
           <span className="text-[#5f5f5f]">Tiền hàng</span>
-          <span>{formatCurrencyVND(selectedItem.amount)}</span>
+          <span>{formatCurrencyVND(selectedItem?.amount || 0)}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-[#5f5f5f]">Phí vận chuyển đơn gốc</span>
-          <span>{formatCurrencyVND(selectedItem.shippingFee)}</span>
+          <span>{formatCurrencyVND(selectedItem?.shippingFee || 0)}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-[#5f5f5f]">Phí trả hàng</span>
@@ -214,7 +329,7 @@ export function ReturnInspectionVerdict({ selectedItem, inspectionVerdict, setIn
         </div>
         <div className="flex justify-between text-sm font-bold pt-2 border-t border-[#d4d4d4] text-[#191C19]">
           <span>Hoàn vào ví người mua</span>
-          <span>{formatCurrencyVND(selectedItem.amount + selectedItem.shippingFee)}</span>
+          <span>{formatCurrencyVND((selectedItem?.amount || 0) + (selectedItem?.shippingFee || 0))}</span>
         </div>
         <p className="text-[10px] text-[#7a7a7a] pt-1">
           Vào ví ReHome, không hoàn về thẻ/MoMo. Tiền của người ký gửi đang giữ nên không phải đòi lại.
@@ -253,19 +368,19 @@ export function ReturnInspectionChecklist({ checklist, setChecklist, selectedIte
         <label className="p-3 flex items-start gap-3 cursor-pointer hover:bg-[#fafafa]">
           <input
             type="checkbox"
-            checked={checklist.skuCorrect}
+            checked={checklist?.skuCorrect}
             onChange={(e) => setChecklist({ ...checklist, skuCorrect: e.target.checked })}
             className="mt-0.5 rounded border-[#8a8a8a]"
           />
           <div>
             <span className="font-semibold">Đúng món theo mã SKU</span>
-            <span className="block text-[10px] text-[#7a7a7a]">{selectedItem.sku} khớp với món đã gửi đi</span>
+            <span className="block text-[10px] text-[#7a7a7a]">{selectedItem?.sku} khớp với món đã gửi đi</span>
           </div>
         </label>
         <label className="p-3 flex items-start gap-3 cursor-pointer hover:bg-[#fafafa]">
           <input
             type="checkbox"
-            checked={checklist.labelIntact}
+            checked={checklist?.labelIntact}
             onChange={(e) => setChecklist({ ...checklist, labelIntact: e.target.checked })}
             className="mt-0.5 rounded border-[#8a8a8a]"
           />
@@ -276,7 +391,7 @@ export function ReturnInspectionChecklist({ checklist, setChecklist, selectedIte
         <label className="p-3 flex items-start gap-3 cursor-pointer hover:bg-[#fafafa]">
           <input
             type="checkbox"
-            checked={checklist.noNewDamage}
+            checked={checklist?.noNewDamage}
             onChange={(e) => setChecklist({ ...checklist, noNewDamage: e.target.checked })}
             className="mt-0.5 rounded border-[#8a8a8a]"
           />
@@ -287,7 +402,7 @@ export function ReturnInspectionChecklist({ checklist, setChecklist, selectedIte
         <label className="p-3 flex items-start gap-3 cursor-pointer hover:bg-[#fafafa]">
           <input
             type="checkbox"
-            checked={checklist.noUsageSign}
+            checked={checklist?.noUsageSign}
             onChange={(e) => setChecklist({ ...checklist, noUsageSign: e.target.checked })}
             className="mt-0.5 rounded border-[#8a8a8a]"
           />
@@ -298,7 +413,7 @@ export function ReturnInspectionChecklist({ checklist, setChecklist, selectedIte
         <label className="p-3 flex items-start gap-3 cursor-pointer hover:bg-[#fafafa]">
           <input
             type="checkbox"
-            checked={checklist.accessoriesComplete}
+            checked={checklist?.accessoriesComplete}
             onChange={(e) => setChecklist({ ...checklist, accessoriesComplete: e.target.checked })}
             className="mt-0.5 rounded border-[#8a8a8a]"
           />
@@ -312,6 +427,9 @@ export function ReturnInspectionChecklist({ checklist, setChecklist, selectedIte
 }
 
 export function ReturnInspectionProduct({ selectedItem, scannedSku, setScannedSku, setSkuMatched, skuMatched, checklist, setChecklist }) {
+  const stockPhotos = selectedItem?.stockInPhotos || [];
+  const buyerPhotos = selectedItem?.buyerPhotos || [];
+
   return (
     <div className="lg:col-span-6 space-y-4 border-r border-[#E2E8E0] pr-0 lg:pr-5">
       <div>
@@ -319,7 +437,7 @@ export function ReturnInspectionProduct({ selectedItem, scannedSku, setScannedSk
           Đối chiếu hàng về với ảnh nhập kho
         </h2>
         <p className="text-xs text-[#5f5f5f]">
-          Mốc chuẩn là ảnh kho tự chụp ngày {selectedItem.stockInDate}, không phải ảnh người mua gửi.
+          Mốc chuẩn là ảnh kho tự chụp ngày {selectedItem?.stockInDate}, không phải ảnh người mua gửi.
         </p>
       </div>
     
@@ -340,7 +458,7 @@ export function ReturnInspectionProduct({ selectedItem, scannedSku, setScannedSk
             onChange={(e) => {
               const val = e.target.value;
               setScannedSku(val);
-              setSkuMatched(val.trim().toUpperCase() === selectedItem.sku.toUpperCase());
+              setSkuMatched(val.trim().toUpperCase() === (selectedItem?.sku || '').toUpperCase());
             }}
             className="border border-[#8a8a8a] rounded px-3 py-1.5 font-mono font-bold text-sm text-center uppercase w-32"
           />
@@ -354,10 +472,10 @@ export function ReturnInspectionProduct({ selectedItem, scannedSku, setScannedSk
       <div className="grid grid-cols-2 gap-3">
         <div>
           <div className="text-[10px] uppercase font-bold text-[#6b6b6b] mb-1.5">
-            Ảnh nhập kho · {selectedItem.stockInDate}
+            Ảnh nhập kho · {selectedItem?.stockInDate}
           </div>
           <div className="flex gap-2">
-            {selectedItem.stockInPhotos.map((src, i) => (
+            {stockPhotos.map((src, i) => (
               <img key={i} src={src} alt="Điểm kí gửi" className="w-20 h-24 object-cover rounded border border-[#c4c4c4]" />
             ))}
           </div>
@@ -367,7 +485,7 @@ export function ReturnInspectionProduct({ selectedItem, scannedSku, setScannedSk
             Ảnh người mua gửi
           </div>
           <div className="flex gap-2">
-            {selectedItem.buyerPhotos.map((src, i) => (
+            {buyerPhotos.map((src, i) => (
               <img key={i} src={src} alt="Khách" className="w-20 h-24 object-cover rounded border border-[#c4c4c4]" />
             ))}
           </div>
@@ -386,7 +504,7 @@ export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybi
       <div>
         <h2 className="text-base font-bold text-[#191C19]">Đơn và món liên quan</h2>
         <p className="text-xs text-[#5f5f5f]">
-          Đơn #{selectedItem.orderId} · Người mua: {selectedItem.buyerName}
+          Đơn #{selectedItem?.orderId} · Người mua: {selectedItem?.buyerName}
         </p>
       </div>
     
@@ -394,17 +512,17 @@ export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybi
       <div className="border border-[#8a8a8a] rounded-lg overflow-hidden bg-white">
         <div className="p-3 flex items-center gap-3 border-b border-[#e0e0e0]">
           <img
-            src={selectedItem.stockInPhotos[0]}
-            alt={selectedItem.itemName}
+            src={selectedItem?.stockInPhotos?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400'}
+            alt={selectedItem?.itemName}
             className="w-12 h-14 object-cover rounded border border-[#c4c4c4]"
           />
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-bold text-[#191C19]">{selectedItem.sku}</div>
-            <div className="text-xs text-[#5f5f5f]">{selectedItem.itemName}</div>
-            <div className="text-[10px] text-[#7a7a7a]">{selectedItem.itemDetails}</div>
+            <div className="text-xs font-bold text-[#191C19]">{selectedItem?.sku}</div>
+            <div className="text-xs text-[#5f5f5f]">{selectedItem?.itemName}</div>
+            <div className="text-[10px] text-[#7a7a7a]">{selectedItem?.itemDetails}</div>
           </div>
           <div className="text-xs font-bold text-[#191C19]">
-            {formatCurrencyVND(selectedItem.amount)}
+            {formatCurrencyVND(selectedItem?.amount || 0)}
           </div>
         </div>
         <div className="p-2.5 bg-[#fafafa] text-[11px] text-[#5f5f5f]">
@@ -419,15 +537,15 @@ export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybi
         </div>
         <div className="flex justify-between">
           <span className="text-[#5f5f5f]">Mã Member</span>
-          <span className="font-bold">{selectedItem.senderCode}</span>
+          <span className="font-bold">{selectedItem?.senderCode}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-[#5f5f5f]">Lượt bị trả trước đây</span>
-          <span>{selectedItem.prevReturns}</span>
+          <span>{selectedItem?.prevReturns}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-[#5f5f5f]">Tiền đã chia</span>
-          <span className="font-semibold text-[#006B2C]">{selectedItem.payoutStatus}</span>
+          <span className="font-semibold text-[#006B2C]">{selectedItem?.payoutStatus}</span>
         </div>
         <p className="text-[10px] text-[#7a7a7a] pt-1">
           Tiền người ký gửi chỉ chia sau khi hết cửa sổ trả hàng. Nhờ vậy không phải đòi lại tiền đã trả.
@@ -440,9 +558,9 @@ export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybi
           Vận đơn trả hàng sẽ tạo khi bấm duyệt
         </div>
         <div className="text-xs text-[#3a3a3a] leading-relaxed">
-          Lấy tại <strong className="font-semibold">{selectedItem.buyerName} · {selectedItem.buyerPhone}</strong>
+          Lấy tại <strong className="font-semibold">{selectedItem?.buyerName} · {selectedItem?.buyerPhone}</strong>
           <br />
-          {selectedItem.buyerAddress}
+          {selectedItem?.buyerAddress}
         </div>
         <div className="p-2 bg-[#f4f4f4] rounded text-[10px] text-[#4a4a4a]">
           Địa chỉ do người mua nhập. Bấm duyệt là GHN nhận thông tin này và <strong className="font-semibold">hai bên đều không sửa được nữa</strong> — đọc lại trước khi bấm.
@@ -450,7 +568,7 @@ export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybi
       </div>
     
       {/* Footer Buttons */}
-      {selectedItem.status === 'PENDING_APPROVAL' && (
+      {selectedItem?.status === 'PENDING_APPROVAL' && (
         <div className="pt-2 flex flex-col sm:flex-row gap-2">
           <button
             type="button"
@@ -473,6 +591,9 @@ export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybi
 }
 
 export function ReturnRequestDetails({ selectedItem, setIsCompareModalOpen }) {
+  const buyerPhotos = selectedItem?.buyerPhotos || [];
+  const stockPhotos = selectedItem?.stockInPhotos || [];
+
   return (
     <div className="lg:col-span-7 space-y-4 border-r border-[#E2E8E0] pr-0 lg:pr-5">
       <div>
@@ -485,20 +606,20 @@ export function ReturnRequestDetails({ selectedItem, setIsCompareModalOpen }) {
       <div className="border border-[#8a8a8a] rounded-lg p-4 bg-white space-y-2">
         <div className="flex justify-between items-baseline text-[10px] text-[#6b6b6b] uppercase tracking-wider font-semibold">
           <span>Lý do đã chọn</span>
-          <span className="text-[#7a7a7a]">Gửi lúc {selectedItem.submittedAt}</span>
+          <span className="text-[#7a7a7a]">Gửi lúc {selectedItem?.submittedAt}</span>
         </div>
-        <div className="text-sm font-bold text-[#191C19]">{selectedItem.reason}</div>
+        <div className="text-sm font-bold text-[#191C19]">{selectedItem?.reason}</div>
         <div className="text-xs text-[#4a4a4a] leading-relaxed bg-[#f9f9f9] p-2.5 rounded border border-[#e0e0e0]">
-          "{selectedItem.buyerNote}"
+          "{selectedItem?.buyerNote}"
         </div>
       </div>
     
       <div className="space-y-2">
         <div className="text-[10px] uppercase font-bold text-[#6b6b6b] tracking-wider">
-          Ảnh người mua gửi · {selectedItem.buyerPhotos.length} ảnh
+          Ảnh người mua gửi · {buyerPhotos.length} ảnh
         </div>
         <div className="flex gap-3 overflow-x-auto pb-2">
-          {selectedItem.buyerPhotos.map((src, i) => (
+          {buyerPhotos.map((src, i) => (
             <img
               key={i}
               src={src}
@@ -511,10 +632,10 @@ export function ReturnRequestDetails({ selectedItem, setIsCompareModalOpen }) {
     
       <div className="border border-[#c4c4c4] rounded-lg p-4 bg-white space-y-3">
         <div className="text-[10px] uppercase font-bold text-[#6b6b6b] tracking-wider">
-          So với ảnh kiểm định lúc nhập kho · {selectedItem.stockInDate}
+          So với ảnh kiểm định lúc nhập kho · {selectedItem?.stockInDate}
         </div>
         <div className="flex items-center gap-3">
-          {selectedItem.stockInPhotos.map((src, i) => (
+          {stockPhotos.map((src, i) => (
             <img
               key={i}
               src={src}
@@ -538,7 +659,7 @@ export function ReturnRequestDetails({ selectedItem, setIsCompareModalOpen }) {
   );
 }
 
-export function ReturnQueueTable({ loading, filteredRequests, activeTab, handleOpenReview, handleOpenInspect }) {
+export function ReturnQueueTable({ loading, filteredRequests, activeTab, handleOpenReview, handleOpenInspect, handleMarkLost }) {
   return (
     <div className="bg-white border border-[#8a8a8a] rounded-lg overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
@@ -580,6 +701,7 @@ export function ReturnQueueTable({ loading, filteredRequests, activeTab, handleO
                     isOverdueItem={isOverdueItem}
                     handleOpenReview={handleOpenReview}
                     handleOpenInspect={handleOpenInspect}
+                    handleMarkLost={handleMarkLost}
                   />
                 );
               })}
