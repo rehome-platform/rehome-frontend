@@ -1,17 +1,37 @@
 import baseApi from '../../../services/baseApi.js';
 import { normalizeError, Phase2Error, unwrap } from '../models/warehouseModel.js';
-import { phase4Contract } from '../config/packingContract.js';
+import { phase4Contract, operationReady } from '../config/packingContract.js';
+import { isFixtureMode } from '../config/warehouseContract.js';
 import { handoverPayload } from '../models/packingModel.js';
+import { packingMockApi } from './packingMockApi.js';
 
 export async function request(operation, { orderId, data, signal, scope } = {}) {
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+  const isWireframeDemo = typeof orderId === 'string' && orderId.startsWith('DH-');
+
+  // Chế độ Mock API cho các đơn hàng mẫu DH-* hoặc khi bật isFixtureMode
+  if (isWireframeDemo || isFixtureMode) {
+    validateScope(scope);
+    if (operation === 'read') return packingMockApi.getOrderDetail(orderId, scope);
+    if (operation === 'scan') return packingMockApi.scanSku(orderId, data?.productId);
+    if (operation === 'shipment') return packingMockApi.createShipment(orderId, data);
+    if (operation === 'handover') return packingMockApi.handover(data);
+  }
+
   const config = operationConfig(operation);
   validateScope(scope);
   requireOrderId(config, orderId);
+
   try {
-    const result = unwrap(await baseApi.request({ method: config.method,
-      url: config.path.replace(':orderId', encodeURIComponent(orderId)), data, signal,
-      noReplay: config.method !== 'get' }));
+    const result = unwrap(
+      await baseApi.request({
+        method: config.method,
+        url: config.path.replace(':orderId', encodeURIComponent(orderId)),
+        data,
+        signal,
+        noReplay: config.method !== 'get',
+      })
+    );
     if (operation === 'read') validateOrder(result, orderId, scope);
     return result;
   } catch (error) {
@@ -43,20 +63,28 @@ function validateScope(scope) {
 }
 
 function validateOrder(result, orderId, scope) {
-      if (result?.warehouseId !== scope.warehouseId)
-        throw new Phase2Error('Dữ liệu không thuộc điểm kí gửi hiện tại.', 403);
-      if (result.orderId !== orderId || !hasOrderCollections(result))
-        throw new Phase2Error('Dữ liệu đóng gói không đúng contract đã bàn giao.', 422, 'INVALID_CONTRACT');
+  if (result?.warehouseId !== scope?.warehouseId) {
+    throw new Phase2Error('Dữ liệu không thuộc điểm kí gửi hiện tại.', 403);
+  }
+  if (result.orderId !== orderId || !hasOrderCollections(result)) {
+    throw new Phase2Error('Dữ liệu đóng gói không đúng contract đã bàn giao.', 422, 'INVALID_CONTRACT');
+  }
 }
 
 function hasOrderCollections(result) {
   return Array.isArray(result.items) && Array.isArray(result.scannedProductIds) && Array.isArray(result.allowedActions);
 }
+
 export const packingService = {
-  read: (orderId, options) => request('read', { ...options, orderId }),
+  read: (orderId, options) => {
+    if (typeof orderId === 'string' && orderId.startsWith('DH-')) {
+      return Promise.resolve(packingMockApi.getOrderDetail(orderId, options?.scope));
+    }
+    return request('read', { ...options, orderId });
+  },
   scan: (orderId, productId, options) =>
     request('scan', { ...options, orderId, data: { productId: String(productId || '').trim() } }),
-  shipment: (orderId, options) => request('shipment', { ...options, orderId }),
+  shipment: (orderId, options) => request('shipment', { ...options, orderId, data: options?.data }),
   handover: (task, identity, options = {}) => {
     const data = handoverPayload(task, identity, options.scope || {});
     if (!data) throw new Phase2Error('Yêu cầu hoặc xác nhận danh tính không còn hợp lệ.', 409);

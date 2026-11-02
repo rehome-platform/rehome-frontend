@@ -6,19 +6,35 @@ import { isFixtureMode } from "../config/warehouseContract.js";
 import { callBackend } from './warehouseTransport.js';
 
 export const queueService = {
-  // API 28: GET /queues?type={type}
+  // API 28 / API 68: GET /queues?type={type}
   list: async (params, options) => {
-    const fallback = fixtureFallback('queueList', { params, ...options });
+    const fallback = async () => {
+      if (params?.type === 'PACKING') {
+        const { packingMockApi } = await import('./packingMockApi.js');
+        return packingMockApi.listQueue(params);
+      }
+      return fixtureFallback('queueList', { params, ...options });
+    };
 
     const typeQuery = params?.type && params.type !== 'ALL' ? params.type : undefined;
-    const result = await callBackend(
-      {
-        method: 'get',
-        url: API_ENDPOINTS.MODERATOR.QUEUES,
-        params: typeQuery ? { type: typeQuery } : undefined,
-      },
-      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
-    );
+    let result;
+    try {
+      result = await callBackend(
+        {
+          method: 'get',
+          url: API_ENDPOINTS.MODERATOR.QUEUES,
+          params: typeQuery ? { type: typeQuery } : undefined,
+        },
+        { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+      );
+    } catch (err) {
+      if (options?.signal?.aborted || err.code === 'ERR_CANCELED') throw err;
+      if (fallback) {
+        result = await fallback();
+      } else {
+        throw err;
+      }
+    }
 
     const map = (item) => ({
       ...item,
@@ -42,28 +58,54 @@ export const queueService = {
 
   // API 29: POST /queues/{id}/claim
   claim: async (queueId, options) => {
-    const fallback = fixtureFallback('queueClaim', { ids: { queueId }, ...options });
+    const fallback = async () => {
+      try {
+        const { packingMockApi } = await import('./packingMockApi.js');
+        return await packingMockApi.claimQueue(queueId, options?.scope?.userId);
+      } catch (e) {
+        return fixtureFallback('queueClaim', { ids: { queueId }, ...options });
+      }
+    };
 
-    return callBackend(
-      {
-        method: 'post',
-        url: API_ENDPOINTS.MODERATOR.CLAIM_QUEUE(queueId),
-      },
-      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
-    );
+    try {
+      return await callBackend(
+        {
+          method: 'post',
+          url: API_ENDPOINTS.MODERATOR.CLAIM_QUEUE(queueId),
+        },
+        { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+      );
+    } catch (err) {
+      if (options?.signal?.aborted || err.code === 'ERR_CANCELED') throw err;
+      if (fallback) return fallback();
+      throw err;
+    }
   },
 
   // API 30: POST /queues/{id}/release
   release: async (queueId, options) => {
-    const fallback = fixtureFallback('queueRelease', { ids: { queueId }, ...options });
+    const fallback = async () => {
+      try {
+        const { packingMockApi } = await import('./packingMockApi.js');
+        return await packingMockApi.releaseQueue(queueId, options?.scope?.userId);
+      } catch (e) {
+        return fixtureFallback('queueRelease', { ids: { queueId }, ...options });
+      }
+    };
 
-    return callBackend(
-      {
-        method: 'post',
-        url: API_ENDPOINTS.MODERATOR.RELEASE_QUEUE(queueId),
-      },
-      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
-    );
+    try {
+      return await callBackend(
+        {
+          method: 'post',
+          url: API_ENDPOINTS.MODERATOR.RELEASE_QUEUE(queueId),
+        },
+        { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+      );
+    } catch (err) {
+      if (options?.signal?.aborted || err.code === 'ERR_CANCELED') throw err;
+      if (fallback) return fallback();
+      throw err;
+    }
   },
 
   // API 31: POST /consignment-forms/{id}/approve
