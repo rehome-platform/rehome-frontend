@@ -49,6 +49,12 @@ beforeEach(() => {
       return HttpResponse.json({ result: null, isSuccess: true, statusCode: 204, message: 'Đã nhả việc' });
     }),
 
+    // API 63: GET /orders/:id
+    http.get(`${API_BASE_URL}/orders/:id`, async ({ params }) => {
+      const order = await packingMockApi.getOrderDetail(params.id, { warehouseId: 'warehouse-a', userId: 'mod-a' });
+      return HttpResponse.json({ result: order, isSuccess: true, statusCode: 200 });
+    }),
+
     // API 69: POST /orders/:id/pack/scan
     http.post(`${API_BASE_URL}/orders/:id/pack/scan`, async ({ params, request }) => {
       const body = await request.json();

@@ -20,6 +20,7 @@ it('blocks unreviewed contracts, missing scope and cancelled calls', async () =>
   await expect(request('shipment', { scope, signal: controller.signal })).rejects.toMatchObject({ name: 'AbortError' });
 });
 it('reports unsupported moderator order reads before network access', async () => {
+  phase4Contract.operations.read.supported = false;
   await expect(packingService.read('o1', { scope })).rejects.toMatchObject({ code: 'OPERATION_UNSUPPORTED' });
 });
 it('sends exact SKU casing to order id and unwraps the server result', async () => {
