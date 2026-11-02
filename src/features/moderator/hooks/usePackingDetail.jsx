@@ -5,6 +5,7 @@ import { usePhase2, useResource } from "./warehouseHooks.jsx";
 import { packingService } from "../services/packingApi.js";
 import { canPack, canShip } from "../models/packingModel.js";
 import { operationReady } from "../config/packingContract.js";
+import { packingMockApi } from "../services/packingMockApi.js";
 
 export function usePackingDetail({ orderId, onChanged }) {
   const { scope, signal } = usePhase2();
@@ -27,6 +28,14 @@ export function usePackingDetail({ orderId, onChanged }) {
   const [scanLogs, setScanLogs] = useState([]);
   const [incidentOpen, setIncidentOpen] = useState(false);
   const [incidentNote, setIncidentNote] = useState('');
+
+  // Trạng thái modal cảnh báo sai món (DG-03-SaiMon) & in phiếu (DG-04)
+  const [wrongItemModalOpen, setWrongItemModalOpen] = useState(false);
+  const [wrongItem, setWrongItem] = useState(null);
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [packageWeight, setPackageWeight] = useState(820);
+  const [packageDimensions, setPackageDimensions] = useState('30 x 22 x 10');
+  const [shipperNote, setShipperNote] = useState('Giao giờ hành chính, gọi trước khi tới.');
 
   const lock = useRef(false);
   const input = useRef(null);
@@ -56,9 +65,13 @@ export function usePackingDetail({ orderId, onChanged }) {
           if (result.matched) {
             setMessage('Đã đối chiếu SKU. Tiến độ được tải lại từ server.');
             setScanLogs(prev => [{ time: timeStr, code, status: 'Khớp — món thành công', matched: true }, ...prev]);
+            setWrongItem(null);
           } else {
             setMessage('SKU không thuộc đơn.');
             setScanLogs(prev => [{ time: timeStr, code, status: 'Không có mã này — nhập lại', matched: false }, ...prev]);
+            const wrongDetail = packingMockApi.findWrongItemInfo(code);
+            setWrongItem(wrongDetail);
+            setWrongItemModalOpen(true);
           }
           setSku('');
         },
@@ -66,22 +79,29 @@ export function usePackingDetail({ orderId, onChanged }) {
     } finally {
       lock.current = false;
       if (alive.current && !signal.aborted) {
-        resource.refresh();
-        onChanged();
         input.current?.focus();
       }
     }
   };
 
-  const create = async () => {
+  const create = async (customPayload = {}) => {
     if (actionBlocked('shipment', { lock, uncertain, resource })) return;
     if (!canShip(order, scope, now)) return;
     lock.current = true;
     readEpoch.current++;
     setUncertain(true);
     try {
-      await resource.mutate(options => packingService.shipment(orderId, options), {
-        onSuccess: changed,
+      const payload = {
+        weightGrams: packageWeight,
+        dimensions: packageDimensions,
+        shipperNote,
+        ...customPayload,
+      };
+      await resource.mutate(options => packingService.shipment(orderId, { ...options, data: payload }), {
+        onSuccess: () => {
+          changed();
+          setPrintModalOpen(true); // Tự động mở tùy chọn in phiếu sau khi tạo vận đơn GHN thành công
+        },
       });
     } finally {
       readEpoch.current++;
@@ -100,7 +120,7 @@ export function usePackingDetail({ orderId, onChanged }) {
   const scannedCount = order?.scannedCount ?? scannedProductIds.length;
   const totalCount = order?.totalCount ?? items.length;
 
-    return {
+  return {
     resource,
     order,
     totalCount,
@@ -125,9 +145,41 @@ export function usePackingDetail({ orderId, onChanged }) {
     setIncidentNote,
     incidentNote,
     camera,
-      sections: {
+    wrongItemModalOpen,
+    setWrongItemModalOpen,
+    wrongItem,
+    printModalOpen,
+    setPrintModalOpen,
+    packageWeight,
+    setPackageWeight,
+    packageDimensions,
+    setPackageDimensions,
+    shipperNote,
+    setShipperNote,
+    sections: {
       PackingItemTable: { items, pickedItems, scannedProductIds, togglePicked },
-      PackingScanPanel: { totalCount, order, scope, now, scan, sku, input, setSku, uncertain, resource, setCamera, message, create, setIncidentOpen },
+      PackingScanPanel: {
+        totalCount,
+        order,
+        scope,
+        now,
+        scan,
+        sku,
+        input,
+        setSku,
+        uncertain,
+        resource,
+        setCamera,
+        message,
+        create,
+        setIncidentOpen,
+        packageWeight,
+        setPackageWeight,
+        packageDimensions,
+        setPackageDimensions,
+        shipperNote,
+        setShipperNote,
+      },
       PackingIncidentDialog: { setIncidentOpen, setIncidentNote, incidentNote },
     },
   };

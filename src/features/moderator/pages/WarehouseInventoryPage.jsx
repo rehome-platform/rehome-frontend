@@ -232,7 +232,6 @@ export default function WarehouseInventoryPage() {
                   {value}
                 </option>
               ))}
-              <option value="WAITING_END_OF_TERM">Chờ xử lý cuối kỳ</option>
             </select>
           </div>
         </div>

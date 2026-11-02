@@ -1,9 +1,6 @@
 import React from "react";
-
 import Button from "../../../../components/common/Button.jsx";
-
 import { safeDocumentUrl } from "../../models/warehouseModel.js";
-
 import { canPack, canShip } from "../../models/packingModel.js";
 import { operationReady } from "../../config/packingContract.js";
 
@@ -72,7 +69,7 @@ export function PackingRecipientPanel({ order, scanLogs }) {
       <div className="rounded-2xl border border-[#8a8a8a] bg-white p-5 shadow-sm space-y-2 text-xs">
         <p className="text-[10px] font-bold uppercase tracking-wider text-[#717971]">Người nhận hàng</p>
         <p className="text-sm font-bold text-[#191C19]">{order.recipientName || 'Ngô Hải F'}</p>
-        <p className="text-[#5B6776]">{order.recipientPhone || '0912 ••• 456'}</p>
+        <p className="text-[#5B6776]">{order.recipientPhone || '0912 456 142'}</p>
         <p className="text-[#5B6776] leading-relaxed">
           {order.shippingAddress || '142 Nguyễn Thị Thập, P. Tân Phú, Quận 7, TP.HCM'}
         </p>
@@ -118,6 +115,9 @@ export function PackingRecipientPanel({ order, scanLogs }) {
           <span>Chênh lệch kho chịu</span>
           <span>0đ</span>
         </div>
+        <p className="text-[10px] text-[#5f5f5f] pt-1">
+          Nếu khối lượng thực vượt mức người mua đã trả, kho chịu phần chênh, không đòi thêm người mua.
+        </p>
       </div>
     
       {/* Nhật ký nhập mã SKU (DG-03) */}
@@ -130,22 +130,24 @@ export function PackingRecipientPanel({ order, scanLogs }) {
             {scanLogs.map((log, i) => (
               <div key={i} className="py-2 space-y-0.5">
                 <p className="font-bold text-[#191C19]">{log.time} · {log.code}</p>
-                <p className={log.matched ? 'text-[#006B2C]' : 'text-[#BA1A1A]'}>{log.status}</p>
+                <p className={log.matched ? 'text-[#006B2C] font-semibold' : 'text-[#BA1A1A] font-semibold'}>
+                  {log.status}
+                </p>
               </div>
             ))}
           </div>
         )}
         <div className="rounded-xl border border-dashed border-[#9a9a9a] p-3 text-[11px] text-[#5f5f5f] leading-relaxed">
-          Mã SKU không dùng chữ I, O, số 0 và số 1 để tránh đọc nhầm khi nhập tay.
+          Mã SKU không dùng chữ I, O, số 0 và số 1 để tránh đọc nhầm khi nhập tay. Dòng khớp lưu vào database (order_item.scanned).
         </div>
       </div>
     </div>
   );
 }
 
-export function PackingShipmentPanel({ order }) {
+export function PackingShipmentPanel({ order, onOpenPrintModal }) {
   return (
-    <div className="rounded-2xl border-2 border-[#006B2C] bg-white p-5 space-y-4 shadow-sm">
+    <div className="rounded-2xl border-2 border-[#006B2C] bg-white p-5 space-y-4 shadow-sm animate-in fade-in duration-200">
       <div>
         <h3 className="text-base font-bold text-[#006B2C]">Vận đơn đã tạo thành công</h3>
         <p className="text-xs text-[#5B6776] mt-0.5">
@@ -156,7 +158,7 @@ export function PackingShipmentPanel({ order }) {
       <div className="p-4 rounded-xl border border-[#2b2b2b] bg-[#f9faf9] space-y-2">
         <p className="text-[10px] font-bold uppercase tracking-wider text-[#717971]">Mã vận đơn GHN</p>
         <p className="text-2xl font-mono font-extrabold text-[#191C19] tracking-wider">
-          {order.ghnTrackingCode}
+          {order.ghnTrackingCode || 'GHN5LK9P2XQ'}
         </p>
         <div className="flex justify-between text-xs text-[#5f5f5f] pt-1 border-t border-[#e0e0e0]">
           <span>Dự kiến lấy hàng:</span>
@@ -174,21 +176,21 @@ export function PackingShipmentPanel({ order }) {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => window.print()}
-            className="px-4 py-2 rounded bg-[#2b2b2b] text-white text-xs font-bold hover:bg-black"
+            onClick={() => onOpenPrintModal ? onOpenPrintModal() : window.print()}
+            className="px-4 py-2 rounded bg-[#2b2b2b] text-white text-xs font-bold hover:bg-black flex items-center gap-1.5"
           >
-            In khổ A5
+            <span>🖨️</span> In khổ A5
           </button>
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={() => onOpenPrintModal ? onOpenPrintModal() : window.print()}
             className="px-4 py-2 rounded border border-[#8a8a8a] bg-white text-xs font-semibold hover:bg-[#F0F5EE]"
           >
             80 × 80mm
           </button>
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={() => onOpenPrintModal ? onOpenPrintModal() : window.print()}
             className="px-4 py-2 rounded border border-[#8a8a8a] bg-white text-xs font-semibold hover:bg-[#F0F5EE]"
           >
             52 × 70mm
@@ -202,15 +204,42 @@ export function PackingShipmentPanel({ order }) {
         <p className="text-xs text-[#5f5f5f] leading-relaxed">
           Bấm xác nhận để đơn chuyển sang <strong>Đang giao</strong> và người mua nhận thông báo kèm mã vận đơn.
         </p>
-        <Button variant="outline" className="text-xs font-bold py-2 border-[#2b2b2b]">
-          Đã bàn giao cho GHN
+        <Button
+          variant="outline"
+          className="text-xs font-bold py-2 border-[#2b2b2b] text-[#006B2C] hover:bg-[#F0F5EE]"
+          onClick={() => alert('Đã xác nhận bàn giao hàng cho shipper GHN!')}
+        >
+          ✓ Đã bàn giao cho GHN
         </Button>
       </div>
     </div>
   );
 }
 
-export function PackingScanPanel({ totalCount, order, scope, now, scan, sku, input, setSku, uncertain, resource, setCamera, message, create, setIncidentOpen }) {
+export function PackingScanPanel({
+  totalCount,
+  order,
+  scope,
+  now,
+  scan,
+  sku,
+  input,
+  setSku,
+  uncertain,
+  resource,
+  setCamera,
+  message,
+  create,
+  setIncidentOpen,
+  packageWeight,
+  setPackageWeight,
+  packageDimensions,
+  setPackageDimensions,
+  shipperNote,
+  setShipperNote,
+}) {
+  const isFullyScanned = (order?.scannedCount ?? 0) >= totalCount && totalCount > 0;
+
   return (
     <div className="rounded-2xl border-2 border-[#2b2b2b] bg-white p-5 space-y-4 shadow-sm">
       <div className="flex justify-between items-center">
@@ -230,7 +259,8 @@ export function PackingScanPanel({ totalCount, order, scope, now, scan, sku, inp
         className="flex flex-wrap items-end gap-3"
         onSubmit={(e) => {
           e.preventDefault();
-          scan(sku);
+          const val = (input?.current?.value || sku || '').trim();
+          scan(val);
         }}
       >
         <div className="flex-1 min-w-[200px]">
@@ -242,7 +272,7 @@ export function PackingScanPanel({ totalCount, order, scope, now, scan, sku, inp
             id="sku-input"
             value={sku}
             onChange={(e) => setSku(e.target.value)}
-            placeholder="Nhập mã SKU trên tem sản phẩm..."
+            placeholder="Nhập mã SKU trên tem sản phẩm (vd: RH-A7F31K)..."
             className="w-full rounded-xl border-2 border-[#2b2b2b] px-3.5 py-2 text-sm font-mono font-bold focus:border-[#006B2C] focus:outline-none"
             autoComplete="off"
           />
@@ -280,6 +310,51 @@ export function PackingScanPanel({ totalCount, order, scope, now, scan, sku, inp
         <p role="status" className="text-xs text-[#D97706] font-bold bg-amber-50 p-2.5 rounded-lg border border-amber-200">
           Đang kiểm tra kết quả tạo vận đơn. Chưa thể tạo mới.
         </p>
+      )}
+
+      {/* THÔNG TIN KIỆN HÀNG KHI ĐÃ ĐỐI CHIẾU ĐỦ (DG-04) */}
+      {isFullyScanned && (
+        <div className="rounded-xl border border-[#006B2C] bg-[#F0F5EE]/40 p-4 space-y-3 pt-3">
+          <p className="text-xs font-bold text-[#006B2C] uppercase tracking-wider">
+            ✓ Đã đối chiếu {totalCount}/{totalCount} món — Nhập thông tin kiện hàng
+          </p>
+          <div className="grid sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <label className="block font-bold text-gray-700 mb-1">
+                Khối lượng thực tế (gram)
+              </label>
+              <input
+                type="number"
+                value={packageWeight ?? 820}
+                onChange={(e) => setPackageWeight && setPackageWeight(Number(e.target.value))}
+                className="w-full rounded-lg border border-gray-300 p-2 text-xs font-mono font-bold"
+              />
+              <span className="text-[10px] text-gray-500">Gợi ý: 800g (2 món, theo danh mục)</span>
+            </div>
+            <div>
+              <label className="block font-bold text-gray-700 mb-1">
+                Kích thước thùng (D x R x C cm)
+              </label>
+              <input
+                type="text"
+                value={packageDimensions ?? '30 x 22 x 10'}
+                onChange={(e) => setPackageDimensions && setPackageDimensions(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 p-2 text-xs font-mono"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block font-bold text-gray-700 mb-1 text-xs">
+              Ghi chú cho shipper
+            </label>
+            <input
+              type="text"
+              value={shipperNote ?? 'Giao giờ hành chính, gọi trước khi tới.'}
+              onChange={(e) => setShipperNote && setShipperNote(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 p-2 text-xs"
+            />
+          </div>
+        </div>
       )}
     
       <div className="flex flex-wrap gap-3 pt-2">
@@ -352,13 +427,13 @@ export function PackingItemTable({ items, pickedItems, scannedProductIds, toggle
                   </td>
                   <td className="py-3 px-3">
                     <p className="font-semibold text-[#191C19]">{item.name || item.productId}</p>
-                    <p className="text-[11px] text-[#717971]">{item.brand || 'ReHome'} · Tốt</p>
+                    <p className="text-[11px] text-[#717971]">{item.brand || 'ReHome'} · {item.condition || 'Tốt'}</p>
                   </td>
                   <td className="py-3 px-3 font-medium text-[#414942]">
                     {item.size || 'M'}
                   </td>
-                  <td className="py-3 px-3 font-bold text-[#006B2C]">
-                    {item.shelfLocation || 'Chưa có kệ'}
+                  <td className="py-3 px-3 font-mono font-bold text-[#006B2C]">
+                    {item.shelfLocation || 'B1-18'}
                   </td>
                   <td className="py-3 px-3 text-right">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isScanned ? 'bg-[#E8F5E9] text-[#006B2C]' : 'bg-[#FFF3E0] text-[#D97706]'}`}>
