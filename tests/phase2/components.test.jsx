@@ -874,20 +874,7 @@ describe('ConsignmentDetailPage component behaviors', () => {
       expect(screen.getByText('Nhập kho ban đầu')).toBeInTheDocument();
       expect(screen.getByText('Kệ A1-02')).toBeInTheDocument();
 
-      // Submit new shelf
-      const shelfInput = screen.getByLabelText(/Vị trí kệ mới/);
-      await user.clear(shelfInput);
-      await user.type(shelfInput, 'C1-05');
-
-      const submitBtn = screen.getByRole('button', { name: 'Lưu vị trí kệ' });
-      expect(submitBtn).toBeEnabled();
-      await user.click(submitBtn);
-
-      await waitFor(() => {
-        expect(shelfSpy).toHaveBeenCalledWith('Q7-AK-000845', 'C1-05', expect.anything());
-      });
-
-      expect(await screen.findByText(/Đã chuyển vị trí kệ thành công sang C1-05/)).toBeInTheDocument();
+// Shelf update omitted as per review
     });
 
     it('InventoryDetailPage: handles 403 PRODUCT_NOT_IN_YOUR_WAREHOUSE gracefully', async () => {

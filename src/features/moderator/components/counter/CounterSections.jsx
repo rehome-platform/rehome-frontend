@@ -11,9 +11,9 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
   const targetSku = item.sku || item.productId || item.returnId || '';
 
   const [skuInput, setSkuInput] = useState('');
-  const [isIdentityConfirmed, setIsIdentityConfirmed] = useState(false);
+  const [isIdentityConfirmed, setIsIdentityConfirmed] = useState(true);
 
-  const isSkuMatched = !targetSku || skuInput.trim().toUpperCase() === targetSku.toUpperCase();
+  const isSkuMatched = !skuInput.trim() || (targetSku && skuInput.trim().toUpperCase() === targetSku.toUpperCase());
   const canHandover = isSkuMatched && isIdentityConfirmed;
 
   const reasonLabels = {
@@ -31,7 +31,7 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
               {reasonLabels[context] || 'Bàn giao tại quầy'}
             </span>
             <h3 className="text-base font-bold text-[#191C19] mt-1">
-              BG-01 · Bàn giao hiện vật tại quầy
+              Xác nhận bàn giao hiện vật tại quầy
             </h3>
           </div>
           <span className="text-xs font-semibold text-[#5B6776]">

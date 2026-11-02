@@ -6,6 +6,11 @@ import { Phase2Provider } from '../../src/features/moderator/hooks/warehouseHook
 import PackingOrdersPage, { PackingDetail } from '../../src/features/moderator/pages/PackingOrdersPage.jsx';
 import { resetPackingSessionStore } from '../../src/features/moderator/services/packingMockApi.js';
 
+vi.mock('../../src/features/moderator/config/warehouseContract.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, isFixtureMode: true };
+});
+
 vi.mock('../../src/context/AuthContext.jsx', () => ({
   useAuth: () => ({
     user: { id: 'MOD-07-003', warehouseId: 'WH-Q7' },

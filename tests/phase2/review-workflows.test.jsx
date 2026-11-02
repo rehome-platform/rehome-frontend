@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router-dom';
 import React from 'react';
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -34,7 +35,7 @@ beforeEach(() => {
 
 describe('return workflow regression', () => {
   it('approves the selected request and refreshes the queue once after success', async () => {
-    const { result } = renderHook(useReturnProcessing);
+    const { result } = renderHook(useReturnProcessing, { wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter> });
     await waitFor(() => expect(result.current.loading).toBe(false));
     act(() => result.current.handleOpenReview(request));
     await act(() => result.current.handleApproveAndCreateWaybill());
@@ -45,7 +46,7 @@ describe('return workflow regression', () => {
   });
 
   it('requires a rejection reason, preserves its payload and closes the modal after success', async () => {
-    const { result } = renderHook(useReturnProcessing);
+    const { result } = renderHook(useReturnProcessing, { wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter> });
     await waitFor(() => expect(result.current.loading).toBe(false));
     act(() => { result.current.handleOpenReview(request); result.current.setIsRejectModalOpen(true); });
     await act(() => result.current.handleConfirmRejectRequest());
@@ -58,7 +59,7 @@ describe('return workflow regression', () => {
   });
 
   it('requires an invalid-inspection reason and resets inspection when switching items', async () => {
-    const { result } = renderHook(useReturnProcessing);
+    const { result } = renderHook(useReturnProcessing, { wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter> });
     await waitFor(() => expect(result.current.loading).toBe(false));
     act(() => { result.current.handleOpenInspect(request); result.current.setInspectionVerdict('INVALID'); });
     await act(() => result.current.handleSaveInspection());
@@ -74,7 +75,7 @@ describe('return workflow regression', () => {
   });
 
   it.each(['RELIST', 'RETURN_SELLER'])('waits for the %s decision before resolving a valid return', async outcome => {
-    const { result } = renderHook(useReturnProcessing);
+    const { result } = renderHook(useReturnProcessing, { wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter> });
     await waitFor(() => expect(result.current.loading).toBe(false));
     act(() => { result.current.handleOpenInspect(request); result.current.setInspectionVerdict('VALID'); });
     await act(() => result.current.handleSaveInspection());
@@ -87,7 +88,7 @@ describe('return workflow regression', () => {
 
   it('retains the review and selected request when the service rejects', async () => {
     returnService.approveReturnAndCreateWaybill.mockRejectedValueOnce(new Error('offline'));
-    const { result } = renderHook(useReturnProcessing);
+    const { result } = renderHook(useReturnProcessing, { wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter> });
     await waitFor(() => expect(result.current.loading).toBe(false));
     act(() => result.current.handleOpenReview(request));
     await act(() => result.current.handleApproveAndCreateWaybill());

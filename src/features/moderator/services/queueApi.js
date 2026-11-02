@@ -29,7 +29,7 @@ export const queueService = {
       );
     } catch (err) {
       if (options?.signal?.aborted || err.code === 'ERR_CANCELED') throw err;
-      if (fallback) {
+      if (isFixtureMode && fallback) {
         result = await fallback();
       } else {
         throw err;
@@ -63,7 +63,7 @@ export const queueService = {
         const { packingMockApi } = await import('./packingMockApi.js');
         return await packingMockApi.claimQueue(queueId, options?.scope?.userId);
       } catch (e) {
-        return fixtureFallback('queueClaim', { ids: { queueId }, ...options });
+        const fn = fixtureFallback('queueClaim', { ids: { queueId }, ...options }); return fn ? fn() : undefined;
       }
     };
 
@@ -77,7 +77,7 @@ export const queueService = {
       );
     } catch (err) {
       if (options?.signal?.aborted || err.code === 'ERR_CANCELED') throw err;
-      if (fallback) return fallback();
+      if (isFixtureMode && fallback) return fallback();
       throw err;
     }
   },
@@ -89,7 +89,7 @@ export const queueService = {
         const { packingMockApi } = await import('./packingMockApi.js');
         return await packingMockApi.releaseQueue(queueId, options?.scope?.userId);
       } catch (e) {
-        return fixtureFallback('queueRelease', { ids: { queueId }, ...options });
+        const fn = fixtureFallback('queueRelease', { ids: { queueId }, ...options }); return fn ? fn() : undefined;
       }
     };
 
@@ -103,7 +103,7 @@ export const queueService = {
       );
     } catch (err) {
       if (options?.signal?.aborted || err.code === 'ERR_CANCELED') throw err;
-      if (fallback) return fallback();
+      if (isFixtureMode && fallback) return fallback();
       throw err;
     }
   },

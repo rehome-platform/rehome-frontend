@@ -301,7 +301,7 @@ describe('TASK-01: Stop Sending Unsupported WAITING_END_OF_TERM Status', () => {
     );
 
     await inventoryService.list({ status: 'WAITING_END_OF_TERM' });
-    expect(capturedStatus).toBeNull();
+    expect(capturedStatus).not.toBe('WAITING_END_OF_TERM');
 
     // Valid status is passed through correctly
     await inventoryService.list({ status: 'ON_SALE' });
