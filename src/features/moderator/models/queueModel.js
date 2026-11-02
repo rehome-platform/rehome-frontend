@@ -1,11 +1,19 @@
 import { ownsClaim } from './memberModel.js';
 import { OVERDUE_THRESHOLD_HOURS } from '../pages/ConsignmentQueuePage.config.js';
 
-function taskTypeLabel(item, typeParam) {
-  if (item.type === 'FORM_REVIEW' || typeParam === 'FORM_REVIEW') return 'Duyệt form ký gửi';
-  if (item.type === 'INSPECTION' || typeParam === 'INSPECTION') return 'Kiểm định tại quầy';
-  if (item.type === 'PACKING' || typeParam === 'PACKING') return 'Đóng gói đơn hàng';
-  return 'Công việc kho';
+export const QUEUE_TYPE_LABELS = {
+  FORM_REVIEW: 'Duyệt form ký gửi',
+  INSPECTION: 'Kiểm định tại quầy',
+  PACKING: 'Đóng gói đơn hàng',
+  RETURN: 'Yêu cầu trả hàng',
+  ORG_VERIFICATION: 'Xác minh tổ chức',
+  LEGAL_CHANGE: 'Đổi pháp lý tổ chức',
+  VIOLATION_REPORT: 'Báo cáo vi phạm',
+};
+
+export function taskTypeLabel(item, typeParam) {
+  const type = item?.type || typeParam;
+  return QUEUE_TYPE_LABELS[type] || 'Công việc kho';
 }
 
 export function queueItemMeta(item, typeParam) {
