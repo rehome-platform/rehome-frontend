@@ -1,11 +1,13 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, renderHook, act } from '@testing-library/react';
 import {
   VerificationQueueTabs,
   VerificationQueueTable,
   VerificationDocuments,
 } from '../../src/features/moderator/components/verification/VerificationSections.jsx';
+import { useOrgVerification } from '../../src/features/moderator/hooks/useOrgVerification.jsx';
+import orgVerificationService from '../../src/features/moderator/services/orgVerificationApi.js';
 
 describe('Organization Verification Data Mapping & Design Tokens', () => {
   const mockQueue = [
@@ -147,6 +149,83 @@ describe('Organization Verification Data Mapping & Design Tokens', () => {
     expect(screen.getByText('Nguyễn Văn Đại Diện · Tổng Thư Ký')).toBeInTheDocument();
     expect(screen.getByText('QUYET_DINH_THANH_LAP')).toBeInTheDocument();
     expect(screen.getByText('456/QĐ-BNV · 2022-05-10 · Bộ Nội vụ')).toBeInTheDocument();
+  });
+
+  it('calls approveOrg with refId instead of queueItemId', async () => {
+    vi.spyOn(orgVerificationService, 'getQueue').mockResolvedValue({
+      data: [{ id: 'queue-uuid-e607', refId: 'org-uuid-b291', status: 'PENDING' }],
+      total: 1,
+    });
+    vi.spyOn(orgVerificationService, 'getLegalChanges').mockResolvedValue({ data: [] });
+    vi.spyOn(orgVerificationService, 'getOrgDetail').mockResolvedValue({
+      legalName: 'Tổ Chức Từ Thiện B',
+      orgType: 'Tổ chức từ thiện',
+      taxCode: 'không có',
+      verificationStatus: 'PENDING',
+    });
+    const approveSpy = vi.spyOn(orgVerificationService, 'approveOrg').mockResolvedValue({ success: true });
+    vi.spyOn(window, 'alert').mockImplementation(() => {});
+
+    const { result } = renderHook(() => useOrgVerification());
+    await act(async () => {});
+
+    expect(result.current.orgsQueue.length).toBe(1);
+    expect(result.current.orgsQueue[0].refId).toBe('org-uuid-b291');
+
+    act(() => {
+      result.current.handleOpenDetail(result.current.orgsQueue[0]);
+    });
+    await act(async () => {});
+
+    act(() => {
+      result.current.setChecklist({
+        taxChecked: true,
+        businessChecked: true,
+        docsValid: true,
+        cccdMatched: true,
+        phoneConfirmed: true,
+        authorityChecked: true,
+        reputationChecked: true,
+      });
+    });
+
+    await act(async () => {
+      await result.current.handleApproveOrg();
+    });
+
+    expect(approveSpy).toHaveBeenCalledWith('org-uuid-b291', expect.anything());
+    expect(approveSpy).not.toHaveBeenCalledWith('queue-uuid-e607', expect.anything());
+  });
+
+  it('calls rejectOrg with refId instead of queueItemId and sends reason', async () => {
+    vi.spyOn(orgVerificationService, 'getQueue').mockResolvedValue({
+      data: [{ id: 'queue-uuid-e607', refId: 'org-uuid-b291', status: 'PENDING' }],
+      total: 1,
+    });
+    vi.spyOn(orgVerificationService, 'getLegalChanges').mockResolvedValue({ data: [] });
+    vi.spyOn(orgVerificationService, 'getOrgDetail').mockResolvedValue({
+      legalName: 'Tổ Chức Từ Thiện B',
+      orgType: 'Tổ chức từ thiện',
+      taxCode: 'không có',
+      verificationStatus: 'PENDING',
+    });
+    const rejectSpy = vi.spyOn(orgVerificationService, 'rejectOrg').mockResolvedValue({ success: true });
+    vi.spyOn(window, 'alert').mockImplementation(() => {});
+
+    const { result } = renderHook(() => useOrgVerification());
+    await act(async () => {});
+
+    act(() => {
+      result.current.handleOpenDetail(result.current.orgsQueue[0]);
+      result.current.setRejectReason('Giấy tờ không hợp lệ');
+    });
+
+    await act(async () => {
+      await result.current.handleConfirmReject();
+    });
+
+    expect(rejectSpy).toHaveBeenCalledWith('org-uuid-b291', 'Giấy tờ không hợp lệ');
+    expect(rejectSpy).not.toHaveBeenCalledWith('queue-uuid-e607', expect.anything());
   });
 });
 
