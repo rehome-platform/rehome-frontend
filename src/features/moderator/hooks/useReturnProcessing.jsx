@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { formatCurrencyVND } from "../../../utils/formatters.js";
 import { returnService } from "../services/returnApi.js";
@@ -15,11 +15,14 @@ export function useReturnProcessing() {
   const [viewMode, setViewMode] = useState('QUEUE');
   const [selectedItem, setSelectedItem] = useState(null);
 
+  // In-flight mutation lock (F13)
+  const resolvingRef = useRef(false);
+
   // TH-02 Reject Modal
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
 
-  // TH-03 Inspection states
+  // TH-03 Inspection states (F04: require explicit verification)
   const [scannedSku, setScannedSku] = useState('');
   const [skuMatched, setSkuMatched] = useState(false);
   const [checklist, setChecklist] = useState({
@@ -63,12 +66,12 @@ export function useReturnProcessing() {
     fetchReturns();
   }, []);
 
-  // Handle URL params (?id=...&tab=...)
+  // Handle URL params (?id=...&tab=...) with deep link support (F11)
   useEffect(() => {
     const paramId = searchParams.get('id');
     const paramTab = searchParams.get('tab');
 
-    if (!loading && returnRequests.length > 0 && paramId) {
+    if (!loading && paramId) {
       const found = returnRequests.find(
         (r) => String(r.id) === String(paramId) || String(r.code) === String(paramId)
       );
@@ -86,6 +89,28 @@ export function useReturnProcessing() {
         } else {
           handleOpenReview(found);
         }
+      } else {
+        // Deep link outside first page: fetch authorized detail
+        returnService.detail(paramId).then((item) => {
+          if (item) {
+            setSelectedItem(item);
+            if (paramTab) {
+              setActiveTab(paramTab);
+            } else if (item.status) {
+              setActiveTab(item.status);
+            }
+
+            if (item.status === 'PENDING_APPROVAL') {
+              setViewMode('REVIEW');
+            } else if (item.status === 'RECEIVED_INSPECT' || item.status === 'RETURNING') {
+              setViewMode('INSPECT');
+              setScannedSku('');
+              setSkuMatched(false);
+            } else {
+              setViewMode('REVIEW');
+            }
+          }
+        }).catch(() => {});
       }
     }
   }, [loading, returnRequests, searchParams]);
@@ -103,7 +128,7 @@ export function useReturnProcessing() {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
-      r.code.toLowerCase().includes(q) ||
+      (r.code && r.code.toLowerCase().includes(q)) ||
       (r.orderId && r.orderId.toLowerCase().includes(q)) ||
       (r.sku && r.sku.toLowerCase().includes(q)) ||
       (r.buyerName && r.buyerName.toLowerCase().includes(q))
@@ -117,14 +142,14 @@ export function useReturnProcessing() {
 
   const handleOpenInspect = (item) => {
     setSelectedItem(item);
-    setScannedSku(item.sku || '');
-    setSkuMatched(true);
+    setScannedSku('');
+    setSkuMatched(false);
     setChecklist({
-      skuCorrect: true,
-      labelIntact: true,
+      skuCorrect: false,
+      labelIntact: false,
       noNewDamage: false,
       noUsageSign: false,
-      accessoriesComplete: true,
+      accessoriesComplete: false,
     });
     setInspectionVerdict('');
     setInvalidReason('');
@@ -132,7 +157,8 @@ export function useReturnProcessing() {
   };
 
   const handleApproveAndCreateWaybill = async () => {
-    if (!selectedItem) return;
+    if (!selectedItem || resolvingRef.current) return;
+    resolvingRef.current = true;
     try {
       await returnService.approveReturnAndCreateWaybill(selectedItem.id);
       await fetchReturns();
@@ -141,11 +167,18 @@ export function useReturnProcessing() {
       setSelectedItem(null);
     } catch (err) {
       alert('Có lỗi xảy ra khi duyệt yêu cầu: ' + (err.message || ''));
+    } finally {
+      resolvingRef.current = false;
     }
   };
 
   const handleConfirmRejectRequest = async () => {
-    if (!rejectReason.trim() || !selectedItem) return;
+    if (!selectedItem || resolvingRef.current) return;
+    if (!rejectReason.trim()) {
+      alert('Vui lòng nhập lý do từ chối.');
+      return;
+    }
+    resolvingRef.current = true;
     try {
       await returnService.rejectReturn(selectedItem.id, rejectReason);
       await fetchReturns();
@@ -156,64 +189,89 @@ export function useReturnProcessing() {
       alert(`Đã từ chối yêu cầu trả hàng ${selectedItem.code}. Thông báo kèm lý do đã gửi tới người mua.`);
     } catch (err) {
       alert('Có lỗi xảy ra khi từ chối yêu cầu: ' + (err.message || ''));
+    } finally {
+      resolvingRef.current = false;
     }
   };
 
   const handleSaveInspection = async () => {
-    if (!selectedItem || !inspectionVerdict) return;
-    if (inspectionVerdict === 'INVALID') {
-      if (!invalidReason.trim()) {
-        alert('Vui lòng nhập lý do kết luận không hợp lệ.');
-        return;
-      }
-      try {
+    if (!selectedItem || !inspectionVerdict || resolvingRef.current) return;
+    resolvingRef.current = true;
+    try {
+      if (inspectionVerdict === 'INVALID') {
+        if (!invalidReason.trim()) {
+          alert('Vui lòng nhập lý do kết luận không hợp lệ.');
+          return;
+        }
+        await returnService.inspect(selectedItem.id, {
+          matchesOriginal: false,
+          degraded: checklist.noNewDamage === false,
+          counterfeitSuspected: false,
+          conditionNote: invalidReason,
+        });
         await returnService.resolveInvalid(selectedItem.id, invalidReason);
         await fetchReturns();
         alert('Đã lưu kết luận: TRẢ HÀNG KHÔNG HỢP LỆ. Hàng được lưu kho 7 ngày để người mua tự đến nhận lại hoặc thanh toán phí ship.');
         setViewMode('QUEUE');
         setSelectedItem(null);
-      } catch (err) {
-        alert('Có lỗi xảy ra khi lưu kết luận: ' + (err.message || ''));
+      } else {
+        // Hợp lệ -> lưu inspect trước rồi mở modal TH-04 để chọn Relist hay Return Seller
+        await returnService.inspect(selectedItem.id, {
+          matchesOriginal: true,
+          degraded: false,
+          counterfeitSuspected: false,
+          conditionNote: 'Đã kiểm tra hàng về kho hợp lệ',
+        });
+        setIsOutcomeModalOpen(true);
       }
-    } else {
-      // Hợp lệ -> mở modal TH-04 để chọn Relist hay Return Seller
-      setIsOutcomeModalOpen(true);
+    } catch (err) {
+      alert('Có lỗi xảy ra khi lưu kết luận: ' + (err.message || ''));
+    } finally {
+      resolvingRef.current = false;
     }
   };
 
   const handleConfirmOutcome = async (outcome) => {
-    if (!selectedItem) return;
+    if (!selectedItem || resolvingRef.current) return;
+    resolvingRef.current = true;
     try {
-      await returnService.resolveValid(selectedItem.id, outcome);
+      const res = await returnService.resolveValid(selectedItem.id, outcome);
       await fetchReturns();
       setIsOutcomeModalOpen(false);
       setViewMode('QUEUE');
       setSelectedItem(null);
+      const confirmedRefund = res?.refundAmount ?? res?.result?.refundAmount ?? selectedItem.refundAmount ?? selectedItem.amount ?? 0;
       alert(
         `Đã hoàn tất xử lý trả hàng! Hệ thống tự động hoàn ${formatCurrencyVND(
-          (selectedItem.amount || 0) + (selectedItem.shippingFee || 0)
+          confirmedRefund
         )} vào ví người mua ReHome và chuyển hàng sang trạng thái: ${
           outcome === 'RELIST' ? 'Đăng bán lại' : 'Trả người ký gửi'
         }.`
       );
     } catch (err) {
       alert('Có lỗi xảy ra khi xác nhận phương án: ' + (err.message || ''));
+    } finally {
+      resolvingRef.current = false;
     }
   };
 
   // 2-Moderator Counterfeit Verdict Handlers (F-134, F-135)
   const handleFlagCounterfeit = async () => {
-    if (!selectedItem) return;
+    if (!selectedItem || resolvingRef.current) return;
+    resolvingRef.current = true;
     try {
       await returnService.flagCounterfeit(selectedItem.id);
       setIsCounterfeitModalOpen(true);
     } catch (err) {
       alert('Có lỗi khi báo nghi hàng giả: ' + (err.message || ''));
+    } finally {
+      resolvingRef.current = false;
     }
   };
 
   const handleConfirmCounterfeitVerdict = async (verdictPayload) => {
-    if (!selectedItem) return;
+    if (!selectedItem || resolvingRef.current) return;
+    resolvingRef.current = true;
     try {
       await returnService.counterfeitConclusion(selectedItem.id, verdictPayload);
       await fetchReturns();
@@ -223,6 +281,8 @@ export function useReturnProcessing() {
       alert('Đã hoàn tất hội chẩn 2 Moderator và lưu kết luận hàng nghi giả!');
     } catch (err) {
       alert('Có lỗi khi lưu kết luận hội chẩn: ' + (err.message || ''));
+    } finally {
+      resolvingRef.current = false;
     }
   };
 
@@ -234,14 +294,16 @@ export function useReturnProcessing() {
   };
 
   const handleCreateDegradedCase = async () => {
-    if (!selectedItem) return;
+    if (!selectedItem || resolvingRef.current) return;
+    resolvingRef.current = true;
     try {
-      await returnService.createDegradedCase({
-        returnRequestId: selectedItem.id,
-        currentConditionRate: degradedConditionRate,
-        originalConditionRate: 90,
-        moderatorNotes: degradedNotes,
+      await returnService.inspect(selectedItem.id, {
+        matchesOriginal: true,
+        degraded: true,
+        counterfeitSuspected: false,
+        conditionNote: degradedNotes || 'Hàng trả về có dấu hiệu xuống cấp',
       });
+      await returnService.resolveValid(selectedItem.id, 'RELIST');
       await fetchReturns();
       setIsDegradedModalOpen(false);
       setViewMode('QUEUE');
@@ -249,17 +311,20 @@ export function useReturnProcessing() {
       alert('Đã lập hồ sơ hàng xuống cấp thành công. Người ký gửi sẽ nhận thông báo chọn phương án đền bù (KG-16).');
     } catch (err) {
       alert('Có lỗi khi lập hồ sơ hàng xuống cấp: ' + (err.message || ''));
+    } finally {
+      resolvingRef.current = false;
     }
   };
 
   // Mark Lost Parcel (TH-08)
   const handleMarkLost = async (targetItem) => {
     const target = targetItem || selectedItem;
-    if (!target) return;
+    if (!target || resolvingRef.current) return;
     const confirmed = window.confirm(
       `Xác nhận bưu kiện trả hàng ${target.code} đã thất lạc bởi bên vận chuyển? Hệ thống sẽ hoàn tiền cho người mua và tạo khiếu nại bảo hiểm với đơn vị giao vận.`
     );
     if (!confirmed) return;
+    resolvingRef.current = true;
     try {
       await returnService.markLost(target.id, 'Thất lạc trong quá trình vận chuyển bởi bưu tá GHN');
       await fetchReturns();
@@ -270,6 +335,8 @@ export function useReturnProcessing() {
       alert(`Đã ghi nhận bưu kiện ${target.code} thất lạc. Người mua đã được tự động hoàn tiền.`);
     } catch (err) {
       alert('Có lỗi khi báo thất lạc: ' + (err.message || ''));
+    } finally {
+      resolvingRef.current = false;
     }
   };
 
