@@ -12,7 +12,7 @@ const delay = (ms = 80) => new Promise((resolve) => setTimeout(resolve, ms));
 // ==========================================
 // 1. RETURN PROCESSING (TH-01..08)
 // ==========================================
-let returnRequestsData = [
+const INITIAL_RETURN_REQUESTS = [
   {
     id: 'RET-00084',
     code: 'YC-00084',
@@ -202,6 +202,21 @@ let returnRequestsData = [
     outcome: 'RELIST',
   },
 ];
+
+let returnRequestsData = JSON.parse(JSON.stringify(INITIAL_RETURN_REQUESTS));
+
+export function resetModeratorMockData() {
+  returnRequestsData = JSON.parse(JSON.stringify(INITIAL_RETURN_REQUESTS));
+}
+
+export const moderatorMockData = {
+  get returnRequests() {
+    return returnRequestsData;
+  },
+  set returnRequests(val) {
+    returnRequestsData = val;
+  },
+};
 
 export const returnService = {
   async list({ status } = {}) {

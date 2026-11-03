@@ -42,17 +42,14 @@ describe('P3: Moderator Domain MockAPI Services', () => {
       expect(Array.isArray(res.data) ? res.data : res).toBeDefined();
     });
 
-    it('falls back to MockAPI data when server is unavailable or returns 404', async () => {
+    it('propagates error when server returns 404', async () => {
       server.use(
         http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.RETURNS}`, () => {
           return new HttpResponse(null, { status: 404 });
         })
       );
 
-      const res = await returnService.list();
-      expect(res.data).toBeDefined();
-      expect(res.data.length).toBeGreaterThan(0);
-      expect(res.data[0].code).toMatch(/^YC-/);
+      await expect(returnService.list()).rejects.toBeDefined();
     });
 
     it('approves return request and calls POST /return-requests/{id}/approve', async () => {
