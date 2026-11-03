@@ -24,28 +24,29 @@ import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
  * - TH-04: Xử lý món hàng (Đăng bán lại / Trả người ký gửi / Hàng xuống cấp)
  * - TH-08: Hàng thất lạc & hoàn tiền ví người mua
  * - F-134, F-135: Quy trình hội chẩn 2 Moderator khi nghi hàng giả
+ * - Chuẩn hóa theo Design tokens.pdf: #006B2C (primary), #FEA619 (secondary), #DDE5D9 (neutral), #1F2A37 (text), #5B6776 (textSecondary)
  */
 export default function ReturnProcessingPage() {
   const model = useReturnProcessing();
   return (
     <ModeratorLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 font-sans">
         {/* VIEW 1: QUEUE (TH-01) */}
         {model.viewMode === 'QUEUE' && (
           <div className="space-y-5">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-[#E2E8E0] pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-neutral pb-4">
               <div>
                 <div className="flex items-center space-x-2">
-                  <h1 className="text-xl font-bold font-heading text-[#191C19]">
+                  <h1 className="text-xl font-bold font-heading text-text">
                     Yêu cầu trả hàng
                   </h1>
                 </div>
-                <p className="text-xs text-[#5f5f5f] mt-1">
+                <p className="text-xs text-textSecondary mt-1">
                   Sắp theo hạn xử lý, sắp quá hạn lên trước. Người mua đang chờ tiền — để lâu là một khiếu nại.
                 </p>
               </div>
-              <div className="text-xs text-[#5f5f5f] font-medium">
+              <div className="text-xs text-textSecondary font-medium">
                 Hạn duyệt: 1 ngày làm việc kể từ khi nhận yêu cầu
               </div>
             </div>
@@ -57,8 +58,8 @@ export default function ReturnProcessingPage() {
             <ReturnQueueTable {...model.sections.ReturnQueueTable} />
 
             {/* Note box TH-01 */}
-            <div className="p-3 border border-dashed border-[#9a9a9a] rounded-lg text-xs leading-relaxed text-[#4a4a4a] bg-[#fafafa]">
-              Cột <strong className="font-semibold text-[#191C19]">Đã chờ</strong> chỉ đếm ở hai tab đầu — những bước phụ thuộc người mua hoặc đơn vị vận chuyển thì kho không kiểm soát được thời gian, đếm ở đó chỉ gây áp lực sai chỗ.
+            <div className="p-3.5 border border-dashed border-neutral rounded-2xl text-xs leading-relaxed text-textSecondary bg-background">
+              Cột <strong className="font-semibold text-text">Đã chờ</strong> chỉ đếm ở hai tab đầu — những bước phụ thuộc người mua hoặc đơn vị vận chuyển thì kho không kiểm soát được thời gian, đếm ở đó chỉ gây áp lực sai chỗ.
             </div>
           </div>
         )}
@@ -67,35 +68,35 @@ export default function ReturnProcessingPage() {
         {model.viewMode === 'REVIEW' && model.selectedItem && (
           <div className="space-y-4">
             {/* Header TH-02 */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E2E8E0] pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral pb-3">
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => model.setViewMode('QUEUE')}
-                  className="w-8 h-8 flex items-center justify-center rounded border border-[#8a8a8a] text-sm hover:bg-[#f4f4f4]"
+                  className="w-8 h-8 flex items-center justify-center rounded-xl border border-neutral text-sm text-text hover:bg-background transition-colors"
                   title="Quay lại hàng đợi"
                 >
                   ←
                 </button>
                 <div>
-                  <span className="text-xs text-[#5f5f5f]">Yêu cầu trả hàng · </span>
-                  <span className="text-sm font-bold text-[#191C19]">{model.selectedItem.code}</span>
+                  <span className="text-xs text-textSecondary">Yêu cầu trả hàng · </span>
+                  <span className="text-sm font-bold text-text">{model.selectedItem.code}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 {model.selectedItem.isOverdue && model.selectedItem.status === 'PENDING_APPROVAL' && (
-                  <span className="text-[10px] font-bold px-2 py-1 bg-[#2b2b2b] text-white rounded">
+                  <span className="text-[10px] font-bold px-2.5 py-1 bg-secondary text-text rounded-full shadow-sm">
                     QUÁ HẠN DUYỆT 15 GIỜ
                   </span>
                 )}
-                <span className="text-xs font-semibold px-2.5 py-1 rounded bg-[#E8F5E9] text-[#006B2C]">
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-success-light text-primary">
                   {model.selectedItem.carrierStatus || 'Chờ xử lý'}
                 </span>
               </div>
             </div>
 
             {/* Bố cục 2 cột TH-02 */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Cột trái (7 cols): Người mua nói gì & Ảnh */}
               <ReturnRequestDetails selectedItem={model.selectedItem} setIsCompareModalOpen={model.setIsCompareModalOpen} />
 
@@ -109,30 +110,30 @@ export default function ReturnProcessingPage() {
         {model.viewMode === 'INSPECT' && model.selectedItem && (
           <div className="space-y-4">
             {/* Header TH-03 */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E2E8E0] pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral pb-3">
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => model.setViewMode('QUEUE')}
-                  className="w-8 h-8 flex items-center justify-center rounded border border-[#8a8a8a] text-sm hover:bg-[#f4f4f4]"
+                  className="w-8 h-8 flex items-center justify-center rounded-xl border border-neutral text-sm text-text hover:bg-background transition-colors"
                   title="Quay lại hàng đợi"
                 >
                   ←
                 </button>
                 <div>
-                  <span className="text-xs text-[#5f5f5f]">Yêu cầu trả hàng · </span>
-                  <span className="text-sm font-bold text-[#191C19]">
+                  <span className="text-xs text-textSecondary">Yêu cầu trả hàng · </span>
+                  <span className="text-sm font-bold text-text">
                     {model.selectedItem.code} · kiểm tra hàng về kho
                   </span>
                 </div>
               </div>
-              <span className="text-xs font-bold px-2.5 py-1 border border-[#2b2b2b] rounded bg-white">
+              <span className="text-xs font-bold px-3 py-1 border border-neutral rounded-full bg-surface text-text shadow-sm">
                 HÀNG VỀ {model.selectedItem.stockInDate || 'Hôm nay'}
               </span>
             </div>
 
             {/* Bố cục 2 cột TH-03 */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Cột trái (6 cols): Đối chiếu hàng về */}
               <ReturnInspectionProduct {...model.sections.ReturnInspectionProduct} />
 
