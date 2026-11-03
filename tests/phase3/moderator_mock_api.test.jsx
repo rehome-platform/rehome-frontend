@@ -88,9 +88,11 @@ describe('P3: Moderator Domain MockAPI Services', () => {
   });
 
   describe('2. Organization Verification Service (orgVerificationService)', () => {
-    it('calls GET /organizations/verifications or falls back to mock queue', async () => {
+    it('calls GET /queues?type=ORG_VERIFICATION and returns queue list', async () => {
       server.use(
-        http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.VERIFICATION_QUEUE}`, () => {
+        http.get(`${API_BASE_URL}/queues`, ({ request }) => {
+          const url = new URL(request.url);
+          expect(url.searchParams.get('type')).toBe('ORG_VERIFICATION');
           return HttpResponse.json({
             result: [{ id: 'TC-001', name: 'Quỹ Mầm Xanh', status: 'PENDING' }],
             isSuccess: true,
@@ -103,9 +105,9 @@ describe('P3: Moderator Domain MockAPI Services', () => {
       expect(res.data).toBeDefined();
     });
 
-    it('calls POST /organizations/{id}/verify on approveOrg', async () => {
+    it('calls POST /api/organizations/{id}/verify on approveOrg', async () => {
       server.use(
-        http.post(`${API_BASE_URL}/organizations/TC-00042/verify`, async ({ request }) => {
+        http.post(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.APPROVE_ORG('TC-00042')}`, async ({ request }) => {
           const body = await request.json();
           expect(body.note).toBe('Đã xác thực giấy phép hợp lệ');
           return HttpResponse.json({
@@ -121,9 +123,9 @@ describe('P3: Moderator Domain MockAPI Services', () => {
       expect(res.status).toBe('APPROVED');
     });
 
-    it('calls POST /organizations/{id}/reject on rejectOrg', async () => {
+    it('calls POST /api/organizations/{id}/reject on rejectOrg', async () => {
       server.use(
-        http.post(`${API_BASE_URL}/organizations/TC-00042/reject`, async ({ request }) => {
+        http.post(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.REJECT_ORG('TC-00042')}`, async ({ request }) => {
           const body = await request.json();
           expect(body.reason).toBe('Giấy tờ đã hết hạn');
           return HttpResponse.json({
@@ -141,7 +143,7 @@ describe('P3: Moderator Domain MockAPI Services', () => {
 
     it('handles legal change approval and rejection', async () => {
       server.use(
-        http.post(`${API_BASE_URL}/organizations/legal-change-requests/CHG-801/approve`, () => {
+        http.post(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.APPROVE_LEGAL_CHANGE('CHG-801')}`, () => {
           return HttpResponse.json({
             result: { id: 'CHG-801', status: 'APPROVED' },
             isSuccess: true,
@@ -156,17 +158,14 @@ describe('P3: Moderator Domain MockAPI Services', () => {
   });
 
   describe('3. Violation Report Service (violationReportService)', () => {
-    it('retrieves reports list and falls back gracefully when endpoint is 404', async () => {
+    it('propagates error when endpoint is 404 without fallback', async () => {
       server.use(
         http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.VIOLATION_REPORTS}`, () => {
           return new HttpResponse(null, { status: 404 });
         })
       );
 
-      const res = await violationReportService.list();
-      expect(res.data).toBeDefined();
-      expect(res.data.length).toBeGreaterThan(0);
-      expect(res.data[0].id).toMatch(/^VP-/);
+      await expect(violationReportService.list()).rejects.toBeDefined();
     });
 
     it('resolves violation with action and reason', async () => {
@@ -210,29 +209,26 @@ describe('P3: Moderator Domain MockAPI Services', () => {
   });
 
   describe('4. Warehouse Inbox Service (warehouseInboxService)', () => {
-    it('retrieves conversations list with MockAPI fallback', async () => {
+    it('propagates error when endpoint is 404 without fallback', async () => {
       server.use(
         http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.WAREHOUSE_INBOX}`, () => {
           return new HttpResponse(null, { status: 404 });
         })
       );
 
-      const res = await warehouseInboxService.getConversations();
-      expect(res.data).toBeDefined();
-      expect(res.data.length).toBeGreaterThan(0);
-      expect(res.data[0].id).toMatch(/^CONV-/);
+      await expect(warehouseInboxService.getConversations()).rejects.toBeDefined();
     });
 
-    it('sends reply message in conversation', async () => {
+    it('sends reply message in conversation using content field', async () => {
       server.use(
         http.post(`${API_BASE_URL}/conversations/CONV-01/messages`, async ({ request }) => {
           const body = await request.json();
-          expect(body.text).toBe('Kho đã nhận thông tin, đang xử lý cho bạn');
+          expect(body.content).toBe('Kho đã nhận thông tin, đang xử lý cho bạn');
           return HttpResponse.json({
             result: {
               id: 'CONV-01',
-              lastMessage: body.text,
-              messages: [{ id: 99, text: body.text }],
+              lastMessage: body.content,
+              content: body.content,
             },
             isSuccess: true,
             statusCode: 200,
@@ -246,7 +242,7 @@ describe('P3: Moderator Domain MockAPI Services', () => {
         'Trần Văn B'
       );
       expect(res).toBeDefined();
-      expect(res.lastMessage).toBe('Kho đã nhận thông tin, đang xử lý cho bạn');
+      expect(res.content || res.lastMessage).toBe('Kho đã nhận thông tin, đang xử lý cho bạn');
     });
 
     it('marks conversation as completed', async () => {
