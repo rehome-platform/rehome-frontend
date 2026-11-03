@@ -29,7 +29,7 @@ const STYLES = {
     color: 'text-[#C62828]',
     title: 'Hàng trả không hợp lệ (Khách nhận lại)',
     deadlineLabel: 'Hạn lấy:',
-    groupTitle: '4. Khách đến nhận lại hàng trả không hợp lệ',
+    groupTitle: '4. Nhận lại hàng trả không hợp lệ',
     badge: 'bg-[#FFEBEE] text-[#C62828]',
     badgeLabel: 'Người mua nhận hàng trả',
   },
@@ -66,7 +66,7 @@ export function CounterHandoverTask({ item, context, setConfirmHandover }) {
         <div>
           <p className="font-bold text-sm text-[#191C19]">{item.productName || item.itemName || item.productId}</p>
           <p className="text-xs text-[#5B6776] mt-0.5">
-            Mã SP: <span className="font-mono font-bold text-[#191C19]">{item.productId || item.sku}</span>
+            Mã SP: <span className="font-mono font-bold text-[#191C19]">{item.productId || item.id}</span>{item.sku && <span className="font-mono font-bold text-[#191C19] ml-1"> · SKU: {item.sku}</span>}
             {withdrawal && <> · Phí rút: {item.feeCharged ? money(item.feeCharged) : 'Miễn phí'}</>}
           </p>
         </div>

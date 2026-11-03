@@ -36,7 +36,7 @@ function normalizeTaskForm(f) {
 }
 
 function normalizeReferencedTask(task) {
-  const id = task.id || task.refId;
+  const id = task.id || task.refId || task.productId || task.returnId;
   return { ...task, id, refId: id };
 }
 

@@ -11,10 +11,10 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
   const targetSku = item.sku || item.productId || item.returnId || '';
 
   const [skuInput, setSkuInput] = useState('');
-  const [isIdentityConfirmed, setIsIdentityConfirmed] = useState(true);
+  const [isIdentityConfirmed, setIsIdentityConfirmed] = useState(false);
 
-  const isSkuMatched = !skuInput.trim() || (targetSku && skuInput.trim().toUpperCase() === targetSku.toUpperCase());
-  const canHandover = isSkuMatched && isIdentityConfirmed;
+  const isSkuMatched = Boolean(targetSku && skuInput.trim().toUpperCase() === targetSku.toUpperCase());
+  const canHandover = Boolean(isSkuMatched && isIdentityConfirmed);
 
   const reasonLabels = {
     ITEM_WITHDRAWAL: 'Member rút hàng',
@@ -24,14 +24,14 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl space-y-4">
-        <div className="flex items-center justify-between border-b border-[#E2E8E0] pb-3">
+      <div className="w-full max-w-lg rounded-2xl bg-surface p-6 shadow-card space-y-4 border border-neutral font-sans">
+        <div className="flex items-center justify-between border-b border-neutral pb-3">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[#2b2b2b] text-white">
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-secondary text-text font-bold px-2.5 py-0.5">
               {reasonLabels[context] || 'Bàn giao tại quầy'}
             </span>
             <h3 className="text-base font-bold text-[#191C19] mt-1">
-              Xác nhận bàn giao hiện vật tại quầy
+              <span className="text-[#5B6776] mr-1">BG-01 ·</span>Xác nhận bàn giao hiện vật tại quầy
             </h3>
           </div>
           <span className="text-xs font-semibold text-[#5B6776]">
@@ -40,7 +40,7 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
         </div>
 
         {/* Thông tin người nhận */}
-        <div className="rounded-xl border border-[#c4c4c4] bg-[#f9faf9] p-3 text-xs space-y-1">
+        <div className="rounded-xl border border-neutral bg-background p-3 text-xs space-y-1">
           <div className="flex justify-between">
             <span className="text-[#5B6776]">Người nhận:</span>
             <span className="font-bold text-[#191C19]">{selected?.fullName || selected?.name}</span>
@@ -56,7 +56,7 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
         </div>
 
         {/* Bước 2: Đối chiếu mã SKU */}
-        <div className="rounded-xl border-2 border-[#2b2b2b] p-3.5 space-y-2">
+        <div className="rounded-xl rounded-xl border-2 border-neutral p-3.5 space-y-2 bg-surface">
           <div className="flex items-center justify-between">
             <label htmlFor="counter-sku-verify" className="text-xs font-bold text-[#191C19] uppercase tracking-wide">
               Nhập mã SKU để đối chiếu
@@ -103,7 +103,7 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
         </div>
 
         {/* Bước 3: Xác nhận danh tính */}
-        <div className="rounded-xl border border-[#8a8a8a] p-3.5 space-y-2 bg-[#fcfdfc]">
+        <div className="rounded-xl rounded-xl border border-neutral p-3.5 space-y-2 bg-background">
           <label className="flex items-start gap-2.5 cursor-pointer">
             <input
               type="checkbox"
@@ -121,7 +121,7 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
         </div>
 
         {/* Footer actions */}
-        <div className="flex items-center justify-between pt-2 border-t border-[#E2E8E0]">
+        <div className="flex items-center justify-between pt-2 border-t border-neutral">
           <span className="text-[11px] text-[#5B6776]">
             {!canHandover ? 'Cần đối chiếu SKU và tích xác nhận để hoàn tất' : 'Sẵn sàng bàn giao'}
           </span>
