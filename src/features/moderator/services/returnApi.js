@@ -29,20 +29,21 @@ export function mapReturnItem(raw) {
   return {
     id,
     code,
-    orderId: raw.orderNo || raw.orderId || 'ORD-2026',
-    sku: raw.sku || raw.productId || 'RH-C2M08P',
+    orderId: raw.orderNo || raw.orderId || null,
+    sku: raw.sku || raw.productId || null,
     itemName: raw.productName || raw.itemName || 'Sản phẩm ký gửi',
-    brand: raw.brandName || raw.brand || 'ReHome',
-    category: raw.categoryName || raw.category || 'Thời trang',
-    size: raw.size || 'M',
-    condition: raw.condition || 'Mới 90%',
-    consignPrice: raw.consignPrice || raw.originalPrice || 350000,
-    amount: raw.refundAmount || raw.amount || 320000,
-    shippingFee: raw.shippingFee || 22000,
-    buyerName: raw.buyerName || 'Người mua ReHome',
-    buyerPhone: raw.buyerPhone || '0903 ••• 882',
-    consignorName: raw.consignorName || 'Người ký gửi',
-    consignorCode: raw.consignorCode || 'MB-001294',
+    brand: raw.brandName || raw.brand || null,
+    category: raw.categoryName || raw.category || null,
+    size: raw.size || null,
+    condition: raw.condition || null,
+    consignPrice: raw.consignPrice ?? raw.originalPrice ?? null,
+    amount: raw.refundAmount ?? raw.amount ?? null,
+    refundAmount: raw.refundAmount ?? raw.amount ?? null,
+    shippingFee: raw.shippingFee ?? null,
+    buyerName: raw.buyerName || null,
+    buyerPhone: raw.buyerPhone || null,
+    consignorName: raw.consignorName || null,
+    consignorCode: raw.consignorCode || null,
     reason: raw.reason || '',
     conditionNote: raw.conditionNote || '',
     photoUrls: Array.isArray(raw.photoUrls) ? raw.photoUrls : [],
@@ -77,49 +78,48 @@ export const returnService = {
     const fallback = () => returnMockApi.list(params);
     if (isFixtureMode) return fallback();
 
-    try {
-      const status = params?.status && params.status !== 'ALL' ? params.status : undefined;
-      const res = await callBackend(
-        {
-          method: 'get',
-          url: API_ENDPOINTS.MODERATOR.RETURNS,
-          params: {
-            ...(status ? { status } : {}),
-            ...(params?.page !== undefined ? { page: params.page } : {}),
-            ...(params?.size !== undefined ? { size: params.size } : {}),
-          },
+    const status = params?.status && params.status !== 'ALL' ? params.status : undefined;
+    const res = await callBackend(
+      {
+        method: 'get',
+        url: API_ENDPOINTS.MODERATOR.RETURNS,
+        params: {
+          ...(status ? { status } : {}),
+          ...(params?.page !== undefined ? { page: params.page } : {}),
+          ...(params?.size !== undefined ? { size: params.size } : {}),
         },
-        { fallback, signal: options?.signal }
-      );
+      },
+      { signal: options?.signal }
+    );
 
-      if (res && Array.isArray(res.content)) {
-        return {
-          data: res.content.map(mapReturnItem),
-          total: res.totalElements ?? res.content.length,
-          page: res.page ?? 0,
-          totalPages: res.totalPages ?? 1,
-        };
-      }
-      if (res && Array.isArray(res.data)) {
-        return {
-          data: res.data.map(mapReturnItem),
-          total: res.total || res.data.length,
-        };
-      }
-      if (Array.isArray(res)) {
-        return { data: res.map(mapReturnItem), total: res.length };
-      }
-      if (res && Array.isArray(res.items)) {
-        return {
-          data: res.items.map(mapReturnItem),
-          total: res.total || res.items.length,
-        };
-      }
-      return fallback();
-    } catch (err) {
-      if (fallback) return fallback();
-      throw err;
+    if (res && Array.isArray(res.content)) {
+      return {
+        data: res.content.map(mapReturnItem),
+        total: res.totalElements ?? res.content.length,
+        page: res.page ?? 0,
+        totalPages: res.totalPages ?? 1,
+      };
     }
+    if (res && Array.isArray(res.data)) {
+      return {
+        data: res.data.map(mapReturnItem),
+        total: res.total ?? res.data.length,
+        page: res.page ?? 0,
+        totalPages: res.totalPages ?? 1,
+      };
+    }
+    if (Array.isArray(res)) {
+      return { data: res.map(mapReturnItem), total: res.length, page: 0, totalPages: 1 };
+    }
+    if (res && Array.isArray(res.items)) {
+      return {
+        data: res.items.map(mapReturnItem),
+        total: res.total ?? res.items.length,
+        page: res.page ?? 0,
+        totalPages: res.totalPages ?? 1,
+      };
+    }
+    throw new Error('Invalid response structure from return queue');
   },
 
   /**
@@ -129,20 +129,15 @@ export const returnService = {
     const fallback = () => returnMockApi.detail(retId);
     if (isFixtureMode) return fallback();
 
-    try {
-      const res = await callBackend(
-        {
-          method: 'get',
-          url: API_ENDPOINTS.MODERATOR.RETURN_DETAIL(retId),
-        },
-        { fallback, signal: options?.signal }
-      );
-      const raw = res?.data || res || (await fallback());
-      return mapReturnItem(raw);
-    } catch (err) {
-      if (fallback) return fallback();
-      throw err;
-    }
+    const res = await callBackend(
+      {
+        method: 'get',
+        url: API_ENDPOINTS.MODERATOR.RETURN_DETAIL(retId),
+      },
+      { signal: options?.signal }
+    );
+    const raw = res?.data || res;
+    return mapReturnItem(raw);
   },
 
   /**
@@ -152,19 +147,14 @@ export const returnService = {
     const fallback = () => returnMockApi.approveReturnAndCreateWaybill(retId);
     if (isFixtureMode) return fallback();
 
-    try {
-      const res = await callBackend(
-        {
-          method: 'post',
-          url: API_ENDPOINTS.MODERATOR.APPROVE_RETURN(retId),
-        },
-        { fallback, signal: options?.signal }
-      );
-      return res?.data || res || fallback();
-    } catch (err) {
-      if (fallback) return fallback();
-      throw err;
-    }
+    const res = await callBackend(
+      {
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.APPROVE_RETURN(retId),
+      },
+      { signal: options?.signal }
+    );
+    return res?.data || res;
   },
 
   /**
@@ -174,20 +164,15 @@ export const returnService = {
     const fallback = () => returnMockApi.rejectReturn(retId, reason);
     if (isFixtureMode) return fallback();
 
-    try {
-      const res = await callBackend(
-        {
-          method: 'post',
-          url: API_ENDPOINTS.MODERATOR.REJECT_RETURN(retId),
-          data: { reason },
-        },
-        { fallback, signal: options?.signal }
-      );
-      return res?.data || res || fallback();
-    } catch (err) {
-      if (fallback) return fallback();
-      throw err;
-    }
+    const res = await callBackend(
+      {
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.REJECT_RETURN(retId),
+        data: { reason },
+      },
+      { signal: options?.signal }
+    );
+    return res?.data || res;
   },
 
   /**
@@ -197,25 +182,20 @@ export const returnService = {
     const fallback = () => returnMockApi.inspect(retId, inspectionData);
     if (isFixtureMode) return fallback();
 
-    try {
-      const res = await callBackend(
-        {
-          method: 'post',
-          url: API_ENDPOINTS.MODERATOR.INSPECT_RETURN(retId),
-          data: {
-            matchesOriginal: inspectionData.matchesOriginal ?? true,
-            degraded: inspectionData.degraded ?? false,
-            counterfeitSuspected: inspectionData.counterfeitSuspected ?? false,
-            conditionNote: inspectionData.conditionNote || 'Đã kiểm tra hàng về kho',
-          },
+    const res = await callBackend(
+      {
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.INSPECT_RETURN(retId),
+        data: {
+          matchesOriginal: inspectionData.matchesOriginal ?? true,
+          degraded: inspectionData.degraded ?? false,
+          counterfeitSuspected: inspectionData.counterfeitSuspected ?? false,
+          conditionNote: inspectionData.conditionNote || 'Đã kiểm tra hàng về kho',
         },
-        { fallback, signal: options?.signal }
-      );
-      return res?.data || res || fallback();
-    } catch (err) {
-      if (fallback) return fallback();
-      throw err;
-    }
+      },
+      { signal: options?.signal }
+    );
+    return res?.data || res;
   },
 
   /**
@@ -225,19 +205,14 @@ export const returnService = {
     const fallback = () => returnMockApi.flagCounterfeit(retId);
     if (isFixtureMode) return fallback();
 
-    try {
-      const res = await callBackend(
-        {
-          method: 'post',
-          url: API_ENDPOINTS.MODERATOR.FLAG_COUNTERFEIT(retId),
-        },
-        { fallback, signal: options?.signal }
-      );
-      return res?.data || res || fallback();
-    } catch (err) {
-      if (fallback) return fallback();
-      throw err;
-    }
+    const res = await callBackend(
+      {
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.FLAG_COUNTERFEIT(retId),
+      },
+      { signal: options?.signal }
+    );
+    return res?.data || res;
   },
 
   /**
@@ -247,24 +222,21 @@ export const returnService = {
     const fallback = () => returnMockApi.counterfeitConclusion(retId, conclusionData);
     if (isFixtureMode) return fallback();
 
-    try {
-      const res = await callBackend(
-        {
-          method: 'post',
-          url: API_ENDPOINTS.MODERATOR.COUNTERFEIT_CONCLUSION(retId),
-          data: {
-            conclusion: conclusionData.conclusion || 'CONFIRMED',
-            note: conclusionData.note || '',
-            secondModerator: conclusionData.secondModerator || '',
-          },
+    const conclusion = conclusionData.verdict || conclusionData.conclusion || 'CONFIRMED';
+    const res = await callBackend(
+      {
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.COUNTERFEIT_CONCLUSION(retId),
+        data: {
+          conclusion,
+          verdict: conclusion,
+          note: conclusionData.note || '',
+          secondModerator: conclusionData.secondModerator || '',
         },
-        { fallback, signal: options?.signal }
-      );
-      return res?.data || res || fallback();
-    } catch (err) {
-      if (fallback) return fallback();
-      throw err;
-    }
+      },
+      { signal: options?.signal }
+    );
+    return res?.data || res;
   },
 
   /**
@@ -274,24 +246,19 @@ export const returnService = {
     const fallback = () => returnMockApi.resolveValid(retId, outcome);
     if (isFixtureMode) return fallback();
 
-    try {
-      const res = await callBackend(
-        {
-          method: 'post',
-          url: API_ENDPOINTS.MODERATOR.RESOLVE_RETURN(retId),
-          data: {
-            resolution: 'VALID',
-            action: outcome,
-            resolutionNote: 'Hàng đúng tình trạng, duyệt hoàn tiền',
-          },
+    const res = await callBackend(
+      {
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.RESOLVE_RETURN(retId),
+        data: {
+          resolution: 'VALID',
+          action: outcome,
+          resolutionNote: 'Hàng đúng tình trạng, duyệt hoàn tiền',
         },
-        { fallback, signal: options?.signal }
-      );
-      return res?.data || res || fallback();
-    } catch (err) {
-      if (fallback) return fallback();
-      throw err;
-    }
+      },
+      { signal: options?.signal }
+    );
+    return res?.data || res;
   },
 
   /**
@@ -301,24 +268,19 @@ export const returnService = {
     const fallback = () => returnMockApi.resolveInvalid(retId, reason);
     if (isFixtureMode) return fallback();
 
-    try {
-      const res = await callBackend(
-        {
-          method: 'post',
-          url: API_ENDPOINTS.MODERATOR.RESOLVE_RETURN(retId),
-          data: {
-            resolution: 'INVALID',
-            action: 'DISCARD',
-            resolutionNote: reason,
-          },
+    const res = await callBackend(
+      {
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.RESOLVE_RETURN(retId),
+        data: {
+          resolution: 'INVALID',
+          action: 'DISCARD',
+          resolutionNote: reason,
         },
-        { fallback, signal: options?.signal }
-      );
-      return res?.data || res || fallback();
-    } catch (err) {
-      if (fallback) return fallback();
-      throw err;
-    }
+      },
+      { signal: options?.signal }
+    );
+    return res?.data || res;
   },
 
   /**
@@ -328,20 +290,15 @@ export const returnService = {
     const fallback = () => returnMockApi.markLost(retId, note);
     if (isFixtureMode) return fallback();
 
-    try {
-      const res = await callBackend(
-        {
-          method: 'post',
-          url: API_ENDPOINTS.MODERATOR.MARK_LOST(retId),
-          data: { note: note || 'GHN làm thất lạc trên đường vận chuyển về kho' },
-        },
-        { fallback, signal: options?.signal }
-      );
-      return res?.data || res || fallback();
-    } catch (err) {
-      if (fallback) return fallback();
-      throw err;
-    }
+    const res = await callBackend(
+      {
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.MARK_LOST(retId),
+        data: { note: note || 'GHN làm thất lạc trên đường vận chuyển về kho' },
+      },
+      { signal: options?.signal }
+    );
+    return res?.data || res;
   },
 
   /**
@@ -351,20 +308,15 @@ export const returnService = {
     const fallback = () => returnMockApi.createDegradedCase(payload);
     if (isFixtureMode) return fallback();
 
-    try {
-      const res = await callBackend(
-        {
-          method: 'post',
-          url: API_ENDPOINTS.MODERATOR.CREATE_DEGRADED_CASE,
-          data: payload,
-        },
-        { fallback, signal: options?.signal }
-      );
-      return res?.data || res || fallback();
-    } catch (err) {
-      if (fallback) return fallback();
-      throw err;
-    }
+    const res = await callBackend(
+      {
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.CREATE_DEGRADED_CASE,
+        data: payload,
+      },
+      { signal: options?.signal }
+    );
+    return res?.data || res;
   },
 
   /**
@@ -374,19 +326,14 @@ export const returnService = {
     const fallback = () => returnMockApi.getDegradedCase(id);
     if (isFixtureMode) return fallback();
 
-    try {
-      const res = await callBackend(
-        {
-          method: 'get',
-          url: API_ENDPOINTS.MODERATOR.DEGRADED_CASE_DETAIL(id),
-        },
-        { fallback, signal: options?.signal }
-      );
-      return res?.data || res || fallback();
-    } catch (err) {
-      if (fallback) return fallback();
-      throw err;
-    }
+    const res = await callBackend(
+      {
+        method: 'get',
+        url: API_ENDPOINTS.MODERATOR.DEGRADED_CASE_DETAIL(id),
+      },
+      { signal: options?.signal }
+    );
+    return res?.data || res;
   },
 };
 
