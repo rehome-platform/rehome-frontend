@@ -246,9 +246,9 @@ export function VerificationDocuments({ selectedOrg, setViewingDoc }) {
   );
 }
 
-export function VerificationLegalChanges({ legalChanges, handleApproveLegalChange }) {
+export function VerificationLegalChanges({ legalChanges, handleApproveLegalChange, handleRejectLegalChange }) {
   return (
-    <div className="bg-white border border-[#8a8a8a] rounded-lg overflow-hidden shadow-sm">
+    <div className="bg-surface border border-neutral rounded-2xl overflow-hidden shadow-sm">
       <table className="w-full text-left border-collapse text-xs">
         <thead>
           <tr className="bg-[#f4f4f4] border-b border-[#8a8a8a] text-[10px] uppercase font-bold text-[#5f5f5f]">
@@ -279,13 +279,22 @@ export function VerificationLegalChanges({ legalChanges, handleApproveLegalChang
               </td>
               <td className="py-3 px-3 text-right">
                 {chg.status === 'PENDING' && (
-                  <button
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => (handleRejectLegalChange ? handleRejectLegalChange(chg.id) : null)}
+                      className="text-xs font-medium px-3 py-1.5 rounded-xl bg-error text-white hover:bg-red-700 transition-colors"
+                    >
+                      Từ chối
+                    </button>
+  
+                    <button
                     type="button"
                     onClick={() => handleApproveLegalChange(chg.id)}
-                    className="text-[10px] font-bold px-3 py-1.5 rounded bg-[#2b2b2b] text-white hover:bg-black"
+                    className="text-xs font-medium px-3 py-1.5 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors"
                   >
-                    Duyệt đổi pháp lý
-                  </button>
+                    Duyệt đổi pháp lý</button></div>
+
                 )}
               </td>
             </tr>
@@ -298,7 +307,7 @@ export function VerificationLegalChanges({ legalChanges, handleApproveLegalChang
 
 export function VerificationQueueTable({ loading, orgsQueue, handleOpenDetail }) {
   return (
-    <div className="bg-white border border-[#8a8a8a] rounded-lg overflow-hidden shadow-sm">
+    <div className="bg-surface border border-neutral rounded-2xl overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
@@ -356,10 +365,10 @@ export function VerificationQueueTable({ loading, orgsQueue, handleOpenDetail })
                     <button
                       type="button"
                       onClick={() => handleOpenDetail(org)}
-                      className={`text-[10px] font-bold px-3 py-1.5 rounded transition-colors ${
+                      className={`text-xs font-medium px-3 py-1.5 rounded-xl transition-colors ${
                         idx === 0
-                          ? 'bg-[#2b2b2b] text-white hover:bg-black'
-                          : 'border border-[#8a8a8a] text-[#2b2b2b] hover:bg-[#f4f4f4]'
+                          ? 'bg-primary text-white hover:bg-primary-hover'
+                          : 'border border-neutral text-text hover:bg-background'
                       }`}
                     >
                       Xác minh
