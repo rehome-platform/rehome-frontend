@@ -1,6 +1,19 @@
 import React, { useState, useEffect } from "react";
-
 import { orgVerificationService } from "../services/orgVerificationApi.js";
+
+function calculateWaitDays(createdAt) {
+  if (!createdAt) return '—';
+  const created = new Date(createdAt);
+  const now = new Date();
+  const diffMs = now - created;
+  if (isNaN(diffMs) || diffMs < 0) return '—';
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (days <= 0) {
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    return hours <= 0 ? 'Vừa nộp' : `${hours} giờ`;
+  }
+  return `${days} ngày`;
+}
 
 export function useOrgVerification() {
   const [activeMainTab, setActiveMainTab] = useState('NEW_ORGS'); // 'NEW_ORGS' | 'LEGAL_CHANGES'
@@ -41,8 +54,51 @@ export function useOrgVerification() {
         orgVerificationService.getQueue(),
         orgVerificationService.getLegalChanges(),
       ]);
-      setOrgsQueue(orgsRes.data);
-      setLegalChanges(changesRes.data);
+
+      const rawQueue = orgsRes?.data || [];
+      const enrichedQueue = await Promise.all(
+        rawQueue.map(async (item) => {
+          const targetId = item.refId || item.id;
+          try {
+            const detail = await orgVerificationService.getOrgDetail(targetId);
+            return {
+              ...item,
+              targetId,
+              name: detail?.legalName || detail?.displayName || item.name || targetId,
+              legalName: detail?.legalName || item.legalName || targetId,
+              displayName: detail?.displayName || detail?.legalName || item.displayName || targetId,
+              orgType: detail?.orgType || item.orgType || 'Tổ chức từ thiện',
+              type: detail?.orgType || item.orgType || (item.type !== 'ORG_VERIFICATION' ? item.type : 'Tổ chức từ thiện'),
+              taxCode: detail?.taxCode || item.taxCode || 'không có',
+              status: detail?.verificationStatus || item.status || 'PENDING',
+              representative: detail?.representative || item.representative,
+              documents: detail?.documents || item.documents || [],
+              checklist: detail?.checklist || item.checklist || [],
+              submittedAt: item.submittedAt || (item.createdAt ? new Date(item.createdAt).toLocaleDateString('vi-VN') : '—'),
+              waitTime: item.waitTime || calculateWaitDays(item.createdAt),
+              submissionCount: detail?.submissionCount || item.submissionCount || 'Nộp lần đầu',
+            };
+          } catch {
+            return {
+              ...item,
+              targetId,
+              name: item.name || targetId,
+              legalName: item.legalName || targetId,
+              displayName: item.displayName || targetId,
+              orgType: item.orgType || 'Tổ chức từ thiện',
+              type: item.type === 'ORG_VERIFICATION' ? 'Tổ chức từ thiện' : (item.type || 'Tổ chức từ thiện'),
+              taxCode: item.taxCode || 'không có',
+              status: item.status || 'PENDING',
+              submittedAt: item.submittedAt || (item.createdAt ? new Date(item.createdAt).toLocaleDateString('vi-VN') : '—'),
+              waitTime: item.waitTime || calculateWaitDays(item.createdAt),
+              submissionCount: item.submissionCount || 'Nộp lần đầu',
+            };
+          }
+        })
+      );
+
+      setOrgsQueue(enrichedQueue);
+      setLegalChanges(changesRes?.data || []);
     } catch (err) {
       setError('Không thể tải dữ liệu hồ sơ tổ chức.');
     } finally {
@@ -73,7 +129,12 @@ export function useOrgVerification() {
         .getOrgDetail(targetId)
         .then((detail) => {
           if (detail) {
-            setSelectedOrg((prev) => ({ ...prev, ...detail }));
+            setSelectedOrg((prev) => ({
+              ...prev,
+              ...detail,
+              name: detail?.legalName || detail?.displayName || prev?.name || targetId,
+              type: detail?.orgType || prev?.type || 'Tổ chức từ thiện',
+            }));
           }
         })
         .catch((err) => {
@@ -179,7 +240,7 @@ export function useOrgVerification() {
     handleConfirmReject,
     sections: {
       VerificationQueueTabs: { setActiveQueueTab, activeQueueTab, orgsQueue },
-      VerificationQueueTable: { loading, orgsQueue, handleOpenDetail },
+      VerificationQueueTable: { loading, orgsQueue, handleOpenDetail, activeQueueTab },
       VerificationChecklist: { checklist, setChecklist, isEnterprise },
       VerificationRejectDialog: { isRejectModalOpen, setIsRejectModalOpen, rejectReason, setRejectReason, handleConfirmReject },
     },
