@@ -69,10 +69,20 @@ export function usePackingDetail({ orderId, onChanged }) {
           } else {
             setMessage('SKU không thuộc đơn.');
             setScanLogs(prev => [{ time: timeStr, code, status: 'Không có mã này — nhập lại', matched: false }, ...prev]);
-            const wrongDetail = packingMockApi.findWrongItemInfo(code);
+            const wrongDetail = result?.wrongItem
+              ? {
+                  ...result.wrongItem,
+                  brand: result.wrongItem.brand || result.wrongItem.brandName,
+                }
+              : packingMockApi.findWrongItemInfo(code);
             setWrongItem(wrongDetail);
             setWrongItemModalOpen(true);
           }
+          setSku('');
+        },
+        onError: (err) => {
+          setMessage(err?.message || 'Không tìm thấy sản phẩm với mã này.');
+          setScanLogs(prev => [{ time: timeStr, code, status: 'Mã không tồn tại', matched: false }, ...prev]);
           setSku('');
         },
       });
