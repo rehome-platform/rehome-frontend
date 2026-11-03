@@ -68,11 +68,10 @@ export function PackingDetail({ orderId, onChanged }) {
               </p>
               <div className="pt-2 text-xs font-bold text-[#191C19] flex items-center gap-2">
                 <span>Tiến độ đối chiếu:</span>
-                <span className={`px-2.5 py-0.5 rounded-full font-mono text-xs font-bold ${
-                  model.scannedCount === model.totalCount
+                <span className={`px-2.5 py-0.5 rounded-full font-mono text-xs font-bold ${model.scannedCount === model.totalCount
                     ? 'bg-[#E8F5E9] text-[#006B2C]'
                     : 'bg-[#FFF3E0] text-[#D97706]'
-                }`}>
+                  }`}>
                   {`Đã quét ${model.scannedCount}/${model.totalCount} SKU`}
                 </span>
               </div>
@@ -221,7 +220,6 @@ export default function PackingOrdersPage() {
           {/* Header tìm kiếm chuẩn DG-01 */}
           <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
             <div className="flex items-center gap-2 flex-1 min-w-[280px]">
-              <span className="text-gray-400 text-sm">🔍</span>
               <input
                 type="text"
                 value={keyword}

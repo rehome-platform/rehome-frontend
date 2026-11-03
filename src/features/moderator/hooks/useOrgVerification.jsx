@@ -67,10 +67,18 @@ export function useOrgVerification() {
     });
     setAuditNote('');
     setViewMode('DETAIL');
-    if (org?.id && org.taxCode === undefined) {
-      orgVerificationService.getOrgDetail(org.id).catch((err) => {
-        console.warn('Failed to fetch private verification detail:', err);
-      });
+    const targetId = org?.refId || org?.id;
+    if (targetId && org.taxCode === undefined) {
+      orgVerificationService
+        .getOrgDetail(targetId)
+        .then((detail) => {
+          if (detail) {
+            setSelectedOrg((prev) => ({ ...prev, ...detail }));
+          }
+        })
+        .catch((err) => {
+          console.warn('Failed to fetch private verification detail:', err);
+        });
     }
   };
 

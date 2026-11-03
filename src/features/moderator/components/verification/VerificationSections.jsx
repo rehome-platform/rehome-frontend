@@ -339,26 +339,26 @@ export function VerificationQueueTable({ loading, orgsQueue, handleOpenDetail })
                   }`}
                 >
                   <td className="py-3 px-3 font-bold text-[#191C19]">{org.id}</td>
-                  <td className="py-3 px-3 font-semibold text-[#191C19]">{org.name}</td>
+                  <td className="py-3 px-3 font-semibold text-[#191C19]">{org.name || org.displayName || org.title || org.refId || '—'}</td>
                   <td className="py-3 px-3 text-[#4a4a4a]">{org.type}</td>
                   <td className="py-3 px-3 font-mono">
-                    {org.taxCode !== 'không có' ? (
+                    {org.taxCode && org.taxCode !== 'không có' ? (
                       <span className="font-bold text-[#006B2C]">{org.taxCode}</span>
                     ) : (
-                      <span className="text-[#7a7a7a]">không có</span>
+                      <span className="text-[#7a7a7a]">{org.taxCode || 'không có'}</span>
                     )}
                   </td>
-                  <td className="py-3 px-3 text-[#5f5f5f]">{org.submittedAt}</td>
-                  <td className="py-3 px-3 font-semibold text-[#191C19]">{org.waitTime}</td>
+                  <td className="py-3 px-3 text-[#5f5f5f]">{org.submittedAt || (org.createdAt ? new Date(org.createdAt).toLocaleDateString('vi-VN') : '—')}</td>
+                  <td className="py-3 px-3 font-semibold text-[#191C19]">{org.waitTime || (org.status === 'PENDING' ? 'Chờ duyệt' : '—')}</td>
                   <td className="py-3 px-3">
                     <span
                       className={
-                        org.submissionCount.includes('lại')
+                        String(org.submissionCount || '').includes('lại')
                           ? 'font-bold text-[#BA1A1A]'
                           : 'text-[#5f5f5f]'
                       }
                     >
-                      {org.submissionCount}
+                      {org.submissionCount || 'Nộp lần đầu'}
                     </span>
                   </td>
                   <td className="py-3 px-3 text-right">
