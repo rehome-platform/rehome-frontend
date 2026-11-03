@@ -8,7 +8,7 @@ import {
 } from '../services/baseApi.js';
 import authService, { isMemberRole } from '../features/auth/services/auth.service.js';
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => getUser());
