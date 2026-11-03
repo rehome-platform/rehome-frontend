@@ -17,7 +17,8 @@ function getQueueLinkTarget(item, typeParam) {
     return `/moderator/consignments/${encodeURIComponent(item.formId || item.refId || '')}`;
   }
   if (type === 'RETURN') {
-    return `/moderator/returns`;
+    const id = item.returnId || item.refId || item.id || '';
+    return id ? `/moderator/returns?id=${encodeURIComponent(id)}` : `/moderator/returns`;
   }
   if (type === 'ORG_VERIFICATION') {
     return `/moderator/verifications`;
