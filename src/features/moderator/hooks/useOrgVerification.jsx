@@ -56,8 +56,6 @@ export function useOrgVerification() {
 
   const handleOpenDetail = (org) => {
     setSelectedOrg(org);
-    const hasTax = org.taxCode && org.taxCode !== 'không có';
-    const isEnterprise = org.type?.includes('Doanh nghiệp');
     setChecklist({
       taxChecked: false,
       businessChecked: false,
@@ -67,12 +65,13 @@ export function useOrgVerification() {
       authorityChecked: false,
       reputationChecked: false,
     });
-    setAuditNote(
-      org.taxCode && org.taxCode !== 'không có'
-        ? `Đã liên hệ số ${org.phone}, người đại diện xác nhận hồ sơ do chính tổ chức nộp.`
-        : ''
-    );
+    setAuditNote('');
     setViewMode('DETAIL');
+    if (org?.id && org.taxCode === undefined) {
+      orgVerificationService.getOrgDetail(org.id).catch((err) => {
+        console.warn('Failed to fetch private verification detail:', err);
+      });
+    }
   };
 
   // Required checks logic
@@ -129,7 +128,19 @@ export function useOrgVerification() {
     }
   };
 
-    return {
+  const handleRejectLegalChange = async (changeId, reason = 'Thông tin pháp lý không hợp lệ') => {
+    try {
+      await orgVerificationService.rejectLegalChange(changeId, reason);
+      await loadData();
+      alert('Đã từ chối yêu cầu đổi thông tin pháp lý.');
+      setViewMode('LIST');
+      setSelectedChange(null);
+    } catch (err) {
+      alert('Có lỗi xảy ra khi từ chối đổi pháp lý.');
+    }
+  };
+
+  return {
     viewMode,
     setActiveMainTab,
     activeMainTab,
@@ -140,6 +151,7 @@ export function useOrgVerification() {
     loading,
     handleOpenDetail,
     handleApproveLegalChange,
+    handleRejectLegalChange,
     selectedOrg,
     setViewMode,
     setViewingDoc,
@@ -157,7 +169,7 @@ export function useOrgVerification() {
     rejectReason,
     setRejectReason,
     handleConfirmReject,
-      sections: {
+    sections: {
       VerificationQueueTabs: { setActiveQueueTab, activeQueueTab, orgsQueue },
       VerificationQueueTable: { loading, orgsQueue, handleOpenDetail },
       VerificationChecklist: { checklist, setChecklist, isEnterprise },
