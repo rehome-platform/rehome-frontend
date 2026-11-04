@@ -544,17 +544,17 @@ export const orgVerificationService = {
   async approveOrg(orgId, note) {
     await delay();
     orgsQueueData = orgsQueueData.map((org) =>
-      org.id === orgId ? { ...org, status: 'APPROVED', auditNote: note } : org
+      org.id === orgId || org.refId === orgId ? { ...org, status: 'APPROVED', auditNote: note } : org
     );
-    return orgsQueueData.find((org) => org.id === orgId);
+    return orgsQueueData.find((org) => org.id === orgId || org.refId === orgId);
   },
 
   async rejectOrg(orgId, reason) {
     await delay();
     orgsQueueData = orgsQueueData.map((org) =>
-      org.id === orgId ? { ...org, status: 'REJECTED', rejectReason: reason } : org
+      org.id === orgId || org.refId === orgId ? { ...org, status: 'REJECTED', rejectReason: reason } : org
     );
-    return orgsQueueData.find((org) => org.id === orgId);
+    return orgsQueueData.find((org) => org.id === orgId || org.refId === orgId);
   },
 
   async approveLegalChange(changeId) {

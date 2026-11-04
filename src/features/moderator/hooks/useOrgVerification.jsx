@@ -64,6 +64,8 @@ export function useOrgVerification() {
             return {
               ...item,
               targetId,
+              refId: item.refId || targetId,
+              organizationId: targetId,
               name: detail?.legalName || detail?.displayName || item.name || targetId,
               legalName: detail?.legalName || item.legalName || targetId,
               displayName: detail?.displayName || detail?.legalName || item.displayName || targetId,
@@ -82,6 +84,8 @@ export function useOrgVerification() {
             return {
               ...item,
               targetId,
+              refId: item.refId || targetId,
+              organizationId: targetId,
               name: item.name || targetId,
               legalName: item.legalName || targetId,
               displayName: item.displayName || targetId,
@@ -123,7 +127,7 @@ export function useOrgVerification() {
     });
     setAuditNote('');
     setViewMode('DETAIL');
-    const targetId = org?.refId || org?.id;
+    const targetId = org?.refId || org?.targetId || org?.id;
     if (targetId && org.taxCode === undefined) {
       orgVerificationService
         .getOrgDetail(targetId)
@@ -132,6 +136,9 @@ export function useOrgVerification() {
             setSelectedOrg((prev) => ({
               ...prev,
               ...detail,
+              refId: prev?.refId || targetId,
+              targetId: prev?.targetId || targetId,
+              organizationId: prev?.organizationId || targetId,
               name: detail?.legalName || detail?.displayName || prev?.name || targetId,
               type: detail?.orgType || prev?.type || 'Tổ chức từ thiện',
             }));
@@ -159,8 +166,9 @@ export function useOrgVerification() {
 
   const handleApproveOrg = async () => {
     if (!selectedOrg || !isChecklistComplete) return;
+    const orgId = selectedOrg.refId || selectedOrg.targetId || selectedOrg.organizationId || selectedOrg.id;
     try {
-      await orgVerificationService.approveOrg(selectedOrg.id, auditNote);
+      await orgVerificationService.approveOrg(orgId, auditNote);
       await loadData();
       alert(`Đã xác thực tổ chức ${selectedOrg.name} thành công! Tổ chức đã được cấp quyền tạo chiến dịch tiếp nhận quyên góp.`);
       setViewMode('LIST');
@@ -172,8 +180,9 @@ export function useOrgVerification() {
 
   const handleConfirmReject = async () => {
     if (!rejectReason.trim() || !selectedOrg) return;
+    const orgId = selectedOrg.refId || selectedOrg.targetId || selectedOrg.organizationId || selectedOrg.id;
     try {
-      await orgVerificationService.rejectOrg(selectedOrg.id, rejectReason);
+      await orgVerificationService.rejectOrg(orgId, rejectReason);
       await loadData();
       setIsRejectModalOpen(false);
       setRejectReason('');

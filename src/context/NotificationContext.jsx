@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext.jsx';
-import baseApi from '../services/baseApi.js';
+import baseApi, { getToken } from '../services/baseApi.js';
 import { API_ENDPOINTS, API_BASE_URL, getSockJsUrl } from '../configs/api.config.js';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
@@ -104,8 +104,10 @@ export const NotificationProvider = ({ children }) => {
     let client = null;
 
     try {
+      const token = getToken();
       client = new Client({
         webSocketFactory: () => new SockJS(sockJsUrl),
+        connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
         reconnectDelay: 0,
         heartbeatIncoming: 0,
         heartbeatOutgoing: 0,
