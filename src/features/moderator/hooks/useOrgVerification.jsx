@@ -102,7 +102,28 @@ export function useOrgVerification() {
       );
 
       setOrgsQueue(enrichedQueue);
-      setLegalChanges(changesRes?.data || []);
+      const rawChanges = changesRes?.data || [];
+      const enrichedLegalChanges = rawChanges.map((item) => {
+        const changeRequestId = item.requestId || item.refId || item.id;
+        const formattedDate = item.submittedAt
+          || (item.createdAt ? new Date(item.createdAt).toLocaleDateString('vi-VN') : '—');
+
+        return {
+          ...item,
+          id: changeRequestId,
+          queueItemId: item.id,
+          requestId: changeRequestId,
+          refId: item.refId || changeRequestId,
+          orgName: item.orgName || item.organizationName || 'Tổ chức',
+          fieldChanged: item.fieldChanged || item.field || 'Thông tin pháp lý',
+          oldValue: item.oldValue || '—',
+          newValue: item.newValue || '—',
+          submittedAt: formattedDate,
+          status: item.status || 'PENDING',
+        };
+      });
+
+      setLegalChanges(enrichedLegalChanges);
     } catch (err) {
       setError('Không thể tải dữ liệu hồ sơ tổ chức.');
     } finally {

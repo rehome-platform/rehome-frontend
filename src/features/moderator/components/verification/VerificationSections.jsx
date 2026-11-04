@@ -392,44 +392,60 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
                 </td>
               </tr>
             ) : (
-              legalChanges.map((chg) => (
-                <tr key={chg.id} className="hover:bg-background/60 transition-colors">
-                  <td className="py-3 px-3 font-bold text-text">{chg.orgName}</td>
-                  <td className="py-3 px-3 font-semibold text-primary">{chg.fieldChanged || chg.field}</td>
-                  <td className="py-3 px-3">
-                    <span className="text-textSecondary line-through mr-2">{chg.oldValue}</span>
-                    <span className="font-bold text-text">→ {chg.newValue}</span>
-                  </td>
-                  <td className="py-3 px-3 text-textSecondary">{chg.submittedAt}</td>
-                  <td className="py-3 px-3 font-semibold">
-                    {chg.status === 'PENDING' ? (
-                      <Badge variant="warning">Chờ duyệt</Badge>
-                    ) : (
-                      <Badge variant="success">Đã duyệt</Badge>
-                    )}
-                  </td>
-                  <td className="py-3 px-3 text-right">
-                    {chg.status === 'PENDING' && (
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => (handleRejectLegalChange ? handleRejectLegalChange(chg.id) : null)}
-                          className="text-xs font-medium px-3 py-1.5 rounded-xl bg-error text-white hover:bg-red-700 transition-colors shadow-sm"
-                        >
-                          Từ chối
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleApproveLegalChange(chg.id)}
-                          className="text-xs font-medium px-3 py-1.5 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors shadow-sm"
-                        >
-                          Duyệt đổi pháp lý
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))
+              legalChanges.map((chg) => {
+                const targetRequestId = chg.requestId || chg.refId || chg.id;
+                return (
+                  <tr key={chg.queueItemId || chg.id} className="hover:bg-background/60 transition-colors">
+                    <td className="py-3 px-3 font-bold text-text">{chg.orgName}</td>
+                    <td className="py-3 px-3 font-semibold text-primary">{chg.fieldChanged || chg.field}</td>
+                    <td className="py-3 px-3">
+                      <span className="text-textSecondary line-through mr-2">{chg.oldValue}</span>
+                      <span className="font-bold text-text">→ {chg.newValue}</span>
+                    </td>
+                    <td className="py-3 px-3 text-textSecondary">{chg.submittedAt}</td>
+                    <td className="py-3 px-3 font-semibold">
+                      {chg.status === 'PENDING' ? (
+                        <Badge variant="warning">Chờ duyệt</Badge>
+                      ) : chg.status === 'REJECTED' ? (
+                        <Badge variant="error">Bị từ chối</Badge>
+                      ) : (
+                        <Badge variant="success">Đã duyệt</Badge>
+                      )}
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      {chg.status === 'PENDING' && (
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const reason = typeof window !== 'undefined' && window.prompt
+                                ? window.prompt('Nhập lý do từ chối yêu cầu đổi pháp lý:', 'Thông tin pháp lý không hợp lệ')
+                                : 'Thông tin pháp lý không hợp lệ';
+                              if (reason !== null && reason.trim()) {
+                                handleRejectLegalChange?.(targetRequestId, reason.trim());
+                              }
+                            }}
+                            className="text-xs font-medium px-3 py-1.5 rounded-xl bg-error text-white hover:bg-red-700 transition-colors shadow-sm"
+                          >
+                            Từ chối
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (typeof window === 'undefined' || !window.confirm || window.confirm(`Bạn có chắc muốn duyệt thay đổi pháp lý cho ${chg.orgName || 'tổ chức này'}?`)) {
+                                handleApproveLegalChange?.(targetRequestId);
+                              }
+                            }}
+                            className="text-xs font-medium px-3 py-1.5 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors shadow-sm"
+                          >
+                            Duyệt đổi pháp lý
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

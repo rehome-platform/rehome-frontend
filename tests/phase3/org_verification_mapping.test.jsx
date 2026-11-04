@@ -6,6 +6,7 @@ import {
   VerificationQueueTable,
   VerificationDocuments,
   VerificationChecklist,
+  VerificationLegalChanges,
 } from '../../src/features/moderator/components/verification/VerificationSections.jsx';
 import { useOrgVerification } from '../../src/features/moderator/hooks/useOrgVerification.jsx';
 import orgVerificationService from '../../src/features/moderator/services/orgVerificationApi.js';
@@ -350,5 +351,132 @@ describe('Organization Verification Data Mapping & Design Tokens', () => {
 
     expect(rejectSpy).toHaveBeenCalledWith('org-uuid-b291', 'Giấy tờ không hợp lệ');
     expect(rejectSpy).not.toHaveBeenCalledWith('queue-uuid-e607', expect.anything());
+  });
+  it('useOrgVerification enriches legalChanges from queue items and defaults status to PENDING', async () => {
+    vi.spyOn(orgVerificationService, 'getQueue').mockResolvedValue({ data: [], total: 0 });
+    vi.spyOn(orgVerificationService, 'getLegalChanges').mockResolvedValue({
+      data: [
+        {
+          id: 'q-item-88',
+          type: 'LEGAL_CHANGE',
+          refId: 'req-uuid-99',
+          requestId: 'req-uuid-99',
+          orgName: 'Mái ấm Ánh Sáng',
+          fieldChanged: 'Người đại diện',
+          oldValue: 'Trần Văn A',
+          newValue: 'Nguyễn Ngọc Kim Ngân · Trưởng phòng',
+          createdAt: '2026-11-04T08:00:00Z',
+          status: 'PENDING',
+        },
+      ],
+      total: 1,
+    });
+
+    const { result } = renderHook(() => useOrgVerification());
+    await act(async () => {});
+
+    expect(result.current.legalChanges).toHaveLength(1);
+    const item = result.current.legalChanges[0];
+    expect(item.id).toBe('req-uuid-99');
+    expect(item.refId).toBe('req-uuid-99');
+    expect(item.queueItemId).toBe('q-item-88');
+    expect(item.orgName).toBe('Mái ấm Ánh Sáng');
+    expect(item.fieldChanged).toBe('Người đại diện');
+    expect(item.oldValue).toBe('Trần Văn A');
+    expect(item.newValue).toBe('Nguyễn Ngọc Kim Ngân · Trưởng phòng');
+    expect(item.status).toBe('PENDING');
+    expect(item.submittedAt).not.toBe('—');
+  });
+
+  it('VerificationLegalChanges displays table with correct columns and action buttons for PENDING', () => {
+    const handleApprove = vi.fn();
+    const handleReject = vi.fn();
+
+    const mockChanges = [
+      {
+        id: 'req-uuid-1',
+        queueItemId: 'q-1',
+        orgName: 'Mái ấm 123',
+        fieldChanged: 'Người đại diện',
+        oldValue: 'Trần Thị Mỹ Hạnh · Trưởng ban',
+        newValue: 'Nguyễn Ngọc Kim Ngân · Trưởng phòng',
+        submittedAt: '04/11/2026',
+        status: 'PENDING',
+      },
+    ];
+
+    render(
+      <VerificationLegalChanges
+        legalChanges={mockChanges}
+        handleApproveLegalChange={handleApprove}
+        handleRejectLegalChange={handleReject}
+      />
+    );
+
+    expect(screen.getByText('Mái ấm 123')).toBeInTheDocument();
+    expect(screen.getByText('Người đại diện')).toBeInTheDocument();
+    expect(screen.getByText('Trần Thị Mỹ Hạnh · Trưởng ban')).toBeInTheDocument();
+    expect(screen.getByText(/Nguyễn Ngọc Kim Ngân · Trưởng phòng/)).toBeInTheDocument();
+    expect(screen.getByText('04/11/2026')).toBeInTheDocument();
+    expect(screen.getByText('Chờ duyệt')).toBeInTheDocument();
+    expect(screen.getByText('Duyệt đổi pháp lý')).toBeInTheDocument();
+    expect(screen.getByText('Từ chối')).toBeInTheDocument();
+  });
+
+  it('VerificationLegalChanges buttons invoke approve and reject with requestId', () => {
+    const handleApprove = vi.fn();
+    const handleReject = vi.fn();
+
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vi.spyOn(window, 'prompt').mockReturnValue('Lý do kiểm thử');
+
+    const mockChanges = [
+      {
+        id: 'req-uuid-abc',
+        refId: 'req-uuid-abc',
+        queueItemId: 'q-999',
+        orgName: 'Quỹ Nụ Cười',
+        fieldChanged: 'Tên tổ chức',
+        oldValue: 'Quỹ Cũ',
+        newValue: 'Quỹ Nụ Cười',
+        submittedAt: '04/11/2026',
+        status: 'PENDING',
+      },
+    ];
+
+    render(
+      <VerificationLegalChanges
+        legalChanges={mockChanges}
+        handleApproveLegalChange={handleApprove}
+        handleRejectLegalChange={handleReject}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Duyệt đổi pháp lý'));
+    expect(handleApprove).toHaveBeenCalledWith('req-uuid-abc');
+
+    fireEvent.click(screen.getByText('Từ chối'));
+    expect(handleReject).toHaveBeenCalledWith('req-uuid-abc', 'Lý do kiểm thử');
+  });
+
+  it('VerificationLegalChanges renders correct badges for REJECTED and APPROVED statuses', () => {
+    const mockChanges = [
+      {
+        id: 'req-1',
+        orgName: 'Tổ chức A',
+        status: 'REJECTED',
+      },
+      {
+        id: 'req-2',
+        orgName: 'Tổ chức B',
+        status: 'APPROVED',
+      },
+    ];
+
+    render(<VerificationLegalChanges legalChanges={mockChanges} />);
+
+    expect(screen.getByText('Bị từ chối')).toBeInTheDocument();
+    expect(screen.getByText('Đã duyệt')).toBeInTheDocument();
+    expect(screen.queryByText('Duyệt đổi pháp lý')).not.toBeInTheDocument();
   });
 });
