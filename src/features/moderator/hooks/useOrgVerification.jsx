@@ -174,7 +174,9 @@ export function useOrgVerification() {
       setViewMode('LIST');
       setSelectedOrg(null);
     } catch (err) {
-      alert('Có lỗi xảy ra khi xác thực tổ chức.');
+      console.error('Lỗi khi xác thực tổ chức:', err);
+      const serverMsg = err?.message || err?.response?.data?.message;
+      alert(serverMsg ? `Có lỗi xảy ra khi xác thực tổ chức:\n${serverMsg}` : 'Có lỗi xảy ra khi xác thực tổ chức.');
     }
   };
 
@@ -190,7 +192,9 @@ export function useOrgVerification() {
       setSelectedOrg(null);
       alert('Đã từ chối hồ sơ kèm hướng dẫn bổ sung giấy tờ!');
     } catch (err) {
-      alert('Có lỗi xảy ra khi từ chối hồ sơ.');
+      console.error('Lỗi khi từ chối hồ sơ:', err);
+      const serverMsg = err?.message || err?.response?.data?.message;
+      alert(serverMsg ? `Có lỗi xảy ra khi từ chối hồ sơ:\n${serverMsg}` : 'Có lỗi xảy ra khi từ chối hồ sơ.');
     }
   };
 
@@ -202,7 +206,9 @@ export function useOrgVerification() {
       setViewMode('LIST');
       setSelectedChange(null);
     } catch (err) {
-      alert('Có lỗi xảy ra khi duyệt đổi pháp lý.');
+      console.error('Lỗi khi duyệt đổi pháp lý:', err);
+      const serverMsg = err?.message || err?.response?.data?.message;
+      alert(serverMsg ? `Có lỗi xảy ra khi duyệt đổi pháp lý:\n${serverMsg}` : 'Có lỗi xảy ra khi duyệt đổi pháp lý.');
     }
   };
 
@@ -214,7 +220,9 @@ export function useOrgVerification() {
       setViewMode('LIST');
       setSelectedChange(null);
     } catch (err) {
-      alert('Có lỗi xảy ra khi từ chối đổi pháp lý.');
+      console.error('Lỗi khi từ chối đổi pháp lý:', err);
+      const serverMsg = err?.message || err?.response?.data?.message;
+      alert(serverMsg ? `Có lỗi xảy ra khi từ chối đổi pháp lý:\n${serverMsg}` : 'Có lỗi xảy ra khi từ chối đổi pháp lý.');
     }
   };
 
@@ -250,7 +258,7 @@ export function useOrgVerification() {
     sections: {
       VerificationQueueTabs: { setActiveQueueTab, activeQueueTab, orgsQueue },
       VerificationQueueTable: { loading, orgsQueue, handleOpenDetail, activeQueueTab },
-      VerificationChecklist: { checklist, setChecklist, isEnterprise },
+      VerificationChecklist: { checklist, setChecklist, isEnterprise, selectedOrg },
       VerificationRejectDialog: { isRejectModalOpen, setIsRejectModalOpen, rejectReason, setRejectReason, handleConfirmReject },
     },
   };
