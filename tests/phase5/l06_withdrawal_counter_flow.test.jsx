@@ -6,6 +6,7 @@ import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { API_BASE_URL, API_ENDPOINTS } from '../../src/configs/api.config.js';
 import CounterPage from '../../src/features/moderator/pages/CounterPage.jsx';
+import { Phase2Provider } from '../../src/features/moderator/hooks/warehouseHooks.jsx';
 
 vi.mock('../../src/context/AuthContext.jsx', () => ({
   useAuth: () => ({
@@ -75,51 +76,72 @@ beforeEach(() => {
   server.resetHandlers();
 
   server.use(
-    // API 25: GET /counter/members
-    http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.COUNTER_MEMBERS}`, async ({ request }) => {
-      const url = new URL(request.url);
-      const code = url.searchParams.get('memberCode');
-      const phone = url.searchParams.get('phone');
-      if (code === 'MB-004821' || phone === '0912345456') {
+    // API 25: POST /counter/lookup
+    http.post(`${API_BASE_URL}/counter/lookup`, async ({ request }) => {
+      const body = await request.json();
+      if (body.memberCode === 'MB-004821' || body.phone === '0912345456') {
         return HttpResponse.json({
           result: [mockMember],
           isSuccess: true,
+          statusCode: 200,
         });
       }
       return HttpResponse.json({
         result: [],
         isSuccess: true,
+        statusCode: 200,
       });
     }),
 
-    // API 26: GET /counter/members/:id/tasks
+    // API 26: POST /counter/members/:id/confirm-identity
+    http.post(`${API_BASE_URL}/counter/members/:id/confirm-identity`, async ({ params }) => {
+      return HttpResponse.json({
+        result: { memberId: params.id, confirmedAt: new Date().toISOString() },
+        isSuccess: true,
+        statusCode: 200,
+      });
+    }),
+
+    // API 27: GET /counter/members/:id/tasks
     http.get(`${API_BASE_URL}/counter/members/:id/tasks`, async () => {
       return HttpResponse.json({
         result: mockTasks,
         isSuccess: true,
+        statusCode: 200,
       });
     }),
 
     // API 72: POST /counter/handover
-    http.post(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.COUNTER_HANDOVER}`, async ({ request }) => {
+    http.post(`${API_BASE_URL}/counter/handover`, async ({ request }) => {
       const body = await request.json();
       return HttpResponse.json({
         result: { handoverId: 'HO-999', ...body, completedAt: new Date().toISOString() },
         isSuccess: true,
+        statusCode: 200,
         message: 'Bàn giao hiện vật tại quầy thành công',
       });
     })
   );
 });
 
+function Wrapper({ children }) {
+  return (
+    <MemoryRouter initialEntries={['/moderator/counter']}>
+      <Phase2Provider scope={{ warehouseId: 'wh-main' }}>
+        {children}
+      </Phase2Provider>
+    </MemoryRouter>
+  );
+}
+
 describe('L-06 Withdrawal & Counter Handover Flow (BG-01, QT-01 to QT-03)', () => {
   it('QT-01 & QT-02: looks up member, confirms identity, and displays 4 task categories', async () => {
     render(
-      <MemoryRouter initialEntries={['/moderator/counter']}>
+      <Wrapper>
         <Routes>
           <Route path="/moderator/counter" element={<CounterPage />} />
         </Routes>
-      </MemoryRouter>
+      </Wrapper>
     );
 
     // Initial screen: QT-01 search
@@ -130,10 +152,16 @@ describe('L-06 Withdrawal & Counter Handover Flow (BG-01, QT-01 to QT-03)', () =
 
     fireEvent.click(screen.getByRole('button', { name: /^Tra cứu$/i }));
 
+    // Wait for search result and click "Chọn Member"
+    await waitFor(() => {
+      expect(screen.getByText(/Chọn Member MB-004821/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Chọn Member MB-004821/i));
+
     // QT-02 Identity panel shown
     await waitFor(() => {
       expect(screen.getByText(/Tôi đã đối chiếu đúng Member/i)).toBeInTheDocument();
-      expect(screen.getByText(/Ngô Hải F/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Ngô Hải F/i).length).toBeGreaterThan(0);
     });
 
     // Click confirm identity
@@ -145,10 +173,10 @@ describe('L-06 Withdrawal & Counter Handover Flow (BG-01, QT-01 to QT-03)', () =
       // 1. Pending forms
       expect(screen.getByText(/1\. Tiếp nhận hàng ký gửi & Kiểm định/i)).toBeInTheDocument();
       // 2. Pending withdrawal (L-06)
-      expect(screen.getByText(/Member rút hàng giữa kỳ/i)).toBeInTheDocument();
+      expect(screen.getByText(/hàng rút giữa kỳ/i)).toBeInTheDocument();
       expect(screen.getByText(/RH-K9B47T/i)).toBeInTheDocument();
       // 3. Pending end of term
-      expect(screen.getByText(/Nhận lại hàng cuối kỳ/i)).toBeInTheDocument();
+      expect(screen.getByText(/hết kỳ ký gửi/i)).toBeInTheDocument();
       expect(screen.getByText(/RH-T3N77F/i)).toBeInTheDocument();
       // 4. Pending invalid return (L-05 RT-04)
       expect(screen.getByText(/Nhận lại hàng trả không hợp lệ/i)).toBeInTheDocument();
@@ -158,17 +186,22 @@ describe('L-06 Withdrawal & Counter Handover Flow (BG-01, QT-01 to QT-03)', () =
 
   it('BG-01: opens handover modal, requires SKU matching & identity check before enabling handover', async () => {
     render(
-      <MemoryRouter initialEntries={['/moderator/counter']}>
+      <Wrapper>
         <Routes>
           <Route path="/moderator/counter" element={<CounterPage />} />
         </Routes>
-      </MemoryRouter>
+      </Wrapper>
     );
 
     // Search and confirm member
     const input = screen.getByPlaceholderText(/MB-0000000/i);
     fireEvent.change(input, { target: { value: 'MB-004821' } });
     fireEvent.click(screen.getByRole('button', { name: /^Tra cứu$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Chọn Member MB-004821/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Chọn Member MB-004821/i));
 
     await waitFor(() => {
       expect(screen.getByText(/Tôi đã đối chiếu đúng Member/i)).toBeInTheDocument();
@@ -180,13 +213,14 @@ describe('L-06 Withdrawal & Counter Handover Flow (BG-01, QT-01 to QT-03)', () =
       expect(screen.getByText(/RH-K9B47T/i)).toBeInTheDocument();
     });
 
-    const handoverBtns = screen.getAllByRole('button', { name: /Bàn giao tại quầy/i });
+    const handoverBtns = screen.getAllByRole('button', { name: /Bàn giao/i });
     fireEvent.click(handoverBtns[0]); // First one is ITEM_WITHDRAWAL
 
     // BG-01 Handover modal appears
     await waitFor(() => {
-      expect(screen.getByText(/BG-01 · Bàn giao hiện vật tại quầy/i)).toBeInTheDocument();
-      expect(screen.getByText(/Member rút hàng/i)).toBeInTheDocument();
+      expect(screen.getByText(/BG-01/i)).toBeInTheDocument();
+      expect(screen.getByText(/Xác nhận bàn giao hiện vật tại quầy/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Member rút hàng/i).length).toBeGreaterThan(0);
     });
 
     const confirmBtn = screen.getByRole('button', { name: /Xác nhận đã bàn giao/i });
@@ -216,17 +250,23 @@ describe('L-06 Withdrawal & Counter Handover Flow (BG-01, QT-01 to QT-03)', () =
 
   it('BG-01: supports INVALID_RETURN_PICKUP handover with reason badge', async () => {
     render(
-      <MemoryRouter initialEntries={['/moderator/counter']}>
+      <Wrapper>
         <Routes>
           <Route path="/moderator/counter" element={<CounterPage />} />
         </Routes>
-      </MemoryRouter>
+      </Wrapper>
     );
 
     // Search and confirm
     const input = screen.getByPlaceholderText(/MB-0000000/i);
     fireEvent.change(input, { target: { value: 'MB-004821' } });
     fireEvent.click(screen.getByRole('button', { name: /^Tra cứu$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Chọn Member MB-004821/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Chọn Member MB-004821/i));
+
     await waitFor(() => screen.getByText(/Tôi đã đối chiếu đúng Member/i));
     fireEvent.click(screen.getByText(/Tôi đã đối chiếu đúng Member/i));
 
@@ -235,7 +275,7 @@ describe('L-06 Withdrawal & Counter Handover Flow (BG-01, QT-01 to QT-03)', () =
       expect(screen.getByText(/RH-CV882X/i)).toBeInTheDocument();
     });
 
-    const handoverBtns = screen.getAllByRole('button', { name: /Bàn giao tại quầy/i });
+    const handoverBtns = screen.getAllByRole('button', { name: /Bàn giao/i });
     // Click the invalid return handover button (the third one)
     fireEvent.click(handoverBtns[2]);
 

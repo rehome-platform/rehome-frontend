@@ -21,10 +21,33 @@ export const NotificationProvider = ({ children }) => {
     setLoading(true);
     try {
       const res = await baseApi.get(API_ENDPOINTS.NOTIFICATIONS.LIST);
-      const items = res.data?.data || res.data || [];
-      const list = Array.isArray(items) ? items : [];
+      const payload = res.data;
+      let rawList = [];
+      if (Array.isArray(payload)) {
+        rawList = payload;
+      } else if (payload && Array.isArray(payload.result?.content)) {
+        rawList = payload.result.content;
+      } else if (payload && Array.isArray(payload.content)) {
+        rawList = payload.content;
+      } else if (payload && Array.isArray(payload.result)) {
+        rawList = payload.result;
+      } else if (payload && Array.isArray(payload.data)) {
+        rawList = payload.data;
+      } else if (payload && Array.isArray(payload.items)) {
+        rawList = payload.items;
+      }
+
+      const list = rawList.map((item) => {
+        const isRead = item.isRead !== undefined ? Boolean(item.isRead) : Boolean(item.read);
+        return {
+          ...item,
+          isRead,
+          read: isRead,
+        };
+      });
+
       setNotifications(list);
-      setUnreadCount(list.filter((item) => !item.read).length);
+      setUnreadCount(list.filter((item) => !item.isRead).length);
       setError(null);
     } catch (err) {
       const status = err.response?.status;
@@ -37,28 +60,38 @@ export const NotificationProvider = ({ children }) => {
         status: status || 0,
         message: errorMsg,
       });
-      // Bảo toàn trạng thái: không chế tạo dữ liệu ảo (không fake notification)
     } finally {
       setLoading(false);
     }
   }, [isAuthenticated]);
 
   const markAsRead = async (id) => {
+    const target = notifications.find((n) => n.id === id);
+    if (!target || target.isRead || target.read) return;
+
     try {
       await baseApi.put(API_ENDPOINTS.NOTIFICATIONS.MARK_READ(id));
       setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+        prev.map((n) => (n.id === id ? { ...n, read: true, isRead: true } : n))
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (err) {
       console.warn('Failed to mark notification read:', err?.message || err);
+      // P6-N02: failed read preserves unread count - không trừ count khi lỗi
     }
   };
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setNotifications([]);
+      setUnreadCount(0);
+      setError(null);
+      return;
+    }
+
     fetchNotifications();
 
-    if (!isAuthenticated || !user?.id) return;
+    if (!user?.id) return;
 
     // SockJS yêu cầu scheme http: hoặc https:, tuyệt đối không truyền ws: hoặc wss:
     const sockJsUrl = getSockJsUrl(API_BASE_URL);
@@ -73,7 +106,6 @@ export const NotificationProvider = ({ children }) => {
     try {
       client = new Client({
         webSocketFactory: () => new SockJS(sockJsUrl),
-        // reconnectDelay = 0 để tránh vòng lặp reconnect liên tục khi backend chưa triển khai WebSocket/STOMP
         reconnectDelay: 0,
         heartbeatIncoming: 0,
         heartbeatOutgoing: 0,
@@ -86,9 +118,22 @@ export const NotificationProvider = ({ children }) => {
           client.subscribe(`/user/${user.id}/queue/notifications`, (message) => {
             if (message.body) {
               try {
-                const newNotification = JSON.parse(message.body);
-                setNotifications((prev) => [newNotification, ...prev]);
-                setUnreadCount((prev) => prev + 1);
+                const raw = JSON.parse(message.body);
+                const isRead = raw.isRead !== undefined ? Boolean(raw.isRead) : Boolean(raw.read);
+                const newNotification = {
+                  ...raw,
+                  isRead,
+                  read: isRead,
+                };
+                setNotifications((prev) => {
+                  if (prev.some((n) => n.id === newNotification.id)) {
+                    return prev;
+                  }
+                  if (!isRead) {
+                    setUnreadCount((cnt) => cnt + 1);
+                  }
+                  return [newNotification, ...prev];
+                });
               } catch (e) {
                 console.warn('[NotificationContext] Could not parse socket message:', e);
               }

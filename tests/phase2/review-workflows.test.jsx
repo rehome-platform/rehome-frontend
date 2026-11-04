@@ -11,7 +11,7 @@ import { orgVerificationService } from '../../src/features/moderator/services/or
 vi.mock('../../src/features/moderator/services/returnApi.js', () => ({
   returnService: {
     list: vi.fn(), approveReturnAndCreateWaybill: vi.fn(), rejectReturn: vi.fn(),
-    resolveInvalid: vi.fn(), resolveValid: vi.fn(),
+    resolveInvalid: vi.fn(), resolveValid: vi.fn(), inspect: vi.fn().mockResolvedValue({}),
   },
 }));
 
@@ -61,14 +61,21 @@ describe('return workflow regression', () => {
   it('requires an invalid-inspection reason and resets inspection when switching items', async () => {
     const { result } = renderHook(useReturnProcessing, { wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter> });
     await waitFor(() => expect(result.current.loading).toBe(false));
-    act(() => { result.current.handleOpenInspect(request); result.current.setInspectionVerdict('INVALID'); });
+    act(() => {
+      result.current.handleOpenInspect(request);
+      result.current.setScannedSku('Sku-A');
+      result.current.setSkuMatched(true);
+      result.current.setChecklist({ skuCorrect: true, labelIntact: true, noNewDamage: true, noUsageSign: true, accessoriesComplete: true });
+      result.current.setInspectionVerdict('INVALID');
+    });
     await act(() => result.current.handleSaveInspection());
     expect(returnService.resolveInvalid).not.toHaveBeenCalled();
     act(() => result.current.setInvalidReason('Hư hỏng mới'));
     await act(() => result.current.handleSaveInspection());
     expect(returnService.resolveInvalid).toHaveBeenCalledExactlyOnceWith('r1', 'Hư hỏng mới');
     act(() => result.current.handleOpenInspect({ ...request, id: 'r2', sku: 'Sku-B' }));
-    expect(result.current.scannedSku).toBe('Sku-B');
+    expect(result.current.scannedSku).toBe('');
+    expect(result.current.skuMatched).toBe(false);
     expect(result.current.inspectionVerdict).toBe('');
     expect(result.current.invalidReason).toBe('');
     expect(result.current.checklist.noNewDamage).toBe(false);
@@ -77,7 +84,13 @@ describe('return workflow regression', () => {
   it.each(['RELIST', 'RETURN_SELLER'])('waits for the %s decision before resolving a valid return', async outcome => {
     const { result } = renderHook(useReturnProcessing, { wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter> });
     await waitFor(() => expect(result.current.loading).toBe(false));
-    act(() => { result.current.handleOpenInspect(request); result.current.setInspectionVerdict('VALID'); });
+    act(() => {
+      result.current.handleOpenInspect(request);
+      result.current.setScannedSku('Sku-A');
+      result.current.setSkuMatched(true);
+      result.current.setChecklist({ skuCorrect: true, labelIntact: true, noNewDamage: true, noUsageSign: true, accessoriesComplete: true });
+      result.current.setInspectionVerdict('VALID');
+    });
     await act(() => result.current.handleSaveInspection());
     expect(result.current.isOutcomeModalOpen).toBe(true);
     expect(returnService.resolveValid).not.toHaveBeenCalled();

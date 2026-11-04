@@ -125,13 +125,13 @@ export const API_ENDPOINTS = {
     DEGRADED_CASE_DETAIL: (id) => `/degraded-item-cases/${moderatorId(id)}`,
 
     // Xác minh tổ chức & Duyệt đổi pháp lý
-    VERIFICATION_QUEUE: "/organizations/verifications",
-    ORG_VERIFICATION_DETAIL: (id) => `/organizations/${moderatorId(id)}/verification`,
-    APPROVE_ORG: (id) => `/organizations/${moderatorId(id)}/verify`,
-    REJECT_ORG: (id) => `/organizations/${moderatorId(id)}/reject`,
-    LEGAL_CHANGES: "/organizations/legal-change-requests",
-    APPROVE_LEGAL_CHANGE: (id) => `/organizations/legal-change-requests/${moderatorId(id)}/approve`,
-    REJECT_LEGAL_CHANGE: (id) => `/organizations/legal-change-requests/${moderatorId(id)}/reject`,
+    VERIFICATION_QUEUE: "/queues?type=ORG_VERIFICATION",
+    ORG_VERIFICATION_DETAIL: (id) => `/api/organizations/${moderatorId(id)}/verification`,
+    APPROVE_ORG: (id) => `/api/organizations/${moderatorId(id)}/verify`,
+    REJECT_ORG: (id) => `/api/organizations/${moderatorId(id)}/reject`,
+    LEGAL_CHANGES: "/queues?type=LEGAL_CHANGE",
+    APPROVE_LEGAL_CHANGE: (id) => `/api/organizations/legal-change-requests/${moderatorId(id)}/approve`,
+    REJECT_LEGAL_CHANGE: (id) => `/api/organizations/legal-change-requests/${moderatorId(id)}/reject`,
 
     // Báo cáo vi phạm nội dung
     VIOLATION_REPORTS: "/violation-reports",

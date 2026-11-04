@@ -123,12 +123,12 @@ export function useCounter() {
     try {
       await counterService.handover({
         accountId: selected.memberId,
-        refId: item.refId || item.id,
+        refId: item.refId || item.productId || item.returnId || item.id,
         context,
       });
       setHandoverFeedback({
         type: 'success',
-        message: `Đã bàn giao thành công "${item.productName || item.productId}" cho khách hàng!`,
+        message: `Đã bàn giao thành công. Đã hoàn tất bàn giao "${item.productName || item.productId}" cho khách hàng!`,
       });
       rememberServed(selected, `Bàn giao hàng · ${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`);
       setConfirmHandover(null);

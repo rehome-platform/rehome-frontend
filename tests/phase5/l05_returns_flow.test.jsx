@@ -41,7 +41,19 @@ beforeEach(() => {
       });
     }),
 
-    // POST /return-requests/:id/approve-return
+    // POST /return-requests/:id/approve and /return-requests/:id/approve-return
+    http.post(`${API_BASE_URL}/return-requests/:id/approve`, async ({ params }) => {
+      const item = moderatorMockData.returnRequests.find((r) => String(r.id) === String(params.id));
+      if (item) {
+        item.status = 'WAITING_BUYER_DISPATCH';
+        item.carrierStatus = 'Đã tạo vận đơn thu hồi GHN';
+      }
+      return HttpResponse.json({
+        result: { id: params.id, status: 'WAITING_BUYER_DISPATCH', waybillCode: 'GHN-RET-1234' },
+        isSuccess: true,
+        statusCode: 200,
+      });
+    }),
     http.post(`${API_BASE_URL}/return-requests/:id/approve-return`, async ({ params }) => {
       const item = moderatorMockData.returnRequests.find((r) => String(r.id) === String(params.id));
       if (item) {
@@ -51,6 +63,7 @@ beforeEach(() => {
       return HttpResponse.json({
         result: { id: params.id, status: 'WAITING_BUYER_DISPATCH', waybillCode: 'GHN-RET-1234' },
         isSuccess: true,
+        statusCode: 200,
       });
     }),
 
@@ -65,6 +78,37 @@ beforeEach(() => {
       return HttpResponse.json({
         result: { id: params.id, status: 'REJECTED' },
         isSuccess: true,
+        statusCode: 200,
+      });
+    }),
+
+    // POST /return-requests/:id/inspect
+    http.post(`${API_BASE_URL}/return-requests/:id/inspect`, async ({ params, request }) => {
+      const body = await request.json();
+      const item = moderatorMockData.returnRequests.find((r) => String(r.id) === String(params.id));
+      if (item) {
+        item.inspection = body;
+      }
+      return HttpResponse.json({
+        result: { id: params.id, ...body, status: 'INSPECTING' },
+        isSuccess: true,
+        statusCode: 200,
+      });
+    }),
+
+    // POST /return-requests/:id/resolve (VALID / INVALID)
+    http.post(`${API_BASE_URL}/return-requests/:id/resolve`, async ({ params, request }) => {
+      const body = await request.json();
+      const item = moderatorMockData.returnRequests.find((r) => String(r.id) === String(params.id));
+      if (item) {
+        item.status = 'RESOLVED';
+        if (body.resolution === 'VALID') item.outcome = body.outcome;
+        else if (body.resolution === 'INVALID') item.invalidReason = body.reason;
+      }
+      return HttpResponse.json({
+        result: { id: params.id, status: 'RESOLVED', ...body },
+        isSuccess: true,
+        statusCode: 200,
       });
     }),
 
@@ -79,6 +123,7 @@ beforeEach(() => {
       return HttpResponse.json({
         result: { id: params.id, status: 'RESOLVED', outcome: body.outcome },
         isSuccess: true,
+        statusCode: 200,
       });
     }),
 
@@ -93,6 +138,7 @@ beforeEach(() => {
       return HttpResponse.json({
         result: { id: params.id, status: 'RESOLVED', valid: false },
         isSuccess: true,
+        statusCode: 200,
       });
     }),
 
@@ -101,6 +147,7 @@ beforeEach(() => {
       return HttpResponse.json({
         result: { id: params.id, suspectedCounterfeit: true },
         isSuccess: true,
+        statusCode: 200,
       });
     }),
 
@@ -115,6 +162,7 @@ beforeEach(() => {
       return HttpResponse.json({
         result: { id: params.id, ...body },
         isSuccess: true,
+        statusCode: 200,
       });
     }),
 
@@ -128,6 +176,7 @@ beforeEach(() => {
       return HttpResponse.json({
         result: { id: params.id, isLost: true, refundIssued: true },
         isSuccess: true,
+        statusCode: 200,
       });
     }),
 
@@ -137,6 +186,7 @@ beforeEach(() => {
       return HttpResponse.json({
         result: { id: 'DEG-01', ...body, status: 'PENDING_SELLER_CHOICE' },
         isSuccess: true,
+        statusCode: 200,
       });
     })
   );
@@ -164,7 +214,7 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
 
     // Initial load: PENDING_APPROVAL tab
     await waitFor(() => {
-      expect(screen.getByText(/Yêu cầu trả hàng/i)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Yêu cầu trả hàng/i })).toBeInTheDocument();
     });
 
     expect(screen.getByText(/Chờ duyệt ·/i)).toBeInTheDocument();
@@ -191,19 +241,20 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Duyệt yêu cầu/i)).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: /Duyệt yêu cầu/i }).length).toBeGreaterThan(0);
     });
 
-    // Click "Duyệt yêu cầu" to open TH-02 review view
-    fireEvent.click(screen.getByText(/Duyệt yêu cầu/i));
+    // Click first "Duyệt yêu cầu" to open TH-02 review view
+    const approveBtns = screen.getAllByRole('button', { name: /Duyệt yêu cầu/i });
+    fireEvent.click(approveBtns[0]);
 
     await waitFor(() => {
       expect(screen.getByText(/Người mua nói gì/i)).toBeInTheDocument();
-      expect(screen.getByText(/Duyệt & tạo vận đơn trả/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Duyệt & tạo vận đơn trả/i })).toBeInTheDocument();
     });
 
     // Approve return request
-    fireEvent.click(screen.getByText(/Duyệt & tạo vận đơn trả/i));
+    fireEvent.click(screen.getByRole('button', { name: /Duyệt & tạo vận đơn trả/i }));
 
     await waitFor(() => {
       expect(window.alert).toHaveBeenCalled();
@@ -228,16 +279,28 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     fireEvent.click(screen.getByText(/Hàng đã về, chờ kiểm ·/i));
 
     await waitFor(() => {
-      expect(screen.getByText(/Kiểm tra hàng/i)).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: /Kiểm tra hàng/i }).length).toBeGreaterThan(0);
     });
 
     // Click "Kiểm tra hàng"
-    fireEvent.click(screen.getByText(/Kiểm tra hàng/i));
+    const inspectBtns = screen.getAllByRole('button', { name: /Kiểm tra hàng/i });
+    fireEvent.click(inspectBtns[0]);
 
     await waitFor(() => {
       expect(screen.getByText(/kiểm tra hàng về kho/i)).toBeInTheDocument();
       expect(screen.getByText(/Đối chiếu hàng về với ảnh nhập kho/i)).toBeInTheDocument();
     });
+
+    // Enter matching SKU (RH-A7F31K)
+    const skuInput = screen.getByPlaceholderText(/Nhập SKU.../i);
+    fireEvent.change(skuInput, { target: { value: 'RH-A7F31K' } });
+
+    // Check all checklist items
+    fireEvent.click(screen.getByLabelText(/Đúng món theo mã SKU/i));
+    fireEvent.click(screen.getByLabelText(/Còn nguyên tem SKU trên sản phẩm/i));
+    fireEvent.click(screen.getByLabelText(/Không có hư hỏng mới so với ảnh nhập kho/i));
+    fireEvent.click(screen.getByLabelText(/Không có dấu vết đã qua sử dụng thêm/i));
+    fireEvent.click(screen.getByLabelText(/Đủ phụ kiện đi kèm nếu có/i));
 
     // Select "Hợp lệ"
     const validRadio = screen.getByLabelText(/Hợp lệ — hoàn tiền cho người mua/i);
@@ -272,9 +335,10 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     // Go to RECEIVED_INSPECT and click "Kiểm tra hàng"
     fireEvent.click(screen.getByText(/Hàng đã về, chờ kiểm ·/i));
     await waitFor(() => {
-      expect(screen.getByText(/Kiểm tra hàng/i)).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: /Kiểm tra hàng/i }).length).toBeGreaterThan(0);
     });
-    fireEvent.click(screen.getByText(/Kiểm tra hàng/i));
+    const inspectBtns = screen.getAllByRole('button', { name: /Kiểm tra hàng/i });
+    fireEvent.click(inspectBtns[0]);
 
     await waitFor(() => {
       expect(screen.getByText(/⚠️ Báo nghi hàng giả \(2 Moderator\)/i)).toBeInTheDocument();
@@ -314,10 +378,11 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     fireEvent.click(screen.getByText(/Đang về kho ·/i));
 
     await waitFor(() => {
-      expect(screen.getByText(/Báo thất lạc/i)).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: /Báo thất lạc/i }).length).toBeGreaterThan(0);
     });
 
-    fireEvent.click(screen.getByText(/Báo thất lạc/i));
+    const lostBtns = screen.getAllByRole('button', { name: /Báo thất lạc/i });
+    fireEvent.click(lostBtns[0]);
 
     await waitFor(() => {
       expect(window.confirm).toHaveBeenCalled();

@@ -68,11 +68,10 @@ export function PackingDetail({ orderId, onChanged }) {
               </p>
               <div className="pt-2 text-xs font-bold text-[#191C19] flex items-center gap-2">
                 <span>Tiến độ đối chiếu:</span>
-                <span className={`px-2.5 py-0.5 rounded-full font-mono text-xs font-bold ${
-                  model.scannedCount === model.totalCount
+                <span className={`px-2.5 py-0.5 rounded-full font-mono text-xs font-bold ${model.scannedCount === model.totalCount
                     ? 'bg-[#E8F5E9] text-[#006B2C]'
                     : 'bg-[#FFF3E0] text-[#D97706]'
-                }`}>
+                  }`}>
                   {`Đã quét ${model.scannedCount}/${model.totalCount} SKU`}
                 </span>
               </div>
@@ -221,7 +220,6 @@ export default function PackingOrdersPage() {
           {/* Header tìm kiếm chuẩn DG-01 */}
           <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
             <div className="flex items-center gap-2 flex-1 min-w-[280px]">
-              <span className="text-gray-400 text-sm">🔍</span>
               <input
                 type="text"
                 value={keyword}
@@ -257,14 +255,14 @@ export default function PackingOrdersPage() {
             </div>
           )}
 
-          <ResourceState resource={queue} empty={!items.length} />
+          <ResourceState resource={queue} />
 
           {/* BẢNG HÀNG ĐỢI ĐÓNG GÓI 8 CỘT CHUẨN WIREFRAME DG-01 */}
-          <div className="rounded-2xl border border-[#8a8a8a] bg-white overflow-hidden shadow-sm">
+          <div className="rounded-2xl border border-neutral bg-surface overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[800px] text-left text-xs">
                 <thead>
-                  <tr className="bg-[#f4f4f4] border-b border-[#8a8a8a] text-[10px] font-bold uppercase tracking-wider text-[#5f5f5f]">
+                  <tr className="bg-background border-b border-neutral text-[10px] font-bold uppercase tracking-wider text-textSecondary">
                     <th className="py-3 px-3">Mã đơn</th>
                     <th className="py-3 px-3">Người mua</th>
                     <th className="py-3 px-3">Số món</th>
@@ -275,8 +273,15 @@ export default function PackingOrdersPage() {
                     <th className="py-3 px-3 text-right">Thao tác</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#e0e0e0]">
-                  {items.map((item) => {
+                <tbody className="divide-y divide-neutral">
+                  {items.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" className="py-12 text-center text-xs text-textSecondary">
+                        Chưa có dữ liệu phù hợp.
+                      </td>
+                    </tr>
+                  ) : (
+                    items.map((item) => {
                     const isMine =
                       item.claimedBy === scope.userId ||
                       item.claimedBy === 'CURRENT_USER' ||
@@ -295,7 +300,8 @@ export default function PackingOrdersPage() {
                         handleRelease={handleRelease}
                       />
                     );
-                  })}
+                  })
+                  )}
                 </tbody>
               </table>
             </div>

@@ -142,6 +142,10 @@ describe('Member selection', () => {
     await user.click(handoverButtons[0]);
 
     expect(await screen.findByText('Xác nhận bàn giao hiện vật tại quầy')).toBeInTheDocument();
+    const quickMatch = screen.queryByText('Khớp nhanh');
+    if (quickMatch) await user.click(quickMatch);
+    const idCheckbox = screen.queryByLabelText(/Tôi đã hỏi và xác nhận đúng người nhận/i);
+    if (idCheckbox) await user.click(idCheckbox);
     await user.click(screen.getByRole('button', { name: 'Xác nhận đã bàn giao' }));
 
     expect(handoverSpy).toHaveBeenCalledWith(
