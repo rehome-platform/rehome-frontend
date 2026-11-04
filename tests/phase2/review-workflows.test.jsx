@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router-dom';
 import React from 'react';
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -10,7 +11,7 @@ import { orgVerificationService } from '../../src/features/moderator/services/or
 vi.mock('../../src/features/moderator/services/returnApi.js', () => ({
   returnService: {
     list: vi.fn(), approveReturnAndCreateWaybill: vi.fn(), rejectReturn: vi.fn(),
-    resolveInvalid: vi.fn(), resolveValid: vi.fn(),
+    resolveInvalid: vi.fn(), resolveValid: vi.fn(), inspect: vi.fn().mockResolvedValue({}),
   },
 }));
 
@@ -34,7 +35,7 @@ beforeEach(() => {
 
 describe('return workflow regression', () => {
   it('approves the selected request and refreshes the queue once after success', async () => {
-    const { result } = renderHook(useReturnProcessing);
+    const { result } = renderHook(useReturnProcessing, { wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter> });
     await waitFor(() => expect(result.current.loading).toBe(false));
     act(() => result.current.handleOpenReview(request));
     await act(() => result.current.handleApproveAndCreateWaybill());
@@ -45,7 +46,7 @@ describe('return workflow regression', () => {
   });
 
   it('requires a rejection reason, preserves its payload and closes the modal after success', async () => {
-    const { result } = renderHook(useReturnProcessing);
+    const { result } = renderHook(useReturnProcessing, { wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter> });
     await waitFor(() => expect(result.current.loading).toBe(false));
     act(() => { result.current.handleOpenReview(request); result.current.setIsRejectModalOpen(true); });
     await act(() => result.current.handleConfirmRejectRequest());
@@ -58,25 +59,38 @@ describe('return workflow regression', () => {
   });
 
   it('requires an invalid-inspection reason and resets inspection when switching items', async () => {
-    const { result } = renderHook(useReturnProcessing);
+    const { result } = renderHook(useReturnProcessing, { wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter> });
     await waitFor(() => expect(result.current.loading).toBe(false));
-    act(() => { result.current.handleOpenInspect(request); result.current.setInspectionVerdict('INVALID'); });
+    act(() => {
+      result.current.handleOpenInspect(request);
+      result.current.setScannedSku('Sku-A');
+      result.current.setSkuMatched(true);
+      result.current.setChecklist({ skuCorrect: true, labelIntact: true, noNewDamage: true, noUsageSign: true, accessoriesComplete: true });
+      result.current.setInspectionVerdict('INVALID');
+    });
     await act(() => result.current.handleSaveInspection());
     expect(returnService.resolveInvalid).not.toHaveBeenCalled();
     act(() => result.current.setInvalidReason('Hư hỏng mới'));
     await act(() => result.current.handleSaveInspection());
     expect(returnService.resolveInvalid).toHaveBeenCalledExactlyOnceWith('r1', 'Hư hỏng mới');
     act(() => result.current.handleOpenInspect({ ...request, id: 'r2', sku: 'Sku-B' }));
-    expect(result.current.scannedSku).toBe('Sku-B');
+    expect(result.current.scannedSku).toBe('');
+    expect(result.current.skuMatched).toBe(false);
     expect(result.current.inspectionVerdict).toBe('');
     expect(result.current.invalidReason).toBe('');
     expect(result.current.checklist.noNewDamage).toBe(false);
   });
 
   it.each(['RELIST', 'RETURN_SELLER'])('waits for the %s decision before resolving a valid return', async outcome => {
-    const { result } = renderHook(useReturnProcessing);
+    const { result } = renderHook(useReturnProcessing, { wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter> });
     await waitFor(() => expect(result.current.loading).toBe(false));
-    act(() => { result.current.handleOpenInspect(request); result.current.setInspectionVerdict('VALID'); });
+    act(() => {
+      result.current.handleOpenInspect(request);
+      result.current.setScannedSku('Sku-A');
+      result.current.setSkuMatched(true);
+      result.current.setChecklist({ skuCorrect: true, labelIntact: true, noNewDamage: true, noUsageSign: true, accessoriesComplete: true });
+      result.current.setInspectionVerdict('VALID');
+    });
     await act(() => result.current.handleSaveInspection());
     expect(result.current.isOutcomeModalOpen).toBe(true);
     expect(returnService.resolveValid).not.toHaveBeenCalled();
@@ -87,7 +101,7 @@ describe('return workflow regression', () => {
 
   it('retains the review and selected request when the service rejects', async () => {
     returnService.approveReturnAndCreateWaybill.mockRejectedValueOnce(new Error('offline'));
-    const { result } = renderHook(useReturnProcessing);
+    const { result } = renderHook(useReturnProcessing, { wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter> });
     await waitFor(() => expect(result.current.loading).toBe(false));
     act(() => result.current.handleOpenReview(request));
     await act(() => result.current.handleApproveAndCreateWaybill());

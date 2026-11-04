@@ -1,25 +1,31 @@
 import React from "react";
 
-export function ReturnQueueRow({ r, isOverdueItem, handleOpenReview, handleOpenInspect }) {
+export function ReturnQueueRow({
+  r,
+  isOverdueItem,
+  handleOpenReview,
+  handleOpenInspect,
+  handleMarkLost,
+}) {
   return (
     <tr
       key={r.id}
-      className={`hover:bg-[#F8FAF8] transition-colors ${
-        isOverdueItem ? 'border-l-4 border-l-[#2b2b2b] bg-[#fafafa]' : ''
+      className={`hover:bg-background transition-colors font-sans ${
+        isOverdueItem ? 'border-l-4 border-l-secondary bg-[#FFFDF5]' : ''
       }`}
     >
-      <td className="py-3 px-3 font-bold text-[#191C19]">{r.code}</td>
-      <td className="py-3 px-3">{r.buyerName}</td>
-      <td className="py-3 px-3">{r.itemCount} món</td>
-      <td className="py-3 px-3 text-[#4a4a4a] max-w-[200px] truncate" title={r.reason}>
+      <td className="py-3 px-3 font-bold text-text">{r.code}</td>
+      <td className="py-3 px-3 text-text">{r.buyerName}</td>
+      <td className="py-3 px-3 text-textSecondary">{r.itemCount} món</td>
+      <td className="py-3 px-3 text-textSecondary max-w-[200px] truncate" title={r.reason}>
         {r.reason}
       </td>
-      <td className="py-3 px-3 text-[#5f5f5f]">{r.submittedAt}</td>
-      <td className={`py-3 px-3 ${isOverdueItem ? 'font-bold text-[#BA1A1A]' : 'text-[#5f5f5f]'}`}>
+      <td className="py-3 px-3 text-textSecondary">{r.submittedAt}</td>
+      <td className={`py-3 px-3 ${isOverdueItem ? 'font-bold text-error' : 'text-textSecondary'}`}>
         {r.waitTime}
       </td>
       <td className="py-3 px-3">
-        <span className="font-semibold text-[#191C19]">
+        <span className="font-semibold text-text">
           {r.status === 'PENDING_APPROVAL' && 'Chờ duyệt'}
           {r.status === 'WAITING_BUYER_DISPATCH' && 'Chờ người mua gửi'}
           {r.status === 'RETURNING' && 'Đang về kho'}
@@ -32,7 +38,7 @@ export function ReturnQueueRow({ r, isOverdueItem, handleOpenReview, handleOpenI
           <button
             type="button"
             onClick={() => handleOpenReview(r)}
-            className="text-[10px] font-bold px-3 py-1.5 rounded bg-[#2b2b2b] text-white hover:bg-black transition-colors"
+            className="text-[11px] font-bold px-3 py-1.5 rounded-xl bg-primary text-white hover:bg-primary-hover shadow-sm transition-colors"
           >
             Duyệt yêu cầu
           </button>
@@ -41,25 +47,37 @@ export function ReturnQueueRow({ r, isOverdueItem, handleOpenReview, handleOpenI
           <button
             type="button"
             onClick={() => handleOpenInspect(r)}
-            className="text-[10px] font-bold px-3 py-1.5 rounded border border-[#2b2b2b] text-[#2b2b2b] hover:bg-[#2b2b2b] hover:text-white transition-colors"
+            className="text-[11px] font-bold px-3 py-1.5 rounded-xl border-2 border-primary text-primary hover:bg-primary hover:text-white transition-colors"
           >
             Kiểm tra hàng
           </button>
         )}
         {(r.status === 'RETURNING' || r.status === 'WAITING_BUYER_DISPATCH') && (
-          <button
-            type="button"
-            onClick={() => handleOpenReview(r)}
-            className="text-[10px] px-3 py-1.5 rounded border border-[#8a8a8a] text-[#4a4a4a] hover:bg-[#f4f4f4] transition-colors"
-          >
-            Theo dõi
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => handleOpenReview(r)}
+              className="text-[11px] px-3 py-1.5 rounded-xl border border-neutral text-textSecondary hover:bg-background transition-colors"
+            >
+              Theo dõi
+            </button>
+            {handleMarkLost && (
+              <button
+                type="button"
+                onClick={() => handleMarkLost(r)}
+                className="text-[11px] px-2.5 py-1.5 rounded-xl border border-error text-error hover:bg-error-light transition-colors"
+                title="Báo bưu kiện thất lạc bởi đơn vị giao vận (TH-08)"
+              >
+                Báo thất lạc
+              </button>
+            )}
+          </>
         )}
         {r.status === 'RESOLVED' && (
           <button
             type="button"
             onClick={() => handleOpenReview(r)}
-            className="text-[10px] px-2.5 py-1 rounded border border-[#c4c4c4] text-[#717971]"
+            className="text-[11px] px-2.5 py-1.5 rounded-xl border border-neutral text-textSecondary hover:bg-background transition-colors"
           >
             Chi tiết
           </button>

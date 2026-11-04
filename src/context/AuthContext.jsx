@@ -6,9 +6,9 @@ import {
   removeTokens,
   isTokenExpired,
 } from '../services/baseApi.js';
-import authService from '../features/auth/services/auth.service.js';
+import authService, { isMemberRole } from '../features/auth/services/auth.service.js';
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => getUser());
@@ -76,6 +76,21 @@ export const AuthProvider = ({ children }) => {
   const updateProfile = async (profileData) => {
     setLoading(true);
     try {
+      // Đối với Moderator/Staff và Admin trên Web: Backend chỉ hỗ trợ PATCH /members/me cho MEMBER.
+      // Nếu user hiện tại không phải Member, cập nhật phiên làm việc cục bộ mà không gọi /members/me để tránh 403.
+      if (user && !isMemberRole(user.role || user.authorities)) {
+        const currentUser = user;
+        const updated = {
+          ...currentUser,
+          ...profileData,
+          name: profileData.fullName || profileData.name || currentUser.name,
+          fullName: profileData.fullName || profileData.name || currentUser.fullName,
+          phone: profileData.phone !== undefined ? profileData.phone : currentUser.phone,
+        };
+        saveUser(updated);
+        setUser(updated);
+        return updated;
+      }
       const updatedUser = await authService.updateProfile(profileData);
       setUser(updatedUser);
       return updatedUser;

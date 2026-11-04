@@ -47,7 +47,7 @@ function ScopedSession({ user, warehouse, children }) {
   const scope = useMemo(
     () => ({
       userId: user?.accountId || user?.id,
-      warehouseId: warehouse.id || (isFixtureMode ? 'warehouse-a' : null),
+      warehouseId: user?.warehouseId || warehouse.id || (isFixtureMode ? 'warehouse-a' : null),
     }),
     [user, warehouse.id],
   );

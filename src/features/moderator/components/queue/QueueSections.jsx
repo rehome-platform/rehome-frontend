@@ -128,11 +128,17 @@ export function QueueTaskRow({ item, isFocused, isSelected, toggleSelectRow, isM
         {item.typeLabel}
       </td>
       <td className="py-3 px-3 font-medium text-[#191C19]">
-        {item.formId || item.orderId || item.queueId}
+        {linkTarget ? (
+          <Link to={linkTarget} className="text-[#006B2C] hover:underline font-bold">
+            {item.orderNo || item.formId || item.orderId || item.queueId}
+          </Link>
+        ) : (
+          item.orderNo || item.formId || item.orderId || item.queueId
+        )}
         {isFocused && <span className="ml-2 inline-block rounded bg-primary px-2 py-1 text-[10px] text-white">Việc vừa mở</span>}
       </td>
       <td className="py-3 px-3 text-[#414942]">
-        {item.name || item.memberName || '—'}
+        {item.buyerName || item.name || item.memberName || '—'}
       </td>
       <td className="py-3 px-3 text-[#5f5f5f]">
         {item.formattedTime}
@@ -163,16 +169,26 @@ export function QueueTaskRow({ item, isFocused, isSelected, toggleSelectRow, isM
             </Button>
           )}
           {isMine && (
-            <button
-              type="button"
-              onClick={() => {
-                setFeedback?.(null);
-                setReleaseTarget(item);
-              }}
-              className="text-[11px] py-1.5 px-3 border border-[#8a8a8a] bg-white text-[#2b2b2b] hover:bg-[#f4f4f4] rounded font-semibold transition-colors"
-            >
-              Nhả việc
-            </button>
+            <>
+              {linkTarget && (
+                <Link
+                  to={linkTarget}
+                  className="text-[11px] py-1.5 px-3 bg-[#006B2C] text-white hover:bg-[#005221] font-semibold rounded inline-flex items-center gap-1 shadow-sm transition-colors"
+                >
+                  {item.type === 'PACKING' ? 'Đóng gói →' : 'Mở việc →'}
+                </Link>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setFeedback?.(null);
+                  setReleaseTarget(item);
+                }}
+                className="text-[11px] py-1.5 px-3 border border-[#8a8a8a] bg-white text-[#2b2b2b] hover:bg-[#f4f4f4] rounded font-semibold transition-colors"
+              >
+                Nhả việc
+              </button>
+            </>
           )}
           {isClaimedByOther && (
             <button

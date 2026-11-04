@@ -8,102 +8,91 @@ import { isFixtureMode } from '../config/warehouseContract.js';
 import { callBackend } from './warehouseTransport.js';
 import { warehouseInboxMockApi } from './moderatorMockData.js';
 
+function parseListResponse(res, errorMessage = 'Dữ liệu trả về không hợp lệ.') {
+  if (Array.isArray(res)) {
+    return { data: res, total: res.length };
+  }
+  if (res && Array.isArray(res.content)) {
+    return { data: res.content, total: res.totalElements ?? res.content.length };
+  }
+  if (res && Array.isArray(res.data)) {
+    return { data: res.data, total: res.total ?? res.data.length };
+  }
+  if (res && Array.isArray(res.items)) {
+    return { data: res.items, total: res.total ?? res.items.length };
+  }
+  throw new Error(errorMessage);
+}
+
 export const warehouseInboxService = {
   /**
    * API 110 / UC-48 / F-091: Lấy danh sách hội thoại chung trong kho
    */
   getConversations: async (params = {}, options = {}) => {
-    const fallback = () => warehouseInboxMockApi.getConversations(params);
-    if (isFixtureMode) return fallback();
+    if (isFixtureMode) return warehouseInboxMockApi.getConversations(params);
 
-    try {
-      const res = await callBackend(
-        {
-          method: 'get',
-          url: API_ENDPOINTS.MODERATOR.WAREHOUSE_INBOX,
-          params,
-        },
-        { fallback, signal: options?.signal }
-      );
+    const res = await callBackend(
+      {
+        method: 'get',
+        url: API_ENDPOINTS.MODERATOR.WAREHOUSE_INBOX,
+        params,
+      },
+      { signal: options?.signal }
+    );
 
-      if (res && Array.isArray(res.data)) return res;
-      if (Array.isArray(res)) return { data: res, total: res.length };
-      if (res && Array.isArray(res.items)) return { data: res.items, total: res.total || res.items.length };
-      return fallback();
-    } catch (err) {
-      if (fallback) return fallback();
-      throw err;
-    }
+    return parseListResponse(res, 'Dữ liệu hộp thư không hợp lệ.');
   },
 
   /**
    * Lấy chi tiết một hội thoại
    */
   getConversationDetail: async (convId, options = {}) => {
-    const fallback = () => warehouseInboxMockApi.getConversationDetail(convId);
-    if (isFixtureMode) return fallback();
+    if (isFixtureMode) return warehouseInboxMockApi.getConversationDetail(convId);
 
-    try {
-      const res = await callBackend(
-        {
-          method: 'get',
-          url: API_ENDPOINTS.MODERATOR.WAREHOUSE_INBOX_DETAIL(convId),
-        },
-        { fallback, signal: options?.signal }
-      );
-      return res?.data || res || fallback();
-    } catch (err) {
-      if (fallback) return fallback();
-      throw err;
-    }
+    const res = await callBackend(
+      {
+        method: 'get',
+        url: API_ENDPOINTS.MODERATOR.WAREHOUSE_INBOX_DETAIL(convId),
+      },
+      { signal: options?.signal }
+    );
+    return res?.data || res;
   },
 
   /**
    * API 110 / F-091: Gửi tin nhắn trả lời Member
+   * Backend Contract: SendMessageRequest { content: string }
    */
   sendMessage: async (convId, text, moderatorName = 'Nguyễn Văn A', options = {}) => {
-    const fallback = () => warehouseInboxMockApi.sendMessage(convId, text, moderatorName);
-    if (isFixtureMode) return fallback();
+    if (isFixtureMode) return warehouseInboxMockApi.sendMessage(convId, text, moderatorName);
 
-    try {
-      const res = await callBackend(
-        {
-          method: 'post',
-          url: API_ENDPOINTS.MODERATOR.SEND_INBOX_MESSAGE(convId),
-          data: {
-            text,
-            senderName: `Moderator ${moderatorName}`,
-          },
+    const res = await callBackend(
+      {
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.SEND_INBOX_MESSAGE(convId),
+        data: {
+          content: text,
         },
-        { fallback, signal: options?.signal }
-      );
-      return res?.data || res || fallback();
-    } catch (err) {
-      if (fallback) return fallback();
-      throw err;
-    }
+      },
+      { signal: options?.signal }
+    );
+    return res?.data || res;
   },
 
   /**
    * Đánh dấu hoàn tất hội thoại
    */
   markAsDone: async (convId, options = {}) => {
-    const fallback = () => warehouseInboxMockApi.markAsDone(convId);
-    if (isFixtureMode) return fallback();
+    if (isFixtureMode) return warehouseInboxMockApi.markAsDone(convId);
 
-    try {
-      const res = await callBackend(
-        {
-          method: 'post',
-          url: API_ENDPOINTS.MODERATOR.MARK_INBOX_DONE(convId),
-        },
-        { fallback, signal: options?.signal }
-      );
-      return res?.data || res || fallback();
-    } catch (err) {
-      if (fallback) return fallback();
-      throw err;
-    }
+    const res = await callBackend(
+      {
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.MARK_INBOX_DONE(convId),
+      },
+      { signal: options?.signal }
+    );
+    return res?.data || res;
   },
 };
 

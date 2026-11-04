@@ -48,10 +48,17 @@ export const API_ENDPOINTS = {
   MEMBER: {
     ME: "/members/me",
     CODE: "/members/me/code",
+    MY_PRODUCTS: "/products/mine",
+    DECIDE_END_OF_TERM: (id) => `/end-of-term-decisions/${id}/decide`,
+    CONFIRM_RECEIPT: (id) => `/consignment-receipts/${id}/confirm`,
   },
 
   // 2. Moderator (Nhân viên vận hành kho & Kiểm duyệt viên tại chi nhánh kho) - API 25 -> 48
   MODERATOR: {
+    // Ký gửi lại & Xử lý cuối kỳ (KD-11)
+    RECONSIGN_TERMS: (decisionId) => `/end-of-term-decisions/${moderatorId(decisionId)}/re-consign-terms`,
+    PENDING_PRICING: "/end-of-term-decisions/pending-pricing",
+    CONFIRM_RECEIPT: (id) => `/consignment-receipts/${moderatorId(id)}/confirm`,
     // API 25, 26, 27: Quầy tiếp nhận & Tra cứu Member
     COUNTER_LOOKUP: "/counter/lookup",
     MY_WAREHOUSES: "/warehouses/moderator",
@@ -102,7 +109,7 @@ export const API_ENDPOINTS = {
     CREATE_GHN_SHIPMENT: (orderId) => `/orders/${moderatorId(orderId)}/shipment`,
 
     // Xử lý hàng trả
-    RETURNS: "/return-requests",
+    RETURNS: "/return-requests/queue",
     RETURN_QUEUE: "/return-requests/queue",
     RETURN_DETAIL: (id) => `/return-requests/${moderatorId(id)}/detail`,
     APPROVE_RETURN: (id) => `/return-requests/${moderatorId(id)}/approve`,
@@ -110,15 +117,21 @@ export const API_ENDPOINTS = {
     INSPECT_RETURN: (id) => `/return-requests/${moderatorId(id)}/inspect`,
     RESOLVE_RETURN: (id) => `/return-requests/${moderatorId(id)}/resolve`,
     REPORT_COUNTERFEIT: (id) => `/return-requests/${moderatorId(id)}/flag-counterfeit`,
+    FLAG_COUNTERFEIT: (id) => `/return-requests/${moderatorId(id)}/flag-counterfeit`,
+    COUNTERFEIT_CONCLUSION: (id) => `/return-requests/${moderatorId(id)}/counterfeit-conclusion`,
+    MARK_LOST: (id) => `/return-requests/${moderatorId(id)}/mark-lost`,
+    DEGRADED_CASES: "/degraded-item-cases",
+    CREATE_DEGRADED_CASE: "/degraded-item-cases",
+    DEGRADED_CASE_DETAIL: (id) => `/degraded-item-cases/${moderatorId(id)}`,
 
     // Xác minh tổ chức & Duyệt đổi pháp lý
-    VERIFICATION_QUEUE: "/organizations/verifications",
-    ORG_VERIFICATION_DETAIL: (id) => `/organizations/${moderatorId(id)}/verification`,
-    APPROVE_ORG: (id) => `/organizations/${moderatorId(id)}/verify`,
-    REJECT_ORG: (id) => `/organizations/${moderatorId(id)}/reject`,
-    LEGAL_CHANGES: "/organizations/legal-change-requests",
-    APPROVE_LEGAL_CHANGE: (id) => `/organizations/legal-change-requests/${moderatorId(id)}/approve`,
-    REJECT_LEGAL_CHANGE: (id) => `/organizations/legal-change-requests/${moderatorId(id)}/reject`,
+    VERIFICATION_QUEUE: "/queues?type=ORG_VERIFICATION",
+    ORG_VERIFICATION_DETAIL: (id) => `/api/organizations/${moderatorId(id)}/verification`,
+    APPROVE_ORG: (id) => `/api/organizations/${moderatorId(id)}/verify`,
+    REJECT_ORG: (id) => `/api/organizations/${moderatorId(id)}/reject`,
+    LEGAL_CHANGES: "/queues?type=LEGAL_CHANGE",
+    APPROVE_LEGAL_CHANGE: (id) => `/api/organizations/legal-change-requests/${moderatorId(id)}/approve`,
+    REJECT_LEGAL_CHANGE: (id) => `/api/organizations/legal-change-requests/${moderatorId(id)}/reject`,
 
     // Báo cáo vi phạm nội dung
     VIOLATION_REPORTS: "/violation-reports",

@@ -30,13 +30,10 @@ describe('backend API configuration', () => {
     expect(API_ENDPOINTS.ADMIN.DASHBOARD).toBe('/api/admin/dashboard');
   });
 
-  it('enables backend mutations while exposing the missing Moderator order read separately', async () => {
+  it('enables backend mutations and order read', async () => {
     expect(operationReady('scan')).toBe(true);
     expect(operationReady('shipment')).toBe(true);
     expect(operationReady('handover')).toBe(true);
-    expect(operationReady('read')).toBe(false);
-    await expect(packingService.read('order-1', {
-      scope: { userId: 'mod-1', warehouseId: 'warehouse-1' },
-    })).rejects.toMatchObject({ status: 501, code: 'OPERATION_UNSUPPORTED' });
+    expect(operationReady('read')).toBe(true);
   });
 });

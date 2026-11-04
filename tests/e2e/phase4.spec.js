@@ -14,6 +14,6 @@ test('Phase 4 shows the unsupported moderator read without fixture details or sh
   await expect(page.getByText('Chưa thể xem chi tiết đơn hàng để đóng gói. Vui lòng liên hệ quản trị viên.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Tạo vận đơn GHN', exact: true })).toHaveCount(0);
   await expect(page.getByText('Mô phỏng chụp ảnh kiện hàng')).toHaveCount(0);
-  await page.getByRole('link', { name: /Quay lại hàng đợi$/ }).focus();
-  await expect(page.getByRole('link', { name: /Quay lại hàng đợi$/ })).toBeFocused();
+  await page.getByRole('link', { name: /Quay lại hàng đợi/ }).focus();
+  await expect(page.getByRole('link', { name: /Quay lại hàng đợi/ })).toBeFocused();
 });
