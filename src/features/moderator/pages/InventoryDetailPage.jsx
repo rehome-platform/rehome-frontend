@@ -276,7 +276,7 @@ export default function InventoryDetailPage() {
                   <h3 className="text-sm font-bold text-amber-900">Khách đã chọn nhận lại cuối kỳ (miễn phí)</h3>
                 </div>
                 <p className="text-xs text-amber-800">
-                  Khách đã chọn nhận lại hàng ngày 09/10 — còn 5 ngày đến quầy lấy. Quá 30 ngày không lấy sẽ thành hàng vô thừa nhận.
+                  {`     Khách đã chọn nhận lại hàng ${moment(data.takeBackDate).format('DD/MM/YYYY')} — còn ${data.daysToTakeBack}còn 5 ngày đến quầy lấy. Quá 30 ngày không lấy sẽ thành hàng vô thừa `}nhận.
                 </p>
               </div>
               <Link to="/moderator/counter">
@@ -286,71 +286,6 @@ export default function InventoryDetailPage() {
               </Link>
             </div>
           )}
-
-          {/* BANNER XỬ LÝ CUỐI KỲ (L-02 · TK-02) */}
-
-          
-          {/* Cập nhật vị trí kệ mới (L-02 · TK-02) */}
-          <div className="rounded-2xl border border-[#c4c4c4] bg-white p-5 shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[#191C19]">Điều chuyển vị trí kệ mới</h3>
-              <span className="text-xs text-[#5f5f5f]">
-                Kệ hiện tại: <strong className="font-mono text-[#006B2C]">{data.shelfLocation || 'Chưa gán'}</strong>
-              </span>
-            </div>
-            <form onSubmit={handleShelfSubmit} className="flex flex-wrap items-center gap-3">
-              <input
-                type="text"
-                aria-label="Vị trí kệ mới"
-                placeholder="Ví dụ: B2-15"
-                value={shelf}
-                onChange={(e) => setShelf(e.target.value.toUpperCase())}
-                className="px-3.5 py-2 border border-[#c4c4c4] rounded-xl text-sm font-mono uppercase focus:outline-none focus:border-[#006B2C]"
-              />
-              <Button
-                type="submit"
-                disabled={!shelfValidation.valid || product.busy}
-                loading={product.busy}
-                className="bg-[#006B2C] text-white hover:bg-[#005221] font-bold text-xs py-2 px-4 rounded-xl shadow-sm"
-              >
-                Lưu vị trí kệ
-              </Button>
-            </form>
-            {shelfFeedback && (
-              <p className="text-xs text-[#006B2C] font-semibold">{shelfFeedback}</p>
-            )}
-          </div>
-
-          {/* Cập nhật vị trí kệ mới (L-02 · TK-02) */}
-          <div className="rounded-2xl border border-[#c4c4c4] bg-white p-5 shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[#191C19]">Điều chuyển vị trí kệ mới</h3>
-              <span className="text-xs text-[#5f5f5f]">
-                Kệ hiện tại: <strong className="font-mono text-[#006B2C]">{data.shelfLocation || 'Chưa gán'}</strong>
-              </span>
-            </div>
-            <form onSubmit={handleShelfSubmit} className="flex flex-wrap items-center gap-3">
-              <input
-                type="text"
-                aria-label="Vị trí kệ mới"
-                placeholder="Ví dụ: B2-15"
-                value={shelf}
-                onChange={(e) => setShelf(e.target.value.toUpperCase())}
-                className="px-3.5 py-2 border border-[#c4c4c4] rounded-xl text-sm font-mono uppercase focus:outline-none focus:border-[#006B2C]"
-              />
-              <Button
-                type="submit"
-                disabled={!shelfValidation.valid || product.busy}
-                loading={product.busy}
-                className="bg-[#006B2C] text-white hover:bg-[#005221] font-bold text-xs py-2 px-4 rounded-xl shadow-sm"
-              >
-                Lưu vị trí kệ
-              </Button>
-            </form>
-            {shelfFeedback && (
-              <p className="text-xs text-[#006B2C] font-semibold">{shelfFeedback}</p>
-            )}
-          </div>
 
           {/* Bổ sung ảnh (nếu được hỗ trợ) */}
           {data.allowedActions?.includes('ADD_PHOTOS') && (

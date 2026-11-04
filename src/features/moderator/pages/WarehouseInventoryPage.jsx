@@ -177,8 +177,8 @@ export default function WarehouseInventoryPage() {
                 type="button"
                 onClick={() => change('status', tab.value)}
                 className={`text-xs px-3.5 py-1.5 rounded-lg border font-semibold transition-colors ${isActive
-                    ? 'bg-[#2b2b2b] text-white border-[#2b2b2b]'
-                    : 'bg-white text-[#4a4a4a] border-[#a8a8a8] hover:bg-[#f4f4f4]'
+                  ? 'bg-[#2b2b2b] text-white border-[#2b2b2b]'
+                  : 'bg-white text-[#4a4a4a] border-[#a8a8a8] hover:bg-[#f4f4f4]'
                   }`}
               >
                 {tab.label}
@@ -280,8 +280,8 @@ export default function WarehouseInventoryPage() {
                       <tr
                         key={item.sku}
                         className={`transition-colors ${isActionNeeded
-                            ? 'bg-[#f8f9fa] border-l-4 border-l-[#2b2b2b]'
-                            : 'hover:bg-[#fcfdfc]'
+                          ? 'bg-[#f8f9fa] border-l-4 border-l-[#2b2b2b]'
+                          : 'hover:bg-[#fcfdfc]'
                           }`}
                       >
                         <td className="py-3.5 px-4 font-mono font-bold text-[#191C19]">
@@ -360,11 +360,6 @@ export default function WarehouseInventoryPage() {
                 </tbody>
               </table>
             </div>
-          </div>
-
-          {/* Ghi chú wireframe TK-01 số 2 */}
-          <div className="p-3.5 rounded-xl border border-dashed border-[#9a9a9a] bg-[#fafafa] text-xs text-[#4a4a4a] leading-relaxed">
-            Các dòng viền đậm là món <strong className="text-[#191C19]">cần người xử lý</strong>: hết kỳ chờ Member quyết định, hoặc đã quá 30 ngày thành vô thừa nhận. Chúng nằm chung bảng chứ không tách tab riêng để Moderator nhìn một lần thấy hết.
           </div>
         </div>
       )}
@@ -487,7 +482,7 @@ export default function WarehouseInventoryPage() {
       </Modal>
 
 
-            {/* Modal Đổi kệ */}
+      {/* Modal Đổi kệ */}
       <Modal
         isOpen={!!shelfModal}
         onClose={() => setShelfModal(null)}

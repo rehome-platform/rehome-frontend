@@ -35,7 +35,13 @@ export function VerificationRejectDialog({ isRejectModalOpen, setIsRejectModalOp
   );
 }
 
-export function VerificationChecklist({ checklist, setChecklist, isEnterprise }) {
+export function VerificationChecklist({ checklist, setChecklist, isEnterprise, selectedOrg }) {
+  const docs = selectedOrg?.documents || [];
+  const rep = selectedOrg?.representative;
+  const isRepObject = rep && typeof rep === 'object';
+  const hasCccdInDocs = docs.some((d) => (d.title || d.docType || '').toLowerCase().includes('cccd'));
+  const missingCccd = !hasCccdInDocs && (!isRepObject || !rep.cccdFrontUrl || !rep.cccdBackUrl);
+
   return (
     <div className="border border-neutral rounded-xl divide-y divide-neutral bg-surface text-xs">
       {/* Bước 1: Tra MST */}
@@ -112,6 +118,11 @@ export function VerificationChecklist({ checklist, setChecklist, isEnterprise })
           <span className="font-semibold text-text">
             Đối chiếu tên trên CCCD với tên người đại diện ghi trên giấy phép
           </span>
+          {missingCccd && (
+            <span className="block text-[10px] text-error font-medium mt-1">
+              ⚠️ Hồ sơ thiếu ảnh CCCD. Nếu xác thực, hệ thống sẽ từ chối vì chưa đủ hồ sơ tối thiểu. Hãy nhấn &quot;Từ chối kèm lý do&quot; để tổ chức bổ sung.
+            </span>
+          )}
         </div>
       </label>
 
@@ -180,6 +191,19 @@ export function VerificationDocuments({ selectedOrg, setViewingDoc }) {
   const orgDisplayName = selectedOrg?.displayName || selectedOrg?.legalName || selectedOrg?.name || '—';
   const orgType = selectedOrg?.orgType || selectedOrg?.type || '—';
 
+  const docs = selectedOrg?.documents || [];
+  const rep = selectedOrg?.representative;
+  const isRepObject = rep && typeof rep === 'object';
+
+  const hasCccdInDocs = docs.some((d) =>
+    (d.title || d.docType || '').toLowerCase().includes('cccd')
+  );
+
+  const cccdFrontUrl = isRepObject ? rep.cccdFrontUrl : null;
+  const cccdBackUrl = isRepObject ? rep.cccdBackUrl : null;
+  const cccdNumber = isRepObject ? rep.cccdNumber : null;
+  const hasBothCccd = hasCccdInDocs || (Boolean(cccdFrontUrl) && Boolean(cccdBackUrl));
+
   return (
     <div className="lg:col-span-6 space-y-4 border-r border-neutral pr-0 lg:pr-5">
       <div>
@@ -223,20 +247,28 @@ export function VerificationDocuments({ selectedOrg, setViewingDoc }) {
 
       {/* Tệp đính kèm */}
       <div className="space-y-2">
-        <h2 className="text-base font-bold font-heading text-text">Tệp đính kèm</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-bold font-heading text-text">Tệp đính kèm</h2>
+          {!hasBothCccd && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-error-light text-error border border-error/30">
+              Thiếu ảnh CCCD
+            </span>
+          )}
+        </div>
         <p className="text-[11px] text-textSecondary">
-          Hai nhóm bắt buộc cho mọi loại tổ chức. Bấm "Xem ảnh" để kiểm tra con dấu và hiệu lực pháp lý.
+          Hai nhóm bắt buộc cho mọi loại tổ chức: 1. Giấy tờ pháp lý tổ chức, 2. Ảnh CCCD người đại diện. Bấm &quot;Xem ảnh&quot; để kiểm tra con dấu và hiệu lực pháp lý.
         </p>
       </div>
 
       <div className="border border-neutral rounded-xl overflow-hidden bg-surface text-xs divide-y divide-neutral">
-        {selectedOrg?.documents && selectedOrg.documents.length > 0 ? (
-          selectedOrg.documents.map((doc, idx) => {
+        {/* Nhóm 1: Các giấy tờ pháp lý của tổ chức */}
+        {docs.length > 0 ? (
+          docs.map((doc, idx) => {
             const docTitle = doc.title || doc.docType || `Giấy tờ #${idx + 1}`;
             const docInfo = doc.info || [doc.docNumber, doc.issueDate, doc.issuingAuthority].filter(Boolean).join(' · ') || 'Tài liệu pháp lý';
             const docUrl = doc.url || doc.fileUrl;
             return (
-              <div key={idx} className="p-3 flex items-center justify-between gap-3 hover:bg-background transition-colors">
+              <div key={`doc-${idx}`} className="p-3 flex items-center justify-between gap-3 hover:bg-background transition-colors">
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold shrink-0">
                     ✓
@@ -246,18 +278,91 @@ export function VerificationDocuments({ selectedOrg, setViewingDoc }) {
                     <div className="text-[10px] text-textSecondary truncate">{docInfo}</div>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setViewingDoc({ title: docTitle, info: docInfo, url: docUrl })}
-                  className="shrink-0 text-xs font-medium px-3 py-1.5 border border-neutral rounded-xl bg-surface hover:bg-background text-text transition-colors"
-                >
-                  Xem ảnh
-                </button>
+                {docUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => setViewingDoc({ title: docTitle, info: docInfo, url: docUrl })}
+                    className="shrink-0 text-xs font-medium px-3 py-1.5 border border-neutral rounded-xl bg-surface hover:bg-background text-text transition-colors"
+                  >
+                    Xem ảnh
+                  </button>
+                ) : (
+                  <span className="shrink-0 text-[10px] text-textSecondary px-2 py-1 bg-neutral-light rounded-lg">Không có tệp</span>
+                )}
               </div>
             );
           })
         ) : (
-          <div className="p-4 text-center text-textSecondary">Chưa có tệp đính kèm.</div>
+          <div className="p-4 text-center text-textSecondary">Chưa có giấy tờ pháp lý.</div>
+        )}
+
+        {/* Nhóm 2: Ảnh CCCD người đại diện (hiển thị khi chưa có trong danh sách docs) */}
+        {!hasCccdInDocs && (
+          <>
+            {/* CCCD mặt trước */}
+            <div className={`p-3 flex items-center justify-between gap-3 transition-colors ${!cccdFrontUrl ? 'bg-error/5' : 'hover:bg-background'}`}>
+              <div className="flex items-center gap-3 min-w-0">
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${cccdFrontUrl ? 'bg-primary text-white' : 'bg-error text-white'}`}>
+                  {cccdFrontUrl ? '✓' : '!'}
+                </span>
+                <div className="min-w-0">
+                  <div className="font-bold text-text truncate">CCCD mặt trước (Người đại diện)</div>
+                  <div className={`text-[10px] truncate ${cccdFrontUrl ? 'text-textSecondary' : 'text-error font-medium'}`}>
+                    {cccdFrontUrl ? (cccdNumber ? `Số CCCD: ${cccdNumber}` : 'Ảnh mặt trước CCCD') : 'Chưa nộp ảnh CCCD mặt trước (bắt buộc)'}
+                  </div>
+                </div>
+              </div>
+              {cccdFrontUrl ? (
+                <button
+                  type="button"
+                  onClick={() => setViewingDoc({
+                    title: 'CCCD mặt trước (Người đại diện)',
+                    info: cccdNumber ? `Số CCCD: ${cccdNumber}` : 'CCCD mặt trước',
+                    url: cccdFrontUrl
+                  })}
+                  className="shrink-0 text-xs font-medium px-3 py-1.5 border border-neutral rounded-xl bg-surface hover:bg-background text-text transition-colors"
+                >
+                  Xem ảnh
+                </button>
+              ) : (
+                <span className="shrink-0 text-[10px] font-semibold px-2 py-1 rounded-lg bg-error-light text-error">
+                  Thiếu tệp
+                </span>
+              )}
+            </div>
+
+            {/* CCCD mặt sau */}
+            <div className={`p-3 flex items-center justify-between gap-3 transition-colors ${!cccdBackUrl ? 'bg-error/5' : 'hover:bg-background'}`}>
+              <div className="flex items-center gap-3 min-w-0">
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${cccdBackUrl ? 'bg-primary text-white' : 'bg-error text-white'}`}>
+                  {cccdBackUrl ? '✓' : '!'}
+                </span>
+                <div className="min-w-0">
+                  <div className="font-bold text-text truncate">CCCD mặt sau (Người đại diện)</div>
+                  <div className={`text-[10px] truncate ${cccdBackUrl ? 'text-textSecondary' : 'text-error font-medium'}`}>
+                    {cccdBackUrl ? (formatRepresentative(rep) !== '—' ? `Người đại diện: ${formatRepresentative(rep)}` : 'Ảnh mặt sau CCCD') : 'Chưa nộp ảnh CCCD mặt sau (bắt buộc)'}
+                  </div>
+                </div>
+              </div>
+              {cccdBackUrl ? (
+                <button
+                  type="button"
+                  onClick={() => setViewingDoc({
+                    title: 'CCCD mặt sau (Người đại diện)',
+                    info: formatRepresentative(rep) !== '—' ? `Người đại diện: ${formatRepresentative(rep)}` : 'CCCD mặt sau',
+                    url: cccdBackUrl
+                  })}
+                  className="shrink-0 text-xs font-medium px-3 py-1.5 border border-neutral rounded-xl bg-surface hover:bg-background text-text transition-colors"
+                >
+                  Xem ảnh
+                </button>
+              ) : (
+                <span className="shrink-0 text-[10px] font-semibold px-2 py-1 rounded-lg bg-error-light text-error">
+                  Thiếu tệp
+                </span>
+              )}
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -287,44 +392,60 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
                 </td>
               </tr>
             ) : (
-              legalChanges.map((chg) => (
-                <tr key={chg.id} className="hover:bg-background/60 transition-colors">
-                  <td className="py-3 px-3 font-bold text-text">{chg.orgName}</td>
-                  <td className="py-3 px-3 font-semibold text-primary">{chg.fieldChanged || chg.field}</td>
-                  <td className="py-3 px-3">
-                    <span className="text-textSecondary line-through mr-2">{chg.oldValue}</span>
-                    <span className="font-bold text-text">→ {chg.newValue}</span>
-                  </td>
-                  <td className="py-3 px-3 text-textSecondary">{chg.submittedAt}</td>
-                  <td className="py-3 px-3 font-semibold">
-                    {chg.status === 'PENDING' ? (
-                      <Badge variant="warning">Chờ duyệt</Badge>
-                    ) : (
-                      <Badge variant="success">Đã duyệt</Badge>
-                    )}
-                  </td>
-                  <td className="py-3 px-3 text-right">
-                    {chg.status === 'PENDING' && (
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => (handleRejectLegalChange ? handleRejectLegalChange(chg.id) : null)}
-                          className="text-xs font-medium px-3 py-1.5 rounded-xl bg-error text-white hover:bg-red-700 transition-colors shadow-sm"
-                        >
-                          Từ chối
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleApproveLegalChange(chg.id)}
-                          className="text-xs font-medium px-3 py-1.5 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors shadow-sm"
-                        >
-                          Duyệt đổi pháp lý
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))
+              legalChanges.map((chg) => {
+                const targetRequestId = chg.requestId || chg.refId || chg.id;
+                return (
+                  <tr key={chg.queueItemId || chg.id} className="hover:bg-background/60 transition-colors">
+                    <td className="py-3 px-3 font-bold text-text">{chg.orgName}</td>
+                    <td className="py-3 px-3 font-semibold text-primary">{chg.fieldChanged || chg.field}</td>
+                    <td className="py-3 px-3">
+                      <span className="text-textSecondary line-through mr-2">{chg.oldValue}</span>
+                      <span className="font-bold text-text">→ {chg.newValue}</span>
+                    </td>
+                    <td className="py-3 px-3 text-textSecondary">{chg.submittedAt}</td>
+                    <td className="py-3 px-3 font-semibold">
+                      {chg.status === 'PENDING' ? (
+                        <Badge variant="warning">Chờ duyệt</Badge>
+                      ) : chg.status === 'REJECTED' ? (
+                        <Badge variant="error">Bị từ chối</Badge>
+                      ) : (
+                        <Badge variant="success">Đã duyệt</Badge>
+                      )}
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      {chg.status === 'PENDING' && (
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const reason = typeof window !== 'undefined' && window.prompt
+                                ? window.prompt('Nhập lý do từ chối yêu cầu đổi pháp lý:', 'Thông tin pháp lý không hợp lệ')
+                                : 'Thông tin pháp lý không hợp lệ';
+                              if (reason !== null && reason.trim()) {
+                                handleRejectLegalChange?.(targetRequestId, reason.trim());
+                              }
+                            }}
+                            className="text-xs font-medium px-3 py-1.5 rounded-xl bg-error text-white hover:bg-red-700 transition-colors shadow-sm"
+                          >
+                            Từ chối
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (typeof window === 'undefined' || !window.confirm || window.confirm(`Bạn có chắc muốn duyệt thay đổi pháp lý cho ${chg.orgName || 'tổ chức này'}?`)) {
+                                handleApproveLegalChange?.(targetRequestId);
+                              }
+                            }}
+                            className="text-xs font-medium px-3 py-1.5 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors shadow-sm"
+                          >
+                            Duyệt đổi pháp lý
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

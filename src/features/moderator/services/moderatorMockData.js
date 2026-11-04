@@ -573,6 +573,11 @@ export const orgVerificationService = {
     return legalChangesData.find((chg) => chg.id === changeId);
   },
 
+  async getLegalChangeDetail(changeId) {
+    await delay();
+    return legalChangesData.find((chg) => chg.id === changeId);
+  },
+
   async getOrgDetail(orgId) {
     await delay();
     return orgsQueueData.find((org) => org.id === orgId);

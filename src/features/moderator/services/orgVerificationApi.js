@@ -62,6 +62,22 @@ export const orgVerificationService = {
   },
 
   /**
+   * API 131 / F-140: Lấy chi tiết 1 yêu cầu thay đổi thông tin pháp lý
+   */
+  getLegalChangeDetail: async (changeId, options = {}) => {
+    if (isFixtureMode) return orgVerificationMockApi.getLegalChangeDetail?.(changeId);
+
+    const res = await callBackend(
+      {
+        method: 'get',
+        url: API_ENDPOINTS.MODERATOR.LEGAL_CHANGE_DETAIL(changeId),
+      },
+      { signal: options?.signal }
+    );
+    return res?.data || res;
+  },
+
+  /**
    * API 128 / F-137: Lấy chi tiết hồ sơ xác minh của tổ chức
    */
   getOrgDetail: async (orgId, options = {}) => {
