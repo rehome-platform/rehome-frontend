@@ -2,57 +2,73 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrencyVND } from '../../../utils/formatters.js';
 import { Button, Badge } from '../../../components/common/index.js';
-import { useAuth } from '../../../context/AuthContext.jsx';
-import authService from '../../auth/services/auth.service.js';
+import adminApi from '../services/adminApi.js';
 import AdminOverviewView from '../components/AdminOverviewView.jsx';
 
 /**
  * Trang Dashboard Điều Hành & Quỹ Nền Tảng ReHome (Admin)
- * Chuẩn hóa 100% theo Mục 7 & Mục 8: "Luồng tiền & Nguồn thu của nền tảng" (sau Review 1)
- * Kết nối xác thực phân quyền thực tế với Backend API: GET /api/admin/dashboard
+ * Chuẩn hóa 100% Real Data:
+ * - Nối API backend thực tế: GET /api/admin/dashboard & GET /api/admin/dashboard/export
+ * - Phần trăm dưới lợi nhuận ròng (Net Profit Margin % = platformRevenue / revenue * 100%)
+ * - Empty State chuẩn khi backend chưa cung cấp API phân rã hoa hồng theo kỳ
+ * - Thống kê tồn kho thực tế từ backend
+ * - Đã loại bỏ dòng thông tin Admin tĩnh theo yêu cầu
  */
 export default function AdminDashboardPage() {
-  const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('fund'); // 'fund' | 'activities'
-  const [exporting, setExporting] = useState(false);
-  const [filterPeriod, setFilterPeriod] = useState('MONTH'); // 'TODAY' | 'WEEK' | 'MONTH' | 'ALL'
-  const [adminApiStatus, setAdminApiStatus] = useState({ loading: true, verified: false, message: '' });
 
+  // Tab: 'fund' (Dashboard & Quỹ) | 'revenue_report' (Báo cáo doanh thu) | 'activities' (Tăng trưởng)
+  const [activeTab, setActiveTab] = useState('fund');
+  const [exporting, setExporting] = useState(false);
+  const [filterPeriod, setFilterPeriod] = useState('MONTH'); // 'WEEK' | 'MONTH' | 'ALL'
+  const [loading, setLoading] = useState(true);
+
+  // Dữ liệu từ API GET /api/admin/dashboard
+  const [dashboardData, setDashboardData] = useState({
+    revenue: 0,
+    ordersCount: 0,
+    inventoryCount: 0,
+    avgServiceRating: 0,
+    walletBalanceHeld: 0,
+    platformRevenue: 0,
+    fundBalance: 0,
+    overdueTaskCount: 0,
+  });
+
+  // Tải dữ liệu dashboard thực tế từ backend
   useEffect(() => {
     let isMounted = true;
-    const verifyAdmin = async () => {
+
+    const loadData = async () => {
       try {
-        const res = await authService.checkAdminAccess();
-        if (isMounted) {
-          setAdminApiStatus({
-            loading: false,
-            verified: res.authorized,
-            message: res.message,
-          });
+        setLoading(true);
+        const dashRes = await adminApi.getDashboard();
+        if (isMounted && dashRes) {
+          setDashboardData(dashRes);
         }
       } catch (err) {
-        if (isMounted) {
-          setAdminApiStatus({
-            loading: false,
-            verified: false,
-            message: err.message || 'Không thể xác thực quyền Admin',
-          });
-        }
+        console.error('Lỗi tải dữ liệu dashboard:', err);
+      } finally {
+        if (isMounted) setLoading(false);
       }
     };
 
-    verifyAdmin();
+    loadData();
     return () => {
       isMounted = false;
     };
   }, []);
 
-  // Ba con số cốt lõi của Quỹ Nền Tảng (Mục 7)
+  // Tính tỷ suất lợi nhuận ròng (% dưới số tiền Lợi nhuận ròng)
+  const netProfitMargin = dashboardData.revenue > 0
+    ? ((dashboardData.platformRevenue / dashboardData.revenue) * 100).toFixed(1)
+    : '0.0';
+
+  // 4 Thẻ Quỹ & Dòng tiền thực tế từ backend
   const fundMetrics = [
     {
       label: 'Tiền đang giữ hộ (Holding)',
-      value: 142580000,
+      value: dashboardData.walletBalanceHeld || 0,
       description: 'Tổng số dư ví Member + Tiền đơn đang treo chưa hoàn thành',
       icon: 'lock_clock',
       iconBg: 'bg-[#FFF3E0]',
@@ -61,26 +77,27 @@ export default function AdminDashboardPage() {
     },
     {
       label: 'Doanh thu thực tế nền tảng',
-      value: 38450000,
+      value: dashboardData.platformRevenue || 0,
       description: 'Tổng hoa hồng lũy tiến (10-20%) + Phí rút hàng - Chi đền bù',
       icon: 'trending_up',
       iconBg: 'bg-[#E8F5E9]',
       iconColor: 'text-[#006B2C]',
       badge: 'Lợi nhuận ròng',
+      extraInfo: `${netProfitMargin}% tỷ suất lợi nhuận ròng`,
     },
     {
       label: 'Số dư quỹ nền tảng',
-      value: 181030000,
-      description: 'Tiền MoMo thực tế trong tài khoản hệ thống (Tiền giữ + Doanh thu)',
+      value: dashboardData.fundBalance || 0,
+      description: 'Tiền thực tế trong tài khoản hệ thống (Tiền giữ + Doanh thu)',
       icon: 'account_balance',
       iconBg: 'bg-[#E0F2F1]',
       iconColor: 'text-[#00685F]',
-      badge: 'MoMo Merchant',
+      badge: 'Cổng thanh toán',
     },
     {
       label: 'Đơn hàng đang xử lý tại kho',
-      value: '24 đơn',
-      description: '14 đơn chờ đóng gói GHN • 10 đơn đang trên đường giao',
+      value: `${dashboardData.ordersCount || 0} đơn`,
+      description: 'Đơn hàng đã thanh toán đang chuẩn bị đóng gói & vận chuyển',
       icon: 'local_shipping',
       iconBg: 'bg-[#EDE7F6]',
       iconColor: 'text-[#673AB7]',
@@ -88,136 +105,108 @@ export default function AdminDashboardPage() {
     },
   ];
 
-  // Chi tiết cơ cấu doanh thu theo Mục 8
-  const revenueBreakdown = [
-    {
-      source: 'Hoa hồng bán hàng (Kỳ 1: 10%)',
-      amount: 19800000,
-      count: '64 sản phẩm',
-      note: 'Bán trong 30 ngày đầu tại kho',
-    },
-    {
-      source: 'Hoa hồng bán hàng (Kỳ 2: 15%)',
-      amount: 12450000,
-      count: '28 sản phẩm',
-      note: 'Bán trong ngày 31 - 60',
-    },
-    {
-      source: 'Hoa hồng bán hàng (Kỳ 3: 20%)',
-      amount: 4700000,
-      count: '8 sản phẩm',
-      note: 'Bán trong ngày 61 - 90',
-    },
-    {
-      source: 'Phí rút hàng ngoài cửa sổ 7 ngày',
-      amount: 2500000,
-      count: '50 lượt rút',
-      note: '50.000 đ / lượt rút ngoài thời gian miễn phí',
-    },
-    {
-      source: 'Chi đền bù hàng xuống cấp (Khấu trừ)',
-      amount: -1000000,
-      count: '2 trường hợp',
-      note: 'Nền tảng chịu lỗ đền bù 50% theo quy định',
-    },
-  ];
+  // Xử lý xuất báo cáo Excel thật từ Backend API
+  const handleExportExcel = async () => {
+    try {
+      setExporting(true);
+      const today = new Date();
+      const thirtyDaysAgo = new Date(today);
+      thirtyDaysAgo.setDate(today.getDate() - 30);
 
-  // Bút toán sổ kép gần nhất trong hệ thống (Ghi sổ kép: Ví Member <-> Quỹ nền tảng)
-  const recentLedgerEntries = [
-    {
-      id: 'TX-89210',
-      time: '15/10/2026 13:45',
-      type: 'BÁN HÀNG HOÀN THÀNH',
-      orderCode: 'ORD-9821',
-      memberWallet: '+360.000 đ (Ví người bán)',
-      platformFund: '-360.000 đ (Quỹ chi trả)',
-      revenueEarned: '+40.000 đ (Hoa hồng 10%)',
-      status: 'SUCCESS',
-    },
-    {
-      id: 'TX-89209',
-      time: '15/10/2026 11:20',
-      type: 'MEMBER RÚT TIỀN',
-      orderCode: 'PAYOUT-4821',
-      memberWallet: '-500.000 đ (Khóa & trừ ví)',
-      platformFund: 'Giao dịch giả lập thành công',
-      revenueEarned: '0 đ',
-      status: 'SUCCESS',
-    },
-    {
-      id: 'TX-89205',
-      time: '15/10/2026 09:12',
-      type: 'PHÍ RÚT HÀNG KÝ GỬI',
-      orderCode: 'WD-1029',
-      memberWallet: '-50.000 đ (Trừ ví người gửi)',
-      platformFund: '+50.000 đ (Quỹ thu phí)',
-      revenueEarned: '+50.000 đ (Doanh thu sàn)',
-      status: 'SUCCESS',
-    },
-    {
-      id: 'TX-89190',
-      time: '14/10/2026 16:30',
-      type: 'HOÀN TIỀN TRẢ HÀNG HỢP LỆ',
-      orderCode: 'RET-3012',
-      memberWallet: '+280.000 đ (Ví người mua)',
-      platformFund: '-280.000 đ (Hoàn tiền 100%)',
-      revenueEarned: '0 đ (Hủy hoa hồng)',
-      status: 'SUCCESS',
-    },
-  ];
+      const fromStr = thirtyDaysAgo.toISOString().split('T')[0];
+      const toStr = today.toISOString().split('T')[0];
 
-  const handleExportExcel = () => {
-    setExporting(true);
-    setTimeout(() => {
+      const blob = await adminApi.exportDashboard(fromStr, toStr);
+
+      // Kích hoạt tải file xuống trình duyệt
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `dashboard_report_${today.toISOString().slice(0, 7)}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Lỗi xuất báo cáo Excel:', err);
+      alert('Không thể kết nối API xuất báo cáo Excel. Vui lòng kiểm tra lại quyền Admin hoặc kết nối mạng.');
+    } finally {
       setExporting(false);
-      alert('Đã xuất báo cáo Quỹ Nền Tảng & Doanh Thu ra file Excel thành công!');
-    }, 800);
+    }
   };
+
+  const totalStock = dashboardData.inventoryCount || 0;
 
   return (
     <div className="min-w-0 space-y-6">
-      {/* Tab Switcher: Quỹ & Doanh thu VS Hoạt động & Tăng trưởng */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#DDE5D9] pb-4">
+      {/* Tab Switcher: Quỹ & Doanh thu VS Báo cáo doanh thu chi tiết VS Hoạt động */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E2E8E0] pb-4">
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setActiveTab('fund')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${
-              activeTab === 'fund'
-                ? 'bg-[#006B2C] text-white shadow-xs'
-                : 'bg-white border border-[#DDE5D9] text-[#5B6776] hover:bg-[#F6F9F4] hover:text-[#006B2C]'
-            }`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${activeTab === 'fund'
+              ? 'bg-[#006B2C] text-white shadow-sm'
+              : 'bg-white border border-[#E2E8E0] text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
+              }`}
           >
             <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
             <span>Quỹ nền tảng & Doanh thu</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('revenue_report')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${activeTab === 'revenue_report'
+              ? 'bg-[#006B2C] text-white shadow-sm'
+              : 'bg-white border border-[#E2E8E0] text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
+              }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">table_chart</span>
+            <span>Báo cáo doanh thu theo kỳ</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('activities')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${
-              activeTab === 'activities'
-                ? 'bg-[#006B2C] text-white shadow-xs'
-                : 'bg-white border border-[#DDE5D9] text-[#5B6776] hover:bg-[#F6F9F4] hover:text-[#006B2C]'
-            }`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${activeTab === 'activities'
+              ? 'bg-[#006B2C] text-white shadow-sm'
+              : 'bg-white border border-[#E2E8E0] text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
+              }`}
           >
             <span className="material-symbols-outlined text-[18px]">insights</span>
             <span>Hoạt động & Tăng trưởng hệ thống</span>
           </button>
         </div>
+
+        {/* Nút xuất báo cáo Excel gọi API thật */}
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={handleExportExcel}
+            loading={exporting}
+            className="bg-[#00685F] hover:bg-[#005049] text-white text-xs shrink-0 rounded-xl px-4 py-2 shadow-xs"
+          >
+            <span className="material-symbols-outlined text-[18px] mr-1.5">file_download</span>
+            Xuất báo cáo Excel
+          </Button>
+        </div>
       </div>
 
-      {activeTab === 'activities' ? (
+      {/* Nội dung Tab Hoạt động & Tăng trưởng */}
+      {activeTab === 'activities' && (
         <AdminOverviewView onNavigateToAudit={() => navigate('/admin/audit-logs')} />
-      ) : (
-        <div className="space-y-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-extrabold font-heading text-[#191C19]">
-              Quỹ Nền Tảng & Tổng Quan Doanh Thu
-            </h1>
-          </div>
+      )}
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center bg-white border border-[#DDE5D9] rounded-xl p-1 text-xs font-medium">
+      {/* Nội dung Tab Báo cáo doanh thu chi tiết theo kỳ */}
+      {activeTab === 'revenue_report' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-extrabold text-[#191C19] font-heading">
+                Báo Cáo Doanh Thu Nền Tảng Theo Kỳ Kí Gửi
+              </h2>
+              <p className="text-xs text-[#717971] mt-0.5">
+                Doanh thu hoa hồng được chốt lũy tiến (10% - 15% - 20%) và chỉ tính cho sản phẩm đã bán thành công
+              </p>
+            </div>
+            <div className="flex items-center bg-white border border-[#E2E8E0] rounded-xl p-1 text-xs font-medium">
               <button
                 onClick={() => setFilterPeriod('WEEK')}
                 className={`px-3 py-1.5 rounded-lg transition-colors ${filterPeriod === 'WEEK' ? 'bg-[#006B2C] text-white' : 'text-[#717971]'}`}
@@ -237,159 +226,215 @@ export default function AdminDashboardPage() {
                 Tất cả
               </button>
             </div>
-
-            <Button
-              onClick={handleExportExcel}
-              loading={exporting}
-              className="bg-[#00685F] hover:bg-[#005049] text-white text-xs shrink-0"
-            >
-              <span className="material-symbols-outlined text-[18px] mr-1.5">file_download</span>
-              Xuất báo cáo Excel
-            </Button>
           </div>
-        </div>
 
-        {/* Backend Authorization Status & Real User Info */}
-        <div className="p-4 rounded-2xl bg-white border border-[#DDE5D9] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${adminApiStatus.verified ? 'bg-[#E8F5E9] text-[#006B2C]' : 'bg-[#FFF3E0] text-[#D97706]'}`}>
-              <span className="material-symbols-outlined text-xl">
-                {adminApiStatus.verified ? 'verified_user' : 'security'}
+          {/* Empty State cho Tab Báo Cáo Doanh Thu */}
+          <div className="bg-white rounded-2xl border border-[#E2E8E0] p-12 text-center flex flex-col items-center justify-center shadow-xs">
+            <div className="w-16 h-16 rounded-2xl bg-[#E8F5E9] text-[#006B2C] flex items-center justify-center mb-4">
+              <span className="material-symbols-outlined text-3xl font-light">
+                query_stats
               </span>
             </div>
-            <div className="min-w-0 break-words">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-bold text-[#191C19]">Tài khoản Admin: {user?.fullName || user?.name || user?.email}</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7]">
-                  {user?.authorities || 'ROLE_ADMIN'}
-                </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#E0F2F1] text-[#00685F]">
-                  Mã: {user?.memberCode || 'MB-ADMIN'}
-                </span>
-              </div>
-              {!adminApiStatus.loading && !adminApiStatus.verified && (
-                <p role="alert" className="text-[11px] text-[#717971] mt-0.5">
-                  Cảnh báo phân quyền: {adminApiStatus.message}
-                </p>
-              )}
+            <h3 className="text-base font-bold text-[#191C19] font-heading">
+              Chưa có dữ liệu giao dịch chi tiết theo kỳ từ máy chủ
+            </h3>
+            <p className="text-xs text-[#717971] max-w-md mt-1 mb-4">
+              Tổng doanh thu nền tảng hiện tại là <strong className="text-[#006B2C]">{formatCurrencyVND(dashboardData.platformRevenue || 0)}</strong>. Dữ liệu phân rã hoa hồng chi tiết theo Kỳ 1, Kỳ 2, Kỳ 3 và danh sách sản phẩm bán thành công sẽ tự động hiển thị khi API máy chủ cung cấp dữ liệu phân bổ.
+            </p>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-[11px] text-[#717971]">
+              <span className="material-symbols-outlined text-sm text-[#006B2C]">info</span>
+              <span>Đang kết nối API: <code>GET /api/admin/dashboard</code></span>
             </div>
           </div>
-          <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] font-semibold bg-[#F0F5EE] text-[#006B2C] border border-[#C8E6C9]">
-              <span className={`w-2 h-2 rounded-full ${adminApiStatus.loading ? 'bg-[#FEA619] animate-pulse' : adminApiStatus.verified ? 'bg-[#006B2C]' : 'bg-[#D92D20]'}`}></span>
-              <span role="status">{adminApiStatus.loading ? 'Đang kiểm tra quyền' : adminApiStatus.verified ? 'Đã xác thực quyền quản trị' : 'Cần kiểm tra quyền truy cập'}</span>
-            </span>
-          </div>
         </div>
+      )}
 
-        {/* 4 Thẻ Quỹ & Dòng tiền */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {fundMetrics.map((m, idx) => (
-            <div
-              key={idx}
-              className="bg-white p-5 rounded-2xl border border-[#DDE5D9] shadow-sm flex flex-col justify-between hover:border-[#006B2C]/40 transition-all duration-200"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-[#F6F9F4] text-[#414942] border border-[#DDE5D9]">
-                  {m.badge}
-                </span>
-                <div className={`w-10 h-10 rounded-xl ${m.iconBg} ${m.iconColor} flex items-center justify-center shrink-0`}>
-                  <span className="material-symbols-outlined text-[22px]">{m.icon}</span>
-                </div>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-[#717971]">{m.label}</p>
-                <p className="text-2xl font-black font-heading text-[#191C19] mt-1 tracking-tight">
-                  {typeof m.value === 'number' ? formatCurrencyVND(m.value) : m.value}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Chi tiết nguồn thu & Bút toán sổ kép */}
-        <div className="grid min-w-0 grid-cols-1 gap-6">
-          {/* Cơ cấu doanh thu */}
-          <div className="min-w-0 bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#DDE5D9] pb-3">
-              <div>
-                <h3 className="text-base font-bold text-[#191C19]">Cơ Cấu Doanh Thu Nền Tảng</h3>
-                <p className="text-xs text-[#717971]">Phân bổ theo hoa hồng 3 kỳ & các nguồn thu khác</p>
-              </div>
-              <span className="text-xs font-extrabold text-[#006B2C]">
-                {formatCurrencyVND(38450000)}
-              </span>
-            </div>
-
-            <div className="space-y-3 pt-1">
-              {revenueBreakdown.map((item, idx) => (
-                <div key={idx} className="p-3 rounded-xl bg-[#F8FAF8] border border-[#E8EEE6] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="min-w-0 break-words">
-                    <p className="text-xs font-bold text-[#191C19]">{item.source}</p>
-                    <p className="text-[11px] text-[#717971] mt-0.5">{item.count} • {item.note}</p>
+      {/* Nội dung Tab Quỹ & Doanh thu Chính */}
+      {activeTab === 'fund' && (
+        <div className="space-y-6">
+          {/* 4 Thẻ Quỹ & Dòng tiền */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {fundMetrics.map((m, idx) => (
+              <div
+                key={idx}
+                className="bg-white p-5 rounded-2xl border border-[#E2E8E0] shadow-xs flex flex-col justify-between hover:border-[#006B2C]/40 transition-all duration-200"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-[#F8FAF8] text-[#414942] border border-[#E2E8E0]">
+                      {m.badge}
+                    </span>
+                    <div
+                      className={`w-10 h-10 rounded-xl ${m.iconBg} ${m.iconColor} flex items-center justify-center shrink-0`}
+                    >
+                      <span className="material-symbols-outlined text-[22px]">{m.icon}</span>
+                    </div>
                   </div>
-                  <span className={`shrink-0 text-xs font-black ${item.amount < 0 ? 'text-[#BA1A1A]' : 'text-[#006B2C]'}`}>
-                    {item.amount > 0 ? `+${formatCurrencyVND(item.amount)}` : formatCurrencyVND(item.amount)}
+                  <p className="text-xs font-medium text-[#717971]">{m.label}</p>
+                  <p className="text-2xl font-black font-heading text-[#191C19] mt-1 tracking-tight">
+                    {typeof m.value === 'number' ? formatCurrencyVND(m.value) : m.value}
+                  </p>
+                </div>
+
+                {/* Phần trăm dưới lợi nhuận ròng */}
+                {m.extraInfo ? (
+                  <div className="mt-3 pt-2.5 border-t border-[#F0F5EE] flex items-center gap-1.5 text-xs font-bold text-[#006B2C]">
+                    <span className="material-symbols-outlined text-[16px]">trending_up</span>
+                    <span>{m.extraInfo}</span>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-[#717971] mt-3 line-clamp-1">{m.description}</p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* 2 Khối Trung tâm: Cơ cấu Doanh thu & Thống kê Tồn kho theo kỳ */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Khối Cơ Cấu Doanh Thu Nền Tảng (7 cột) */}
+            <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-[#E2E8E0] shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between border-b border-[#E2E8E0] pb-3 mb-4">
+                <div>
+                  <h3 className="text-base font-bold text-[#191C19] font-heading">
+                    Cơ Cấu Doanh Thu Nền Tảng
+                  </h3>
+                  <p className="text-xs text-[#717971] mt-0.5">
+                    Tỷ trọng doanh thu theo hoa hồng Kỳ 1, Kỳ 2, Kỳ 3 & các nguồn thu khác
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActiveTab('revenue_report')}
+                  className="text-xs font-bold text-[#006B2C] hover:underline flex items-center gap-1"
+                >
+                  <span>Xem chi tiết báo cáo</span>
+                  <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                </button>
+              </div>
+
+              {/* Empty State Tinh Tế Cho Cơ Cấu Doanh Thu (chờ API phân rã) */}
+              <div className="p-8 my-auto rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center flex flex-col items-center justify-center">
+                <div className="w-14 h-14 rounded-2xl bg-[#E8F5E9] text-[#006B2C] flex items-center justify-center mb-3">
+                  <span className="material-symbols-outlined text-2xl">
+                    pie_chart
                   </span>
                 </div>
-              ))}
+                <h4 className="text-sm font-bold text-[#191C19]">
+                  Chưa có dữ liệu phân bổ theo kỳ từ máy chủ
+                </h4>
+                <p className="text-xs text-[#717971] max-w-sm mt-1 mb-4">
+                  Tính năng phân rã hoa hồng theo kỳ đang chờ hỗ trợ từ API máy chủ. Biểu đồ tròn sẽ tự động hiển thị ngay khi hệ thống cung cấp dữ liệu phân bổ.
+                </p>
+                <div className="px-4 py-2 rounded-xl bg-white border border-[#E2E8E0] shadow-2xs text-xs">
+                  <span className="text-[#717971] mr-1.5">Tổng doanh thu nền tảng:</span>
+                  <span className="font-extrabold text-[#006B2C]">
+                    {formatCurrencyVND(dashboardData.platformRevenue || 0)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-[#E2E8E0] text-[11px] text-[#717971] flex items-center justify-between">
+                <span>Số liệu doanh thu được tổng hợp tự động từ máy chủ ReHome.</span>
+              </div>
             </div>
 
+            {/* Thống kê sản phẩm đang tồn kho trong mỗi kỳ (5 cột) */}
+            <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-[#E2E8E0] shadow-xs flex flex-col justify-between">
+              <div className="border-b border-[#E2E8E0] pb-3 mb-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold text-[#191C19] font-heading">
+                    Tồn Kho Trong Kho Hàng
+                  </h3>
+                  <Badge variant="outline">Tổng: {totalStock} món</Badge>
+                </div>
+                <p className="text-xs text-[#717971] mt-0.5">
+                  Số lượng sản phẩm thực tế đang lưu tại hệ thống kho
+                </p>
+              </div>
+
+              {totalStock === 0 ? (
+                <div className="p-8 my-auto rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center flex flex-col items-center justify-center">
+                  <div className="w-12 h-12 rounded-xl bg-[#E0F2F1] text-[#00685F] flex items-center justify-center mb-2">
+                    <span className="material-symbols-outlined text-2xl">
+                      inventory_2
+                    </span>
+                  </div>
+                  <h4 className="text-xs font-bold text-[#191C19]">
+                    Kho hàng hiện chưa có sản phẩm tồn
+                  </h4>
+                  <p className="text-[11px] text-[#717971] mt-0.5">
+                    Số liệu sẽ cập nhật khi có sản phẩm được nhập kho.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="p-3.5 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-[#191C19]">Tổng sản phẩm trong kho</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C]">
+                          Đang lưu kho
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#717971] mt-0.5">Bao gồm hàng đang bán, giữ chỗ và chờ xử lý</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-lg font-black text-[#191C19] block">{totalStock}</span>
+                      <span className="text-[10px] font-semibold text-[#717971]">100% tồn kho</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] flex items-center justify-between text-xs">
+                    <span className="text-[#414942]">Đánh giá dịch vụ kho:</span>
+                    <span className="font-bold text-[#006B2C]">
+                      {dashboardData.avgServiceRating ? `${dashboardData.avgServiceRating} ★` : 'Chưa có đánh giá'}
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] flex items-center justify-between text-xs">
+                    <span className="text-[#414942]">Tác vụ quá hạn cần xử lý:</span>
+                    <span className={`font-bold ${dashboardData.overdueTaskCount > 0 ? 'text-[#DC2626]' : 'text-[#006B2C]'}`}>
+                      {dashboardData.overdueTaskCount || 0} việc
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-4 pt-3 border-t border-[#E2E8E0] text-[11px] text-[#717971] flex items-center justify-between">
+                <span>Hết 90 ngày: Gỡ khỏi sàn & gửi thông báo 30 ngày</span>
+              </div>
+            </div>
           </div>
 
           {/* Bút toán đối ứng sổ kép */}
-          <div className="min-w-0 bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#DDE5D9] pb-3">
+          <div className="bg-white p-6 rounded-2xl border border-[#E2E8E0] shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E2E8E0] pb-3">
               <div>
-                <h3 id="ledger-heading" className="text-base font-bold text-[#191C19]">Nhật Ký Ghi Sổ Kép (Quỹ → Ví Member)</h3>
+                <h3 className="text-base font-bold text-[#191C19]">
+                  Nhật Ký Ghi Sổ Kép (Quỹ Nền Tảng ↔ Ví Member)
+                </h3>
+                <p className="text-xs text-[#717971]">
+                  Mọi giao dịch thanh toán, rút tiền và hoa hồng được hạch toán đối ứng tự động
+                </p>
               </div>
               <Badge variant="success">Đối soát: Khớp 100%</Badge>
             </div>
 
-            <div role="region" aria-labelledby="ledger-heading" tabIndex={0} className="max-w-full overflow-x-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#006B2C]">
-              <table className="w-full min-w-[760px] text-left text-xs [overflow-wrap:anywhere]">
-                <thead>
-                  <tr className="border-b border-[#DDE5D9] text-[#717971] font-semibold bg-[#F8FAF8]">
-                    <th className="py-2.5 px-3">Thời gian / Mã</th>
-                    <th className="py-2.5 px-3">Loại giao dịch</th>
-                    <th className="py-2.5 px-3">Ví Member</th>
-                    <th className="py-2.5 px-3">Quỹ nền tảng</th>
-                    <th className="py-2.5 px-3 text-right">Doanh thu sàn</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#F0F4EE]">
-                  {recentLedgerEntries.map((e) => (
-                    <tr key={e.id} className="hover:bg-[#F9FBF9] transition-colors">
-                      <td className="py-3 px-3">
-                        <p className="font-bold text-[#191C19]">{e.id}</p>
-                        <p className="text-[10px] text-[#717971]">{e.time}</p>
-                      </td>
-                      <td className="py-3 px-3">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#E8F0FE] text-[#1967D2]">
-                          {e.type}
-                        </span>
-                        <p className="text-[10px] text-[#717971] mt-0.5">#{e.orderCode}</p>
-                      </td>
-                      <td className="py-3 px-3 font-semibold text-[#191C19]">
-                        {e.memberWallet}
-                      </td>
-                      <td className="py-3 px-3 text-[#414942]">
-                        {e.platformFund}
-                      </td>
-                      <td className="py-3 px-3 text-right font-bold text-[#006B2C]">
-                        {e.revenueEarned}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center flex flex-col items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-[#F1F5F9] text-[#64748B] flex items-center justify-center mb-2">
+                <span className="material-symbols-outlined text-2xl font-light">
+                  receipt_long
+                </span>
+              </div>
+              <h4 className="text-xs font-bold text-[#191C19]">
+                Chưa có bút toán ghi sổ kép phát sinh
+              </h4>
+              <p className="text-[11px] text-[#717971] mt-0.5 max-w-sm">
+                Các giao dịch hoàn thành và biến động số dư giữa Quỹ nền tảng và Ví thành viên sẽ hiển thị tự động tại đây.
+              </p>
             </div>
-
           </div>
         </div>
-      </div>
       )}
     </div>
   );
 }
-
