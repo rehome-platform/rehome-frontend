@@ -25,8 +25,8 @@ export function normalizeError(error) {
     422: 'Vui lòng kiểm tra thông tin nhập.',
   };
   return new Phase2Error(
-    messages[status] ||
-      body.message ||
+    body.message ||
+      messages[status] ||
       'Không thể kết nối máy chủ. Hãy tải lại trạng thái trước khi thử tiếp.',
     status,
     body.code || '',

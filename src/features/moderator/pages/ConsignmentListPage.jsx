@@ -88,11 +88,10 @@ export default function ConsignmentListPage() {
               role="tab"
               aria-selected={isSelected}
               onClick={() => handleTabChange(tab.key)}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                isSelected
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${isSelected
                   ? 'border-[#2b2b2b] bg-[#2b2b2b] text-white shadow-sm'
                   : 'border-[#a8a8a8] bg-white text-[#4a4a4a] hover:bg-[#F0F5EE]'
-              }`}
+                }`}
             >
               {tab.label}
             </button>

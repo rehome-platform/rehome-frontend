@@ -102,7 +102,28 @@ export function useOrgVerification() {
       );
 
       setOrgsQueue(enrichedQueue);
-      setLegalChanges(changesRes?.data || []);
+      const rawChanges = changesRes?.data || [];
+      const enrichedLegalChanges = rawChanges.map((item) => {
+        const changeRequestId = item.requestId || item.refId || item.id;
+        const formattedDate = item.submittedAt
+          || (item.createdAt ? new Date(item.createdAt).toLocaleDateString('vi-VN') : '—');
+
+        return {
+          ...item,
+          id: changeRequestId,
+          queueItemId: item.id,
+          requestId: changeRequestId,
+          refId: item.refId || changeRequestId,
+          orgName: item.orgName || item.organizationName || 'Tổ chức',
+          fieldChanged: item.fieldChanged || item.field || 'Thông tin pháp lý',
+          oldValue: item.oldValue || '—',
+          newValue: item.newValue || '—',
+          submittedAt: formattedDate,
+          status: item.status || 'PENDING',
+        };
+      });
+
+      setLegalChanges(enrichedLegalChanges);
     } catch (err) {
       setError('Không thể tải dữ liệu hồ sơ tổ chức.');
     } finally {
@@ -174,7 +195,9 @@ export function useOrgVerification() {
       setViewMode('LIST');
       setSelectedOrg(null);
     } catch (err) {
-      alert('Có lỗi xảy ra khi xác thực tổ chức.');
+      console.error('Lỗi khi xác thực tổ chức:', err);
+      const serverMsg = err?.message || err?.response?.data?.message;
+      alert(serverMsg ? `Có lỗi xảy ra khi xác thực tổ chức:\n${serverMsg}` : 'Có lỗi xảy ra khi xác thực tổ chức.');
     }
   };
 
@@ -190,7 +213,9 @@ export function useOrgVerification() {
       setSelectedOrg(null);
       alert('Đã từ chối hồ sơ kèm hướng dẫn bổ sung giấy tờ!');
     } catch (err) {
-      alert('Có lỗi xảy ra khi từ chối hồ sơ.');
+      console.error('Lỗi khi từ chối hồ sơ:', err);
+      const serverMsg = err?.message || err?.response?.data?.message;
+      alert(serverMsg ? `Có lỗi xảy ra khi từ chối hồ sơ:\n${serverMsg}` : 'Có lỗi xảy ra khi từ chối hồ sơ.');
     }
   };
 
@@ -202,7 +227,9 @@ export function useOrgVerification() {
       setViewMode('LIST');
       setSelectedChange(null);
     } catch (err) {
-      alert('Có lỗi xảy ra khi duyệt đổi pháp lý.');
+      console.error('Lỗi khi duyệt đổi pháp lý:', err);
+      const serverMsg = err?.message || err?.response?.data?.message;
+      alert(serverMsg ? `Có lỗi xảy ra khi duyệt đổi pháp lý:\n${serverMsg}` : 'Có lỗi xảy ra khi duyệt đổi pháp lý.');
     }
   };
 
@@ -214,7 +241,9 @@ export function useOrgVerification() {
       setViewMode('LIST');
       setSelectedChange(null);
     } catch (err) {
-      alert('Có lỗi xảy ra khi từ chối đổi pháp lý.');
+      console.error('Lỗi khi từ chối đổi pháp lý:', err);
+      const serverMsg = err?.message || err?.response?.data?.message;
+      alert(serverMsg ? `Có lỗi xảy ra khi từ chối đổi pháp lý:\n${serverMsg}` : 'Có lỗi xảy ra khi từ chối đổi pháp lý.');
     }
   };
 
@@ -250,7 +279,7 @@ export function useOrgVerification() {
     sections: {
       VerificationQueueTabs: { setActiveQueueTab, activeQueueTab, orgsQueue },
       VerificationQueueTable: { loading, orgsQueue, handleOpenDetail, activeQueueTab },
-      VerificationChecklist: { checklist, setChecklist, isEnterprise },
+      VerificationChecklist: { checklist, setChecklist, isEnterprise, selectedOrg },
       VerificationRejectDialog: { isRejectModalOpen, setIsRejectModalOpen, rejectReason, setRejectReason, handleConfirmReject },
     },
   };

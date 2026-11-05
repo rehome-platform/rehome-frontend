@@ -7,9 +7,208 @@ import {
   VerificationQueueTable,
   VerificationQueueTabs,
 } from '../components/verification/VerificationSections.jsx';
-import React from "react";
+import React, { useState, useEffect } from "react";
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 import { Button, Modal } from "../../../components/common/index.js";
+import baseApi from '../../../services/baseApi.js';
+import { API_BASE_URL } from '../../../configs/api.config.js';
+
+function isProtectedUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  if (url.startsWith('blob:') || url.startsWith('data:')) return false;
+  if (url.startsWith('/') || url.startsWith('api/')) return true;
+  if (url.includes('/legal-files/') || url.includes('/api/organizations/')) return true;
+  if (API_BASE_URL && url.startsWith(API_BASE_URL)) return true;
+  return false;
+}
+
+function AuthenticatedImage({ src, alt, className }) {
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [isPdf, setIsPdf] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    if (!src) {
+      setBlobUrl(null);
+      setIsPdf(false);
+      setError(false);
+      setLoading(false);
+      return;
+    }
+
+    let active = true;
+    let createdObjectUrl = null;
+
+    const lowerSrc = String(src).toLowerCase();
+    const isLikelyPdf = lowerSrc.endsWith('.pdf') || lowerSrc.includes('.pdf');
+
+    if (!isProtectedUrl(src)) {
+      setBlobUrl(src);
+      setIsPdf(isLikelyPdf);
+      setError(false);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(false);
+
+    baseApi
+      .get(src, { responseType: 'blob' })
+      .then(async (res) => {
+        if (!active) return;
+        const blob = res.data;
+        const contentType = (res.headers?.['content-type'] || blob?.type || '').toLowerCase();
+
+        if (contentType.includes('application/json')) {
+          console.error('Máy chủ trả về dữ liệu JSON thay vì tệp nhị phân:', await blob.text());
+          setError(true);
+          return;
+        }
+
+        const isPdfDocument = contentType.includes('application/pdf') || isLikelyPdf;
+        setIsPdf(isPdfDocument);
+
+        createdObjectUrl = URL.createObjectURL(blob);
+        setBlobUrl(createdObjectUrl);
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.error('Không thể tải tệp hình ảnh bảo mật:', err);
+        setError(true);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+      if (createdObjectUrl) {
+        URL.revokeObjectURL(createdObjectUrl);
+      }
+    };
+  }, [src, reloadKey]);
+
+  if (loading) {
+    return (
+      <div className="w-full h-72 flex flex-col items-center justify-center rounded-xl border border-neutral bg-background text-textSecondary text-xs gap-3">
+        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <span className="font-medium">Đang tải tài liệu bảo mật...</span>
+      </div>
+    );
+  }
+
+  if (error || !blobUrl) {
+    return (
+      <div className="w-full min-h-56 flex flex-col items-center justify-center rounded-xl border border-neutral bg-background text-textSecondary text-xs p-6 text-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-error/10 text-error flex items-center justify-center text-lg font-bold">
+          !
+        </div>
+        <div>
+          <span className="font-bold text-sm text-text block">Không thể hiển thị tài liệu</span>
+          <span className="text-[12px] text-textSecondary mt-1 block max-w-sm">
+            Tệp không tồn tại, phiên làm việc hết hạn hoặc định dạng không được hỗ trợ.
+          </span>
+        </div>
+        <div className="flex items-center gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => setReloadKey((k) => k + 1)}
+            className="px-4 py-1.5 text-xs font-semibold rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors shadow-sm"
+          >
+            Thử tải lại
+          </button>
+          {src && (
+            <a
+              href={src}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-neutral hover:bg-surface text-text transition-colors"
+            >
+              Mở liên kết gốc ↗
+            </a>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (isPdf) {
+    return (
+      <div className="space-y-3">
+        <div className="w-full h-[520px] rounded-xl overflow-hidden border border-neutral bg-neutral-light">
+          <iframe
+            src={`${blobUrl}#toolbar=1&navpanes=0`}
+            title={alt || 'Tài liệu PDF'}
+            className="w-full h-full border-0"
+          />
+        </div>
+        <div className="flex flex-wrap items-center justify-between text-xs text-textSecondary bg-surface p-3 rounded-xl border border-neutral gap-2">
+          <span className="flex items-center gap-1.5 font-medium text-text">
+            <span className="w-2 h-2 rounded-full bg-primary" />
+            Định dạng tài liệu: PDF
+          </span>
+          <div className="flex items-center gap-3">
+            <a
+              href={blobUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline font-semibold flex items-center gap-1"
+            >
+              Mở tab mới ↗
+            </a>
+            <span>·</span>
+            <a
+              href={blobUrl}
+              download={alt ? `${alt}.pdf` : 'tai-lieu.pdf'}
+              className="text-primary hover:underline font-semibold flex items-center gap-1"
+            >
+              Tải về máy ⬇
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="relative group flex items-center justify-center rounded-xl border border-neutral bg-background overflow-hidden min-h-[300px] max-h-[520px]">
+        <img
+          src={blobUrl}
+          alt={alt}
+          className={className || "w-full max-h-[480px] object-contain rounded-xl"}
+          onError={() => setError(true)}
+        />
+      </div>
+      <div className="flex flex-wrap items-center justify-between text-xs text-textSecondary bg-surface p-2.5 rounded-xl border border-neutral gap-2">
+        <span className="text-[11px] text-textSecondary">
+          Kiểm tra con dấu, chữ ký và thời hạn hiệu lực theo quy trình kiểm chứng
+        </span>
+        <div className="flex items-center gap-3">
+          <a
+            href={blobUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline font-semibold flex items-center gap-1"
+          >
+            Mở ảnh tab mới ↗
+          </a>
+          <span>·</span>
+          <a
+            href={blobUrl}
+            download={alt ? `${alt}.jpg` : 'hinh-anh.jpg'}
+            className="text-primary hover:underline font-semibold flex items-center gap-1"
+          >
+            Tải ảnh về ⬇
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /**
  * Trang Quản Lý & Xác Minh Hồ Sơ Tổ Chức Từ Thiện
@@ -51,22 +250,20 @@ export default function OrgVerificationPage() {
               <button
                 type="button"
                 onClick={() => model.setActiveMainTab('NEW_ORGS')}
-                className={`text-xs font-bold px-4 py-2 rounded-xl transition-all ${
-                  model.activeMainTab === 'NEW_ORGS'
+                className={`text-xs font-bold px-4 py-2 rounded-xl transition-all ${model.activeMainTab === 'NEW_ORGS'
                     ? 'bg-primary text-white shadow-sm'
                     : 'bg-surface text-textSecondary border border-neutral hover:bg-background hover:text-text'
-                }`}
+                  }`}
               >
                 Hồ sơ tổ chức ({model.orgsQueue.length})
               </button>
               <button
                 type="button"
                 onClick={() => model.setActiveMainTab('LEGAL_CHANGES')}
-                className={`text-xs font-bold px-4 py-2 rounded-xl transition-all ${
-                  model.activeMainTab === 'LEGAL_CHANGES'
+                className={`text-xs font-bold px-4 py-2 rounded-xl transition-all ${model.activeMainTab === 'LEGAL_CHANGES'
                     ? 'bg-primary text-white shadow-sm'
                     : 'bg-surface text-textSecondary border border-neutral hover:bg-background hover:text-text'
-                }`}
+                  }`}
               >
                 Yêu cầu đổi pháp lý ({model.legalChanges.filter((c) => c.status === 'PENDING').length})
               </button>
@@ -79,11 +276,6 @@ export default function OrgVerificationPage() {
 
                 {/* Bảng TC-01 */}
                 <VerificationQueueTable {...model.sections.VerificationQueueTable} />
-
-                {/* Ghi chú TC-01 */}
-                <div className="p-3.5 border border-dashed border-neutral rounded-xl text-xs leading-relaxed text-textSecondary bg-background">
-                  Cột <strong className="font-semibold text-text">Mã số thuế</strong> nằm ngay ở bảng vì nó quyết định cách xác minh: có mã số thuế thì tra được trên cổng thuế nhà nước (bước bắt buộc); không có — câu lạc bộ trường học, chi hội cấp xã — thì phải gọi điện và hỏi cơ quan cấp phép, mất nhiều thời gian hơn.
-                </div>
               </div>
             )}
 
@@ -162,11 +354,10 @@ export default function OrgVerificationPage() {
                     type="button"
                     disabled={!model.isChecklistComplete}
                     onClick={model.handleApproveOrg}
-                    className={`py-2.5 px-6 rounded-xl text-xs font-bold transition-all ${
-                      model.isChecklistComplete
+                    className={`py-2.5 px-6 rounded-xl text-xs font-bold transition-all ${model.isChecklistComplete
                         ? 'bg-primary text-white hover:bg-primary-hover shadow-sm cursor-pointer'
                         : 'bg-neutral-light text-textSecondary border border-neutral cursor-not-allowed'
-                    }`}
+                      }`}
                   >
                     Xác thực tổ chức
                   </button>
@@ -193,11 +384,12 @@ export default function OrgVerificationPage() {
           isOpen={!!model.viewingDoc}
           onClose={() => model.setViewingDoc(null)}
           title={model.viewingDoc ? model.viewingDoc.title : 'Xem tài liệu'}
+          maxWidth="max-w-4xl"
         >
           {model.viewingDoc && (
             <div className="space-y-3">
               <div className="text-xs text-textSecondary">{model.viewingDoc.info}</div>
-              <img
+              <AuthenticatedImage
                 src={model.viewingDoc.url}
                 alt={model.viewingDoc.title}
                 className="w-full max-h-[480px] object-contain rounded-xl border border-neutral bg-background"
