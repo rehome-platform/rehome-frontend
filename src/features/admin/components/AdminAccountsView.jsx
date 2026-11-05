@@ -1,22 +1,139 @@
-import React, { useState, useEffect } from 'react';
-import adminApi from '../services/adminApi.js';
+import React, { useState } from 'react';
 
 /**
- * View Quản lý Tài khoản ReHome (Admin)
- * Chế độ Strict Real Data: 100% dữ liệu thực từ Backend API GET /api/admin/accounts
- * Hỗ trợ sắp xếp theo Ngày tạo, Trạng thái, tìm kiếm và phân quyền khóa/mở khóa
+ * View Quản lý Tài khoản ReHome
+ * Thiết kế chính xác theo Google Stitch (Figma) Prototype:
+ * - Bảng danh sách tài khoản chuẩn xác (Member, Organizer, Moderator)
+ * - Bộ lọc tìm kiếm theo tên, email, sđt, vai trò, trạng thái
+ * - Màn hình Empty State khi tìm kiếm không ra kết quả
+ * - Side Drawer trượt "Chi tiết tài khoản" với dòng thời gian lịch sử khóa/mở khóa
+ * - Modal "Khóa tài khoản này?" với đếm ký tự (0/300) và xác thực lý do
  */
+// Dữ liệu người dùng mẫu chuẩn từ Stitch
+const initialAccounts = [
+  {
+    id: 'USR-101',
+    code: '849102',
+    name: 'Lê Hoàng Nam',
+    initials: 'LN',
+    email: 'nam.le@gmail.com',
+    phone: '0903 112 458',
+    role: 'Member',
+    createdAt: '12/06/2026',
+    status: 'LOCKED', // Bị khóa
+    history: [
+      {
+        date: '02/10/2026 14:20',
+        action: 'Khóa',
+        actor: 'Trần Minh Quân',
+        reason: 'Đăng bình luận xúc phạm nhiều lần trên các bài đăng quyên góp.',
+      },
+      {
+        date: '18/08/2026 09:10',
+        action: 'Mở khóa',
+        actor: 'Trần Minh Quân',
+        reason: 'Người dùng đã cam kết không tái phạm quy định cộng đồng.',
+      },
+    ],
+  },
+  {
+    id: 'USR-102',
+    code: '849103',
+    name: 'Nguyễn Thị Mai',
+    initials: 'NM',
+    email: 'mai.nguyen@gmail.com',
+    phone: '0918 245 771',
+    role: 'Member',
+    createdAt: '03/05/2026',
+    status: 'ACTIVE',
+    history: [
+      {
+        date: '30/09/2026 17:30',
+        action: 'Mở khóa',
+        actor: 'Trần Minh Quân',
+        reason: 'Hoàn tất xác minh khiếu nại biên nhận ký gửi.',
+      },
+    ],
+  },
+  {
+    id: 'USR-103',
+    code: '849104',
+    name: 'Quỹ Hy Vọng Xanh',
+    initials: 'HX',
+    email: 'lienhe@hyvongxanh.org.vn',
+    phone: '028 3822 6858',
+    role: 'Organizer',
+    createdAt: '20/04/2026',
+    status: 'ACTIVE',
+    history: [],
+  },
+  {
+    id: 'USR-104',
+    code: '849105',
+    name: 'Mái Ấm Hướng Dương',
+    initials: 'HD',
+    email: 'contact@huongduong.org.vn',
+    phone: '028 3844 1200',
+    role: 'Organizer',
+    createdAt: '02/07/2026',
+    status: 'ACTIVE',
+    history: [],
+  },
+  {
+    id: 'USR-105',
+    code: 'MOD-1042',
+    name: 'Phạm Thu Hà',
+    initials: 'TH',
+    email: 'ha.pham@rehome.vn',
+    phone: '0977 340 126',
+    role: 'Moderator',
+    createdAt: '15/03/2026',
+    status: 'ACTIVE',
+    history: [],
+  },
+  {
+    id: 'USR-106',
+    code: 'MOD-1070',
+    name: 'Đỗ Quang Huy',
+    initials: 'QH',
+    email: 'huy.do@rehome.vn',
+    phone: '0986 554 902',
+    role: 'Moderator',
+    createdAt: '01/10/2026',
+    status: 'ACTIVE',
+    history: [],
+  },
+  {
+    id: 'USR-107',
+    code: '849108',
+    name: 'Trần Bảo Ngọc',
+    initials: 'BN',
+    email: 'ngoc.tran@gmail.com',
+    phone: '0935 778 214',
+    role: 'Member',
+    createdAt: '28/09/2026',
+    status: 'ACTIVE',
+    history: [],
+  },
+  {
+    id: 'USR-108',
+    code: '849109',
+    name: 'Võ Minh Khang',
+    initials: 'MK',
+    email: 'khang.vo@gmail.com',
+    phone: '0909 661 337',
+    role: 'Member',
+    createdAt: '25/09/2026',
+    status: 'ACTIVE',
+    history: [],
+  },
+];
+
 export default function AdminAccountsView({ onLogAction }) {
-  const [accounts, setAccounts] = useState([]);
+  const [accounts, setAccounts] = useState(initialAccounts);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedRole, setSelectedRole] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
-  const [loading, setLoading] = useState(true);
-  const [apiError, setApiError] = useState(null);
-
-  // Sắp xếp (Sort) theo Ngày tạo hoặc Trạng thái
-  const [sortBy, setSortBy] = useState('createdAt'); // 'createdAt' | 'status'
-  const [sortDir, setSortDir] = useState('desc'); // 'asc' | 'desc'
 
   // Drawer chi tiết & Modal khóa
   const [drawerAccount, setDrawerAccount] = useState(null);
@@ -25,86 +142,26 @@ export default function AdminAccountsView({ onLogAction }) {
   const [lockError, setLockError] = useState('');
   const [openActionMenuId, setOpenActionMenuId] = useState(null);
 
-  // Tải danh sách tài khoản từ Backend API
-  const fetchAccounts = async () => {
-    try {
-      setLoading(true);
-      setApiError(null);
-      const res = await adminApi.getAccounts({
-        search: searchKeyword,
-        role: selectedRole,
-        status: selectedStatus,
-        page: 0,
-        size: 50,
-      });
+  // Bộ lọc dữ liệu
+  const filteredAccounts = accounts.filter((acc) => {
+    const matchSearch =
+      acc.name.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+      acc.email.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+      acc.phone.includes(searchKeyword);
 
-      if (res && res.content) {
-        const mapped = res.content.map((a) => {
-          const roleLabel =
-            a.role === 'ORGANIZATION'
-              ? 'Organizer'
-              : a.role === 'MODERATOR'
-              ? 'Moderator'
-              : 'Member';
-          return {
-            id: a.accountId,
-            code: a.code || String(a.accountId).slice(0, 8).toUpperCase(),
-            name: a.fullName || a.email?.split('@')[0] || 'Chưa cập nhật',
-            initials: (a.fullName || a.email || 'U').slice(0, 2).toUpperCase(),
-            email: a.email,
-            phone: a.phone || 'Chưa cập nhật',
-            role: roleLabel,
-            createdAt: a.createdAt
-              ? new Date(a.createdAt).toLocaleDateString('vi-VN')
-              : 'Chưa xác định',
-            status: a.status || 'ACTIVE',
-            history: [],
-          };
-        });
-        setAccounts(mapped);
-      } else {
-        setAccounts([]);
-      }
-    } catch (err) {
-      console.error('Lỗi khi tải danh sách tài khoản từ backend:', err);
-      setApiError('Không thể kết nối đến máy chủ quản trị. Vui lòng thử lại sau.');
-      setAccounts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const matchRole =
+      selectedRole === 'ALL' || acc.role.toLowerCase() === selectedRole.toLowerCase();
 
-  useEffect(() => {
-    fetchAccounts();
-  }, [searchKeyword, selectedRole, selectedStatus]);
+    const matchStatus =
+      selectedStatus === 'ALL' || acc.status === selectedStatus;
 
-  // Đảo chiều sắp xếp khi click tiêu đề cột
-  const toggleSort = (column) => {
-    if (sortBy === column) {
-      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortBy(column);
-      setSortDir('asc');
-    }
-  };
-
-  // Lọc và sắp xếp trên dữ liệu thực
-  const sortedAccounts = [...accounts].sort((a, b) => {
-    let comparison = 0;
-    if (sortBy === 'createdAt') {
-      comparison = (a.createdAt || '').localeCompare(b.createdAt || '');
-    } else if (sortBy === 'status') {
-      comparison = (a.status || '').localeCompare(b.status || '');
-    }
-    return sortDir === 'asc' ? comparison : -comparison;
+    return matchSearch && matchRole && matchStatus;
   });
 
   const handleResetFilter = () => {
     setSearchKeyword('');
     setSelectedRole('ALL');
     setSelectedStatus('ALL');
-    setSortBy('createdAt');
-    setSortDir('desc');
   };
 
   const updateAccountStatus = (account, status, historyEntry) => {
@@ -127,45 +184,33 @@ export default function AdminAccountsView({ onLogAction }) {
     }
   };
 
-  // Xác nhận khóa tài khoản gọi API thật
-  const handleConfirmLock = async () => {
+  // Xác nhận khóa tài khoản
+  const handleConfirmLock = () => {
     if (!lockReason.trim()) {
       setLockError('Vui lòng nhập lý do khóa');
       return;
     }
 
-    try {
-      await adminApi.banAccount(lockModalAccount.id, lockReason.trim());
-      updateAccountStatus(lockModalAccount, 'LOCKED', {
-        date: new Date().toLocaleString('vi-VN'),
-        action: 'Khóa',
-        actor: 'Admin',
-        reason: lockReason.trim(),
-      });
-    } catch (err) {
-      console.error('Lỗi gọi API khóa tài khoản:', err);
-      alert('Không thể thực hiện thao tác khóa tài khoản. Vui lòng kiểm tra quyền quản trị.');
-    } finally {
-      setLockModalAccount(null);
-      setLockReason('');
-      setLockError('');
-    }
+    updateAccountStatus(lockModalAccount, 'LOCKED', {
+      date: '09/10/2026 14:00',
+      action: 'Khóa',
+      actor: 'Trần Minh Quân',
+      reason: lockReason.trim(),
+    });
+
+    setLockModalAccount(null);
+    setLockReason('');
+    setLockError('');
   };
 
-  // Mở khóa tài khoản gọi API thật
-  const handleUnlockAccount = async (account) => {
-    try {
-      await adminApi.unbanAccount(account.id);
-      updateAccountStatus(account, 'ACTIVE', {
-        date: new Date().toLocaleString('vi-VN'),
-        action: 'Mở khóa',
-        actor: 'Admin',
-        reason: 'Mở khóa theo yêu cầu sau khi rà soát tuân thủ.',
-      });
-    } catch (err) {
-      console.error('Lỗi gọi API mở khóa tài khoản:', err);
-      alert('Không thể thực hiện thao tác mở khóa tài khoản.');
-    }
+  // Mở khóa tài khoản
+  const handleUnlockAccount = (account) => {
+    updateAccountStatus(account, 'ACTIVE', {
+      date: '09/10/2026 14:05',
+      action: 'Mở khóa',
+      actor: 'Trần Minh Quân',
+      reason: 'Mở khóa theo yêu cầu sau khi rà soát tuân thủ.',
+    });
   };
 
   return (
@@ -174,92 +219,49 @@ export default function AdminAccountsView({ onLogAction }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#191C19] font-heading">
-            Quản Lý Tài Khoản
+            Tài khoản
           </h1>
           <p className="text-xs text-[#717971] mt-0.5">
-            Dữ liệu tài khoản thực tế từ hệ thống ReHome. Hỗ trợ tra cứu, sắp xếp và khóa/mở khóa.
+            Xem và khóa, mở khóa tài khoản người dùng trên ReHome.
           </p>
         </div>
-        <button
-          onClick={fetchAccounts}
-          disabled={loading}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#E2E8E0] bg-white text-xs font-semibold text-[#414942] hover:bg-[#F8FAF8] hover:text-[#006B2C] transition-colors"
-        >
-          <span className={`material-symbols-outlined text-base ${loading ? 'animate-spin' : ''}`}>
-            refresh
-          </span>
-          <span>Làm mới</span>
-        </button>
       </div>
 
       {/* Filter Bar */}
       <AccountsFilters
-        searchKeyword={searchKeyword}
-        setSearchKeyword={setSearchKeyword}
-        selectedRole={selectedRole}
-        setSelectedRole={setSelectedRole}
-        selectedStatus={selectedStatus}
-        setSelectedStatus={setSelectedStatus}
-        handleResetFilter={handleResetFilter}
+        searchKeyword={searchKeyword} setSearchKeyword={setSearchKeyword}
+        selectedRole={selectedRole} setSelectedRole={setSelectedRole}
+        selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus} handleResetFilter={handleResetFilter}
       />
 
-      {/* Loading & Error States */}
-      {loading ? (
-        <div className="bg-white rounded-2xl border border-[#E2E8E0] p-12 text-center space-y-3">
-          <div className="w-8 h-8 border-3 border-[#006B2C] border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-xs font-semibold text-[#717971]">Đang tải danh sách tài khoản từ hệ thống...</p>
-        </div>
-      ) : apiError ? (
-        <div className="bg-white rounded-2xl border border-[#FEE2E2] p-8 text-center space-y-3">
-          <span className="material-symbols-outlined text-3xl text-[#DC2626]">error</span>
-          <p className="text-sm font-bold text-[#191C19]">{apiError}</p>
-          <button
-            onClick={fetchAccounts}
-            className="px-4 py-2 bg-[#006B2C] text-white text-xs font-semibold rounded-xl"
-          >
-            Thử kết nối lại
-          </button>
-        </div>
-      ) : sortedAccounts.length === 0 ? (
+      {/* Main Table or Empty State */}
+      {filteredAccounts.length === 0 ? (
+        /* Empty State Matching Stitch Specification */
         <AccountsEmptyState handleResetFilter={handleResetFilter} />
       ) : (
+        /* Accounts Table */
         <AccountsTable
-          filteredAccounts={sortedAccounts}
-          openActionMenuId={openActionMenuId}
-          setOpenActionMenuId={setOpenActionMenuId}
-          setDrawerAccount={setDrawerAccount}
-          setLockModalAccount={setLockModalAccount}
-          setLockReason={setLockReason}
-          setLockError={setLockError}
-          handleUnlockAccount={handleUnlockAccount}
-          sortBy={sortBy}
-          sortDir={sortDir}
-          toggleSort={toggleSort}
+          filteredAccounts={filteredAccounts} openActionMenuId={openActionMenuId} setOpenActionMenuId={setOpenActionMenuId}
+          setDrawerAccount={setDrawerAccount} setLockModalAccount={setLockModalAccount}
+          setLockReason={setLockReason} setLockError={setLockError} handleUnlockAccount={handleUnlockAccount}
         />
       )}
 
-      {/* Side Drawer: Chi tiết tài khoản */}
+      {/* Side Drawer: Chi tiết tài khoản (Trượt từ phải sang) */}
       {drawerAccount && (
         <AccountDetailsDrawer
-          drawerAccount={drawerAccount}
-          setDrawerAccount={setDrawerAccount}
-          setLockModalAccount={setLockModalAccount}
-          setLockReason={setLockReason}
-          setLockError={setLockError}
-          handleUnlockAccount={handleUnlockAccount}
+          drawerAccount={drawerAccount} setDrawerAccount={setDrawerAccount}
+          setLockModalAccount={setLockModalAccount} setLockReason={setLockReason}
+          setLockError={setLockError} handleUnlockAccount={handleUnlockAccount}
         />
       )}
 
-      {/* Modal: Khóa tài khoản này? */}
+      {/* Modal: Khóa tài khoản này? (Pixel Perfect theo Stitch) */}
       {lockModalAccount && (
         <LockAccountModal
-          lockModalAccount={lockModalAccount}
-          lockReason={lockReason}
-          lockError={lockError}
-          setLockModalAccount={setLockModalAccount}
-          setLockReason={setLockReason}
-          setLockError={setLockError}
-          handleConfirmLock={handleConfirmLock}
+          lockModalAccount={lockModalAccount} lockReason={lockReason} lockError={lockError}
+          setLockModalAccount={setLockModalAccount} setLockReason={setLockReason}
+          setLockError={setLockError} handleConfirmLock={handleConfirmLock}
         />
       )}
     </div>
@@ -267,32 +269,32 @@ export default function AdminAccountsView({ onLogAction }) {
 }
 
 function withAccountStatus(account, status, historyEntry) {
-  return { ...account, status, history: [historyEntry, ...(account.history || [])] };
+  return { ...account, status, history: [historyEntry, ...account.history] };
 }
 
 function AccountActions({
-  acc,
-  openActionMenuId,
-  setOpenActionMenuId,
-  setDrawerAccount,
-  setLockModalAccount,
-  setLockReason,
-  setLockError,
-  handleUnlockAccount,
+  acc, openActionMenuId, setOpenActionMenuId, setDrawerAccount,
+  setLockModalAccount, setLockReason, setLockError, handleUnlockAccount,
 }) {
   return (
     <div className="inline-block relative">
       <button
-        onClick={() => setOpenActionMenuId(openActionMenuId === acc.id ? null : acc.id)}
-        className="p-1 rounded-lg text-[#717971] hover:text-[#191C19] hover:bg-[#F0F5EE] transition-colors"
+        onClick={() =>
+          setOpenActionMenuId(
+            openActionMenuId === acc.id ? null : acc.id
+          )
+        }
+        className="p-1 rounded-lg text-[#717971] hover:text-[#191C19] hover:bg-[#E9F0E5] transition-colors"
         title="Tùy chọn"
       >
-        <span className="material-symbols-outlined text-lg">more_vert</span>
+        <span className="material-symbols-outlined text-lg">
+          more_vert
+        </span>
       </button>
 
       {openActionMenuId === acc.id && (
         <div
-          className="absolute right-0 mt-1 w-36 bg-white rounded-xl border border-[#E2E8E0] shadow-lg py-1.5 z-30 text-left animate-fadeIn"
+          className="absolute right-0 mt-1 w-36 bg-white rounded-xl border border-[#DDE5D9] shadow-lg py-1.5 z-30 text-left animate-fadeIn"
           onMouseLeave={() => setOpenActionMenuId(null)}
         >
           <button
@@ -300,9 +302,11 @@ function AccountActions({
               setDrawerAccount(acc);
               setOpenActionMenuId(null);
             }}
-            className="w-full px-3 py-1.5 text-xs text-[#414942] hover:bg-[#F8FAF8] flex items-center gap-2"
+            className="w-full px-3 py-1.5 text-xs text-[#414942] hover:bg-[#F6F9F4] flex items-center gap-2"
           >
-            <span className="material-symbols-outlined text-base">visibility</span>
+            <span className="material-symbols-outlined text-base">
+              visibility
+            </span>
             <span>Xem chi tiết</span>
           </button>
 
@@ -316,7 +320,9 @@ function AccountActions({
               }}
               className="w-full px-3 py-1.5 text-xs text-[#DC2626] hover:bg-[#FEE2E2]/50 flex items-center gap-2 font-medium"
             >
-              <span className="material-symbols-outlined text-base">lock</span>
+              <span className="material-symbols-outlined text-base">
+                lock
+              </span>
               <span>Khóa tài khoản</span>
             </button>
           ) : (
@@ -327,7 +333,9 @@ function AccountActions({
               }}
               className="w-full px-3 py-1.5 text-xs text-[#006B2C] hover:bg-[#E8F5E9] flex items-center gap-2 font-medium"
             >
-              <span className="material-symbols-outlined text-base">lock_open</span>
+              <span className="material-symbols-outlined text-base">
+                lock_open
+              </span>
               <span>Mở khóa</span>
             </button>
           )}
@@ -338,17 +346,15 @@ function AccountActions({
 }
 
 function AccountRow({
-  acc,
-  openActionMenuId,
-  setOpenActionMenuId,
-  setDrawerAccount,
-  setLockModalAccount,
-  setLockReason,
-  setLockError,
-  handleUnlockAccount,
+  acc, openActionMenuId, setOpenActionMenuId, setDrawerAccount,
+  setLockModalAccount, setLockReason, setLockError, handleUnlockAccount,
 }) {
   return (
-    <tr key={acc.id} className="hover:bg-[#F8FAF8] transition-colors">
+    <tr
+      key={acc.id}
+      className="hover:bg-[#F6F9F4]/70 transition-colors"
+    >
+      {/* Name & Avatar */}
       <td className="py-3.5 px-6 whitespace-nowrap">
         <div className="flex items-center gap-3">
           <div
@@ -356,7 +362,7 @@ function AccountRow({
               acc.role === 'Member'
                 ? 'bg-[#E8F5E9] text-[#006B2C]'
                 : acc.role === 'Organizer'
-                ? 'bg-[#FFF3E0] text-[#D97706]'
+                ? 'bg-[#FFF3E0] text-[#FEA619]'
                 : 'bg-[#E0F2F1] text-[#00685F]'
             }`}
           >
@@ -369,16 +375,24 @@ function AccountRow({
         </div>
       </td>
 
-      <td className="py-3.5 px-6 font-mono text-[#414942] whitespace-nowrap">{acc.email}</td>
-      <td className="py-3.5 px-6 font-mono text-[#717971] whitespace-nowrap">{acc.phone}</td>
+      {/* Email */}
+      <td className="py-3.5 px-6 font-mono text-[#414942] whitespace-nowrap">
+        {acc.email}
+      </td>
 
+      {/* Phone */}
+      <td className="py-3.5 px-6 font-mono text-[#717971] whitespace-nowrap">
+        {acc.phone}
+      </td>
+
+      {/* Role */}
       <td className="py-3.5 px-6 whitespace-nowrap">
         <span
           className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-bold ${
             acc.role === 'Member'
               ? 'bg-[#E8F5E9] text-[#006B2C]'
               : acc.role === 'Organizer'
-              ? 'bg-[#FFF3E0] text-[#D97706]'
+              ? 'bg-[#FFF3E0] text-[#FEA619]'
               : 'bg-[#E0F2F1] text-[#00685F]'
           }`}
         >
@@ -386,8 +400,12 @@ function AccountRow({
         </span>
       </td>
 
-      <td className="py-3.5 px-6 text-[#717971] whitespace-nowrap font-mono">{acc.createdAt}</td>
+      {/* Created Date */}
+      <td className="py-3.5 px-6 text-[#717971] whitespace-nowrap font-mono">
+        {acc.createdAt}
+      </td>
 
+      {/* Status */}
       <td className="py-3.5 px-6 whitespace-nowrap">
         {acc.status === 'ACTIVE' ? (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C]">
@@ -402,16 +420,12 @@ function AccountRow({
         )}
       </td>
 
+      {/* Actions Menu */}
       <td className="py-3.5 px-4 text-center relative whitespace-nowrap">
         <AccountActions
-          acc={acc}
-          openActionMenuId={openActionMenuId}
-          setOpenActionMenuId={setOpenActionMenuId}
-          setDrawerAccount={setDrawerAccount}
-          setLockModalAccount={setLockModalAccount}
-          setLockReason={setLockReason}
-          setLockError={setLockError}
-          handleUnlockAccount={handleUnlockAccount}
+          acc={acc} openActionMenuId={openActionMenuId} setOpenActionMenuId={setOpenActionMenuId}
+          setDrawerAccount={setDrawerAccount} setLockModalAccount={setLockModalAccount}
+          setLockReason={setLockReason} setLockError={setLockError} handleUnlockAccount={handleUnlockAccount}
         />
       </td>
     </tr>
@@ -420,14 +434,28 @@ function AccountRow({
 
 function AccountsPagination({ count }) {
   return (
-    <div className="p-4 border-t border-[#E2E8E0] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#717971]">
-      <span>Hiển thị {count} tài khoản thực tế</span>
+    <div className="p-4 border-t border-[#DDE5D9] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#717971]">
+      <span>
+        Hiển thị 1 - {count} trong tổng số 2.498 tài khoản
+      </span>
       <div className="flex items-center gap-1 font-medium">
-        <button className="px-2.5 py-1 rounded-lg border border-[#E2E8E0] hover:bg-[#F8FAF8]">
+        <button className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4]">
           Trước
         </button>
-        <button className="px-2.5 py-1 rounded-lg bg-[#006B2C] text-white font-bold">1</button>
-        <button className="px-2.5 py-1 rounded-lg border border-[#E2E8E0] hover:bg-[#F8FAF8]">
+        <button className="px-2.5 py-1 rounded-lg bg-[#006B2C] text-white font-bold">
+          1
+        </button>
+        <button className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4]">
+          2
+        </button>
+        <button className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4]">
+          3
+        </button>
+        <span className="px-1 text-[#717971]">...</span>
+        <button className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4]">
+          313
+        </button>
+        <button className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4]">
           Sau
         </button>
       </div>
@@ -435,101 +463,73 @@ function AccountsPagination({ count }) {
   );
 }
 
+function AccountsEmptyState({ handleResetFilter }) {
+  return (
+    <div className="bg-white rounded-2xl border border-[#DDE5D9] p-12 text-center flex flex-col items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+      <div className="w-16 h-16 rounded-2xl bg-[#E8F5E9] text-[#006B2C] flex items-center justify-center mb-4">
+        <span className="material-symbols-outlined text-3xl">search_off</span>
+      </div>
+      <h3 className="text-base font-bold text-[#191C19] font-heading">
+        Không tìm thấy tài khoản phù hợp
+      </h3>
+      <p className="text-xs text-[#717971] max-w-sm mt-1 mb-5">
+        Vui lòng kiểm tra lại từ khóa tìm kiếm hoặc điều chỉnh bộ lọc để xem kết quả.
+      </p>
+      <button
+        onClick={handleResetFilter}
+        className="px-4 py-2 bg-[#006B2C] text-white text-xs font-semibold rounded-xl hover:bg-[#005523] transition-colors flex items-center gap-1.5 shadow-sm"
+      >
+        <span className="material-symbols-outlined text-sm">filter_alt_off</span>
+        <span>Xóa bộ lọc</span>
+      </button>
+    </div>
+  );
+}
+
 function AccountsTable({
-  filteredAccounts,
-  openActionMenuId,
-  setOpenActionMenuId,
-  setDrawerAccount,
-  setLockModalAccount,
-  setLockReason,
-  setLockError,
-  handleUnlockAccount,
-  sortBy,
-  sortDir,
-  toggleSort,
+  filteredAccounts, openActionMenuId, setOpenActionMenuId, setDrawerAccount,
+  setLockModalAccount, setLockReason, setLockError, handleUnlockAccount,
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-[#E2E8E0] shadow-xs overflow-hidden">
+    <div className="bg-white rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs">
-          <thead className="bg-[#F8FAF8] text-[#717971] uppercase tracking-wider font-semibold border-b border-[#E2E8E0]">
+          <thead className="bg-[#F6F9F4] text-[#717971] uppercase tracking-wider font-semibold border-b border-[#DDE5D9]">
             <tr>
               <th className="py-3 px-6">Tài khoản</th>
               <th className="py-3 px-6">Email</th>
               <th className="py-3 px-6">Số điện thoại</th>
               <th className="py-3 px-6">Vai trò</th>
-
-              <th
-                onClick={() => toggleSort('createdAt')}
-                className="py-3 px-6 cursor-pointer select-none hover:text-[#006B2C] transition-colors"
-                title="Click để đổi chiều sắp xếp theo ngày tạo"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span>Ngày tạo</span>
-                  <span className="material-symbols-outlined text-[16px] text-[#006B2C]">
-                    {sortBy === 'createdAt'
-                      ? sortDir === 'asc'
-                        ? 'arrow_upward'
-                        : 'arrow_downward'
-                      : 'unfold_more'}
-                  </span>
-                </div>
-              </th>
-
-              <th
-                onClick={() => toggleSort('status')}
-                className="py-3 px-6 cursor-pointer select-none hover:text-[#006B2C] transition-colors"
-                title="Click để đổi chiều sắp xếp theo trạng thái"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span>Trạng thái</span>
-                  <span className="material-symbols-outlined text-[16px] text-[#006B2C]">
-                    {sortBy === 'status'
-                      ? sortDir === 'asc'
-                        ? 'arrow_upward'
-                        : 'arrow_downward'
-                      : 'unfold_more'}
-                  </span>
-                </div>
-              </th>
-
+              <th className="py-3 px-6">Ngày tạo</th>
+              <th className="py-3 px-6">Trạng thái</th>
               <th className="py-3 px-4 text-center">Thao tác</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#E2E8E0]">
+          <tbody className="divide-y divide-[#DDE5D9]">
             {filteredAccounts.map((acc) => (
               <AccountRow
-                key={acc.id}
-                acc={acc}
-                openActionMenuId={openActionMenuId}
-                setOpenActionMenuId={setOpenActionMenuId}
-                setDrawerAccount={setDrawerAccount}
-                setLockModalAccount={setLockModalAccount}
-                setLockReason={setLockReason}
-                setLockError={setLockError}
-                handleUnlockAccount={handleUnlockAccount}
+                key={acc.id} acc={acc} openActionMenuId={openActionMenuId} setOpenActionMenuId={setOpenActionMenuId}
+                setDrawerAccount={setDrawerAccount} setLockModalAccount={setLockModalAccount}
+                setLockReason={setLockReason} setLockError={setLockError} handleUnlockAccount={handleUnlockAccount}
               />
             ))}
           </tbody>
         </table>
       </div>
 
+      {/* Pagination bar matching Stitch */}
       <AccountsPagination count={filteredAccounts.length} />
     </div>
   );
 }
 
 function AccountsFilters({
-  searchKeyword,
-  setSearchKeyword,
-  selectedRole,
-  setSelectedRole,
-  selectedStatus,
-  setSelectedStatus,
-  handleResetFilter,
+  searchKeyword, setSearchKeyword, selectedRole, setSelectedRole,
+  selectedStatus, setSelectedStatus, handleResetFilter,
 }) {
   return (
-    <div className="bg-white p-4 rounded-2xl border border-[#E2E8E0] shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+    <div className="bg-white p-4 rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+      {/* Search Input */}
       <div className="relative flex-1">
         <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#717971] text-lg">
           search
@@ -539,26 +539,27 @@ function AccountsFilters({
           value={searchKeyword}
           onChange={(e) => setSearchKeyword(e.target.value)}
           placeholder="Tìm theo tên, email hoặc số điện thoại..."
-          className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-[#F8FAF8]/50 focus:bg-white focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15 outline-none transition-all"
+          className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]/50 focus:bg-white focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15 outline-none transition-all"
         />
       </div>
 
+      {/* Dropdowns */}
       <div className="flex flex-wrap items-center gap-2.5">
         <select
           value={selectedRole}
           onChange={(e) => setSelectedRole(e.target.value)}
-          className="px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
+          className="px-3 py-2.5 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
         >
           <option value="ALL">Vai trò: Tất cả</option>
-          <option value="MEMBER">Member</option>
-          <option value="ORGANIZATION">Organizer</option>
-          <option value="MODERATOR">Moderator</option>
+          <option value="member">Member</option>
+          <option value="organizer">Organizer</option>
+          <option value="moderator">Moderator</option>
         </select>
 
         <select
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
-          className="px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
+          className="px-3 py-2.5 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
         >
           <option value="ALL">Trạng thái: Tất cả</option>
           <option value="ACTIVE">Hoạt động</option>
@@ -568,7 +569,7 @@ function AccountsFilters({
         {(searchKeyword || selectedRole !== 'ALL' || selectedStatus !== 'ALL') && (
           <button
             onClick={handleResetFilter}
-            className="px-3 py-2 text-xs font-semibold text-[#006B2C] hover:text-[#005523] hover:bg-[#E8F5E9] rounded-xl transition-colors flex items-center gap-1"
+            className="px-3 py-2.5 text-xs font-semibold text-[#006B2C] hover:text-[#005523] hover:bg-[#E8F5E9] rounded-xl transition-colors flex items-center gap-1"
           >
             <span className="material-symbols-outlined text-base">restart_alt</span>
             <span>Xóa bộ lọc</span>
@@ -579,34 +580,99 @@ function AccountsFilters({
   );
 }
 
-function AccountsEmptyState({ handleResetFilter }) {
+function AccountInformation({ drawerAccount }) {
   return (
-    <div className="bg-white rounded-2xl border border-[#E2E8E0] p-12 text-center space-y-3">
-      <div className="w-12 h-12 rounded-full bg-[#F0F5EE] text-[#006B2C] flex items-center justify-center mx-auto">
-        <span className="material-symbols-outlined text-2xl">search_off</span>
+    <>
+      <div className="space-y-3">
+        <p className="text-[11px] font-bold text-[#717971] uppercase tracking-wider">
+          Thông tin liên hệ
+        </p>
+        <div className="bg-white rounded-xl border border-[#DDE5D9] p-3.5 space-y-2 text-xs">
+          <div className="flex justify-between">
+            <span className="text-[#717971]">Email:</span>
+            <span className="font-mono font-medium text-[#191C19]">
+              {drawerAccount.email}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-[#717971]">Số điện thoại:</span>
+            <span className="font-mono font-medium text-[#191C19]">
+              {drawerAccount.phone}
+            </span>
+          </div>
+        </div>
       </div>
-      <h3 className="text-base font-bold text-[#191C19]">Không có tài khoản nào</h3>
-      <p className="text-xs text-[#717971] max-w-sm mx-auto">
-        Chưa có tài khoản nào được tạo hoặc không có kết quả phù hợp với bộ lọc hiện tại.
+
+      {/* Thông tin tài khoản */}
+      <div className="space-y-3">
+        <p className="text-[11px] font-bold text-[#717971] uppercase tracking-wider">
+          Thông tin tài khoản
+        </p>
+        <div className="bg-white rounded-xl border border-[#DDE5D9] p-3.5 space-y-2 text-xs">
+          <div className="flex justify-between">
+            <span className="text-[#717971]">Vai trò:</span>
+            <span className="font-bold text-[#006B2C]">
+              {drawerAccount.role}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-[#717971]">Ngày tạo:</span>
+            <span className="font-mono text-[#191C19]">
+              {drawerAccount.createdAt}
+            </span>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function AccountHistory({ history }) {
+  return (
+    <div className="space-y-3">
+      <p className="text-[11px] font-bold text-[#717971] uppercase tracking-wider">
+        Lịch sử Khóa / Mở khóa
       </p>
-      <button
-        onClick={handleResetFilter}
-        className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#006B2C] text-white text-xs font-bold hover:bg-[#005222] transition-colors"
-      >
-        <span className="material-symbols-outlined text-sm">restart_alt</span>
-        <span>Xóa toàn bộ bộ lọc</span>
-      </button>
+      {history.length === 0 ? (
+        <div className="p-4 bg-[#F6F9F4] rounded-xl text-center text-xs text-[#717971]">
+          Chưa ghi nhận lịch sử xử phạt nào.
+        </div>
+      ) : (
+        <div className="border-l-2 border-[#DDE5D9] ml-2 pl-4 space-y-4">
+          {history.map((hist, idx) => (
+            <div key={idx} className="relative text-xs">
+              <span
+                className={`absolute -left-[21px] top-0.5 w-2.5 h-2.5 rounded-full ${
+                  hist.action === 'Khóa' ? 'bg-[#DC2626]' : 'bg-[#006B2C]'
+                }`}
+              />
+              <p className="text-[11px] font-mono text-[#717971]">
+                {hist.date} -{' '}
+                <span
+                  className={`font-bold ${
+                    hist.action === 'Khóa'
+                      ? 'text-[#DC2626]'
+                      : 'text-[#006B2C]'
+                  }`}
+                >
+                  {hist.action}
+                </span>{' '}
+                bởi {hist.actor}
+              </p>
+              <p className="mt-1 text-[#414942] italic bg-[#F6F9F4] p-2 rounded-lg border border-[#DDE5D9]">
+                Lý do: {hist.reason}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
 function AccountDetailsDrawer({
-  drawerAccount,
-  setDrawerAccount,
-  setLockModalAccount,
-  setLockReason,
-  setLockError,
-  handleUnlockAccount,
+  drawerAccount, setDrawerAccount, setLockModalAccount,
+  setLockReason, setLockError, handleUnlockAccount,
 }) {
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -615,26 +681,31 @@ function AccountDetailsDrawer({
         className="absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
       />
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col justify-between border-l border-[#E2E8E0] animate-slideLeft">
-          <div className="p-6 border-b border-[#E2E8E0] flex items-center justify-between">
+        <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col justify-between border-l border-[#DDE5D9] animate-slideLeft">
+          {/* Drawer Header */}
+          <div className="p-6 border-b border-[#DDE5D9] flex items-center justify-between">
             <h3 className="text-base font-bold text-[#191C19] font-heading">
               Chi tiết tài khoản
             </h3>
             <button
               onClick={() => setDrawerAccount(null)}
-              className="p-1.5 rounded-lg text-[#717971] hover:text-[#191C19] hover:bg-[#F8FAF8]"
+              className="p-1.5 rounded-lg text-[#717971] hover:text-[#191C19] hover:bg-[#F6F9F4]"
             >
               <span className="material-symbols-outlined text-xl">close</span>
             </button>
           </div>
 
+          {/* Drawer Content */}
           <div className="p-6 space-y-6 overflow-y-auto flex-1">
-            <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#F8FAF8] border border-[#E2E8E0]">
+            {/* Profile Card */}
+            <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#F6F9F4] border border-[#DDE5D9]">
               <div className="w-14 h-14 rounded-2xl bg-[#006B2C] text-white flex items-center justify-center font-bold text-lg shadow-sm">
                 {drawerAccount.initials}
               </div>
               <div>
-                <h4 className="text-base font-bold text-[#191C19]">{drawerAccount.name}</h4>
+                <h4 className="text-base font-bold text-[#191C19]">
+                  {drawerAccount.name}
+                </h4>
                 <p className="text-xs text-[#717971]">#{drawerAccount.code}</p>
                 <span
                   className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
@@ -648,40 +719,15 @@ function AccountDetailsDrawer({
               </div>
             </div>
 
-            <div className="space-y-3">
-              <p className="text-[11px] font-bold text-[#717971] uppercase tracking-wider">
-                Thông tin liên hệ
-              </p>
-              <div className="bg-white rounded-xl border border-[#E2E8E0] p-3.5 space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-[#717971]">Email:</span>
-                  <span className="font-mono font-medium text-[#191C19]">{drawerAccount.email}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#717971]">Số điện thoại:</span>
-                  <span className="font-mono font-medium text-[#191C19]">{drawerAccount.phone}</span>
-                </div>
-              </div>
-            </div>
+            {/* Thông tin liên hệ */}
+            <AccountInformation drawerAccount={drawerAccount} />
 
-            <div className="space-y-3">
-              <p className="text-[11px] font-bold text-[#717971] uppercase tracking-wider">
-                Thông tin tài khoản
-              </p>
-              <div className="bg-white rounded-xl border border-[#E2E8E0] p-3.5 space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-[#717971]">Vai trò:</span>
-                  <span className="font-bold text-[#006B2C]">{drawerAccount.role}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#717971]">Ngày tạo:</span>
-                  <span className="font-mono text-[#191C19]">{drawerAccount.createdAt}</span>
-                </div>
-              </div>
-            </div>
+            {/* Lịch sử khóa / mở khóa (Timeline) */}
+            <AccountHistory history={drawerAccount.history} />
           </div>
 
-          <div className="p-6 border-t border-[#E2E8E0] bg-[#F8FAF8]">
+          {/* Drawer Footer Actions */}
+          <div className="p-6 border-t border-[#DDE5D9] bg-[#F6F9F4]">
             {drawerAccount.status === 'ACTIVE' ? (
               <button
                 onClick={() => {
@@ -697,7 +743,7 @@ function AccountDetailsDrawer({
             ) : (
               <button
                 onClick={() => handleUnlockAccount(drawerAccount)}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-[#006B2C] text-white hover:bg-[#005222] transition-colors flex items-center justify-center gap-2 shadow-sm"
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-[#006B2C] text-white hover:bg-[#005523] transition-colors flex items-center justify-center gap-2 shadow-sm"
               >
                 <span className="material-symbols-outlined text-base">lock_open</span>
                 <span>Mở khóa tài khoản</span>
@@ -711,35 +757,38 @@ function AccountDetailsDrawer({
 }
 
 function LockAccountModal({
-  lockModalAccount,
-  lockReason,
-  lockError,
-  setLockModalAccount,
-  setLockReason,
-  setLockError,
-  handleConfirmLock,
+  lockModalAccount, lockReason, lockError, setLockModalAccount,
+  setLockReason, setLockError, handleConfirmLock,
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
-      <div className="w-full max-w-lg bg-white rounded-2xl border border-[#E2E8E0] shadow-2xl p-6 sm:p-7 space-y-4">
+      <div className="w-full max-w-lg bg-white rounded-2xl border border-[#DDE5D9] shadow-2xl p-6 sm:p-7 space-y-4">
+        {/* Modal Header */}
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#FEE2E2] text-[#DC2626] flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-2xl">shield_lock</span>
+            <span className="material-symbols-outlined text-2xl">
+              shield_lock
+            </span>
           </div>
           <div className="flex-1">
             <h3 className="text-base font-bold text-[#191C19] font-heading">
               Khóa tài khoản này?
             </h3>
             <p className="text-xs text-[#717971] mt-1 leading-relaxed">
-              Tài khoản <span className="font-semibold text-[#191C19]">{lockModalAccount.name}</span>{' '}
-              sẽ không thể đăng nhập hoặc thực hiện giao dịch cho đến khi được mở khóa.
+              Tài khoản{' '}
+              <span className="font-semibold text-[#191C19]">
+                {lockModalAccount.name}
+              </span>{' '}
+              sẽ không thể đăng nhập vào hệ thống quầy và cổng quyên góp cho
+              đến khi được ban quản trị mở khóa thủ công.
             </p>
           </div>
         </div>
 
-        <div className="p-3 bg-[#F8FAF8] rounded-xl border border-[#E2E8E0] flex items-center justify-between text-xs">
+        {/* Target Account Info Badge */}
+        <div className="p-3 bg-[#F6F9F4] rounded-xl border border-[#DDE5D9] flex items-center justify-between text-xs">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#E8F5E9] text-[#006B2C] flex items-center justify-center font-bold text-xs">
+            <div className="w-8 h-8 rounded-lg bg-[#E9F0E5] text-[#191C19] flex items-center justify-center font-bold text-xs">
               {lockModalAccount.initials}
             </div>
             <div>
@@ -752,12 +801,15 @@ function LockAccountModal({
           </span>
         </div>
 
+        {/* Textarea Reason */}
         <div>
           <div className="flex items-center justify-between text-xs mb-1.5">
             <label className="font-semibold text-[#191C19]">
               Lý do khóa <span className="text-[#DC2626]">*</span>
             </label>
-            <span className="text-[11px] text-[#717971]">{lockReason.length} / 300</span>
+            <span className="text-[11px] text-[#717971]">
+              {lockReason.length} / 300
+            </span>
           </div>
           <textarea
             rows="4"
@@ -767,11 +819,11 @@ function LockAccountModal({
               setLockReason(e.target.value);
               if (lockError) setLockError('');
             }}
-            placeholder="Nhập lý do chi tiết..."
+            placeholder="Nhập lý do chi tiết (ví dụ: Vi phạm quy chuẩn tiếp nhận hiện vật quyên góp nhiều lần)..."
             className={`w-full p-3 text-xs rounded-xl border outline-none transition-all ${
               lockError
                 ? 'border-[#DC2626] bg-[#FFF5F5] focus:ring-2 focus:ring-[#DC2626]/20'
-                : 'border-[#E2E8E0] bg-white hover:border-[#006B2C]/50 focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15'
+                : 'border-[#DDE5D9] bg-white hover:border-[#006B2C]/50 focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15'
             }`}
           />
           {lockError && (
@@ -782,10 +834,21 @@ function LockAccountModal({
           )}
         </div>
 
+        {/* Notice Footer */}
+        <div className="p-3 bg-[#FFF3E0] border border-[#FFE0B2] text-[#855300] rounded-xl text-[11px] flex items-center gap-2">
+          <span className="material-symbols-outlined text-base text-[#FEA619] shrink-0">
+            info
+          </span>
+          <span>
+            Thông tin này sẽ được lưu vào nhật ký kiểm toán hệ thống.
+          </span>
+        </div>
+
+        {/* Actions */}
         <div className="flex items-center justify-end gap-2.5 pt-2">
           <button
             onClick={() => setLockModalAccount(null)}
-            className="px-4 py-2 text-xs font-semibold text-[#414942] hover:bg-[#F8FAF8] rounded-xl transition-colors border border-[#E2E8E0]"
+            className="px-4 py-2 text-xs font-semibold text-[#414942] hover:bg-[#F6F9F4] rounded-xl transition-colors border border-[#DDE5D9]"
           >
             Hủy
           </button>

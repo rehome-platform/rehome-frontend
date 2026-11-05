@@ -99,6 +99,16 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
           <div
             onClick={() => setShowDropdown((prev) => !prev)}
             className="flex items-center gap-2.5 p-1 pl-2.5 rounded-xl hover:bg-[#F8FAF8] cursor-pointer transition-colors border border-transparent hover:border-[#E2E8E0] select-none"
+            role="button"
+            aria-expanded={showDropdown}
+            aria-controls="admin-account-dropdown"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setShowDropdown((prev) => !prev);
+              }
+            }}
           >
             <div className="w-8 h-8 rounded-full bg-[#E8F5E9] text-[#006B2C] font-bold text-xs flex items-center justify-center shrink-0 border border-[#C8E6C9]">
               {initials}
@@ -117,7 +127,10 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
           </div>
 
           {showDropdown && (
-            <div className="absolute right-0 mt-1.5 w-56 bg-white rounded-xl shadow-lg border border-[#E2E8E0] py-1 z-50 animate-fadeIn">
+            <div
+              id="admin-account-dropdown"
+              className="absolute right-0 mt-1.5 w-56 bg-white rounded-xl shadow-lg border border-[#E2E8E0] py-1 z-50 animate-fadeIn"
+            >
               <div className="px-4 py-2.5 border-b border-[#E2E8E0]">
                 <p className="text-xs font-bold text-[#191C19] truncate">{displayName}</p>
                 <p className="text-[11px] text-[#717971] truncate">{displayEmail}</p>
@@ -128,22 +141,16 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
                 </div>
               </div>
 
-              <Link
-                to="/admin"
-                onClick={() => setShowDropdown(false)}
-                className="flex items-center gap-2.5 px-4 py-2 text-xs text-[#191C19] hover:bg-[#F0F5EE] hover:text-[#006B2C]"
-              >
-                <span className="material-symbols-outlined text-[18px] text-[#717971]">dashboard</span>
-                <span>Bảng điều khiển Quản trị</span>
-              </Link>
-              <Link
-                to="/admin/audit-logs"
-                onClick={() => setShowDropdown(false)}
-                className="flex items-center gap-2.5 px-4 py-2 text-xs text-[#191C19] hover:bg-[#F0F5EE] hover:text-[#006B2C]"
-              >
-                <span className="material-symbols-outlined text-[18px] text-[#717971]">history</span>
-                <span>Nhật ký kiểm toán</span>
-              </Link>
+              <div className="py-1">
+                <Link
+                  to="/profile"
+                  onClick={() => setShowDropdown(false)}
+                  className="flex items-center gap-2.5 px-4 py-2 text-xs text-[#191C19] hover:bg-[#F0F5EE] hover:text-[#006B2C]"
+                >
+                  <span className="material-symbols-outlined text-[18px] text-[#717971]">manage_accounts</span>
+                  <span>Hồ sơ cá nhân & Đổi mật khẩu</span>
+                </Link>
+              </div>
 
               <div className="border-t border-[#E2E8E0] my-1"></div>
 
