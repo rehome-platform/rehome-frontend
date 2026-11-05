@@ -130,15 +130,15 @@ export function QueueTaskRow({ item, isFocused, isSelected, toggleSelectRow, isM
       <td className="py-3 px-3 font-medium text-[#191C19]">
         {linkTarget ? (
           <Link to={linkTarget} className="text-[#006B2C] hover:underline font-bold">
-            {item.orderNo || item.formId || item.orderId || item.queueId}
+            {item.targetName || item.productName || item.orderNo || item.name || item.formId || item.orderId || item.queueId}
           </Link>
         ) : (
-          item.orderNo || item.formId || item.orderId || item.queueId
+          item.targetName || item.productName || item.orderNo || item.name || item.formId || item.orderId || item.queueId
         )}
         {isFocused && <span className="ml-2 inline-block rounded bg-primary px-2 py-1 text-[10px] text-white">Việc vừa mở</span>}
       </td>
       <td className="py-3 px-3 text-[#414942]">
-        {item.buyerName || item.name || item.memberName || '—'}
+        {item.subjectSubtitle || item.buyerName || item.memberName || item.sellerName || item.memberCode || '—'}
       </td>
       <td className="py-3 px-3 text-[#5f5f5f]">
         {item.formattedTime}
