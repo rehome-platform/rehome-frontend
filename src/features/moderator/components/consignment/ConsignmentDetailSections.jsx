@@ -151,13 +151,14 @@ export function ConsignmentInspectionPanel({ allChecked, checkedCount, checklist
 
 export function ConsignmentStartPanel({ resource, formId, proof, setFeedback, onOpenReturn }) {
   const [quickChecks, setQuickChecks] = React.useState({
-    itemMatch: true,
-    brandSizeMatch: true,
-    conditionMatch: true,
-    notProhibited: true,
+    itemMatch: false,
+    brandSizeMatch: false,
+    conditionMatch: false,
+    notProhibited: false,
   });
 
   const toggle = (k) => setQuickChecks((p) => ({ ...p, [k]: !p[k] }));
+  const allQuickChecksPassed = quickChecks.itemMatch && quickChecks.brandSizeMatch && quickChecks.conditionMatch && quickChecks.notProhibited;
 
   return (
     <div className="rounded-2xl border-2 border-[#2b2b2b] bg-white p-5 space-y-4 shadow-sm">
@@ -214,25 +215,31 @@ export function ConsignmentStartPanel({ resource, formId, proof, setFeedback, on
       </div>
 
       <div className="flex flex-wrap gap-2 pt-1">
-        <Button
-          className="flex-1 py-3 bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs"
-          loading={resource.busy}
-          onClick={() =>
-            resource.mutate(
-              (opts) => consignmentService.start(formId, proof, opts),
-              {
-                onSuccess: () => {
-                  setFeedback({
-                    type: 'success',
-                    message: 'Đã bắt đầu kiểm định tại quầy. Mời đối chiếu sản phẩm theo checklist.',
-                  });
+        {allQuickChecksPassed ? (
+          <Button
+            className="flex-1 py-3 bg-[#006B2C] text-white hover:bg-[#005221] font-bold text-xs shadow-sm transition-all"
+            loading={resource.busy}
+            onClick={() =>
+              resource.mutate(
+                (opts) => consignmentService.start(formId, proof, opts),
+                {
+                  onSuccess: () => {
+                    setFeedback({
+                      type: 'success',
+                      message: 'Đã bắt đầu kiểm định tại quầy. Mời đối chiếu sản phẩm theo checklist.',
+                    });
+                  },
                 },
-              },
-            )
-          }
-        >
-          Bắt đầu kiểm định tại quầy
-        </Button>
+              )
+            }
+          >
+            Bắt đầu kiểm định tại quầy
+          </Button>
+        ) : (
+          <div className="flex-1 py-2.5 px-3 bg-[#f5f5f5] text-[#717971] text-xs font-semibold rounded-xl text-center border border-dashed border-[#ccc]">
+            Tích đủ 4 tiêu chí trên để mở nút kiểm định
+          </div>
+        )}
         {onOpenReturn && (
           <Button
             variant="outline"
