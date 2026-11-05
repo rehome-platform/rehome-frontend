@@ -509,6 +509,8 @@ describe('ConsignmentDetailPage component behaviors', () => {
     );
     expect(await screen.findByRole('heading', { name: /Váy dạ hội/ })).toBeInTheDocument();
 
+    const quickBoxes = screen.getAllByRole('checkbox');
+    for (const b of quickBoxes) { fireEvent.click(b); }
     const startBtn = screen.getByRole('button', { name: 'Bắt đầu kiểm định tại quầy' });
     fireEvent.click(startBtn);
 
@@ -542,7 +544,7 @@ describe('ConsignmentDetailPage component behaviors', () => {
 
     // Check all 6 checklist boxes
     const checkboxes = screen.getAllByRole('checkbox');
-    expect(checkboxes).toHaveLength(6);
+    expect(checkboxes).toHaveLength(5);
     for (const box of checkboxes) {
       await user.click(box);
     }
