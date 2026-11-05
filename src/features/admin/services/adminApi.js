@@ -2,6 +2,15 @@ import baseApi from '../../../services/baseApi.js';
 import { API_ENDPOINTS } from '../../../configs/api.config.js';
 
 /**
+ * Trích xuất dữ liệu trả về từ Spring Boot ApiResponse:
+ * Backend Spring Boot chuẩn hoá cấu trúc envelope: { result: T, isSuccess: boolean, message: String }
+ */
+function unwrap(res) {
+  if (!res) return null;
+  return res.data?.result ?? res.data?.data ?? res.data;
+}
+
+/**
  * Dịch vụ API chuyên biệt cho phân hệ Quản trị ReHome (Admin)
  * Kết nối trực tiếp với backend Spring Boot theo hợp đồng API sau Review 2
  */
@@ -9,7 +18,7 @@ export const adminApi = {
   // 1. Dashboard & Báo cáo
   async getDashboard() {
     const res = await baseApi.get(API_ENDPOINTS.ADMIN.DASHBOARD);
-    return res.data?.data || res.data;
+    return unwrap(res);
   },
 
   async exportDashboard(from, to) {
@@ -31,17 +40,17 @@ export const adminApi = {
     if (status && status !== 'ALL') params.status = status;
 
     const res = await baseApi.get(API_ENDPOINTS.ADMIN.ACCOUNTS, { params });
-    return res.data?.data || res.data;
+    return unwrap(res);
   },
 
   async banAccount(accountId, reason) {
     const res = await baseApi.post(API_ENDPOINTS.ADMIN.BAN_ACCOUNT(accountId), { reason });
-    return res.data?.data || res.data;
+    return unwrap(res);
   },
 
   async unbanAccount(accountId) {
     const res = await baseApi.post(API_ENDPOINTS.ADMIN.UNBAN_ACCOUNT(accountId));
-    return res.data?.data || res.data;
+    return unwrap(res);
   },
 
   // 3. Quản lý Điểm kí gửi (Kho)
@@ -49,22 +58,22 @@ export const adminApi = {
     const params = {};
     if (status && status !== 'ALL') params.status = status;
     const res = await baseApi.get(API_ENDPOINTS.ADMIN.WAREHOUSES, { params });
-    return res.data?.data || res.data;
+    return unwrap(res);
   },
 
   async createWarehouse(data) {
     const res = await baseApi.post(API_ENDPOINTS.ADMIN.CREATE_WAREHOUSE, data);
-    return res.data?.data || res.data;
+    return unwrap(res);
   },
 
   async updateWarehouse(id, data) {
     const res = await baseApi.put(API_ENDPOINTS.ADMIN.UPDATE_WAREHOUSE(id), data);
-    return res.data?.data || res.data;
+    return unwrap(res);
   },
 
   async hideWarehouse(id) {
     const res = await baseApi.post(API_ENDPOINTS.ADMIN.HIDE_WAREHOUSE(id));
-    return res.data?.data || res.data;
+    return unwrap(res);
   },
 
   // 4. Quản lý Nhân sự Moderator
@@ -74,22 +83,22 @@ export const adminApi = {
     if (search && search.trim()) params.search = search.trim();
     if (status && status !== 'ALL') params.status = status;
     const res = await baseApi.get(API_ENDPOINTS.ADMIN.MODERATORS, { params });
-    return res.data?.data || res.data;
+    return unwrap(res);
   },
 
   async createModerator(data) {
     const res = await baseApi.post(API_ENDPOINTS.ADMIN.CREATE_MODERATOR, data);
-    return res.data?.data || res.data;
+    return unwrap(res);
   },
 
   async updateModerator(id, data) {
     const res = await baseApi.put(API_ENDPOINTS.ADMIN.UPDATE_MODERATOR(id), data);
-    return res.data?.data || res.data;
+    return unwrap(res);
   },
 
   async assignWarehouse(moderatorId, warehouseId) {
     const res = await baseApi.patch(API_ENDPOINTS.ADMIN.CHANGE_WAREHOUSE(moderatorId), { warehouseId });
-    return res.data?.data || res.data;
+    return unwrap(res);
   },
 
   // 5. Nhật ký kiểm soát (Audit Log)
@@ -103,12 +112,12 @@ export const adminApi = {
     if (to) params.to = to;
 
     const res = await baseApi.get(API_ENDPOINTS.ADMIN.AUDIT_LOGS, { params });
-    return res.data?.data || res.data;
+    return unwrap(res);
   },
 
   async getAuditLogFilterOptions() {
     const res = await baseApi.get(API_ENDPOINTS.ADMIN.AUDIT_LOG_FILTER_OPTIONS);
-    return res.data?.data || res.data;
+    return unwrap(res);
   },
 
   // 6. Cấu hình Tham số Hệ thống (API 146: PUT /api/admin/config/{key})
