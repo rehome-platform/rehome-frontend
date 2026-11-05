@@ -613,3 +613,5 @@ export function VerificationQueueTabs({ setActiveQueueTab, activeQueueTab, orgsQ
     </div>
   );
 }
+
+export { ExistingOrganizationsSection } from './ExistingOrganizationsSection.jsx';
