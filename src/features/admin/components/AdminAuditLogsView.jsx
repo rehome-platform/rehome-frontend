@@ -4,129 +4,16 @@ import adminApi from '../services/adminApi.js';
 /**
  * View Nhật ký hệ thống (Audit Log)
  * Chuẩn hóa 100% theo Nghiệp vụ sau Review 2:
- * - Nối trực tiếp Backend API: GET /api/admin/audit-logs & GET /filter-options
+ * - Nối trực tiếp Backend API: GET /api/admin/audit-logs & GET /api/admin/audit-logs/filter-options
  * - Chọn theo khoảng thời gian linh hoạt (Từ ngày - Đến ngày)
- * - Thêm ô Search truy vết theo từ khóa (Mã đối tượng, Lý do, Thao tác)
+ * - Thêm ô Search truy vết theo từ khóa (Mã đối tượng, Lý do, Thao tác, Người thực hiện)
  * - Chuyển bộ lọc "Người thực hiện" thành "Đối tượng" (targetType)
  * - Đồng bộ giao diện 100% với phong cách Moderator
  */
 export default function AdminAuditLogsView({ dynamicLogs = [] }) {
-  const initialLogs = [
-    {
-      id: 'AUD-01',
-      time: '02/10/2026 14:20',
-      user: 'Trần Minh Quân',
-      role: 'Admin',
-      actionType: 'Khóa tài khoản',
-      targetType: 'ACCOUNT',
-      target: 'Member "Lê Hoàng Nam" (MB-849102)',
-      beforeState: 'Hoạt động',
-      afterState: 'Bị khóa',
-      reason: 'Đăng bình luận xúc phạm nhiều lần trên các bài đăng quyên góp công khai.',
-    },
-    {
-      id: 'AUD-02',
-      time: '02/10/2026 11:05',
-      user: 'Phạm Thu Hà',
-      role: 'Moderator',
-      actionType: 'Gỡ nội dung',
-      targetType: 'ORGANIZATION',
-      target: 'Tổ chức "Mái Ấm Hướng Dương"',
-      beforeState: 'Hiển thị công khai',
-      afterState: 'Đã gỡ bỏ',
-      reason: 'Hình ảnh chiến dịch kêu gọi không đạt tiêu chuẩn kiểm duyệt nội dung của ReHome.',
-    },
-    {
-      id: 'AUD-03',
-      time: '01/10/2026 16:42',
-      user: 'Trần Minh Quân',
-      role: 'Admin',
-      actionType: 'Tạo Moderator',
-      targetType: 'ACCOUNT',
-      target: 'Moderator "Đỗ Quang Huy" (MOD-1070)',
-      beforeState: 'Chưa có',
-      afterState: 'Hoạt động (ID: MOD-1070)',
-      reason: 'Bổ sung nhân sự kiểm duyệt khu vực TP. Hồ Chí Minh.',
-    },
-    {
-      id: 'AUD-04',
-      time: '01/10/2026 09:15',
-      user: 'Phạm Thu Hà',
-      role: 'Moderator',
-      actionType: 'Bỏ qua báo cáo',
-      targetType: 'ORGANIZATION',
-      target: 'Chiến dịch "Áo ấm mùa đông vùng cao Tây Bắc"',
-      beforeState: 'Chờ xử lý vi phạm',
-      afterState: 'Hợp lệ / Hoạt động',
-      reason: 'Báo cáo sai sự thật từ tài khoản giả mạo, nội dung chiến dịch hợp lệ.',
-    },
-    {
-      id: 'AUD-05',
-      time: '30/09/2026 17:30',
-      user: 'Trần Minh Quân',
-      role: 'Admin',
-      actionType: 'Mở khóa tài khoản',
-      targetType: 'ACCOUNT',
-      target: 'Member "Nguyễn Thị Mai" (MB-849103)',
-      beforeState: 'Bị khóa',
-      afterState: 'Hoạt động',
-      reason: 'Hoàn tất xác minh và giải quyết tranh chấp biên nhận ký gửi tại quầy.',
-    },
-    {
-      id: 'AUD-06',
-      time: '29/09/2026 10:12',
-      user: 'Trần Minh Quân',
-      role: 'Admin',
-      actionType: 'Ẩn kho',
-      targetType: 'WAREHOUSE',
-      target: 'Điểm kí gửi Thủ Đức (WH-04)',
-      beforeState: 'Hoạt động',
-      afterState: 'Đã ẩn (Tồn kho = 0)',
-      reason: 'Đã thanh lý và điều chuyển hết hàng tồn kho, đóng điểm phục vụ sửa chữa.',
-    },
-    {
-      id: 'AUD-07',
-      time: '27/09/2026 15:48',
-      user: 'Trần Minh Quân',
-      role: 'Admin',
-      actionType: 'Cập nhật cấu hình',
-      targetType: 'SYSTEM_CONFIG',
-      target: 'Tham số: commission_rate_term2',
-      beforeState: '0.12 (12%)',
-      afterState: '0.15 (15%)',
-      reason: 'Điều chỉnh tỷ lệ hoa hồng Kỳ 2 theo phê duyệt sau Review 2.',
-    },
-  ];
-
-  // Hợp nhất với log phát sinh trong phiên
-  const allLogs = [
-    ...dynamicLogs.map((l, i) => ({
-      id: `DYN-${i}`,
-      time: l.time,
-      user: l.user,
-      role: l.role,
-      actionType: l.action.includes('Khóa')
-        ? 'Khóa tài khoản'
-        : l.action.includes('Mở khóa')
-        ? 'Mở khóa tài khoản'
-        : l.action.includes('Ẩn')
-        ? 'Ẩn kho'
-        : 'Thao tác Admin',
-      targetType: l.action.includes('kho')
-        ? 'WAREHOUSE'
-        : l.action.includes('cấu hình')
-        ? 'SYSTEM_CONFIG'
-        : 'ACCOUNT',
-      target: l.action,
-      beforeState: 'Ghi nhận',
-      afterState: 'Đã lưu',
-      reason: 'Thực hiện trực tiếp từ phiên quản trị hiện tại.',
-    })),
-    ...initialLogs,
-  ];
-
-  const [logs, setLogs] = useState(allLogs);
-  const [loading, setLoading] = useState(false);
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [availableActionTypes, setAvailableActionTypes] = useState([]);
 
   // Bộ lọc
   const [searchTerm, setSearchTerm] = useState(''); // Ô search để truy vết
@@ -136,38 +23,145 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
   // Chọn theo thời gian
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
-  const [expandedLogId, setExpandedLogId] = useState('AUD-01');
+  const [expandedLogId, setExpandedLogId] = useState(null);
 
-  // Nối Backend API
+  // Tải danh sách filter options từ backend
+  useEffect(() => {
+    const loadFilterOptions = async () => {
+      try {
+        const options = await adminApi.getAuditLogFilterOptions();
+        if (options && options.actionTypes) {
+          setAvailableActionTypes(options.actionTypes);
+        }
+      } catch (err) {
+        console.warn('Lỗi tải filter-options audit-logs:', err);
+      }
+    };
+    loadFilterOptions();
+  }, []);
+
+  // Format nhãn hành động sang tiếng Việt thân thiện
+  const formatActionLabel = (actionType) => {
+    switch (actionType) {
+      case 'BAN_ACCOUNT':
+      case 'Khóa tài khoản':
+        return 'Khóa tài khoản';
+      case 'UNBAN_ACCOUNT':
+      case 'Mở khóa tài khoản':
+        return 'Mở khóa tài khoản';
+      case 'HIDE_WAREHOUSE':
+      case 'Ẩn kho':
+        return 'Ẩn kho';
+      case 'CREATE_WAREHOUSE':
+      case 'Tạo kho':
+        return 'Tạo kho mới';
+      case 'UPDATE_WAREHOUSE':
+        return 'Cập nhật điểm ký gửi';
+      case 'CREATE_MODERATOR':
+      case 'Tạo Moderator':
+        return 'Tạo Moderator';
+      case 'UPDATE_MODERATOR':
+        return 'Cập nhật Moderator';
+      case 'CHANGE_WAREHOUSE':
+      case 'ASSIGN_WAREHOUSE':
+        return 'Phân công kho';
+      case 'UPDATE_CONFIG':
+      case 'Cập nhật cấu hình':
+        return 'Cập nhật cấu hình';
+      case 'RESOLVE_VIOLATION':
+        return 'Xử lý vi phạm';
+      default:
+        return actionType || 'Thao tác hệ thống';
+    }
+  };
+
+  // Nối Backend API lấy real data
   const fetchAuditLogs = async () => {
     try {
       setLoading(true);
-      const res = await adminApi.getAuditLogs({
-        targetType: selectedTargetType !== 'ALL' ? selectedTargetType : undefined,
-        actionType: selectedActionType !== 'ALL' ? selectedActionType : undefined,
-        from: fromDate ? `${fromDate}T00:00:00Z` : undefined,
-        to: toDate ? `${toDate}T23:59:59Z` : undefined,
+      const params = {
         page: 0,
         size: 50,
+      };
+      if (selectedTargetType !== 'ALL') params.targetType = selectedTargetType;
+      if (selectedActionType !== 'ALL') params.actionType = selectedActionType;
+      if (fromDate) params.from = `${fromDate}T00:00:00Z`;
+      if (toDate) params.to = `${toDate}T23:59:59Z`;
+
+      const res = await adminApi.getAuditLogs(params);
+      const rawList = Array.isArray(res) ? res : res?.content || [];
+
+      const mapped = rawList.map((l, idx) => {
+        let beforeState = '—';
+        let afterState = '—';
+        let reason = 'Ghi nhận kiểm toán tự động';
+
+        if (l.detail) {
+          if (typeof l.detail === 'object') {
+            beforeState = l.detail.beforeStatus || l.detail.beforeState || l.detail.oldValue || '—';
+            afterState = l.detail.afterStatus || l.detail.afterState || l.detail.newValue || '—';
+            reason = l.detail.reason || l.detail.note || l.detail.message || JSON.stringify(l.detail);
+          } else {
+            reason = String(l.detail);
+          }
+        }
+
+        return {
+          id: l.id || `AUD-BE-${idx}`,
+          time: l.createdAt ? new Date(l.createdAt).toLocaleString('vi-VN') : '—',
+          user: l.actorName || l.actorEmail || (l.actorRole ? `Tài khoản ${l.actorRole}` : 'Quản trị viên'),
+          role: l.actorRole || 'ADMIN',
+          actionType: formatActionLabel(l.actionType),
+          rawActionType: l.actionType,
+          targetType: l.targetType || 'SYSTEM',
+          target: l.targetId ? `${l.targetType || 'Đối tượng'}: ${l.targetId}` : (l.targetType || 'Hệ thống'),
+          beforeState,
+          afterState,
+          reason,
+        };
       });
 
-      if (res && res.content && res.content.length > 0) {
-        const mapped = res.content.map((l, idx) => ({
-          id: l.id || `AUD-BE-${idx}`,
-          time: l.createdAt ? new Date(l.createdAt).toLocaleString('vi-VN') : '02/10/2026',
-          user: l.actorEmail || l.actorFullName || 'Admin',
-          role: l.actorRole || 'Admin',
-          actionType: l.actionType || 'Thao tác hệ thống',
-          targetType: l.targetType || 'SYSTEM',
-          target: `${l.targetType || 'Đối tượng'}: ${l.targetId || ''}`,
-          beforeState: l.beforeState || 'Dữ liệu trước',
-          afterState: l.afterState || 'Dữ liệu sau',
-          reason: l.reason || 'Ghi nhận kiểm toán tự động',
-        }));
-        setLogs([...allLogs.slice(0, dynamicLogs.length), ...mapped]);
+      // Hợp nhất với các dynamic logs phát sinh trong phiên làm việc hiện tại
+      const sessionLogs = dynamicLogs.map((l, i) => ({
+        id: `DYN-${i}`,
+        time: l.time || new Date().toLocaleString('vi-VN'),
+        user: l.user || 'Admin',
+        role: l.role || 'ADMIN',
+        actionType: formatActionLabel(l.action || 'Thao tác Admin'),
+        rawActionType: l.action,
+        targetType: l.action?.includes('kho')
+          ? 'WAREHOUSE'
+          : l.action?.includes('cấu hình')
+          ? 'SYSTEM_CONFIG'
+          : 'ACCOUNT',
+        target: l.action,
+        beforeState: 'Ghi nhận',
+        afterState: 'Đã lưu',
+        reason: 'Thực hiện trực tiếp từ phiên quản trị hiện tại.',
+      }));
+
+      const combined = [...sessionLogs, ...mapped];
+      setLogs(combined);
+      if (combined.length > 0 && !expandedLogId) {
+        setExpandedLogId(combined[0].id);
       }
     } catch (err) {
-      console.warn('Lỗi gọi API audit-logs, dùng dữ liệu mẫu:', err);
+      console.warn('Lỗi gọi API audit-logs:', err);
+      // Giữ lại các log động trong phiên nếu backend tạm thời lỗi
+      const sessionLogs = dynamicLogs.map((l, i) => ({
+        id: `DYN-${i}`,
+        time: l.time || new Date().toLocaleString('vi-VN'),
+        user: l.user || 'Admin',
+        role: l.role || 'ADMIN',
+        actionType: formatActionLabel(l.action || 'Thao tác Admin'),
+        rawActionType: l.action,
+        targetType: 'SYSTEM',
+        target: l.action,
+        beforeState: 'Ghi nhận',
+        afterState: 'Đã lưu',
+        reason: 'Thực hiện trực tiếp từ phiên quản trị hiện tại.',
+      }));
+      setLogs(sessionLogs);
     } finally {
       setLoading(false);
     }
@@ -175,7 +169,7 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
 
   useEffect(() => {
     fetchAuditLogs();
-  }, [selectedTargetType, selectedActionType, fromDate, toDate]);
+  }, [selectedTargetType, selectedActionType, fromDate, toDate, dynamicLogs.length]);
 
   // Bộ lọc kết hợp tìm kiếm truy vết
   const filteredLogs = logs.filter((log) => {
@@ -197,7 +191,9 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
 
     // Filter theo Loại hành động
     const matchAction =
-      selectedActionType === 'ALL' || log.actionType === selectedActionType;
+      selectedActionType === 'ALL' ||
+      log.actionType === selectedActionType ||
+      log.rawActionType === selectedActionType;
 
     return matchSearch && matchTargetType && matchAction;
   });
@@ -221,43 +217,44 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
   };
 
   const getActionBadge = (actionType) => {
-    switch (actionType) {
-      case 'Khóa tài khoản':
-        return (
-          <span className="inline-flex items-center gap-1 text-[#DC2626] font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626]"></span>
-            <span>Khóa tài khoản</span>
-          </span>
-        );
-      case 'Mở khóa tài khoản':
-        return (
-          <span className="inline-flex items-center gap-1 text-[#006B2C] font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#006B2C]"></span>
-            <span>Mở khóa tài khoản</span>
-          </span>
-        );
-      case 'Ẩn kho':
-        return (
-          <span className="inline-flex items-center gap-1 text-[#D97706] font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#D97706]"></span>
-            <span>Ẩn điểm kí gửi</span>
-          </span>
-        );
-      case 'Tạo Moderator':
-        return (
-          <span className="inline-flex items-center gap-1 text-[#00685F] font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#00685F]"></span>
-            <span>Tạo Moderator</span>
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 text-[#414942] font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#717971]"></span>
-            <span>{actionType}</span>
-          </span>
-        );
+    if (actionType.includes('Khóa tài khoản')) {
+      return (
+        <span className="inline-flex items-center gap-1 text-[#DC2626] font-semibold">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626]"></span>
+          <span>Khóa tài khoản</span>
+        </span>
+      );
     }
+    if (actionType.includes('Mở khóa tài khoản')) {
+      return (
+        <span className="inline-flex items-center gap-1 text-[#006B2C] font-semibold">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#006B2C]"></span>
+          <span>Mở khóa tài khoản</span>
+        </span>
+      );
+    }
+    if (actionType.includes('Ẩn kho')) {
+      return (
+        <span className="inline-flex items-center gap-1 text-[#D97706] font-semibold">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#D97706]"></span>
+          <span>Ẩn điểm kí gửi</span>
+        </span>
+      );
+    }
+    if (actionType.includes('Tạo Moderator') || actionType.includes('Tạo kho')) {
+      return (
+        <span className="inline-flex items-center gap-1 text-[#00685F] font-semibold">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#00685F]"></span>
+          <span>{actionType}</span>
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 text-[#414942] font-semibold">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#717971]"></span>
+        <span>{actionType}</span>
+      </span>
+    );
   };
 
   return (
@@ -361,27 +358,53 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
               <option value="Ẩn kho">Ẩn kho</option>
               <option value="Tạo Moderator">Tạo Moderator</option>
               <option value="Cập nhật cấu hình">Cập nhật cấu hình</option>
+              {availableActionTypes.map((act) => (
+                <option key={act} value={act}>
+                  {formatActionLabel(act)} ({act})
+                </option>
+              ))}
             </select>
           </div>
 
-          {(searchTerm ||
-            selectedTargetType !== 'ALL' ||
-            selectedActionType !== 'ALL' ||
-            fromDate ||
-            toDate) && (
+          <div className="flex items-center gap-2">
             <button
-              onClick={handleResetFilter}
-              className="px-3 py-1.5 text-xs font-semibold text-[#006B2C] hover:text-[#005523] hover:bg-[#E8F5E9] rounded-xl transition-colors flex items-center gap-1"
+              onClick={fetchAuditLogs}
+              disabled={loading}
+              className="px-3 py-1.5 text-xs font-semibold text-[#006B2C] hover:bg-[#E8F5E9] rounded-xl transition-colors flex items-center gap-1 border border-[#006B2C]/30"
+              title="Làm mới nhật ký"
             >
-              <span className="material-symbols-outlined text-base">restart_alt</span>
-              <span>Xóa bộ lọc</span>
+              <span className={`material-symbols-outlined text-base ${loading ? 'animate-spin' : ''}`}>
+                refresh
+              </span>
+              <span>{loading ? 'Đang tải...' : 'Làm mới'}</span>
             </button>
-          )}
+
+            {(searchTerm ||
+              selectedTargetType !== 'ALL' ||
+              selectedActionType !== 'ALL' ||
+              fromDate ||
+              toDate) && (
+              <button
+                onClick={handleResetFilter}
+                className="px-3 py-1.5 text-xs font-semibold text-[#717971] hover:text-[#191C19] hover:bg-[#F0F4EE] rounded-xl transition-colors flex items-center gap-1"
+              >
+                <span className="material-symbols-outlined text-base">restart_alt</span>
+                <span>Xóa bộ lọc</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Main Table or Empty State */}
-      {filteredLogs.length === 0 ? (
+      {loading ? (
+        <div className="bg-white rounded-2xl border border-[#E2E8E0] p-12 text-center flex flex-col items-center justify-center shadow-xs">
+          <span className="material-symbols-outlined text-4xl text-[#006B2C] animate-spin mb-3">
+            progress_activity
+          </span>
+          <p className="text-xs text-[#717971]">Đang tải dữ liệu nhật ký kiểm soát từ hệ thống...</p>
+        </div>
+      ) : filteredLogs.length === 0 ? (
         <div className="bg-white rounded-2xl border border-[#E2E8E0] p-12 text-center flex flex-col items-center justify-center shadow-xs">
           <div className="w-16 h-16 rounded-2xl bg-[#F0F5EE] text-[#006B2C] flex items-center justify-center mb-4">
             <span className="material-symbols-outlined text-3xl">receipt_long</span>

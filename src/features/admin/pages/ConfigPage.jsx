@@ -37,26 +37,19 @@ export default function ConfigPage() {
     try {
       const data = await adminApi.getConfigs();
       if (data && typeof data === 'object') {
-        // Nếu backend trả về danh sách key-value hoặc object
         const updated = JSON.parse(JSON.stringify(DEFAULT_SYSTEM_CONFIGS));
-        if (data.term_length_days) updated.consignment.termDays = Number(data.term_length_days);
-        if (data.max_renewals) updated.consignment.maxRenewals = Number(data.max_renewals);
-        if (data.free_withdrawal_window_days) updated.consignment.freeWithdrawalDays = Number(data.free_withdrawal_window_days);
-        if (data.commission_rate_term1) updated.pricingAndCommission.commissionTerm1 = Number(data.commission_rate_term1) * 100;
-        if (data.commission_rate_term2) updated.pricingAndCommission.commissionTerm2 = Number(data.commission_rate_term2) * 100;
-        if (data.commission_rate_term3) updated.pricingAndCommission.commissionTerm3 = Number(data.commission_rate_term3) * 100;
-        if (data.floor_price_ratio) updated.pricingAndCommission.floorPricePercent = Number(data.floor_price_ratio) * 100;
-        if (data.withdrawal_fee !== undefined) updated.pricingAndCommission.withdrawalFee = Number(data.withdrawal_fee);
-        if (data.degraded_compensation_rate) updated.pricingAndCommission.degradedCompensationRate = Number(data.degraded_compensation_rate) * 100;
-        if (data.max_concurrent_campaigns) updated.operationsAndCommunity.maxConcurrentCampaignsPerOrg = Number(data.max_concurrent_campaigns);
-        if (data.legal_image_retention_days) updated.operationsAndCommunity.legalDocsRetentionDays = Number(data.legal_image_retention_days);
-        if (data.overdue_task_hours) updated.operationsAndCommunity.taskAutoReleaseHours = Number(data.overdue_task_hours);
+        // Khôi phục từ cấu hình đã lưu
+        if (data.consignment) updated.consignment = { ...updated.consignment, ...data.consignment };
+        if (data.pricingAndCommission) updated.pricingAndCommission = { ...updated.pricingAndCommission, ...data.pricingAndCommission };
+        if (data.walletAndPayout) updated.walletAndPayout = { ...updated.walletAndPayout, ...data.walletAndPayout };
+        if (data.ordersAndReturns) updated.ordersAndReturns = { ...updated.ordersAndReturns, ...data.ordersAndReturns };
+        if (data.operationsAndCommunity) updated.operationsAndCommunity = { ...updated.operationsAndCommunity, ...data.operationsAndCommunity };
 
         setConfigs(updated);
         setInitialConfigs(JSON.parse(JSON.stringify(updated)));
       }
     } catch {
-      // Giữ default nếu backend chưa có GET /configs
+      // Giữ default nếu chưa có cấu hình lưu trữ
     }
   };
 
@@ -82,7 +75,7 @@ export default function ConfigPage() {
         { key: 'overdue_task_hours', value: String(configs.operationsAndCommunity.taskAutoReleaseHours) },
       ];
 
-      // Gửi các PUT request song song cho các key
+      // Gửi các PUT request song song cho các key lên backend Azure
       const updatePromises = configKeyMap.map(async ({ key, value }) => {
         try {
           return await adminApi.updateConfig(key, value);
@@ -94,6 +87,11 @@ export default function ConfigPage() {
 
       await Promise.all(updatePromises);
 
+      // Lưu lại snapshot vào localStorage
+      try {
+        localStorage.setItem('rehome_admin_saved_configs', JSON.stringify(configs));
+      } catch {}
+
       setSavedSuccess(true);
       setInitialConfigs(JSON.parse(JSON.stringify(configs)));
 
@@ -102,7 +100,7 @@ export default function ConfigPage() {
           time: new Date().toLocaleString('vi-VN'),
           user: user?.fullName || user?.name || 'Trần Minh Quân',
           role: 'Admin',
-          action: 'Cập nhật cấu hình tham số hệ thống (API 146 - F-157)',
+          action: 'Cập nhật cấu hình tham số hệ thống (API 146 - PUT /api/admin/config/{key})',
         });
       }
 
