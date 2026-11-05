@@ -12,6 +12,7 @@ export const COMMON_COLORS = [
   'Đen',
   'Trắng',
   'Xám',
+  'Be',
   'Be / Kem',
   'Nâu',
   'Xanh dương',
