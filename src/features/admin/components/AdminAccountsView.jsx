@@ -129,8 +129,24 @@ const initialAccounts = [
   },
 ];
 
-export default function AdminAccountsView({ onLogAction }) {
-  const [accounts, setAccounts] = useState(initialAccounts);
+export default function AdminAccountsView({
+  onLogAction,
+  remoteAccounts,
+  onBanAccount,
+  onUnbanAccount,
+}) {
+  const [accounts, setAccounts] = useState(
+    remoteAccounts && remoteAccounts.length > 0 ? remoteAccounts : initialAccounts
+  );
+
+  if (typeof React.useEffect === 'function') {
+    React.useEffect(() => {
+      if (remoteAccounts && remoteAccounts.length > 0) {
+        setAccounts(remoteAccounts);
+      }
+    }, [remoteAccounts]);
+  }
+
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedRole, setSelectedRole] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
@@ -191,6 +207,10 @@ export default function AdminAccountsView({ onLogAction }) {
       return;
     }
 
+    if (onBanAccount && lockModalAccount) {
+      onBanAccount(lockModalAccount.id, lockReason.trim());
+    }
+
     updateAccountStatus(lockModalAccount, 'LOCKED', {
       date: '09/10/2026 14:00',
       action: 'Khóa',
@@ -205,6 +225,10 @@ export default function AdminAccountsView({ onLogAction }) {
 
   // Mở khóa tài khoản
   const handleUnlockAccount = (account) => {
+    if (onUnbanAccount && account) {
+      onUnbanAccount(account.id);
+    }
+
     updateAccountStatus(account, 'ACTIVE', {
       date: '09/10/2026 14:05',
       action: 'Mở khóa',

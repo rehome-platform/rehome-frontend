@@ -152,26 +152,34 @@ export const API_ENDPOINTS = {
     DASHBOARD: "/api/admin/dashboard",
     DASHBOARD_STATS: "/api/admin/dashboard/stats",
     DASHBOARD_FUND: "/api/admin/dashboard/fund",
-    EXPORT_EXCEL: "/api/admin/dashboard/export-excel",
+    EXPORT_EXCEL: "/api/admin/dashboard/export",
 
-    USERS: "/api/admin/users",
-    LOCK_USER: (id) => `/api/admin/users/${id}/lock`,
-    UNLOCK_USER: (id) => `/api/admin/users/${id}/unlock`,
+    ACCOUNTS: "/api/admin/accounts",
+    USERS: "/api/admin/accounts",
+    BAN_ACCOUNT: (id) => `/api/admin/accounts/${id}/ban`,
+    UNBAN_ACCOUNT: (id) => `/api/admin/accounts/${id}/unban`,
+    LOCK_USER: (id) => `/api/admin/accounts/${id}/ban`,
+    UNLOCK_USER: (id) => `/api/admin/accounts/${id}/unban`,
 
     MODERATORS: "/api/admin/moderators",
     CREATE_MODERATOR: "/api/admin/moderators",
     UPDATE_MODERATOR: (id) => `/api/admin/moderators/${id}`,
-    ASSIGN_WAREHOUSE: (id) => `/api/admin/moderators/${id}/assign-warehouse`,
+    CHANGE_WAREHOUSE: (id) => `/api/admin/moderators/${id}/warehouse`,
+    ASSIGN_WAREHOUSE: (id) => `/api/admin/moderators/${id}/warehouse`,
 
     WAREHOUSES: "/api/admin/warehouses",
     CREATE_WAREHOUSE: "/api/admin/warehouses",
     UPDATE_WAREHOUSE: (id) => `/api/admin/warehouses/${id}`,
     HIDE_WAREHOUSE: (id) => `/api/admin/warehouses/${id}/hide`,
 
-    CONFIGS: "/api/admin/configs",
-    UPDATE_CONFIGS: "/api/admin/configs/update",
+    CONFIGS: "/api/admin/config",
+    UPDATE_CONFIG: (key) => `/api/admin/config/${key}`,
+    UPDATE_CONFIGS: "/api/admin/config",
 
     AUDIT_LOGS: "/api/admin/audit-logs",
+    AUDIT_LOG_FILTER_OPTIONS: "/api/admin/audit-logs/filter-options",
+
+    VIOLATION_WORDS: "/api/admin/violation-words",
   },
 
   // 4. Notifications (API 114)

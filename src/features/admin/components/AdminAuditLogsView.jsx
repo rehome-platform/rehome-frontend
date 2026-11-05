@@ -1,184 +1,260 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import adminApi from '../services/adminApi.js';
 
 /**
  * View Nhật ký hệ thống (Audit Log)
- * Thiết kế chính xác theo Google Stitch (Figma) Prototype:
- * - Read-only nghiêm ngặt: không có nút xóa/sửa/xuất
- * - Bộ lọc ngày (25/09/2026 - 02/10/2026), Người thực hiện, Loại hành động
- * - Mở rộng chi tiết từng dòng (Row expansion) xem trạng thái trước/sau và lý do
- * - Màn hình Empty State khi tìm kiếm không thấy bản ghi
+ * Chuẩn hóa 100% theo Nghiệp vụ sau Review 2:
+ * - Nối trực tiếp Backend API: GET /api/admin/audit-logs & GET /api/admin/audit-logs/filter-options
+ * - Chọn theo khoảng thời gian linh hoạt (Từ ngày - Đến ngày)
+ * - Thêm ô Search truy vết theo từ khóa (Mã đối tượng, Lý do, Thao tác, Người thực hiện)
+ * - Chuyển bộ lọc "Người thực hiện" thành "Đối tượng" (targetType)
+ * - Đồng bộ giao diện 100% với phong cách Moderator
  */
 export default function AdminAuditLogsView({ dynamicLogs = [] }) {
-  const initialLogs = [
-    {
-      id: 'AUD-01',
-      time: '02/10/2026 14:20',
-      user: 'Trần Minh Quân',
-      role: 'Admin',
-      actionType: 'Khóa tài khoản',
-      actionText: 'Khóa tài khoản',
-      target: 'Member "Lê Hoàng Nam"',
-      beforeState: 'Hoạt động',
-      afterState: 'Bị khóa',
-      reason: 'Đăng bình luận xúc phạm nhiều lần trên các bài đăng quyên góp công khai.',
-    },
-    {
-      id: 'AUD-02',
-      time: '02/10/2026 11:05',
-      user: 'Phạm Thu Hà',
-      role: 'Moderator',
-      actionType: 'Gỡ nội dung',
-      actionText: 'Gỡ bài viết vi phạm',
-      target: 'Tổ chức "Mái Ấm Hướng Dương"',
-      beforeState: 'Hiển thị công khai',
-      afterState: 'Đã gỡ bỏ',
-      reason: 'Hình ảnh chiến dịch kêu gọi không đạt tiêu chuẩn kiểm duyệt nội dung của ReHome.',
-    },
-    {
-      id: 'AUD-03',
-      time: '01/10/2026 16:42',
-      user: 'Trần Minh Quân',
-      role: 'Admin',
-      actionType: 'Tạo Moderator',
-      actionText: 'Tạo Moderator',
-      target: 'Moderator "Đỗ Quang Huy"',
-      beforeState: 'Chưa có',
-      afterState: 'Hoạt động (ID: MOD-1070)',
-      reason: 'Bổ sung nhân sự kiểm duyệt khu vực TP. Hồ Chí Minh.',
-    },
-    {
-      id: 'AUD-04',
-      time: '01/10/2026 09:15',
-      user: 'Phạm Thu Hà',
-      role: 'Moderator',
-      actionType: 'Bỏ qua báo cáo',
-      actionText: 'Bỏ qua báo cáo',
-      target: 'Chiến dịch "Áo ấm mùa đông vùng cao Tây Bắc"',
-      beforeState: 'Chờ xử lý vi phạm',
-      afterState: 'Hợp lệ / Hoạt động',
-      reason: 'Báo cáo sai sự thật từ tài khoản giả mạo, nội dung chiến dịch hợp lệ.',
-    },
-    {
-      id: 'AUD-05',
-      time: '30/09/2026 17:30',
-      user: 'Trần Minh Quân',
-      role: 'Admin',
-      actionType: 'Mở khóa tài khoản',
-      actionText: 'Mở khóa tài khoản',
-      target: 'Member "Nguyễn Thị Mai"',
-      beforeState: 'Bị khóa',
-      afterState: 'Hoạt động',
-      reason: 'Hoàn tất xác minh và giải quyết tranh chấp biên nhận ký gửi tại quầy.',
-    },
-    {
-      id: 'AUD-06',
-      time: '29/09/2026 10:12',
-      user: 'Trần Minh Quân',
-      role: 'Admin',
-      actionType: 'Sửa Moderator',
-      actionText: 'Sửa phân quyền Moderator',
-      target: 'Moderator "Hoàng Anh Thư"',
-      beforeState: 'Kiểm duyệt bài đăng',
-      afterState: 'Kiểm duyệt bài đăng + Phân xử khiếu nại',
-      reason: 'Phân công mở rộng phụ trách nhánh giải quyết tranh chấp.',
-    },
-    {
-      id: 'AUD-07',
-      time: '27/09/2026 15:48',
-      user: 'Trần Minh Quân',
-      role: 'Admin',
-      actionType: 'Đặt lại mật khẩu',
-      actionText: 'Đặt lại mật khẩu',
-      target: 'Moderator "Lý Gia Bảo"',
-      beforeState: 'Bình thường',
-      afterState: 'Yêu cầu đổi mật khẩu ở lần đăng nhập tới',
-      reason: 'Hỗ trợ cấp lại mã truy cập sau sự cố quên thông tin.',
-    },
-    {
-      id: 'AUD-08',
-      time: '25/09/2026 08:30',
-      user: 'Trần Minh Quân',
-      role: 'Admin',
-      actionType: 'Khóa tài khoản',
-      actionText: 'Khóa tài khoản',
-      target: 'Moderator "Bùi Đức Thịnh"',
-      beforeState: 'Hoạt động',
-      afterState: 'Bị khóa',
-      reason: 'Tạm đình chỉ nhiệm vụ do vi phạm quy chế bảo mật thông tin đối tác.',
-    },
-  ];
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [availableActionTypes, setAvailableActionTypes] = useState([]);
 
-  // Hợp nhất với các hành động vừa thực hiện trong phiên
-  const allLogs = [
-    ...dynamicLogs.map((l, i) => ({
-      id: `DYN-${i}`,
-      time: l.time,
-      user: l.user,
-      role: l.role,
-      actionType: l.action.includes('Khóa')
-        ? 'Khóa tài khoản'
-        : l.action.includes('Mở khóa')
-        ? 'Mở khóa tài khoản'
-        : 'Tạo Moderator',
-      actionText: l.action,
-      target: 'Tài khoản người dùng',
-      beforeState: 'Thay đổi',
-      afterState: 'Áp dụng ngay',
-      reason: 'Thực hiện trực tiếp từ giao diện điều hành.',
-    })),
-    ...initialLogs,
-  ];
-
-  const [dateRange, setDateRange] = useState('25/09/2026 - 02/10/2026');
-  const [selectedActor, setSelectedActor] = useState('ALL');
+  // Bộ lọc
+  const [searchTerm, setSearchTerm] = useState(''); // Ô search để truy vết
+  const [selectedTargetType, setSelectedTargetType] = useState('ALL'); // Filter Đối tượng
   const [selectedActionType, setSelectedActionType] = useState('ALL');
-  const [expandedLogId, setExpandedLogId] = useState('AUD-01'); // Mặc định mở dòng đầu tiên như Stitch
 
-  const filteredLogs = allLogs.filter((log) => {
-    const matchActor =
-      selectedActor === 'ALL' || log.user.toLowerCase().includes(selectedActor.toLowerCase());
-    const matchType =
-      selectedActionType === 'ALL' || log.actionType === selectedActionType;
-    return matchActor && matchType;
+  // Chọn theo thời gian
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [expandedLogId, setExpandedLogId] = useState(null);
+
+  // Tải danh sách filter options từ backend
+  useEffect(() => {
+    const loadFilterOptions = async () => {
+      try {
+        const options = await adminApi.getAuditLogFilterOptions();
+        if (options && options.actionTypes) {
+          setAvailableActionTypes(options.actionTypes);
+        }
+      } catch (err) {
+        console.warn('Lỗi tải filter-options audit-logs:', err);
+      }
+    };
+    loadFilterOptions();
+  }, []);
+
+  // Format nhãn hành động sang tiếng Việt thân thiện
+  const formatActionLabel = (actionType) => {
+    switch (actionType) {
+      case 'BAN_ACCOUNT':
+      case 'Khóa tài khoản':
+        return 'Khóa tài khoản';
+      case 'UNBAN_ACCOUNT':
+      case 'Mở khóa tài khoản':
+        return 'Mở khóa tài khoản';
+      case 'HIDE_WAREHOUSE':
+      case 'Ẩn kho':
+        return 'Ẩn kho';
+      case 'CREATE_WAREHOUSE':
+      case 'Tạo kho':
+        return 'Tạo kho mới';
+      case 'UPDATE_WAREHOUSE':
+        return 'Cập nhật điểm ký gửi';
+      case 'CREATE_MODERATOR':
+      case 'Tạo Moderator':
+        return 'Tạo Moderator';
+      case 'UPDATE_MODERATOR':
+        return 'Cập nhật Moderator';
+      case 'CHANGE_WAREHOUSE':
+      case 'ASSIGN_WAREHOUSE':
+        return 'Phân công kho';
+      case 'UPDATE_CONFIG':
+      case 'Cập nhật cấu hình':
+        return 'Cập nhật cấu hình';
+      case 'RESOLVE_VIOLATION':
+        return 'Xử lý vi phạm';
+      default:
+        return actionType || 'Thao tác hệ thống';
+    }
+  };
+
+  // Nối Backend API lấy real data
+  const fetchAuditLogs = async () => {
+    try {
+      setLoading(true);
+      const params = {
+        page: 0,
+        size: 50,
+      };
+      if (selectedTargetType !== 'ALL') params.targetType = selectedTargetType;
+      if (selectedActionType !== 'ALL') params.actionType = selectedActionType;
+      if (fromDate) params.from = `${fromDate}T00:00:00Z`;
+      if (toDate) params.to = `${toDate}T23:59:59Z`;
+
+      const res = await adminApi.getAuditLogs(params);
+      const rawList = Array.isArray(res) ? res : res?.content || [];
+
+      const mapped = rawList.map((l, idx) => {
+        let beforeState = '—';
+        let afterState = '—';
+        let reason = 'Ghi nhận kiểm toán tự động';
+
+        if (l.detail) {
+          if (typeof l.detail === 'object') {
+            beforeState = l.detail.beforeStatus || l.detail.beforeState || l.detail.oldValue || '—';
+            afterState = l.detail.afterStatus || l.detail.afterState || l.detail.newValue || '—';
+            reason = l.detail.reason || l.detail.note || l.detail.message || JSON.stringify(l.detail);
+          } else {
+            reason = String(l.detail);
+          }
+        }
+
+        return {
+          id: l.id || `AUD-BE-${idx}`,
+          time: l.createdAt ? new Date(l.createdAt).toLocaleString('vi-VN') : '—',
+          user: l.actorName || l.actorEmail || (l.actorRole ? `Tài khoản ${l.actorRole}` : 'Quản trị viên'),
+          role: l.actorRole || 'ADMIN',
+          actionType: formatActionLabel(l.actionType),
+          rawActionType: l.actionType,
+          targetType: l.targetType || 'SYSTEM',
+          target: l.targetId ? `${l.targetType || 'Đối tượng'}: ${l.targetId}` : (l.targetType || 'Hệ thống'),
+          beforeState,
+          afterState,
+          reason,
+        };
+      });
+
+      // Hợp nhất với các dynamic logs phát sinh trong phiên làm việc hiện tại
+      const sessionLogs = dynamicLogs.map((l, i) => ({
+        id: `DYN-${i}`,
+        time: l.time || new Date().toLocaleString('vi-VN'),
+        user: l.user || 'Admin',
+        role: l.role || 'ADMIN',
+        actionType: formatActionLabel(l.action || 'Thao tác Admin'),
+        rawActionType: l.action,
+        targetType: l.action?.includes('kho')
+          ? 'WAREHOUSE'
+          : l.action?.includes('cấu hình')
+          ? 'SYSTEM_CONFIG'
+          : 'ACCOUNT',
+        target: l.action,
+        beforeState: 'Ghi nhận',
+        afterState: 'Đã lưu',
+        reason: 'Thực hiện trực tiếp từ phiên quản trị hiện tại.',
+      }));
+
+      const combined = [...sessionLogs, ...mapped];
+      setLogs(combined);
+      if (combined.length > 0 && !expandedLogId) {
+        setExpandedLogId(combined[0].id);
+      }
+    } catch (err) {
+      console.warn('Lỗi gọi API audit-logs:', err);
+      // Giữ lại các log động trong phiên nếu backend tạm thời lỗi
+      const sessionLogs = dynamicLogs.map((l, i) => ({
+        id: `DYN-${i}`,
+        time: l.time || new Date().toLocaleString('vi-VN'),
+        user: l.user || 'Admin',
+        role: l.role || 'ADMIN',
+        actionType: formatActionLabel(l.action || 'Thao tác Admin'),
+        rawActionType: l.action,
+        targetType: 'SYSTEM',
+        target: l.action,
+        beforeState: 'Ghi nhận',
+        afterState: 'Đã lưu',
+        reason: 'Thực hiện trực tiếp từ phiên quản trị hiện tại.',
+      }));
+      setLogs(sessionLogs);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAuditLogs();
+  }, [selectedTargetType, selectedActionType, fromDate, toDate, dynamicLogs.length]);
+
+  // Bộ lọc kết hợp tìm kiếm truy vết
+  const filteredLogs = logs.filter((log) => {
+    // Search truy vết theo từ khóa (Mã đối tượng, Lý do, Hành động, Tên người dùng)
+    const matchSearch =
+      !searchTerm.trim() ||
+      (log.target && log.target.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (log.reason && log.reason.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (log.actionType && log.actionType.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (log.user && log.user.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    // Filter theo Đối tượng tác động (targetType)
+    const matchTargetType =
+      selectedTargetType === 'ALL' ||
+      log.targetType === selectedTargetType ||
+      (selectedTargetType === 'ACCOUNT' && log.target?.includes('Member')) ||
+      (selectedTargetType === 'WAREHOUSE' && log.target?.includes('kho')) ||
+      (selectedTargetType === 'ORGANIZATION' && log.target?.includes('Tổ chức'));
+
+    // Filter theo Loại hành động
+    const matchAction =
+      selectedActionType === 'ALL' ||
+      log.actionType === selectedActionType ||
+      log.rawActionType === selectedActionType;
+
+    return matchSearch && matchTargetType && matchAction;
   });
 
   const handleResetFilter = () => {
-    setSelectedActor('ALL');
+    setSearchTerm('');
+    setSelectedTargetType('ALL');
     setSelectedActionType('ALL');
-    setDateRange('25/09/2026 - 02/10/2026');
+    setFromDate('');
+    setToDate('');
+  };
+
+  // Chọn nhanh mốc thời gian
+  const setQuickRange = (days) => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - days);
+
+    setToDate(end.toISOString().split('T')[0]);
+    setFromDate(start.toISOString().split('T')[0]);
   };
 
   const getActionBadge = (actionType) => {
-    switch (actionType) {
-      case 'Khóa tài khoản':
-        return (
-          <span className="inline-flex items-center gap-1 text-[#DC2626] font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626]"></span>
-            <span>Khóa tài khoản</span>
-          </span>
-        );
-      case 'Mở khóa tài khoản':
-        return (
-          <span className="inline-flex items-center gap-1 text-[#006B2C] font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#006B2C]"></span>
-            <span>Mở khóa tài khoản</span>
-          </span>
-        );
-      case 'Tạo Moderator':
-        return (
-          <span className="inline-flex items-center gap-1 text-[#00685F] font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#00685F]"></span>
-            <span>Tạo Moderator</span>
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 text-[#414942] font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#717971]"></span>
-            <span>{actionType}</span>
-          </span>
-        );
+    if (actionType.includes('Khóa tài khoản')) {
+      return (
+        <span className="inline-flex items-center gap-1 text-[#DC2626] font-semibold">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626]"></span>
+          <span>Khóa tài khoản</span>
+        </span>
+      );
     }
+    if (actionType.includes('Mở khóa tài khoản')) {
+      return (
+        <span className="inline-flex items-center gap-1 text-[#006B2C] font-semibold">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#006B2C]"></span>
+          <span>Mở khóa tài khoản</span>
+        </span>
+      );
+    }
+    if (actionType.includes('Ẩn kho')) {
+      return (
+        <span className="inline-flex items-center gap-1 text-[#D97706] font-semibold">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#D97706]"></span>
+          <span>Ẩn điểm kí gửi</span>
+        </span>
+      );
+    }
+    if (actionType.includes('Tạo Moderator') || actionType.includes('Tạo kho')) {
+      return (
+        <span className="inline-flex items-center gap-1 text-[#00685F] font-semibold">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#00685F]"></span>
+          <span>{actionType}</span>
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 text-[#414942] font-semibold">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#717971]"></span>
+        <span>{actionType}</span>
+      </span>
+    );
   };
 
   return (
@@ -187,88 +263,172 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#191C19] font-heading">
-            Nhật ký hệ thống
+            Nhật Ký Kiểm Soát (Audit Log)
           </h1>
+          <p className="text-xs text-[#717971] mt-0.5">
+            Lưu vết và truy xuất toàn bộ thao tác phân quyền, xử phạt, ẩn kho và thay đổi tham số hệ thống.
+          </p>
         </div>
       </div>
 
-      {/* Filter Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Date Picker Button */}
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4] text-xs font-medium text-[#414942]">
-            <span className="material-symbols-outlined text-base text-[#006B2C]">
-              date_range
-            </span>
-            <span>{dateRange}</span>
-          </div>
-
-          {/* Actor Select */}
-          <select
-            value={selectedActor}
-            onChange={(e) => setSelectedActor(e.target.value)}
-            className="px-3 py-2 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
-          >
-            <option value="ALL">Người thực hiện: Tất cả</option>
-            <option value="Trần Minh Quân">Trần Minh Quân (Admin)</option>
-            <option value="Phạm Thu Hà">Phạm Thu Hà (Moderator)</option>
-          </select>
-
-          {/* Action Type Select */}
-          <select
-            value={selectedActionType}
-            onChange={(e) => setSelectedActionType(e.target.value)}
-            className="px-3 py-2 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
-          >
-            <option value="ALL">Loại hành động: Tất cả</option>
-            <option value="Khóa tài khoản">Khóa tài khoản</option>
-            <option value="Mở khóa tài khoản">Mở khóa tài khoản</option>
-            <option value="Tạo Moderator">Tạo Moderator</option>
-            <option value="Sửa Moderator">Sửa Moderator</option>
-            <option value="Đặt lại mật khẩu">Đặt lại mật khẩu</option>
-            <option value="Gỡ nội dung">Gỡ nội dung</option>
-            <option value="Bỏ qua báo cáo">Bỏ qua báo cáo</option>
-          </select>
+      {/* Filter Bar: Tìm kiếm truy vết, Khoảng thời gian & Lọc theo Đối tượng */}
+      <div className="bg-white p-5 rounded-2xl border border-[#E2E8E0] shadow-xs space-y-3.5">
+        {/* Hàng 1: Ô Search để truy vết */}
+        <div className="relative w-full">
+          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#717971] text-lg">
+            search
+          </span>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Tìm kiếm truy vết (Mã đối tượng MB-102, WH-01, SKU, lý do, người thao tác)..."
+            className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl border border-[#E2E8E0] bg-[#F8FAF8]/50 focus:bg-white focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15 outline-none transition-all"
+          />
         </div>
 
-        {(selectedActor !== 'ALL' || selectedActionType !== 'ALL') && (
-          <button
-            onClick={handleResetFilter}
-            className="px-3 py-2 text-xs font-semibold text-[#006B2C] hover:text-[#005523] hover:bg-[#E8F5E9] rounded-xl transition-colors flex items-center gap-1"
-          >
-            <span className="material-symbols-outlined text-base">restart_alt</span>
-            <span>Xóa bộ lọc</span>
-          </button>
-        )}
+        {/* Hàng 2: Chọn theo thời gian & Filter đối tượng */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-[#F0F4EE]">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Bộ chọn ngày Từ ngày - Đến ngày */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#E2E8E0] bg-[#F8FAF8] text-xs text-[#414942]">
+              <span className="material-symbols-outlined text-base text-[#006B2C]">date_range</span>
+              <span className="text-[11px] text-[#717971]">Từ:</span>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="bg-transparent border-none text-xs outline-none font-medium"
+              />
+              <span className="text-[11px] text-[#717971]">Đến:</span>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="bg-transparent border-none text-xs outline-none font-medium"
+              />
+            </div>
+
+            {/* Phím chọn nhanh mốc thời gian */}
+            <div className="flex items-center gap-1 text-[11px]">
+              <button
+                onClick={() => setQuickRange(0)}
+                className="px-2 py-1 rounded-lg border border-[#E2E8E0] hover:bg-[#F8FAF8] text-[#414942]"
+              >
+                Hôm nay
+              </button>
+              <button
+                onClick={() => setQuickRange(7)}
+                className="px-2 py-1 rounded-lg border border-[#E2E8E0] hover:bg-[#F8FAF8] text-[#414942]"
+              >
+                7 ngày
+              </button>
+              <button
+                onClick={() => setQuickRange(30)}
+                className="px-2 py-1 rounded-lg border border-[#E2E8E0] hover:bg-[#F8FAF8] text-[#414942]"
+              >
+                30 ngày
+              </button>
+            </div>
+
+            {/* Filter "Đối tượng" (Thay thế cho Người thực hiện) */}
+            <select
+              value={selectedTargetType}
+              onChange={(e) => setSelectedTargetType(e.target.value)}
+              className="px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
+            >
+              <option value="ALL">Đối tượng: Tất cả</option>
+              <option value="ACCOUNT">Tài khoản (Member / Moderator)</option>
+              <option value="WAREHOUSE">Điểm kí gửi (Kho)</option>
+              <option value="ORGANIZATION">Tổ chức từ thiện</option>
+              <option value="PRODUCT">Sản phẩm & Hàng kí gửi</option>
+              <option value="ORDER">Đơn hàng</option>
+              <option value="SYSTEM_CONFIG">Cấu hình hệ thống</option>
+            </select>
+
+            {/* Filter Loại hành động */}
+            <select
+              value={selectedActionType}
+              onChange={(e) => setSelectedActionType(e.target.value)}
+              className="px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
+            >
+              <option value="ALL">Loại hành động: Tất cả</option>
+              <option value="Khóa tài khoản">Khóa tài khoản</option>
+              <option value="Mở khóa tài khoản">Mở khóa tài khoản</option>
+              <option value="Ẩn kho">Ẩn kho</option>
+              <option value="Tạo Moderator">Tạo Moderator</option>
+              <option value="Cập nhật cấu hình">Cập nhật cấu hình</option>
+              {availableActionTypes.map((act) => (
+                <option key={act} value={act}>
+                  {formatActionLabel(act)} ({act})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={fetchAuditLogs}
+              disabled={loading}
+              className="px-3 py-1.5 text-xs font-semibold text-[#006B2C] hover:bg-[#E8F5E9] rounded-xl transition-colors flex items-center gap-1 border border-[#006B2C]/30"
+              title="Làm mới nhật ký"
+            >
+              <span className={`material-symbols-outlined text-base ${loading ? 'animate-spin' : ''}`}>
+                refresh
+              </span>
+              <span>{loading ? 'Đang tải...' : 'Làm mới'}</span>
+            </button>
+
+            {(searchTerm ||
+              selectedTargetType !== 'ALL' ||
+              selectedActionType !== 'ALL' ||
+              fromDate ||
+              toDate) && (
+              <button
+                onClick={handleResetFilter}
+                className="px-3 py-1.5 text-xs font-semibold text-[#717971] hover:text-[#191C19] hover:bg-[#F0F4EE] rounded-xl transition-colors flex items-center gap-1"
+              >
+                <span className="material-symbols-outlined text-base">restart_alt</span>
+                <span>Xóa bộ lọc</span>
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Main Table or Empty State */}
-      {filteredLogs.length === 0 ? (
-        /* Empty State Matching Stitch Specification */
-        <div className="bg-white rounded-2xl border border-[#DDE5D9] p-12 text-center flex flex-col items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
-          <div className="w-16 h-16 rounded-2xl bg-[#E8F5E9] text-[#006B2C] flex items-center justify-center mb-4">
+      {loading ? (
+        <div className="bg-white rounded-2xl border border-[#E2E8E0] p-12 text-center flex flex-col items-center justify-center shadow-xs">
+          <span className="material-symbols-outlined text-4xl text-[#006B2C] animate-spin mb-3">
+            progress_activity
+          </span>
+          <p className="text-xs text-[#717971]">Đang tải dữ liệu nhật ký kiểm soát từ hệ thống...</p>
+        </div>
+      ) : filteredLogs.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-[#E2E8E0] p-12 text-center flex flex-col items-center justify-center shadow-xs">
+          <div className="w-16 h-16 rounded-2xl bg-[#F0F5EE] text-[#006B2C] flex items-center justify-center mb-4">
             <span className="material-symbols-outlined text-3xl">receipt_long</span>
           </div>
           <h3 className="text-base font-bold text-[#191C19] font-heading">
-            Không có bản ghi nào trong khoảng thời gian này
+            Không tìm thấy bản ghi nhật ký phù hợp
           </h3>
           <p className="text-xs text-[#717971] max-w-sm mt-1 mb-5">
-            Thử điều chỉnh lại khoảng ngày hoặc chọn lại loại hành động để tìm kiếm nhật ký.
+            Thử điều chỉnh lại từ khóa truy vết, khoảng ngày hoặc đối tượng tác động để tìm kiếm lại.
           </p>
           <button
             onClick={handleResetFilter}
-            className="px-4 py-2 bg-[#006B2C] text-white text-xs font-semibold rounded-xl hover:bg-[#005523] transition-colors flex items-center gap-1.5 shadow-sm"
+            className="px-4 py-2 bg-[#006B2C] text-white text-xs font-semibold rounded-xl hover:bg-[#005222] transition-colors flex items-center gap-1.5 shadow-sm"
           >
-            <span className="material-symbols-outlined text-sm">filter_alt_off</span>
-            <span>Xóa bộ lọc</span>
+            <span className="material-symbols-outlined text-sm">restart_alt</span>
+            <span>Xóa toàn bộ bộ lọc</span>
           </button>
         </div>
       ) : (
         /* Audit Table */
-        <div className="bg-white rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
+        <div className="bg-white rounded-2xl border border-[#E2E8E0] shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#F6F9F4] text-[#717971] uppercase tracking-wider font-semibold border-b border-[#DDE5D9]">
+              <thead className="bg-[#F8FAF8] text-[#717971] uppercase tracking-wider font-semibold border-b border-[#E2E8E0]">
                 <tr>
                   <th className="w-10 py-3 pl-4 pr-1"></th>
                   <th className="py-3 px-4">Thời gian</th>
@@ -277,17 +437,15 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
                   <th className="py-3 px-6">Đối tượng tác động</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#DDE5D9]">
+              <tbody className="divide-y divide-[#E2E8E0]">
                 {filteredLogs.map((log) => {
                   const isExpanded = expandedLogId === log.id;
                   return (
                     <React.Fragment key={log.id}>
                       <tr
-                        onClick={() =>
-                          setExpandedLogId(isExpanded ? null : log.id)
-                        }
-                        className={`hover:bg-[#F6F9F4]/70 cursor-pointer transition-colors ${
-                          isExpanded ? 'bg-[#F6F9F4]/50' : ''
+                        onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
+                        className={`hover:bg-[#F8FAF8] cursor-pointer transition-colors ${
+                          isExpanded ? 'bg-[#F8FAF8]' : ''
                         }`}
                       >
                         {/* Expand toggle chevron */}
@@ -308,9 +466,7 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
 
                         {/* Actor */}
                         <td className="py-3.5 px-6 whitespace-nowrap">
-                          <span className="font-semibold text-[#191C19] mr-2">
-                            {log.user}
-                          </span>
+                          <span className="font-semibold text-[#191C19] mr-2">{log.user}</span>
                           <span
                             className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${
                               log.role === 'Admin'
@@ -329,40 +485,37 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
 
                         {/* Target */}
                         <td className="py-3.5 px-6 font-medium text-[#191C19]">
-                          {log.target}
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#F8FAF8] border border-[#E2E8E0] mr-2">
+                            {log.targetType || 'TARGET'}
+                          </span>
+                          <span>{log.target}</span>
                         </td>
                       </tr>
 
                       {/* Expanded Row Detail */}
                       {isExpanded && (
-                        <tr className="bg-[#F6F9F4]/70">
+                        <tr className="bg-[#F8FAF8]">
                           <td colSpan="5" className="p-4 pl-12 pr-6">
-                            <div className="bg-white p-4 rounded-xl border border-[#DDE5D9] shadow-xs space-y-2.5 text-xs">
+                            <div className="bg-white p-4 rounded-xl border border-[#E2E8E0] shadow-xs space-y-2.5 text-xs">
                               <div className="flex flex-wrap items-center gap-6">
                                 <div>
-                                  <span className="text-[#717971] text-[11px]">
-                                    Trạng thái trước:
-                                  </span>{' '}
+                                  <span className="text-[#717971] text-[11px]">Trạng thái trước:</span>{' '}
                                   <span className="font-semibold text-[#414942]">
                                     {log.beforeState}
                                   </span>
                                 </div>
-                                <span className="text-[#DDE5D9]">→</span>
+                                <span className="text-[#E2E8E0]">→</span>
                                 <div>
-                                  <span className="text-[#717971] text-[11px]">
-                                    Trạng thái sau:
-                                  </span>{' '}
-                                  <span className="font-bold text-[#006B2C]">
-                                    {log.afterState}
-                                  </span>
+                                  <span className="text-[#717971] text-[11px]">Trạng thái sau:</span>{' '}
+                                  <span className="font-bold text-[#006B2C]">{log.afterState}</span>
                                 </div>
                               </div>
 
-                              <div className="pt-2 border-t border-[#DDE5D9]/60">
+                              <div className="pt-2 border-t border-[#E2E8E0]">
                                 <span className="text-[#717971] text-[11px] block mb-1">
                                   Lý do ghi nhận kiểm toán:
                                 </span>
-                                <p className="text-[#191C19] italic bg-[#F6F9F4] p-2.5 rounded-lg border border-[#DDE5D9]/50">
+                                <p className="text-[#191C19] italic bg-[#F8FAF8] p-2.5 rounded-lg border border-[#E2E8E0]">
                                   "{log.reason}"
                                 </p>
                               </div>
@@ -377,27 +530,15 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
             </table>
           </div>
 
-          {/* Pagination bar matching Stitch */}
-          <div className="p-4 border-t border-[#DDE5D9] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#717971]">
-            <span>Hiển thị 1 - {filteredLogs.length} trong tổng số 126 bản ghi</span>
+          {/* Pagination bar */}
+          <div className="p-4 border-t border-[#E2E8E0] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#717971]">
+            <span>Hiển thị {filteredLogs.length} bản ghi nhật ký</span>
             <div className="flex items-center gap-1 font-medium">
-              <button className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4]">
+              <button className="px-2.5 py-1 rounded-lg border border-[#E2E8E0] hover:bg-[#F8FAF8]">
                 Trước
               </button>
-              <button className="px-2.5 py-1 rounded-lg bg-[#006B2C] text-white font-bold">
-                1
-              </button>
-              <button className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4]">
-                2
-              </button>
-              <button className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4]">
-                3
-              </button>
-              <span className="px-1 text-[#717971]">...</span>
-              <button className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4]">
-                16
-              </button>
-              <button className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4]">
+              <button className="px-2.5 py-1 rounded-lg bg-[#006B2C] text-white font-bold">1</button>
+              <button className="px-2.5 py-1 rounded-lg border border-[#E2E8E0] hover:bg-[#F8FAF8]">
                 Sau
               </button>
             </div>

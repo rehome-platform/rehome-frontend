@@ -4,9 +4,9 @@ import { useAuth } from '../../../context/AuthContext.jsx';
 
 /**
  * Header Quản trị hệ thống ReHome (Admin Unified Header)
- * Đồng nhất trên toàn bộ 6 trang Admin:
- * - Chiều cao chuẩn h-20, nền Surface #FFFFFF, viền Neutral #DDE5D9
- * - Breadcrumb / Tiêu đề trang cập nhật theo route
+ * Đồng bộ chuẩn 100% với Moderator Header:
+ * - Chiều cao chuẩn h-16 (64px), nền Surface #FFFFFF, viền Neutral #E2E8E0
+ * - Breadcrumb / Tiêu đề trang cập nhật tự động theo route
  * - Badge vai trò Quản trị viên (Admin) chuẩn Design tokens
  * - User Profile menu với avatar, thông tin và chức năng đăng xuất
  */
@@ -18,7 +18,7 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
 
   const handleLogout = async () => {
     setShowDropdown(false);
-    await logout();
+    if (logout) await logout();
   };
 
   const displayName = user?.fullName || user?.name || user?.email || 'Quản trị viên';
@@ -38,6 +38,7 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
     if (path.startsWith('/admin/users')) return 'Quản lý Tài khoản (Member & Tổ chức)';
     if (path.startsWith('/admin/moderators')) return 'Quản lý Nhân sự Moderator';
     if (path.startsWith('/admin/warehouses')) return 'Quản lý Điểm kí gửi ReHome';
+    if (path.startsWith('/admin/violation-words')) return 'Thư viện Từ vựng Vi phạm';
     if (path.startsWith('/admin/configs')) return 'Cấu hình Tham số Hệ thống';
     if (path.startsWith('/admin/audit-logs')) return 'Nhật ký kiểm toán hệ thống (Audit Log)';
     return 'Tổng quan điều hành & Quỹ nền tảng';
@@ -61,13 +62,13 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
   return (
     <header
       id="admin-header"
-      className="h-20 bg-white border-b border-[#DDE5D9] px-4 sm:px-8 flex items-center justify-between sticky top-0 z-30 shadow-[0_1px_3px_rgba(0,0,0,0.02)]"
+      className="h-16 bg-white border-b border-[#E2E8E0] px-4 sm:px-6 flex items-center justify-between sticky top-0 z-20 shadow-xs"
     >
       {/* Trái: Nút mở Mobile Drawer & Breadcrumb / Tiêu đề */}
       <div className="flex items-center gap-3 min-w-0">
         <button
           onClick={onOpenMobile}
-          className="lg:hidden p-2 rounded-xl text-[#1F2A37] hover:bg-[#F6F9F4] hover:text-[#006B2C] transition-colors"
+          className="lg:hidden p-1.5 rounded-lg text-[#191C19] hover:bg-[#F0F5EE] hover:text-[#006B2C] transition-colors"
           title="Mở thanh điều hướng"
           aria-label="Mở menu"
         >
@@ -75,11 +76,11 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
         </button>
 
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-semibold text-[#5B6776] uppercase tracking-wider hidden sm:inline shrink-0">
+          <span className="text-[11px] font-semibold text-[#717971] uppercase tracking-wider hidden sm:inline shrink-0">
             Hệ thống
           </span>
-          <span className="text-xs text-[#DDE5D9] hidden sm:inline shrink-0">/</span>
-          <h1 className="text-base sm:text-lg font-bold text-[#1F2A37] font-heading truncate">
+          <span className="text-xs text-[#E2E8E0] hidden sm:inline shrink-0">/</span>
+          <h1 className="text-sm sm:text-base font-bold text-[#191C19] font-heading truncate">
             {currentTitle}
           </h1>
         </div>
@@ -97,7 +98,7 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
         <div className="relative" ref={dropdownRef}>
           <div
             onClick={() => setShowDropdown((prev) => !prev)}
-            className="flex items-center gap-2.5 sm:gap-3 p-1.5 pl-2.5 sm:pl-3 rounded-2xl hover:bg-[#F6F9F4] cursor-pointer transition-colors border border-transparent hover:border-[#DDE5D9] select-none"
+            className="flex items-center gap-2.5 p-1 pl-2.5 rounded-xl hover:bg-[#F8FAF8] cursor-pointer transition-colors border border-transparent hover:border-[#E2E8E0] select-none"
             role="button"
             aria-expanded={showDropdown}
             aria-controls="admin-account-dropdown"
@@ -109,67 +110,56 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
               }
             }}
           >
-            <div className="text-right hidden sm:block">
-              <p className="text-xs font-bold text-[#1F2A37] leading-tight max-w-[140px] truncate">
+            <div className="w-8 h-8 rounded-full bg-[#E8F5E9] text-[#006B2C] font-bold text-xs flex items-center justify-center shrink-0 border border-[#C8E6C9]">
+              {initials}
+            </div>
+            <div className="hidden sm:block text-left">
+              <p className="text-xs font-bold text-[#191C19] leading-tight truncate max-w-[130px]">
                 {displayName}
               </p>
-              <p className="text-[11px] text-[#5B6776] font-medium leading-tight mt-0.5">
-                Quản trị viên
+              <p className="text-[10px] text-[#717971] leading-tight truncate max-w-[130px]">
+                {displayEmail}
               </p>
             </div>
-
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#006B2C] text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-xs overflow-hidden shrink-0">
-              {user?.avatarUrl || user?.avatar ? (
-                <img
-                  src={user.avatarUrl || user.avatar}
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span>{initials}</span>
-              )}
-            </div>
-
-            <span
-              className={`material-symbols-outlined text-[#5B6776] text-lg transition-transform duration-200 ${
-                showDropdown ? 'rotate-180' : ''
-              }`}
-            >
-              expand_more
+            <span className="material-symbols-outlined text-[18px] text-[#717971]">
+              arrow_drop_down
             </span>
           </div>
 
-          {/* Profile Dropdown Menu */}
           {showDropdown && (
-            <div id="admin-account-dropdown" className="absolute right-0 mt-2 w-64 bg-white rounded-2xl border border-[#DDE5D9] shadow-xl py-2 z-40 animate-fadeIn">
-              <div className="px-4 py-2.5 border-b border-[#DDE5D9]/60">
-                <p className="text-xs font-bold text-[#1F2A37] truncate">{displayName}</p>
-                <p className="text-[11px] text-[#5B6776] truncate">{displayEmail}</p>
-                <span className="inline-block mt-1 px-2 py-0.5 text-[10px] font-semibold bg-[#E8F5E9] text-[#006B2C] rounded-md font-mono">
-                  {user?.authorities || 'ROLE_ADMIN'}
-                </span>
+            <div
+              id="admin-account-dropdown"
+              className="absolute right-0 mt-1.5 w-56 bg-white rounded-xl shadow-lg border border-[#E2E8E0] py-1 z-50 animate-fadeIn"
+            >
+              <div className="px-4 py-2.5 border-b border-[#E2E8E0]">
+                <p className="text-xs font-bold text-[#191C19] truncate">{displayName}</p>
+                <p className="text-[11px] text-[#717971] truncate">{displayEmail}</p>
+                <div className="mt-1.5">
+                  <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7]">
+                    ROLE_ADMIN
+                  </span>
+                </div>
               </div>
 
               <div className="py-1">
                 <Link
                   to="/profile"
                   onClick={() => setShowDropdown(false)}
-                  className="w-full px-4 py-2 text-left text-xs text-[#1F2A37] hover:bg-[#F6F9F4] hover:text-[#006B2C] flex items-center gap-2.5 transition-colors font-medium"
+                  className="flex items-center gap-2.5 px-4 py-2 text-xs text-[#191C19] hover:bg-[#F0F5EE] hover:text-[#006B2C]"
                 >
-                  <span className="material-symbols-outlined text-base text-[#5B6776]">manage_accounts</span>
+                  <span className="material-symbols-outlined text-[18px] text-[#717971]">manage_accounts</span>
                   <span>Hồ sơ cá nhân & Đổi mật khẩu</span>
                 </Link>
-
               </div>
 
-              <div className="border-t border-[#DDE5D9]/60 my-1"></div>
+              <div className="border-t border-[#E2E8E0] my-1"></div>
 
               <button
                 onClick={handleLogout}
-                className="w-full px-4 py-2 text-left text-xs text-[#D92D20] hover:bg-[#FFF5F5] flex items-center gap-2.5 font-semibold transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-[#BA1A1A] hover:bg-[#FEE4E2] transition-colors"
               >
-                <span className="material-symbols-outlined text-base">logout</span>
-                <span>Đăng xuất phiên làm việc</span>
+                <span className="material-symbols-outlined text-[18px]">logout</span>
+                <span>Đăng xuất</span>
               </button>
             </div>
           )}

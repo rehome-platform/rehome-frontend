@@ -40,6 +40,7 @@ import {
   AdminAccountsPage,
   AdminModeratorsPage,
   AdminWarehousesPage,
+  AdminViolationWordsPage,
   ConfigPage,
   AdminAuditLogsPage,
 } from '../features/admin/pages/index.js';
@@ -58,9 +59,9 @@ function RootRedirect() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F6F9F4] text-[#1F2A37]">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F8FAF8] text-[#191C19]">
         <div className="w-10 h-10 border-4 border-[#006B2C] border-t-transparent rounded-full animate-spin mb-3"></div>
-        <p className="text-xs font-semibold text-[#5B6776]">Đang kiểm tra phiên đăng nhập ReHome...</p>
+        <p className="text-xs font-semibold text-[#717971]">Đang kiểm tra phiên đăng nhập ReHome...</p>
       </div>
     );
   }
@@ -165,7 +166,7 @@ export default function AppRouter() {
       />
       <Route path="/moderator/consignments/:formId" element={<PrivateRoute roles={['moderator', 'staff']}><ConsignmentDetailPage key={location.pathname} /></PrivateRoute>} />
       <Route path="/moderator/inventory/:sku" element={<PrivateRoute roles={['moderator', 'staff']}><InventoryDetailPage key={location.pathname} /></PrivateRoute>} />
-            <Route path="/moderator/inventory/:sku/re-consign" element={<PrivateRoute roles={['moderator', 'staff']}><ReConsignNegotiationPage key={location.pathname} /></PrivateRoute>} />
+      <Route path="/moderator/inventory/:sku/re-consign" element={<PrivateRoute roles={['moderator', 'staff']}><ReConsignNegotiationPage key={location.pathname} /></PrivateRoute>} />
       <Route path="/moderator/consignments/re-consign/:sku" element={<PrivateRoute roles={['moderator', 'staff']}><ReConsignNegotiationPage key={location.pathname} /></PrivateRoute>} />
       <Route path="/moderator/end-of-term" element={<PrivateRoute roles={['moderator', 'staff']}><EndOfTermPage /></PrivateRoute>} />
       <Route
@@ -222,6 +223,7 @@ export default function AppRouter() {
         <Route path="users" element={<AdminAccountsPage />} />
         <Route path="moderators" element={<AdminModeratorsPage />} />
         <Route path="warehouses" element={<AdminWarehousesPage />} />
+        <Route path="violation-words" element={<AdminViolationWordsPage />} />
         <Route path="configs" element={<ConfigPage />} />
         <Route path="audit-logs" element={<AdminAuditLogsPage />} />
         <Route path="system" element={<Navigate to="/admin/users" replace />} />
