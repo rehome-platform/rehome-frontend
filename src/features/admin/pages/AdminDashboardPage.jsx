@@ -88,11 +88,11 @@ export default function AdminDashboardPage() {
     {
       label: 'Số dư quỹ nền tảng',
       value: dashboardData.fundBalance || 0,
-      description: 'Tiền MoMo thực tế trong tài khoản hệ thống (Tiền giữ + Doanh thu)',
+      description: 'Tiền thực tế trong tài khoản hệ thống (Tiền giữ + Doanh thu)',
       icon: 'account_balance',
       iconBg: 'bg-[#E0F2F1]',
       iconColor: 'text-[#00685F]',
-      badge: 'MoMo Merchant',
+      badge: 'Cổng thanh toán',
     },
     {
       label: 'Đơn hàng đang xử lý tại kho',
@@ -144,11 +144,10 @@ export default function AdminDashboardPage() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setActiveTab('fund')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${
-              activeTab === 'fund'
-                ? 'bg-[#006B2C] text-white shadow-sm'
-                : 'bg-white border border-[#E2E8E0] text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
-            }`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${activeTab === 'fund'
+              ? 'bg-[#006B2C] text-white shadow-sm'
+              : 'bg-white border border-[#E2E8E0] text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
+              }`}
           >
             <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
             <span>Quỹ nền tảng & Doanh thu</span>
@@ -156,11 +155,10 @@ export default function AdminDashboardPage() {
 
           <button
             onClick={() => setActiveTab('revenue_report')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${
-              activeTab === 'revenue_report'
-                ? 'bg-[#006B2C] text-white shadow-sm'
-                : 'bg-white border border-[#E2E8E0] text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
-            }`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${activeTab === 'revenue_report'
+              ? 'bg-[#006B2C] text-white shadow-sm'
+              : 'bg-white border border-[#E2E8E0] text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
+              }`}
           >
             <span className="material-symbols-outlined text-[18px]">table_chart</span>
             <span>Báo cáo doanh thu theo kỳ</span>
@@ -168,11 +166,10 @@ export default function AdminDashboardPage() {
 
           <button
             onClick={() => setActiveTab('activities')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${
-              activeTab === 'activities'
-                ? 'bg-[#006B2C] text-white shadow-sm'
-                : 'bg-white border border-[#E2E8E0] text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
-            }`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${activeTab === 'activities'
+              ? 'bg-[#006B2C] text-white shadow-sm'
+              : 'bg-white border border-[#E2E8E0] text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
+              }`}
           >
             <span className="material-symbols-outlined text-[18px]">insights</span>
             <span>Hoạt động & Tăng trưởng hệ thống</span>
@@ -337,7 +334,6 @@ export default function AdminDashboardPage() {
 
               <div className="mt-4 pt-3 border-t border-[#E2E8E0] text-[11px] text-[#717971] flex items-center justify-between">
                 <span>Số liệu doanh thu được tổng hợp tự động từ máy chủ ReHome.</span>
-                <span className="font-bold text-[#006B2C]">API 147</span>
               </div>
             </div>
 
@@ -405,7 +401,6 @@ export default function AdminDashboardPage() {
 
               <div className="mt-4 pt-3 border-t border-[#E2E8E0] text-[11px] text-[#717971] flex items-center justify-between">
                 <span>Hết 90 ngày: Gỡ khỏi sàn & gửi thông báo 30 ngày</span>
-                <span className="font-bold text-[#006B2C]">Quy định F-112</span>
               </div>
             </div>
           </div>
