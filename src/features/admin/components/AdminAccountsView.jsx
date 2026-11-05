@@ -3,115 +3,18 @@ import adminApi from '../services/adminApi.js';
 
 /**
  * View Quản lý Tài khoản ReHome (Admin)
- * Chuẩn hóa 100% theo Nghiệp vụ sau Review 2:
- * - Nối trực tiếp Backend API: GET /api/admin/accounts, POST ban, unban
- * - Sắp xếp (Sort) linh hoạt theo Ngày tạo và Trạng thái
- * - Bộ lọc tìm kiếm theo tên, email, sđt, vai trò, trạng thái
- * - Đồng bộ giao diện 100% với phong cách Moderator
- * - Side Drawer chi tiết tài khoản & Modal khóa kèm lý do
+ * Chế độ Strict Real Data: 100% dữ liệu thực từ Backend API GET /api/admin/accounts
+ * Hỗ trợ sắp xếp theo Ngày tạo, Trạng thái, tìm kiếm và phân quyền khóa/mở khóa
  */
-const initialAccounts = [
-  {
-    id: 'USR-101',
-    code: '849102',
-    name: 'Lê Hoàng Nam',
-    initials: 'LN',
-    email: 'nam.le@gmail.com',
-    phone: '0903 112 458',
-    role: 'Member',
-    createdAt: '12/06/2026',
-    status: 'LOCKED',
-    history: [
-      {
-        date: '02/10/2026 14:20',
-        action: 'Khóa',
-        actor: 'Admin',
-        reason: 'Đăng bình luận xúc phạm nhiều lần trên các bài đăng quyên góp.',
-      },
-    ],
-  },
-  {
-    id: 'USR-102',
-    code: '849103',
-    name: 'Nguyễn Thị Mai',
-    initials: 'NM',
-    email: 'mai.nguyen@gmail.com',
-    phone: '0918 245 771',
-    role: 'Member',
-    createdAt: '03/05/2026',
-    status: 'ACTIVE',
-    history: [],
-  },
-  {
-    id: 'USR-103',
-    code: '849104',
-    name: 'Quỹ Hy Vọng Xanh',
-    initials: 'HX',
-    email: 'lienhe@hyvongxanh.org.vn',
-    phone: '028 3822 6858',
-    role: 'Organizer',
-    createdAt: '20/04/2026',
-    status: 'ACTIVE',
-    history: [],
-  },
-  {
-    id: 'USR-104',
-    code: '849105',
-    name: 'Mái Ấm Hướng Dương',
-    initials: 'HD',
-    email: 'contact@huongduong.org.vn',
-    phone: '028 3844 1200',
-    role: 'Organizer',
-    createdAt: '02/07/2026',
-    status: 'ACTIVE',
-    history: [],
-  },
-  {
-    id: 'USR-105',
-    code: 'MOD-1042',
-    name: 'Phạm Thu Hà',
-    initials: 'TH',
-    email: 'ha.pham@rehome.vn',
-    phone: '0977 340 126',
-    role: 'Moderator',
-    createdAt: '15/03/2026',
-    status: 'ACTIVE',
-    history: [],
-  },
-  {
-    id: 'USR-106',
-    code: 'MOD-1070',
-    name: 'Đỗ Quang Huy',
-    initials: 'QH',
-    email: 'huy.do@rehome.vn',
-    phone: '0986 554 902',
-    role: 'Moderator',
-    createdAt: '01/10/2026',
-    status: 'ACTIVE',
-    history: [],
-  },
-  {
-    id: 'USR-107',
-    code: '849108',
-    name: 'Trần Bảo Ngọc',
-    initials: 'BN',
-    email: 'ngoc.tran@gmail.com',
-    phone: '0935 778 214',
-    role: 'Member',
-    createdAt: '28/09/2026',
-    status: 'ACTIVE',
-    history: [],
-  },
-];
-
 export default function AdminAccountsView({ onLogAction }) {
-  const [accounts, setAccounts] = useState(initialAccounts);
+  const [accounts, setAccounts] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedRole, setSelectedRole] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState(null);
 
-  // Sắp xếp (Sort) theo Ngày tạo hoặc Trạng thái (Yêu cầu nghiệp vụ)
+  // Sắp xếp (Sort) theo Ngày tạo hoặc Trạng thái
   const [sortBy, setSortBy] = useState('createdAt'); // 'createdAt' | 'status'
   const [sortDir, setSortDir] = useState('desc'); // 'asc' | 'desc'
 
@@ -126,6 +29,7 @@ export default function AdminAccountsView({ onLogAction }) {
   const fetchAccounts = async () => {
     try {
       setLoading(true);
+      setApiError(null);
       const res = await adminApi.getAccounts({
         search: searchKeyword,
         role: selectedRole,
@@ -134,7 +38,7 @@ export default function AdminAccountsView({ onLogAction }) {
         size: 50,
       });
 
-      if (res && res.content && res.content.length > 0) {
+      if (res && res.content) {
         const mapped = res.content.map((a) => {
           const roleLabel =
             a.role === 'ORGANIZATION'
@@ -144,7 +48,7 @@ export default function AdminAccountsView({ onLogAction }) {
               : 'Member';
           return {
             id: a.accountId,
-            code: a.code || String(a.accountId).slice(0, 6).toUpperCase(),
+            code: a.code || String(a.accountId).slice(0, 8).toUpperCase(),
             name: a.fullName || a.email?.split('@')[0] || 'Chưa cập nhật',
             initials: (a.fullName || a.email || 'U').slice(0, 2).toUpperCase(),
             email: a.email,
@@ -152,15 +56,19 @@ export default function AdminAccountsView({ onLogAction }) {
             role: roleLabel,
             createdAt: a.createdAt
               ? new Date(a.createdAt).toLocaleDateString('vi-VN')
-              : '12/06/2026',
+              : 'Chưa xác định',
             status: a.status || 'ACTIVE',
             history: [],
           };
         });
         setAccounts(mapped);
+      } else {
+        setAccounts([]);
       }
     } catch (err) {
-      console.warn('Kết nối API accounts thất bại, chuyển về dữ liệu mẫu:', err);
+      console.error('Lỗi khi tải danh sách tài khoản từ backend:', err);
+      setApiError('Không thể kết nối đến máy chủ quản trị. Vui lòng thử lại sau.');
+      setAccounts([]);
     } finally {
       setLoading(false);
     }
@@ -180,31 +88,16 @@ export default function AdminAccountsView({ onLogAction }) {
     }
   };
 
-  // Bộ lọc dữ liệu kết hợp sắp xếp
-  const filteredAccounts = accounts
-    .filter((acc) => {
-      const matchSearch =
-        acc.name.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-        acc.email.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-        acc.phone.includes(searchKeyword);
-
-      const matchRole =
-        selectedRole === 'ALL' || acc.role.toLowerCase() === selectedRole.toLowerCase();
-
-      const matchStatus =
-        selectedStatus === 'ALL' || acc.status === selectedStatus;
-
-      return matchSearch && matchRole && matchStatus;
-    })
-    .sort((a, b) => {
-      let comparison = 0;
-      if (sortBy === 'createdAt') {
-        comparison = (a.createdAt || '').localeCompare(b.createdAt || '');
-      } else if (sortBy === 'status') {
-        comparison = (a.status || '').localeCompare(b.status || '');
-      }
-      return sortDir === 'asc' ? comparison : -comparison;
-    });
+  // Lọc và sắp xếp trên dữ liệu thực
+  const sortedAccounts = [...accounts].sort((a, b) => {
+    let comparison = 0;
+    if (sortBy === 'createdAt') {
+      comparison = (a.createdAt || '').localeCompare(b.createdAt || '');
+    } else if (sortBy === 'status') {
+      comparison = (a.status || '').localeCompare(b.status || '');
+    }
+    return sortDir === 'asc' ? comparison : -comparison;
+  });
 
   const handleResetFilter = () => {
     setSearchKeyword('');
@@ -243,36 +136,36 @@ export default function AdminAccountsView({ onLogAction }) {
 
     try {
       await adminApi.banAccount(lockModalAccount.id, lockReason.trim());
+      updateAccountStatus(lockModalAccount, 'LOCKED', {
+        date: new Date().toLocaleString('vi-VN'),
+        action: 'Khóa',
+        actor: 'Admin',
+        reason: lockReason.trim(),
+      });
     } catch (err) {
-      console.warn('Lỗi gọi API khóa tài khoản:', err);
+      console.error('Lỗi gọi API khóa tài khoản:', err);
+      alert('Không thể thực hiện thao tác khóa tài khoản. Vui lòng kiểm tra quyền quản trị.');
+    } finally {
+      setLockModalAccount(null);
+      setLockReason('');
+      setLockError('');
     }
-
-    updateAccountStatus(lockModalAccount, 'LOCKED', {
-      date: new Date().toLocaleString('vi-VN'),
-      action: 'Khóa',
-      actor: 'Admin',
-      reason: lockReason.trim(),
-    });
-
-    setLockModalAccount(null);
-    setLockReason('');
-    setLockError('');
   };
 
   // Mở khóa tài khoản gọi API thật
   const handleUnlockAccount = async (account) => {
     try {
       await adminApi.unbanAccount(account.id);
+      updateAccountStatus(account, 'ACTIVE', {
+        date: new Date().toLocaleString('vi-VN'),
+        action: 'Mở khóa',
+        actor: 'Admin',
+        reason: 'Mở khóa theo yêu cầu sau khi rà soát tuân thủ.',
+      });
     } catch (err) {
-      console.warn('Lỗi gọi API mở khóa tài khoản:', err);
+      console.error('Lỗi gọi API mở khóa tài khoản:', err);
+      alert('Không thể thực hiện thao tác mở khóa tài khoản.');
     }
-
-    updateAccountStatus(account, 'ACTIVE', {
-      date: new Date().toLocaleString('vi-VN'),
-      action: 'Mở khóa',
-      actor: 'Admin',
-      reason: 'Mở khóa theo yêu cầu sau khi rà soát tuân thủ.',
-    });
   };
 
   return (
@@ -284,9 +177,19 @@ export default function AdminAccountsView({ onLogAction }) {
             Quản Lý Tài Khoản
           </h1>
           <p className="text-xs text-[#717971] mt-0.5">
-            Xem, sắp xếp và phân quyền, khóa hoặc mở khóa tài khoản người dùng trên hệ thống ReHome.
+            Dữ liệu tài khoản thực tế từ hệ thống ReHome. Hỗ trợ tra cứu, sắp xếp và khóa/mở khóa.
           </p>
         </div>
+        <button
+          onClick={fetchAccounts}
+          disabled={loading}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#E2E8E0] bg-white text-xs font-semibold text-[#414942] hover:bg-[#F8FAF8] hover:text-[#006B2C] transition-colors"
+        >
+          <span className={`material-symbols-outlined text-base ${loading ? 'animate-spin' : ''}`}>
+            refresh
+          </span>
+          <span>Làm mới</span>
+        </button>
       </div>
 
       {/* Filter Bar */}
@@ -300,12 +203,28 @@ export default function AdminAccountsView({ onLogAction }) {
         handleResetFilter={handleResetFilter}
       />
 
-      {/* Main Table or Empty State */}
-      {filteredAccounts.length === 0 ? (
+      {/* Loading & Error States */}
+      {loading ? (
+        <div className="bg-white rounded-2xl border border-[#E2E8E0] p-12 text-center space-y-3">
+          <div className="w-8 h-8 border-3 border-[#006B2C] border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-xs font-semibold text-[#717971]">Đang tải danh sách tài khoản từ hệ thống...</p>
+        </div>
+      ) : apiError ? (
+        <div className="bg-white rounded-2xl border border-[#FEE2E2] p-8 text-center space-y-3">
+          <span className="material-symbols-outlined text-3xl text-[#DC2626]">error</span>
+          <p className="text-sm font-bold text-[#191C19]">{apiError}</p>
+          <button
+            onClick={fetchAccounts}
+            className="px-4 py-2 bg-[#006B2C] text-white text-xs font-semibold rounded-xl"
+          >
+            Thử kết nối lại
+          </button>
+        </div>
+      ) : sortedAccounts.length === 0 ? (
         <AccountsEmptyState handleResetFilter={handleResetFilter} />
       ) : (
         <AccountsTable
-          filteredAccounts={filteredAccounts}
+          filteredAccounts={sortedAccounts}
           openActionMenuId={openActionMenuId}
           setOpenActionMenuId={setOpenActionMenuId}
           setDrawerAccount={setDrawerAccount}
@@ -430,7 +349,6 @@ function AccountRow({
 }) {
   return (
     <tr key={acc.id} className="hover:bg-[#F8FAF8] transition-colors">
-      {/* Name & Avatar */}
       <td className="py-3.5 px-6 whitespace-nowrap">
         <div className="flex items-center gap-3">
           <div
@@ -451,13 +369,9 @@ function AccountRow({
         </div>
       </td>
 
-      {/* Email */}
       <td className="py-3.5 px-6 font-mono text-[#414942] whitespace-nowrap">{acc.email}</td>
-
-      {/* Phone */}
       <td className="py-3.5 px-6 font-mono text-[#717971] whitespace-nowrap">{acc.phone}</td>
 
-      {/* Role */}
       <td className="py-3.5 px-6 whitespace-nowrap">
         <span
           className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-bold ${
@@ -472,10 +386,8 @@ function AccountRow({
         </span>
       </td>
 
-      {/* Created Date */}
       <td className="py-3.5 px-6 text-[#717971] whitespace-nowrap font-mono">{acc.createdAt}</td>
 
-      {/* Status */}
       <td className="py-3.5 px-6 whitespace-nowrap">
         {acc.status === 'ACTIVE' ? (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C]">
@@ -490,7 +402,6 @@ function AccountRow({
         )}
       </td>
 
-      {/* Actions Menu */}
       <td className="py-3.5 px-4 text-center relative whitespace-nowrap">
         <AccountActions
           acc={acc}
@@ -510,7 +421,7 @@ function AccountRow({
 function AccountsPagination({ count }) {
   return (
     <div className="p-4 border-t border-[#E2E8E0] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#717971]">
-      <span>Hiển thị {count} tài khoản</span>
+      <span>Hiển thị {count} tài khoản thực tế</span>
       <div className="flex items-center gap-1 font-medium">
         <button className="px-2.5 py-1 rounded-lg border border-[#E2E8E0] hover:bg-[#F8FAF8]">
           Trước
@@ -548,7 +459,6 @@ function AccountsTable({
               <th className="py-3 px-6">Số điện thoại</th>
               <th className="py-3 px-6">Vai trò</th>
 
-              {/* Cột Ngày tạo có thể click để sắp xếp */}
               <th
                 onClick={() => toggleSort('createdAt')}
                 className="py-3 px-6 cursor-pointer select-none hover:text-[#006B2C] transition-colors"
@@ -566,7 +476,6 @@ function AccountsTable({
                 </div>
               </th>
 
-              {/* Cột Trạng thái có thể click để sắp xếp */}
               <th
                 onClick={() => toggleSort('status')}
                 className="py-3 px-6 cursor-pointer select-none hover:text-[#006B2C] transition-colors"
@@ -621,7 +530,6 @@ function AccountsFilters({
 }) {
   return (
     <div className="bg-white p-4 rounded-2xl border border-[#E2E8E0] shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-      {/* Search Input */}
       <div className="relative flex-1">
         <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#717971] text-lg">
           search
@@ -635,7 +543,6 @@ function AccountsFilters({
         />
       </div>
 
-      {/* Dropdowns */}
       <div className="flex flex-wrap items-center gap-2.5">
         <select
           value={selectedRole}
@@ -643,9 +550,9 @@ function AccountsFilters({
           className="px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
         >
           <option value="ALL">Vai trò: Tất cả</option>
-          <option value="member">Member</option>
-          <option value="organizer">Organizer</option>
-          <option value="moderator">Moderator</option>
+          <option value="MEMBER">Member</option>
+          <option value="ORGANIZATION">Organizer</option>
+          <option value="MODERATOR">Moderator</option>
         </select>
 
         <select
@@ -678,9 +585,9 @@ function AccountsEmptyState({ handleResetFilter }) {
       <div className="w-12 h-12 rounded-full bg-[#F0F5EE] text-[#006B2C] flex items-center justify-center mx-auto">
         <span className="material-symbols-outlined text-2xl">search_off</span>
       </div>
-      <h3 className="text-base font-bold text-[#191C19]">Không tìm thấy tài khoản nào</h3>
+      <h3 className="text-base font-bold text-[#191C19]">Không có tài khoản nào</h3>
       <p className="text-xs text-[#717971] max-w-sm mx-auto">
-        Không có tài khoản nào phù hợp với từ khóa hoặc bộ lọc đã chọn. Vui lòng thử lại.
+        Chưa có tài khoản nào được tạo hoặc không có kết quả phù hợp với bộ lọc hiện tại.
       </p>
       <button
         onClick={handleResetFilter}
@@ -709,7 +616,6 @@ function AccountDetailsDrawer({
       />
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
         <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col justify-between border-l border-[#E2E8E0] animate-slideLeft">
-          {/* Drawer Header */}
           <div className="p-6 border-b border-[#E2E8E0] flex items-center justify-between">
             <h3 className="text-base font-bold text-[#191C19] font-heading">
               Chi tiết tài khoản
@@ -722,7 +628,6 @@ function AccountDetailsDrawer({
             </button>
           </div>
 
-          {/* Drawer Content */}
           <div className="p-6 space-y-6 overflow-y-auto flex-1">
             <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#F8FAF8] border border-[#E2E8E0]">
               <div className="w-14 h-14 rounded-2xl bg-[#006B2C] text-white flex items-center justify-center font-bold text-lg shadow-sm">
@@ -743,7 +648,6 @@ function AccountDetailsDrawer({
               </div>
             </div>
 
-            {/* Thông tin liên hệ */}
             <div className="space-y-3">
               <p className="text-[11px] font-bold text-[#717971] uppercase tracking-wider">
                 Thông tin liên hệ
@@ -760,7 +664,6 @@ function AccountDetailsDrawer({
               </div>
             </div>
 
-            {/* Thông tin vai trò */}
             <div className="space-y-3">
               <p className="text-[11px] font-bold text-[#717971] uppercase tracking-wider">
                 Thông tin tài khoản
@@ -776,47 +679,8 @@ function AccountDetailsDrawer({
                 </div>
               </div>
             </div>
-
-            {/* Lịch sử */}
-            <div className="space-y-3">
-              <p className="text-[11px] font-bold text-[#717971] uppercase tracking-wider">
-                Lịch sử Khóa / Mở khóa
-              </p>
-              {!drawerAccount.history || drawerAccount.history.length === 0 ? (
-                <div className="p-4 bg-[#F8FAF8] rounded-xl text-center text-xs text-[#717971]">
-                  Chưa ghi nhận lịch sử xử phạt nào.
-                </div>
-              ) : (
-                <div className="border-l-2 border-[#E2E8E0] ml-2 pl-4 space-y-4">
-                  {drawerAccount.history.map((hist, idx) => (
-                    <div key={idx} className="relative text-xs">
-                      <span
-                        className={`absolute -left-[21px] top-0.5 w-2.5 h-2.5 rounded-full ${
-                          hist.action === 'Khóa' ? 'bg-[#DC2626]' : 'bg-[#006B2C]'
-                        }`}
-                      />
-                      <p className="text-[11px] font-mono text-[#717971]">
-                        {hist.date} -{' '}
-                        <span
-                          className={`font-bold ${
-                            hist.action === 'Khóa' ? 'text-[#DC2626]' : 'text-[#006B2C]'
-                          }`}
-                        >
-                          {hist.action}
-                        </span>{' '}
-                        bởi {hist.actor}
-                      </p>
-                      <p className="mt-1 text-[#414942] italic bg-[#F8FAF8] p-2 rounded-lg border border-[#E2E8E0]">
-                        Lý do: {hist.reason}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
 
-          {/* Drawer Footer Actions */}
           <div className="p-6 border-t border-[#E2E8E0] bg-[#F8FAF8]">
             {drawerAccount.status === 'ACTIVE' ? (
               <button
@@ -858,7 +722,6 @@ function LockAccountModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
       <div className="w-full max-w-lg bg-white rounded-2xl border border-[#E2E8E0] shadow-2xl p-6 sm:p-7 space-y-4">
-        {/* Modal Header */}
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#FEE2E2] text-[#DC2626] flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-2xl">shield_lock</span>
@@ -874,7 +737,6 @@ function LockAccountModal({
           </div>
         </div>
 
-        {/* Target Info */}
         <div className="p-3 bg-[#F8FAF8] rounded-xl border border-[#E2E8E0] flex items-center justify-between text-xs">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-[#E8F5E9] text-[#006B2C] flex items-center justify-center font-bold text-xs">
@@ -890,7 +752,6 @@ function LockAccountModal({
           </span>
         </div>
 
-        {/* Reason Input */}
         <div>
           <div className="flex items-center justify-between text-xs mb-1.5">
             <label className="font-semibold text-[#191C19]">
@@ -906,7 +767,7 @@ function LockAccountModal({
               setLockReason(e.target.value);
               if (lockError) setLockError('');
             }}
-            placeholder="Nhập lý do chi tiết (ví dụ: Vi phạm quy chuẩn tiếp nhận hoặc nội dung)..."
+            placeholder="Nhập lý do chi tiết..."
             className={`w-full p-3 text-xs rounded-xl border outline-none transition-all ${
               lockError
                 ? 'border-[#DC2626] bg-[#FFF5F5] focus:ring-2 focus:ring-[#DC2626]/20'
@@ -921,7 +782,6 @@ function LockAccountModal({
           )}
         </div>
 
-        {/* Actions */}
         <div className="flex items-center justify-end gap-2.5 pt-2">
           <button
             onClick={() => setLockModalAccount(null)}
