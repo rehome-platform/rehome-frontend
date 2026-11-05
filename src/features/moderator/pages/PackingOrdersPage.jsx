@@ -41,7 +41,7 @@ export function PackingDetail({ orderId, onChanged }) {
               className="text-xs bg-[#2b2b2b] text-white hover:bg-black font-bold flex items-center gap-1.5"
               onClick={() => model.setPrintModalOpen(true)}
             >
-              <span>🖨️</span> In phiếu giao hàng
+              <span>📄</span> Chi tiết phiếu giao hàng
             </Button>
           )}
         </div>
