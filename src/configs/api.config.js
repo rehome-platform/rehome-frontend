@@ -152,11 +152,14 @@ export const API_ENDPOINTS = {
     DASHBOARD: "/api/admin/dashboard",
     DASHBOARD_STATS: "/api/admin/dashboard/stats",
     DASHBOARD_FUND: "/api/admin/dashboard/fund",
-    EXPORT_EXCEL: "/api/admin/dashboard/export-excel",
+    EXPORT_EXCEL: "/api/admin/dashboard/export",
 
-    USERS: "/api/admin/users",
-    LOCK_USER: (id) => `/api/admin/users/${id}/lock`,
-    UNLOCK_USER: (id) => `/api/admin/users/${id}/unlock`,
+    ACCOUNTS: "/api/admin/accounts",
+    USERS: "/api/admin/accounts",
+    BAN_ACCOUNT: (id) => `/api/admin/accounts/${id}/ban`,
+    UNBAN_ACCOUNT: (id) => `/api/admin/accounts/${id}/unban`,
+    LOCK_USER: (id) => `/api/admin/accounts/${id}/ban`,
+    UNLOCK_USER: (id) => `/api/admin/accounts/${id}/unban`,
 
     MODERATORS: "/api/admin/moderators",
     CREATE_MODERATOR: "/api/admin/moderators",
@@ -169,9 +172,13 @@ export const API_ENDPOINTS = {
     HIDE_WAREHOUSE: (id) => `/api/admin/warehouses/${id}/hide`,
 
     CONFIGS: "/api/admin/configs",
+    UPDATE_CONFIG: (key) => `/api/admin/configs/${key}`,
     UPDATE_CONFIGS: "/api/admin/configs/update",
 
     AUDIT_LOGS: "/api/admin/audit-logs",
+    AUDIT_LOG_FILTER_OPTIONS: "/api/admin/audit-logs/filter-options",
+
+    VIOLATION_WORDS: "/api/admin/violation-words",
   },
 
   // 4. Notifications (API 114)
