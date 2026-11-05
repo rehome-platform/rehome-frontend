@@ -164,16 +164,17 @@ export const API_ENDPOINTS = {
     MODERATORS: "/api/admin/moderators",
     CREATE_MODERATOR: "/api/admin/moderators",
     UPDATE_MODERATOR: (id) => `/api/admin/moderators/${id}`,
-    ASSIGN_WAREHOUSE: (id) => `/api/admin/moderators/${id}/assign-warehouse`,
+    CHANGE_WAREHOUSE: (id) => `/api/admin/moderators/${id}/warehouse`,
+    ASSIGN_WAREHOUSE: (id) => `/api/admin/moderators/${id}/warehouse`,
 
     WAREHOUSES: "/api/admin/warehouses",
     CREATE_WAREHOUSE: "/api/admin/warehouses",
     UPDATE_WAREHOUSE: (id) => `/api/admin/warehouses/${id}`,
     HIDE_WAREHOUSE: (id) => `/api/admin/warehouses/${id}/hide`,
 
-    CONFIGS: "/api/admin/configs",
-    UPDATE_CONFIG: (key) => `/api/admin/configs/${key}`,
-    UPDATE_CONFIGS: "/api/admin/configs/update",
+    CONFIGS: "/api/admin/config",
+    UPDATE_CONFIG: (key) => `/api/admin/config/${key}`,
+    UPDATE_CONFIGS: "/api/admin/config",
 
     AUDIT_LOGS: "/api/admin/audit-logs",
     AUDIT_LOG_FILTER_OPTIONS: "/api/admin/audit-logs/filter-options",

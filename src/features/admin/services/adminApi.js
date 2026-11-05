@@ -68,8 +68,12 @@ export const adminApi = {
   },
 
   // 4. Quản lý Nhân sự Moderator
-  async getModerators() {
-    const res = await baseApi.get(API_ENDPOINTS.ADMIN.MODERATORS);
+  async getModerators({ warehouseId, search, status, page = 0, size = 50 } = {}) {
+    const params = { page, size };
+    if (warehouseId) params.warehouseId = warehouseId;
+    if (search && search.trim()) params.search = search.trim();
+    if (status && status !== 'ALL') params.status = status;
+    const res = await baseApi.get(API_ENDPOINTS.ADMIN.MODERATORS, { params });
     return res.data?.data || res.data;
   },
 
@@ -84,7 +88,7 @@ export const adminApi = {
   },
 
   async assignWarehouse(moderatorId, warehouseId) {
-    const res = await baseApi.post(API_ENDPOINTS.ADMIN.ASSIGN_WAREHOUSE(moderatorId), { warehouseId });
+    const res = await baseApi.patch(API_ENDPOINTS.ADMIN.CHANGE_WAREHOUSE(moderatorId), { warehouseId });
     return res.data?.data || res.data;
   },
 
@@ -109,12 +113,16 @@ export const adminApi = {
 
   // 6. Cấu hình Tham số Hệ thống
   async getConfigs() {
-    const res = await baseApi.get(API_ENDPOINTS.ADMIN.CONFIGS);
-    return res.data?.data || res.data;
+    try {
+      const res = await baseApi.get(API_ENDPOINTS.ADMIN.CONFIGS);
+      return res.data?.data || res.data;
+    } catch {
+      return null;
+    }
   },
 
   async updateConfig(key, value) {
-    const res = await baseApi.put(API_ENDPOINTS.ADMIN.UPDATE_CONFIG(key), { value });
+    const res = await baseApi.put(API_ENDPOINTS.ADMIN.UPDATE_CONFIG(key), { value: String(value) });
     return res.data?.data || res.data;
   },
 
