@@ -29,8 +29,9 @@ export default function AdminWarehousesView({ onLogAction }) {
       setLoading(true);
       setApiError(null);
       const res = await adminApi.getWarehouses();
-      if (res && Array.isArray(res)) {
-        const mapped = res.map((w, idx) => ({
+      const rawList = Array.isArray(res) ? res : res?.content || res?.result || [];
+      if (rawList && rawList.length > 0) {
+        const mapped = rawList.map((w, idx) => ({
           id: w.warehouseId || w.id || `WH-0${idx + 1}`,
           name: w.name,
           address: w.address,

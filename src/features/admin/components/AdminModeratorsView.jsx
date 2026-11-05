@@ -49,7 +49,7 @@ export default function AdminModeratorsView({ onLogAction }) {
   const loadWarehouses = async () => {
     try {
       const data = await adminApi.getWarehouses();
-      const list = Array.isArray(data) ? data : data?.content || [];
+      const list = Array.isArray(data) ? data : data?.content || data?.result || [];
       setWarehouses(list);
       if (list.length > 0 && !formData.warehouseId) {
         setFormData((prev) => ({ ...prev, warehouseId: list[0].id }));
@@ -69,7 +69,7 @@ export default function AdminModeratorsView({ onLogAction }) {
         warehouseId: warehouseFilter !== 'ALL' ? warehouseFilter : undefined,
       };
       const res = await adminApi.getModerators(params);
-      const list = Array.isArray(res) ? res : res?.content || [];
+      const list = Array.isArray(res) ? res : res?.content || res?.result?.content || res?.result || [];
       setModerators(list);
     } catch (err) {
       console.error('Lỗi tải danh sách Moderator:', err);
