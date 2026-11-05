@@ -6,6 +6,7 @@ import {
   VerificationLegalChanges,
   VerificationQueueTable,
   VerificationQueueTabs,
+  ExistingOrganizationsSection,
 } from '../components/verification/VerificationSections.jsx';
 import React, { useState, useEffect } from "react";
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
@@ -267,6 +268,16 @@ export default function OrgVerificationPage() {
               >
                 Yêu cầu đổi pháp lý ({model.legalChanges.filter((c) => c.status === 'PENDING').length})
               </button>
+              <button
+                type="button"
+                onClick={() => model.setActiveMainTab('EXISTING_ORGS')}
+                className={`text-xs font-bold px-4 py-2 rounded-xl transition-all ${model.activeMainTab === 'EXISTING_ORGS'
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-surface text-textSecondary border border-neutral hover:bg-background hover:text-text'
+                  }`}
+              >
+                Tổ chức hiện hữu ({model.existingOrgs.length})
+              </button>
             </div>
 
             {/* Sub-tabs for NEW_ORGS (TC-01) */}
@@ -286,6 +297,20 @@ export default function OrgVerificationPage() {
                   Tổ chức đã xác minh muốn đổi tên, địa chỉ trụ sở hoặc người đại diện pháp lý
                 </div>
                 <VerificationLegalChanges legalChanges={model.legalChanges} handleApproveLegalChange={model.handleApproveLegalChange} handleRejectLegalChange={model.handleRejectLegalChange} />
+              </div>
+            )}
+
+            {/* TAB EXISTING_ORGS */}
+            {model.activeMainTab === 'EXISTING_ORGS' && (
+              <div className="space-y-4">
+                <div className="text-xs text-textSecondary">
+                  Danh sách các tổ chức từ thiện đã được xác minh và đang hoạt động trên nền tảng
+                </div>
+                <ExistingOrganizationsSection
+                  loading={model.loadingExisting}
+                  existingOrgs={model.existingOrgs}
+                  onRefresh={() => model.fetchExistingOrgs()}
+                />
               </div>
             )}
           </div>

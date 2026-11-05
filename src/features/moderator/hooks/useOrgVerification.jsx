@@ -21,7 +21,9 @@ export function useOrgVerification() {
 
   const [orgsQueue, setOrgsQueue] = useState([]);
   const [legalChanges, setLegalChanges] = useState([]);
+  const [existingOrgs, setExistingOrgs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingExisting, setLoadingExisting] = useState(false);
   const [error, setError] = useState(null);
 
   // View state: 'LIST' | 'DETAIL' (TC-02) | 'LEGAL_DETAIL' (TC-06)
@@ -45,6 +47,20 @@ export function useOrgVerification() {
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [viewingDoc, setViewingDoc] = useState(null); // TC-03 viewer
+
+  const fetchExistingOrgs = async (params = {}) => {
+    try {
+      setLoadingExisting(true);
+      const res = await orgVerificationService.getExistingOrganizations(params);
+      setExistingOrgs(res?.data || []);
+      return res?.data || [];
+    } catch (err) {
+      console.warn('Không thể tải tổ chức hiện hữu từ backend:', err);
+      return [];
+    } finally {
+      setLoadingExisting(false);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -133,6 +149,7 @@ export function useOrgVerification() {
 
   useEffect(() => {
     loadData();
+    fetchExistingOrgs();
   }, []);
 
   const handleOpenDetail = (org) => {
@@ -253,6 +270,9 @@ export function useOrgVerification() {
     activeMainTab,
     orgsQueue,
     legalChanges,
+    existingOrgs,
+    loadingExisting,
+    fetchExistingOrgs,
     setActiveQueueTab,
     activeQueueTab,
     loading,
