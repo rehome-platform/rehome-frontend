@@ -530,6 +530,104 @@ let legalChangesData = [
   },
 ];
 
+export let existingOrganizationsData = [
+  {
+    id: 'ORG-000101',
+    displayName: 'Quỹ Hy Vọng Xanh',
+    legalName: 'Quỹ Từ Thiện Hy Vọng Xanh',
+    description: 'Hỗ trợ trẻ em có hoàn cảnh khó khăn và đồng bào vùng bão lũ trên toàn quốc.',
+    logoUrl: null,
+    orgType: 'Quỹ từ thiện',
+    operationScope: 'Toàn quốc',
+    taxCode: '0312998877',
+    representative: 'Trần Văn Hưng · Giám đốc điều hành',
+    phone: '028 3822 6858',
+    email: 'lienhe@hyvongxanh.org.vn',
+    donationPointName: 'Trụ sở Quỹ Hy Vọng Xanh Q1',
+    donationPointAddress: '120 Hai Bà Trưng, P. Đa Kao, Quận 1, TP.HCM',
+    donationPointReceivingHours: '08:00 - 17:30 (Thứ 2 - Thứ 7)',
+    followerCount: 324,
+    verifiedAt: '2026-01-15T09:00:00Z',
+    status: 'ACTIVE',
+  },
+  {
+    id: 'ORG-000102',
+    displayName: 'Mái Ấm Hướng Dương',
+    legalName: 'Cơ Sở Bảo Trợ Trẻ Em Hướng Dương',
+    description: 'Nuôi dưỡng, chăm sóc và giáo dục trẻ em mồ côi, cơ nhỡ tại TP.HCM.',
+    logoUrl: null,
+    orgType: 'Cơ sở trợ giúp xã hội',
+    operationScope: 'TP.HCM',
+    taxCode: 'không có',
+    representative: 'Nguyễn Thị Hoa · Trưởng cơ sở',
+    phone: '028 3844 1200',
+    email: 'contact@huongduong.org.vn',
+    donationPointName: 'Điểm tiếp nhận Mái Ấm Hướng Dương',
+    donationPointAddress: '124 Mã Lò, P. Bình Trị Đông A, Bình Tân, TP.HCM',
+    donationPointReceivingHours: '08:30 - 18:00 (Mỗi ngày)',
+    followerCount: 185,
+    verifiedAt: '2026-03-02T14:30:00Z',
+    status: 'ACTIVE',
+  },
+  {
+    id: 'ORG-000103',
+    displayName: 'Tái Sinh Xanh',
+    legalName: 'Công Ty TNHH Doanh Nghiệp Xã Hội Tái Sinh Xanh',
+    description: 'Tái chế quần áo, gây quỹ học bổng và việc làm bền vững cho người khuyết tật.',
+    logoUrl: null,
+    orgType: 'Doanh nghiệp xã hội',
+    operationScope: 'Toàn quốc',
+    taxCode: '0318554433',
+    representative: 'Lê Hoàng Nam · Người đại diện pháp luật',
+    phone: '028 7300 8899',
+    email: 'contact@taisinhxanh.vn',
+    donationPointName: 'Kho thu gom Tái Sinh Xanh',
+    donationPointAddress: '15 Tôn Đức Thắng, P. Bến Nghé, Quận 1, TP.HCM',
+    donationPointReceivingHours: '09:00 - 20:00 (Thứ 2 - Chủ Nhật)',
+    followerCount: 410,
+    verifiedAt: '2026-04-20T10:15:00Z',
+    status: 'ACTIVE',
+  },
+  {
+    id: 'ORG-000104',
+    displayName: 'CLB Thiện Nguyện Bách Khoa',
+    legalName: 'Câu Lạc Bộ Thiện Nguyện ĐH Bách Khoa',
+    description: 'Tổ chức các chuyến đi tình nguyện Mùa hè xanh, trao quần áo ấm cho trẻ em vùng cao.',
+    logoUrl: null,
+    orgType: 'CLB trực thuộc pháp nhân',
+    operationScope: 'TP.HCM',
+    taxCode: 'không có',
+    representative: 'Vũ Đức Thịnh · Chủ nhiệm CLB',
+    phone: '028 3865 2200',
+    email: 'thiennguyen@hcmut.edu.vn',
+    donationPointName: 'Văn phòng Đoàn Hội ĐH Bách Khoa',
+    donationPointAddress: '268 Lý Thường Kiệt, Phường 14, Quận 10, TP.HCM',
+    donationPointReceivingHours: '08:00 - 17:00 (Thứ 2 - Thứ 6)',
+    followerCount: 95,
+    verifiedAt: '2026-05-10T16:00:00Z',
+    status: 'ACTIVE',
+  },
+  {
+    id: 'ORG-000105',
+    displayName: 'Quỹ Vì Trẻ Em Vùng Cao',
+    legalName: 'Quỹ Từ Thiện Vì Trẻ Em Vùng Cao',
+    description: 'Xây trường học, cung cấp sách vở và áo ấm mùa đông cho học sinh các tỉnh miền núi.',
+    logoUrl: null,
+    orgType: 'Quỹ từ thiện',
+    operationScope: 'Toàn quốc',
+    taxCode: '0108877665',
+    representative: 'Phan Minh Tuấn · Chủ tịch Hội đồng Quản lý Quỹ',
+    phone: '024 3988 5566',
+    email: 'lienhe@vitreemvungcao.org',
+    donationPointName: 'Trạm tiếp nhận Quỹ Trẻ Em Vùng Cao',
+    donationPointAddress: '45 Lê Duẩn, P. Bến Nghé, Quận 1, TP.HCM',
+    donationPointReceivingHours: '08:00 - 17:00 (Thứ 2 - Thứ 7)',
+    followerCount: 520,
+    verifiedAt: '2026-06-05T11:20:00Z',
+    status: 'ACTIVE',
+  },
+];
+
 export const orgVerificationService = {
   async getQueue() {
     await delay();
@@ -539,6 +637,28 @@ export const orgVerificationService = {
   async getLegalChanges() {
     await delay();
     return { data: [...legalChangesData], total: legalChangesData.length };
+  },
+
+  async getExistingOrganizations(params = {}) {
+    await delay();
+    let result = [...existingOrganizationsData];
+    if (params.search) {
+      const q = params.search.toLowerCase();
+      result = result.filter(
+        (o) =>
+          o.displayName?.toLowerCase().includes(q) ||
+          o.legalName?.toLowerCase().includes(q) ||
+          o.taxCode?.toLowerCase().includes(q) ||
+          o.representative?.toLowerCase().includes(q) ||
+          o.operationScope?.toLowerCase().includes(q)
+      );
+    }
+    return { data: result, total: result.length };
+  },
+
+  async getOrgPublicDetail(orgId) {
+    await delay();
+    return existingOrganizationsData.find((o) => o.id === orgId);
   },
 
   async approveOrg(orgId, note) {
