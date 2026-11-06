@@ -46,7 +46,36 @@ export default function WarehouseInventoryPage() {
   const status = search.get('status') || '';
 
   const resource = useResource(
-    (options) => inventoryService.list({ page, sku, status }, options),
+    async (options) => {
+      if (status === 'DEGRADED') {
+        const degradedList = await inventoryService.degradedCases({ status: '' }, options);
+        return {
+          content: (degradedList || []).map((c) => ({
+            sku: c.productId || c.id,
+            id: c.id,
+            productId: c.productId,
+            name: c.productName || 'Sản phẩm ký gửi',
+            brandName: 'ReHome',
+            degradedDate: c.receivedAt,
+            degradedReason: c.reason || c.moderatorNote || 'Hàng xuống cấp sau khi trả về',
+            conditionNote: c.moderatorNote,
+            decisionStatus: c.decision || (c.status === 'DECIDED' ? 'FULL_COMPENSATION' : 'PENDING'),
+            decisionStatusLabel:
+              c.decision === 'FULL_COMPENSATION'
+                ? 'Đã đền 100%'
+                : c.decision === 'PARTIAL_WITH_ITEM_BACK'
+                ? 'Đền 50% + nhận lại'
+                : 'Chờ Member chọn',
+            compensationAmount: c.compensationAmount,
+            paidAmount: c.paidAmount,
+            photos: c.photos || [],
+          })),
+          totalElements: (degradedList || []).length,
+          totalPages: 1,
+        };
+      }
+      return inventoryService.list({ page, sku, status }, options);
+    },
     [page, sku, status],
   );
 

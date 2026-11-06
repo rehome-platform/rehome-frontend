@@ -184,7 +184,7 @@ export default function WarehouseHomePage() {
                             </Button>
                           ) : mine ? (
                             <Link className="text-xs font-semibold text-primary hover:underline" to={link}>
-                              Mở việc →
+                              Mở
                             </Link>
                           ) : (
                             <span className="text-xs text-textSecondary">Đã có người nhận</span>

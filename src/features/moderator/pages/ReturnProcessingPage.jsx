@@ -152,7 +152,7 @@ export default function ReturnProcessingPage() {
         {/* MODAL: So sánh ảnh cạnh nhau */}
         <ReturnCompareDialog {...model.sections.ReturnCompareDialog} />
 
-        {/* MODAL: Hội chẩn hàng nghi giả 2 Moderator (F-134, F-135) */}
+        {/* MODAL: Thẩm định hàng nghi giả (F-134, F-135) */}
         <SuspiciousCounterfeitModal {...model.sections.SuspiciousCounterfeitModal} />
 
         {/* MODAL: Lập biên bản hàng xuống cấp (TH-04 / KG-16) */}

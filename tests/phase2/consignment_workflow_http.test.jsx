@@ -105,7 +105,6 @@ async function stock(user) {
   await waitFor(() => expect(screen.getByLabelText('Danh mục')).toHaveValue('cat-1'));
   expect(screen.getByLabelText('Tên sản phẩm')).toHaveValue('Áo Zara');
   expect(screen.getByLabelText('Thương hiệu')).toHaveValue('brand-1');
-  await user.type(screen.getByLabelText('Vị trí kệ'), 'A1');
   await user.selectOptions(screen.getByLabelText('Màu sắc'), 'Be');
   await user.upload(screen.getByLabelText('Ảnh sản phẩm'), new File(['image'], 'photo.png', { type: 'image/png' }));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Nhập kho · tạo SKU' })).toBeEnabled());

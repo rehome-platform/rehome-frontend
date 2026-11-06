@@ -86,6 +86,13 @@ export function PackingRecipientPanel({ order, scanLogs }) {
         <p className="text-[#5B6776] leading-relaxed">
           {shippingAddress}
         </p>
+        {order.buyerNote && (
+          <div className="pt-2 border-t border-[#E2E8E0]">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#717971]">Ghi chú đóng gói của người mua</p>
+            <p className="text-xs text-[#191C19] mt-0.5">{order.buyerNote}</p>
+            <p className="text-[10px] font-semibold text-[#BA1A1A] mt-1">Đơn này không huỷ được nữa</p>
+          </div>
+        )}
       </div>
 
       {/* Thanh toán & Vận chuyển */}

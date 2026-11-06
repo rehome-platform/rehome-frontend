@@ -76,7 +76,6 @@ describe('StockInForm - Color Dropdown & Custom Color Input', () => {
     );
 
     await user.type(await screen.findByLabelText('Tên sản phẩm'), 'Áo sơ mi lụa');
-    await user.type(screen.getByLabelText('Vị trí kệ'), 'B2-01');
     await user.selectOptions(screen.getByLabelText('Danh mục'), 'cat-1');
     await user.selectOptions(screen.getByLabelText('Thương hiệu'), 'brand-1');
 
@@ -123,7 +122,6 @@ describe('StockInForm - Color Dropdown & Custom Color Input', () => {
     );
 
     await user.type(await screen.findByLabelText('Tên sản phẩm'), 'Váy dạ hội');
-    await user.type(screen.getByLabelText('Vị trí kệ'), 'C1-03');
     await user.selectOptions(screen.getByLabelText('Danh mục'), 'cat-1');
     await user.selectOptions(screen.getByLabelText('Thương hiệu'), 'brand-1');
 

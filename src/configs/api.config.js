@@ -121,6 +121,7 @@ export const API_ENDPOINTS = {
     COUNTERFEIT_CONCLUSION: (id) => `/return-requests/${moderatorId(id)}/counterfeit-conclusion`,
     MARK_LOST: (id) => `/return-requests/${moderatorId(id)}/mark-lost`,
     DEGRADED_CASES: "/degraded-item-cases",
+    WAREHOUSE_DEGRADED_CASES: "/degraded-item-cases/warehouse",
     CREATE_DEGRADED_CASE: "/degraded-item-cases",
     DEGRADED_CASE_DETAIL: (id) => `/degraded-item-cases/${moderatorId(id)}`,
 

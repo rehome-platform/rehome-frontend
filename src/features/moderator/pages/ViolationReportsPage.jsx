@@ -95,6 +95,10 @@ export default function ViolationReportsPage() {
               </div>
             </div>
 
+            <div className="p-3.5 rounded-xl border border-neutral bg-background text-xs text-textSecondary">
+              Nhiều báo cáo trên cùng một nội dung được hệ thống tự động gộp lại để Moderator xử lý nhanh chóng.
+            </div>
+
             {/* Bảng VP-01 */}
             <div className="bg-surface border border-neutral rounded-2xl overflow-hidden shadow-sm">
               <div className="overflow-x-auto">

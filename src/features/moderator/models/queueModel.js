@@ -16,12 +16,34 @@ export function taskTypeLabel(item, typeParam) {
   return QUEUE_TYPE_LABELS[type] || 'Công việc kho';
 }
 
+export function formatWaitTime(waitMinutes) {
+  const mins = Math.max(0, Number(waitMinutes) || 0);
+  if (mins < 10) return '< 10p';
+  if (mins < 60) {
+    const floored10 = Math.floor(mins / 10) * 10;
+    return `${floored10}p`;
+  }
+  const hours = Math.floor(mins / 60);
+  const remMinutes = mins % 60;
+  const flooredRem = Math.floor(remMinutes / 10) * 10;
+  if (flooredRem === 0) {
+    return `${hours}h`;
+  }
+  return `${hours}h${flooredRem}`;
+}
+
 export function queueItemMeta(item, typeParam) {
   const timestamp = item.createdAt || item.queuedAt;
   const createdTime = timestamp ? new Date(timestamp).getTime() : Date.now() - 3600000 * 2;
-  const hours = Math.max(0, Math.floor((Date.now() - createdTime) / 3600000));
+  const elapsedMs = Math.max(0, Date.now() - createdTime);
+  const minutes = Math.floor(elapsedMs / 60000);
+  const hours = Math.max(0, Math.floor(elapsedMs / 3600000));
+  const waitMinutes = item.waitMinutes !== undefined && item.waitMinutes !== null ? item.waitMinutes : minutes;
   return {
-    ...item, hours,
+    ...item,
+    hours,
+    waitMinutes,
+    waitTimeFormatted: formatWaitTime(waitMinutes),
     isOverdue: hours >= OVERDUE_THRESHOLD_HOURS,
     typeLabel: taskTypeLabel(item, typeParam),
     formattedTime: new Date(createdTime).toLocaleString('vi-VN', {
