@@ -417,10 +417,13 @@ describe('Organization Verification Data Mapping & Design Tokens', () => {
     expect(screen.getByText('Người đại diện')).toBeInTheDocument();
     expect(screen.getByText('Trần Thị Mỹ Hạnh · Trưởng ban')).toBeInTheDocument();
     expect(screen.getByText(/Nguyễn Ngọc Kim Ngân · Trưởng phòng/)).toBeInTheDocument();
-    expect(screen.getByText('04/11/2026')).toBeInTheDocument();
     expect(screen.getByText('Chờ duyệt')).toBeInTheDocument();
     expect(screen.getByText('Duyệt đổi pháp lý')).toBeInTheDocument();
     expect(screen.getByText('Từ chối')).toBeInTheDocument();
+
+    // Thông tin chi tiết (như ngày gửi, MST...) hiển thị khi mở modal chi tiết theo yêu cầu mới
+    fireEvent.click(screen.getByText('Xem chi tiết →'));
+    expect(screen.getByText(/04\/11\/2026/)).toBeInTheDocument();
   });
 
   it('VerificationLegalChanges buttons invoke approve and reject with requestId', () => {

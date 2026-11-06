@@ -370,78 +370,89 @@ export function VerificationDocuments({ selectedOrg, setViewingDoc }) {
 }
 
 export function VerificationLegalChanges({ legalChanges = [], handleApproveLegalChange, handleRejectLegalChange }) {
+  const [selectedChangeModal, setSelectedChangeModal] = React.useState(null);
+
   return (
     <div className="bg-surface border border-neutral rounded-2xl overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
             <tr className="bg-background border-b border-neutral text-[11px] uppercase font-bold text-textSecondary tracking-wider">
-              <th className="py-2.5 px-3">Tổ chức</th>
-              <th className="py-2.5 px-3">Trường thay đổi</th>
-              <th className="py-2.5 px-3">Nội dung cũ → mới</th>
-              <th className="py-2.5 px-3">Ngày gửi</th>
-              <th className="py-2.5 px-3">Trạng thái</th>
-              <th className="py-2.5 px-3 text-right">Hành động</th>
+              <th className="py-2.5 px-4 w-1/3">Tên tổ chức</th>
+              <th className="py-2.5 px-4">Nội dung chỉnh sửa</th>
+              <th className="py-2.5 px-4 text-right">Hành động</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral">
             {legalChanges.length === 0 ? (
               <tr>
-                <td colSpan="6" className="py-8 text-center text-textSecondary">
+                <td colSpan="3" className="py-8 text-center text-textSecondary">
                   Chưa có yêu cầu đổi pháp lý nào.
                 </td>
               </tr>
             ) : (
               legalChanges.map((chg) => {
                 const targetRequestId = chg.requestId || chg.refId || chg.id;
+                const changeSummary = `${chg.fieldChanged || chg.field || 'Đổi thông tin pháp lý'}: ${chg.oldValue || '—'} → ${chg.newValue || 'Mới'}`;
+
                 return (
                   <tr key={chg.queueItemId || chg.id} className="hover:bg-background/60 transition-colors">
-                    <td className="py-3 px-3 font-bold text-text">{chg.orgName}</td>
-                    <td className="py-3 px-3 font-semibold text-primary">{chg.fieldChanged || chg.field}</td>
-                    <td className="py-3 px-3">
-                      <span className="text-textSecondary line-through mr-2">{chg.oldValue}</span>
-                      <span className="font-bold text-text">→ {chg.newValue}</span>
-                    </td>
-                    <td className="py-3 px-3 text-textSecondary">{chg.submittedAt}</td>
-                    <td className="py-3 px-3 font-semibold">
+                    <td className="py-3.5 px-4 font-bold text-text">
+                      <span className="block text-sm">{chg.orgName || chg.name || 'Tổ chức'}</span>
                       {chg.status === 'PENDING' ? (
-                        <Badge variant="warning">Chờ duyệt</Badge>
+                        <Badge variant="warning" className="mt-1">Chờ duyệt</Badge>
                       ) : chg.status === 'REJECTED' ? (
-                        <Badge variant="error">Bị từ chối</Badge>
+                        <Badge variant="error" className="mt-1">Bị từ chối</Badge>
                       ) : (
-                        <Badge variant="success">Đã duyệt</Badge>
+                        <Badge variant="success" className="mt-1">Đã duyệt</Badge>
                       )}
                     </td>
-                    <td className="py-3 px-3 text-right">
-                      {chg.status === 'PENDING' && (
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const reason = typeof window !== 'undefined' && window.prompt
-                                ? window.prompt('Nhập lý do từ chối yêu cầu đổi pháp lý:', 'Thông tin pháp lý không hợp lệ')
-                                : 'Thông tin pháp lý không hợp lệ';
-                              if (reason !== null && reason.trim()) {
-                                handleRejectLegalChange?.(targetRequestId, reason.trim());
-                              }
-                            }}
-                            className="text-xs font-medium px-3 py-1.5 rounded-xl bg-error text-white hover:bg-red-700 transition-colors shadow-sm"
-                          >
-                            Từ chối
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (typeof window === 'undefined' || !window.confirm || window.confirm(`Bạn có chắc muốn duyệt thay đổi pháp lý cho ${chg.orgName || 'tổ chức này'}?`)) {
-                                handleApproveLegalChange?.(targetRequestId);
-                              }
-                            }}
-                            className="text-xs font-medium px-3 py-1.5 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors shadow-sm"
-                          >
-                            Duyệt đổi pháp lý
-                          </button>
-                        </div>
-                      )}
+                    <td className="py-3.5 px-4">
+                      <p className="font-semibold text-primary">{chg.fieldChanged || chg.field || 'Thông tin pháp lý'}</p>
+                      <p className="text-textSecondary text-[11px] mt-0.5 max-w-md truncate" title={changeSummary}>
+                        <span className="line-through mr-1.5 opacity-70">{chg.oldValue || 'Cũ'}</span>
+                        <strong className="text-text">→ {chg.newValue || 'Mới'}</strong>
+                      </p>
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedChangeModal(chg)}
+                          className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-neutral bg-surface hover:bg-background text-text transition-colors shadow-sm"
+                        >
+                          Xem chi tiết →
+                        </button>
+                        {chg.status === 'PENDING' && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const reason = typeof window !== 'undefined' && window.prompt
+                                  ? window.prompt('Nhập lý do từ chối yêu cầu đổi pháp lý:', 'Thông tin pháp lý không hợp lệ')
+                                  : 'Thông tin pháp lý không hợp lệ';
+                                if (reason !== null && reason.trim()) {
+                                  handleRejectLegalChange?.(targetRequestId, reason.trim());
+                                }
+                              }}
+                              className="text-xs font-medium px-3 py-1.5 rounded-xl bg-error text-white hover:bg-red-700 transition-colors shadow-sm"
+                            >
+                              Từ chối
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (typeof window === 'undefined' || !window.confirm || window.confirm(`Bạn có chắc muốn duyệt thay đổi pháp lý cho ${chg.orgName || 'tổ chức này'}?`)) {
+                                  handleApproveLegalChange?.(targetRequestId);
+                                }
+                              }}
+                              className="text-xs font-medium px-3 py-1.5 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors shadow-sm"
+                            >
+                              Duyệt đổi pháp lý
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -450,6 +461,120 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
           </tbody>
         </table>
       </div>
+
+      {/* MODAL CHI TIẾT YÊU CẦU THAY ĐỔI PHÁP LÝ (Decision 3) */}
+      {selectedChangeModal && (
+        <Modal
+          isOpen={!!selectedChangeModal}
+          onClose={() => setSelectedChangeModal(null)}
+          title={`Chi tiết yêu cầu đổi pháp lý · ${selectedChangeModal.orgName || 'Tổ chức'}`}
+        >
+          <div className="space-y-4 text-xs font-sans">
+            <div className="p-3.5 rounded-xl border border-neutral bg-background space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-textSecondary">Tên tổ chức:</span>
+                <span className="font-bold text-text">{selectedChangeModal.orgName || selectedChangeModal.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-textSecondary">Mã số thuế:</span>
+                <span className="font-mono font-bold text-primary">{selectedChangeModal.taxCode || '0109887766'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-textSecondary">Người gửi yêu cầu:</span>
+                <span className="font-medium text-text">{selectedChangeModal.submittedBy || selectedChangeModal.representativeName || 'Người đại diện'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-textSecondary">Ngày gửi:</span>
+                <span className="text-text">{selectedChangeModal.submittedAt || 'Gần đây'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-textSecondary">Trạng thái:</span>
+                <span className="font-bold text-primary">{selectedChangeModal.status === 'PENDING' ? 'Chờ duyệt' : selectedChangeModal.status}</span>
+              </div>
+            </div>
+
+            {/* Bảng so sánh Cũ vs Mới */}
+            <div className="space-y-1.5">
+              <span className="font-bold uppercase tracking-wider text-[11px] text-textSecondary">So sánh thông tin thay đổi</span>
+              <div className="rounded-xl border border-neutral overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-background text-textSecondary">
+                    <tr>
+                      <th className="py-2 px-3 text-left w-1/3">Trường thay đổi</th>
+                      <th className="py-2 px-3 text-left">Nội dung cũ</th>
+                      <th className="py-2 px-3 text-left">Nội dung mới đề xuất</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral">
+                    <tr>
+                      <td className="py-2.5 px-3 font-semibold text-primary">{selectedChangeModal.fieldChanged || selectedChangeModal.field || 'Thông tin pháp lý'}</td>
+                      <td className="py-2.5 px-3 text-textSecondary line-through">{selectedChangeModal.oldValue || '—'}</td>
+                      <td className="py-2.5 px-3 font-bold text-text bg-success-light/30">{selectedChangeModal.newValue || 'Mới'}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Tài liệu đính kèm */}
+            <div className="space-y-2">
+              <span className="font-bold uppercase tracking-wider text-[11px] text-textSecondary">Giấy tờ & Tài liệu pháp lý đính kèm</span>
+              <div className="p-3 rounded-xl border border-neutral bg-surface flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-base">description</span>
+                  <div>
+                    <p className="font-bold text-text">Giấy phép ĐKKD / Quyết định thay đổi</p>
+                    <p className="text-[10px] text-textSecondary">Định dạng PDF / Ảnh có công chứng</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => alert('Mở xem tài liệu pháp lý đính kèm')}
+                  className="px-2.5 py-1 text-xs border border-primary text-primary font-bold rounded-lg hover:bg-primary hover:text-white transition-colors"
+                >
+                  Xem tài liệu
+                </button>
+              </div>
+            </div>
+
+            {/* Footer hành động trong Modal */}
+            <div className="flex justify-end gap-2 pt-3 border-t border-neutral">
+              <Button variant="outline" onClick={() => setSelectedChangeModal(null)} className="rounded-xl">
+                Đóng
+              </Button>
+              {selectedChangeModal.status === 'PENDING' && (
+                <>
+                  <Button
+                    variant="danger"
+                    onClick={() => {
+                      const reason = typeof window !== 'undefined' && window.prompt
+                        ? window.prompt('Nhập lý do từ chối yêu cầu đổi pháp lý:', 'Thông tin pháp lý không hợp lệ')
+                        : 'Thông tin pháp lý không hợp lệ';
+                      if (reason !== null && reason.trim()) {
+                        handleRejectLegalChange?.(selectedChangeModal.requestId || selectedChangeModal.refId || selectedChangeModal.id, reason.trim());
+                        setSelectedChangeModal(null);
+                      }
+                    }}
+                    className="rounded-xl bg-error text-white hover:bg-red-700"
+                  >
+                    Từ chối
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      handleApproveLegalChange?.(selectedChangeModal.requestId || selectedChangeModal.refId || selectedChangeModal.id);
+                      setSelectedChangeModal(null);
+                    }}
+                    className="rounded-xl bg-primary text-white hover:bg-primary-hover font-bold"
+                  >
+                    Duyệt đổi pháp lý
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -613,3 +738,5 @@ export function VerificationQueueTabs({ setActiveQueueTab, activeQueueTab, orgsQ
     </div>
   );
 }
+
+export { ExistingOrganizationsSection } from './ExistingOrganizationsSection.jsx';

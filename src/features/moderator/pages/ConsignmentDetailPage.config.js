@@ -1,5 +1,4 @@
 export const CHECKLIST_ITEMS = [
-  'Đúng món như ảnh trong form, không phải món khác',
   'Tem và nhãn mác khớp thương hiệu đã khai',
   'Đường may, khóa kéo, cúc còn nguyên vẹn',
   'Không rách, thủng, sờn bạc đáng kể',

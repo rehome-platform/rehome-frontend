@@ -2,7 +2,7 @@ import React from "react";
 import Button from "../../../../components/common/Button.jsx";
 
 /**
- * Dòng dữ liệu hàng đợi đóng gói theo chuẩn bảng 8 cột Wireframe DG-01-HangDoi
+ * Dòng dữ liệu hàng đợi đóng gói theo chuẩn bảng Wireframe DG-01-HangDoi
  */
 export function PackingQueueItem({
   item,
@@ -38,12 +38,7 @@ export function PackingQueueItem({
         {item.itemCount ? `${item.itemCount} món` : '2 món'}
       </td>
 
-      {/* 4. Vị trí kệ gom hàng */}
-      <td className="py-3 px-3 font-mono font-bold text-[#006B2C]">
-        {item.shelfLocations || 'B1-18, B1-22'}
-      </td>
-
-      {/* 5. Thời gian đặt */}
+      {/* 4. Thời gian đặt */}
       <td className="py-3 px-3 text-[#5f5f5f]">
         {item.orderTime || 'hôm nay 06:48'}
       </td>
@@ -76,16 +71,18 @@ export function PackingQueueItem({
           {isMine ? (
             <>
               <Button
-                className="text-xs bg-[#2b2b2b] text-white hover:bg-black font-bold py-1.5 px-3.5 shadow-sm"
+                size="sm"
+                variant="primary"
                 onClick={() => setSearch({ page: String(page), orderId: targetOrderId })}
               >
                 Mở đơn
               </Button>
               <Button
+                size="sm"
                 variant="outline"
                 disabled={queue.busy}
                 onClick={() => handleRelease(item.queueId || targetOrderId)}
-                className="text-xs text-[#BA1A1A] py-1.5 px-2 hover:bg-red-50 border-gray-300"
+                className="text-xs text-[#BA1A1A] hover:bg-red-50"
                 title="Nhả đơn để người khác nhận"
               >
                 Nhả
@@ -93,18 +90,21 @@ export function PackingQueueItem({
             </>
           ) : !item.claimedBy ? (
             <Button
+              size="sm"
+              variant="primary"
               disabled={queue.busy}
               onClick={() => handleClaim(item.queueId || targetOrderId)}
-              className="text-xs bg-[#2b2b2b] text-white hover:bg-black font-bold py-1.5 px-3.5"
             >
               Nhận việc
             </Button>
           ) : (
             <Button
+              size="sm"
               disabled
-              className="text-xs bg-[#efefef] text-[#9a9a9a] border border-[#c4c4c4] py-1.5 px-3.5 cursor-not-allowed"
+              variant="outline"
+              className="opacity-50 cursor-not-allowed"
             >
-              Nhận việc
+              Đã có người nhận
             </Button>
           )}
         </div>

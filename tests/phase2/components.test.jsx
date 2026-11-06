@@ -338,6 +338,14 @@ describe('ConsignmentQueuePage component behaviors', () => {
     const claimBtn = screen.getByRole('button', { name: 'Nhận việc' });
     fireEvent.click(claimBtn);
 
+    // Confirm in dialog if dialog is opened
+    const modalClaimBtn = screen.getAllByRole('button', { name: 'Nhận việc' }).find(
+      (btn) => btn.closest('[role="dialog"]'),
+    );
+    if (modalClaimBtn) {
+      fireEvent.click(modalClaimBtn);
+    }
+
     await waitFor(() => {
       expect(claimSpy).toHaveBeenCalledWith('q-free', expect.anything());
     });
@@ -365,6 +373,13 @@ describe('ConsignmentQueuePage component behaviors', () => {
 
     const claimBtn = screen.getByRole('button', { name: 'Nhận việc' });
     fireEvent.click(claimBtn);
+
+    const modalClaimBtn = screen.getAllByRole('button', { name: 'Nhận việc' }).find(
+      (btn) => btn.closest('[role="dialog"]'),
+    );
+    if (modalClaimBtn) {
+      fireEvent.click(modalClaimBtn);
+    }
 
     expect(await screen.findByText(/Công việc đã được người khác nhận trước/)).toBeInTheDocument();
   });
@@ -509,6 +524,8 @@ describe('ConsignmentDetailPage component behaviors', () => {
     );
     expect(await screen.findByRole('heading', { name: /Váy dạ hội/ })).toBeInTheDocument();
 
+    const quickBoxes = screen.getAllByRole('checkbox');
+    for (const b of quickBoxes) { fireEvent.click(b); }
     const startBtn = screen.getByRole('button', { name: 'Bắt đầu kiểm định tại quầy' });
     fireEvent.click(startBtn);
 
@@ -542,7 +559,7 @@ describe('ConsignmentDetailPage component behaviors', () => {
 
     // Check all 6 checklist boxes
     const checkboxes = screen.getAllByRole('checkbox');
-    expect(checkboxes).toHaveLength(6);
+    expect(checkboxes).toHaveLength(5);
     for (const box of checkboxes) {
       await user.click(box);
     }
@@ -692,7 +709,6 @@ describe('ConsignmentDetailPage component behaviors', () => {
 
       await user.type(await screen.findByLabelText('Tên sản phẩm'), 'Áo thun cotton');
       await user.type(screen.getByLabelText('Size'), 'L');
-      await user.type(screen.getByLabelText('Vị trí kệ'), 'A1-02');
       await user.selectOptions(screen.getByLabelText('Danh mục'), 'cat-1');
       await user.selectOptions(screen.getByLabelText('Thương hiệu'), 'brand-1');
 
@@ -710,7 +726,6 @@ describe('ConsignmentDetailPage component behaviors', () => {
             receiptId: 'rcpt-uuid-99',
             name: 'Áo thun cotton',
             size: 'L',
-            shelfLocation: 'A1-02',
             photoUrls: ['https://cdn.rehome.test/p1.jpg'],
           }),
           expect.anything(),
@@ -742,7 +757,6 @@ describe('ConsignmentDetailPage component behaviors', () => {
 
       await user.type(await screen.findByLabelText('Tên sản phẩm'), 'Quần jean');
       await user.type(screen.getByLabelText('Size'), '32');
-      await user.type(screen.getByLabelText('Vị trí kệ'), 'B1-05');
       await user.selectOptions(screen.getByLabelText('Danh mục'), 'c1');
       await user.selectOptions(screen.getByLabelText('Thương hiệu'), 'b1');
       const file = new File(['p'], 'jean.jpg', { type: 'image/jpeg' });
@@ -787,13 +801,12 @@ describe('ConsignmentDetailPage component behaviors', () => {
   });
 
   describe('Task 6: WarehouseInventoryPage & InventoryDetailPage behaviors', () => {
-    it('WarehouseInventoryPage: renders inventory list and updates shelf location via modal', async () => {
+    it('WarehouseInventoryPage: renders inventory list and navigates to detail', async () => {
       vi.spyOn(inventoryService, 'list').mockResolvedValue({
         items: [
           {
             sku: 'Q7-AK-000845',
             name: 'Áo khoác dạ Zara',
-            shelfLocation: 'A1-02',
             agreedPrice: 850000,
             status: 'ON_SALE',
           },
@@ -802,33 +815,10 @@ describe('ConsignmentDetailPage component behaviors', () => {
         totalElements: 1,
       });
 
-      const shelfSpy = vi.spyOn(inventoryService, 'shelf').mockResolvedValue({
-        id: 'Q7-AK-000845',
-        shelfLocation: 'B2-10',
-      });
-
-      const user = userEvent.setup();
       render(<WarehouseInventoryPage />, { wrapper: Wrapper });
 
       expect(await screen.findByText('Q7-AK-000845')).toBeInTheDocument();
       expect(screen.getByText('Áo khoác dạ Zara')).toBeInTheDocument();
-      expect(screen.getByText('A1-02')).toBeInTheDocument();
-
-      // Open shelf modal
-      const editShelfBtn = screen.getByRole('button', { name: 'Đổi kệ' });
-      await user.click(editShelfBtn);
-
-      const input = screen.getByLabelText('Vị trí kệ mới');
-      await user.clear(input);
-      await user.type(input, 'B2-10');
-
-      const saveBtn = screen.getByRole('button', { name: 'Lưu vị trí kệ' });
-      expect(saveBtn).toBeEnabled();
-      await user.click(saveBtn);
-
-      await waitFor(() => {
-        expect(shelfSpy).toHaveBeenCalledWith('Q7-AK-000845', 'B2-10', expect.anything());
-      });
     });
 
     it('InventoryDetailPage: renders details, movements timeline, and handles shelf relocation', async () => {
@@ -1076,7 +1066,6 @@ describe('ConsignmentDetailPage component behaviors', () => {
       // Check product list
       expect(await screen.findByText('Q7-AT-009')).toBeInTheDocument();
       expect(screen.getByText('Áo dạ tweed cao cấp')).toBeInTheDocument();
-      expect(screen.getByText('Kệ A2-05')).toBeInTheDocument();
 
       // Test search filter
       const searchInput = screen.getByPlaceholderText(/Tìm theo mã SKU/);

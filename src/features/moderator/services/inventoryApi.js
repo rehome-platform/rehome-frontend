@@ -74,6 +74,28 @@ export const inventoryService = {
     }
   },
 
+  // TH-04..TH-07: Ca hàng xuống cấp thuộc kho của Moderator
+  degradedCases: async (params = {}, options = {}) => {
+    const fallback = fixtureFallback('inventoryList', { params, ...options });
+    try {
+      const res = await callBackend(
+        {
+          method: 'get',
+          url: API_ENDPOINTS.MODERATOR.WAREHOUSE_DEGRADED_CASES,
+          params: {
+            ...(params?.status ? { status: params.status } : {}),
+          },
+        },
+        { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+      );
+      const raw = res?.data || res;
+      return Array.isArray(raw) ? raw : (raw?.content || []);
+    } catch (err) {
+      if (isFixtureMode && fallback) return fallback();
+      throw err;
+    }
+  },
+
   // API 41: GET /products/{sku}
   read: async (sku, options) => {
     const fallback = fixtureFallback('productRead', { ids: { sku }, ...options });

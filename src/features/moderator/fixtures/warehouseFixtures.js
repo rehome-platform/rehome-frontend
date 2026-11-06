@@ -230,6 +230,50 @@ export function resetFixtures() {
       currentPrice: 320000,
       photos: [],
       allowedActions: [],
+    },
+    {
+      sku: 'RH-DG-000101',
+      id: 'RH-DG-000101',
+      warehouseId: 'warehouse-a',
+      memberId: 'member-1',
+      memberName: 'Lê Văn An',
+      name: 'Áo sơ mi lụa tơ tằm',
+      brand: 'Uniqlo',
+      brandName: 'Uniqlo',
+      size: 'M',
+      shelfLocation: 'C1-04',
+      status: 'DEGRADED',
+      degradedDate: '2026-11-04T10:00:00Z',
+      degradedReason: 'Ố vàng vùng cổ và rách chỉ đường may nách khi hoàn về từ người mua',
+      decisionStatus: 'PENDING_DECISION',
+      decisionStatusLabel: 'Chờ Member chọn',
+      compensationAmount: 320000,
+      halfCompensationAmount: 160000,
+      stockInPhotos: ['https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=300'],
+      returnPhotos: ['https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=300'],
+      allowedActions: [],
+    },
+    {
+      sku: 'RH-DG-000102',
+      id: 'RH-DG-000102',
+      warehouseId: 'warehouse-a',
+      memberId: 'member-2',
+      memberName: 'Trần Thị Bình',
+      name: 'Váy dạ hội đuôi cá',
+      brand: 'Zara',
+      brandName: 'Zara',
+      size: 'S',
+      shelfLocation: 'C1-05',
+      status: 'DEGRADED',
+      degradedDate: '2026-11-03T14:30:00Z',
+      degradedReason: 'Trầy xước bề mặt vải, dính vết son môi không giặt được',
+      decisionStatus: 'FULL_COMPENSATION',
+      decisionStatusLabel: 'Đã đền 100% (Tài sản nền tảng)',
+      compensationAmount: 650000,
+      halfCompensationAmount: 325000,
+      stockInPhotos: ['https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=300'],
+      returnPhotos: ['https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=300'],
+      allowedActions: [],
     }
   );
 
@@ -508,7 +552,7 @@ export async function fixtureRequest(
         db.products.filter(
           (row) =>
             row.warehouseId === scope.warehouseId &&
-            (!params.status || (params.status === 'WAITING_END_OF_TERM' ? (row.status === 'WAITING_END_OF_TERM' || row.status === 'WITHDRAWN' || row.status === 'UNCLAIMED') : row.status === params.status)) &&
+            (!params.status || (params.status === 'WAITING_END_OF_TERM' ? (row.status === 'WAITING_END_OF_TERM' || row.status === 'WITHDRAWN' || row.status === 'UNCLAIMED') : params.status === 'DEGRADED' ? (row.status === 'DEGRADED' || row.status === 'PLATFORM_OWNED') : row.status === params.status)) &&
             (!params.shelf || row.shelfLocation.includes(params.shelf)) &&
             (!params.sku || row.sku.includes(params.sku)),
         ),

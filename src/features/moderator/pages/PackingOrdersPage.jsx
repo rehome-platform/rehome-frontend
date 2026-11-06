@@ -38,10 +38,12 @@ export function PackingDetail({ orderId, onChanged }) {
           </Button>
           {model.order?.ghnTrackingCode && (
             <Button
-              className="text-xs bg-[#2b2b2b] text-white hover:bg-black font-bold flex items-center gap-1.5"
+              variant="primary"
+              size="sm"
+              className="flex items-center gap-1.5"
               onClick={() => model.setPrintModalOpen(true)}
             >
-              <span>🖨️</span> In phiếu giao hàng
+              <span>📄</span> Chi tiết phiếu giao hàng
             </Button>
           )}
         </div>
@@ -64,33 +66,21 @@ export function PackingDetail({ orderId, onChanged }) {
                 </span>
               </div>
               <p className="text-xs text-[#5f5f5f]">
-                Lấy đủ {model.totalCount} món theo vị trí kệ, tick từng món, rồi sang bước đối chiếu mã SKU.
+                Lấy đủ {model.totalCount} món, tick từng món, rồi sang bước đối chiếu mã SKU.
               </p>
               <div className="pt-2 text-xs font-bold text-[#191C19] flex items-center gap-2">
                 <span>Tiến độ đối chiếu:</span>
                 <span className={`px-2.5 py-0.5 rounded-full font-mono text-xs font-bold ${model.scannedCount === model.totalCount
-                    ? 'bg-[#E8F5E9] text-[#006B2C]'
-                    : 'bg-[#FFF3E0] text-[#D97706]'
+                  ? 'bg-[#E8F5E9] text-[#006B2C]'
+                  : 'bg-[#FFF3E0] text-[#D97706]'
                   }`}>
                   {`Đã quét ${model.scannedCount}/${model.totalCount} SKU`}
                 </span>
               </div>
             </div>
 
-            {/* Bảng món hàng lấy theo vị trí kệ (DG-02) */}
+            {/* Bảng món hàng (DG-02) */}
             <PackingItemTable {...model.sections.PackingItemTable} />
-
-            {/* Lưu ý đóng gói & Đơn không huỷ được (DG-02) */}
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="rounded-xl border border-[#c4c4c4] bg-[#fcfdfc] p-3.5 text-xs text-[#414942]">
-                <p className="text-[10px] uppercase font-bold text-[#6b6b6b] mb-1">Ghi chú đóng gói của người mua</p>
-                <p>{model.order.buyerNote || 'Giao giờ hành chính, gọi trước khi tới.'}</p>
-              </div>
-              <div className="rounded-xl border border-[#c4c4c4] bg-[#fcfdfc] p-3.5 text-xs text-[#414942]">
-                <p className="text-[10px] uppercase font-bold text-[#6b6b6b] mb-1">Đơn này không huỷ được nữa</p>
-                <p>Người mua đã trả tiền và đã qua cửa sổ huỷ. Nếu có món hỏng hoặc thiếu, chọn <strong>Báo sự cố đơn</strong> — không tự huỷ đơn.</p>
-              </div>
-            </div>
 
             {/* KHUNG QUÉT ĐỐI CHIẾU MÃ SKU (DG-03) */}
             {!model.order.ghnTrackingCode && (
@@ -170,8 +160,7 @@ export default function PackingOrdersPage() {
       source = source.filter(
         i =>
           (i.orderNo || i.refId || i.orderId || '').toLowerCase().includes(q) ||
-          (i.buyerName || i.name || '').toLowerCase().includes(q) ||
-          (i.shelfLocations || '').toLowerCase().includes(q)
+          (i.buyerName || i.name || '').toLowerCase().includes(q)
       );
     }
     return source;
@@ -257,7 +246,7 @@ export default function PackingOrdersPage() {
 
           <ResourceState resource={queue} />
 
-          {/* BẢNG HÀNG ĐỢI ĐÓNG GÓI 8 CỘT CHUẨN WIREFRAME DG-01 */}
+          {/* BẢNG HÀNG ĐỢI ĐÓNG GÓI 7 CỘT */}
           <div className="rounded-2xl border border-neutral bg-surface overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[800px] text-left text-xs">
@@ -266,7 +255,6 @@ export default function PackingOrdersPage() {
                     <th className="py-3 px-3">Mã đơn</th>
                     <th className="py-3 px-3">Người mua</th>
                     <th className="py-3 px-3">Số món</th>
-                    <th className="py-3 px-3">Vị trí kệ gom hàng</th>
                     <th className="py-3 px-3">Thời gian đặt</th>
                     <th className="py-3 px-3">Chờ</th>
                     <th className="py-3 px-3">Trạng thái</th>
@@ -276,31 +264,31 @@ export default function PackingOrdersPage() {
                 <tbody className="divide-y divide-neutral">
                   {items.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="py-12 text-center text-xs text-textSecondary">
+                      <td colSpan="7" className="py-12 text-center text-xs text-textSecondary">
                         Chưa có dữ liệu phù hợp.
                       </td>
                     </tr>
                   ) : (
                     items.map((item) => {
-                    const isMine =
-                      item.claimedBy === scope.userId ||
-                      item.claimedBy === 'CURRENT_USER' ||
-                      (item.claimedByName && item.claimedByName.includes('Bạn đang giữ'));
-                    const targetOrderId = item.orderNo || item.orderId || item.refId;
-                    return (
-                      <PackingQueueItem
-                        key={item.queueId || targetOrderId}
-                        item={item}
-                        targetOrderId={targetOrderId}
-                        isMine={Boolean(isMine)}
-                        setSearch={setSearch}
-                        page={page}
-                        queue={queue}
-                        handleClaim={handleClaim}
-                        handleRelease={handleRelease}
-                      />
-                    );
-                  })
+                      const isMine =
+                        item.claimedBy === scope.userId ||
+                        item.claimedBy === 'CURRENT_USER' ||
+                        (item.claimedByName && item.claimedByName.includes('Bạn đang giữ'));
+                      const targetOrderId = item.orderNo || item.orderId || item.refId;
+                      return (
+                        <PackingQueueItem
+                          key={item.queueId || targetOrderId}
+                          item={item}
+                          targetOrderId={targetOrderId}
+                          isMine={Boolean(isMine)}
+                          setSearch={setSearch}
+                          page={page}
+                          queue={queue}
+                          handleClaim={handleClaim}
+                          handleRelease={handleRelease}
+                        />
+                      );
+                    })
                   )}
                 </tbody>
               </table>

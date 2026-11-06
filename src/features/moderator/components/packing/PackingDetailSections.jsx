@@ -35,7 +35,7 @@ export function PackingIncidentDialog({ setIncidentOpen, setIncidentNote, incide
             <textarea
               value={incidentNote}
               onChange={(e) => setIncidentNote(e.target.value)}
-              placeholder="Ghi rõ vị trí kệ hoặc mã sản phẩm gặp sự cố..."
+              placeholder="Ghi rõ mã sản phẩm hoặc chi tiết gặp sự cố..."
               rows={3}
               className="w-full rounded-xl border border-gray-300 p-2.5 text-xs focus:border-[#006B2C] focus:outline-none"
             />
@@ -63,43 +63,65 @@ export function PackingIncidentDialog({ setIncidentOpen, setIncidentNote, incide
 }
 
 export function PackingRecipientPanel({ order, scanLogs }) {
+  const recipientName = order.shippingRecipientName || order.recipientName || '—';
+  const recipientPhone = order.shippingPhone || order.recipientPhone || '—';
+  const shippingAddress = order.shippingAddress || '—';
+  const subtotalStr = order.subtotal != null ? `${Number(order.subtotal).toLocaleString('vi-VN')}đ` : '—';
+  const shippingFeeStr = order.shippingFee != null ? `${Number(order.shippingFee).toLocaleString('vi-VN')}đ` : '—';
+  const totalAmountStr = order.totalAmount != null ? `${Number(order.totalAmount).toLocaleString('vi-VN')}đ` : '—';
+  const paymentMethodStr = order.paymentMethod ? `Đã thu qua ${order.paymentMethod}` : 'Đã thanh toán';
+  const paidTimeStr = order.paidAt
+    ? new Date(order.paidAt).toLocaleString('vi-VN')
+    : order.createdAt
+      ? new Date(order.createdAt).toLocaleString('vi-VN')
+      : '';
+
   return (
     <div className="space-y-5">
       {/* Người nhận hàng */}
       <div className="rounded-2xl border border-[#8a8a8a] bg-white p-5 shadow-sm space-y-2 text-xs">
         <p className="text-[10px] font-bold uppercase tracking-wider text-[#717971]">Người nhận hàng</p>
-        <p className="text-sm font-bold text-[#191C19]">{order.recipientName || 'Ngô Hải F'}</p>
-        <p className="text-[#5B6776]">{order.recipientPhone || '0912 456 142'}</p>
+        <p className="text-sm font-bold text-[#191C19]">{recipientName}</p>
+        <p className="text-[#5B6776]">{recipientPhone}</p>
         <p className="text-[#5B6776] leading-relaxed">
-          {order.shippingAddress || '142 Nguyễn Thị Thập, P. Tân Phú, Quận 7, TP.HCM'}
+          {shippingAddress}
         </p>
+        {order.buyerNote && (
+          <div className="pt-2 border-t border-[#E2E8E0]">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#717971]">Ghi chú đóng gói của người mua</p>
+            <p className="text-xs text-[#191C19] mt-0.5">{order.buyerNote}</p>
+            <p className="text-[10px] font-semibold text-[#BA1A1A] mt-1">Đơn này không huỷ được nữa</p>
+          </div>
+        )}
       </div>
-    
+
       {/* Thanh toán & Vận chuyển */}
       <div className="rounded-2xl border border-[#8a8a8a] bg-white p-5 shadow-sm space-y-3 text-xs">
         <p className="text-[10px] font-bold uppercase tracking-wider text-[#717971]">Thanh toán</p>
         <div className="flex justify-between text-[#5f5f5f]">
           <span>Tiền hàng</span>
-          <span className="font-semibold text-[#191C19]">425.000đ</span>
+          <span className="font-semibold text-[#191C19]">{subtotalStr}</span>
         </div>
         <div className="flex justify-between text-[#5f5f5f]">
           <span>Phí vận chuyển</span>
-          <span className="font-semibold text-[#191C19]">32.000đ</span>
+          <span className="font-semibold text-[#191C19]">{shippingFeeStr}</span>
         </div>
         <div className="flex justify-between font-bold text-sm text-[#191C19] pt-2 border-t border-[#E2E8E0]">
-          <span>Đã thu qua MoMo</span>
-          <span>457.000đ</span>
+          <span>{paymentMethodStr}</span>
+          <span>{totalAmountStr}</span>
         </div>
-        <p className="text-[10px] text-[#7a7a7a]">
-          Lúc hôm nay 06:48 · MOMO-8842199
-        </p>
-    
+        {paidTimeStr && (
+          <p className="text-[10px] text-[#7a7a7a]">
+            {paidTimeStr}
+          </p>
+        )}
+
         <div className="pt-3 border-t border-[#E2E8E0] flex justify-between items-center">
           <span className="text-[10px] font-bold uppercase tracking-wider text-[#717971]">Đơn vị vận chuyển</span>
           <span className="font-bold text-[#006B2C]">GHN Express</span>
         </div>
       </div>
-    
+
       {/* Phí GHN báo về (DG-04) */}
       <div className="rounded-2xl border border-[#8a8a8a] bg-white p-4 shadow-sm space-y-2 text-xs">
         <p className="text-[10px] font-bold uppercase tracking-wider text-[#717971]">Phí GHN báo về</p>
@@ -119,7 +141,7 @@ export function PackingRecipientPanel({ order, scanLogs }) {
           Nếu khối lượng thực vượt mức người mua đã trả, kho chịu phần chênh, không đòi thêm người mua.
         </p>
       </div>
-    
+
       {/* Nhật ký nhập mã SKU (DG-03) */}
       <div className="rounded-2xl border border-[#8a8a8a] bg-white p-5 shadow-sm space-y-3">
         <p className="text-[10px] font-bold uppercase tracking-wider text-[#717971]">Nhật ký nhập mã</p>
@@ -137,9 +159,6 @@ export function PackingRecipientPanel({ order, scanLogs }) {
             ))}
           </div>
         )}
-        <div className="rounded-xl border border-dashed border-[#9a9a9a] p-3 text-[11px] text-[#5f5f5f] leading-relaxed">
-          Mã SKU không dùng chữ I, O, số 0 và số 1 để tránh đọc nhầm khi nhập tay. Dòng khớp lưu vào database (order_item.scanned).
-        </div>
       </div>
     </div>
   );
@@ -154,7 +173,7 @@ export function PackingShipmentPanel({ order, onOpenPrintModal }) {
           GHN đã nhận đơn lúc 09:31 · chờ shipper tới lấy
         </p>
       </div>
-    
+
       <div className="p-4 rounded-xl border border-[#2b2b2b] bg-[#f9faf9] space-y-2">
         <p className="text-[10px] font-bold uppercase tracking-wider text-[#717971]">Mã vận đơn GHN</p>
         <p className="text-2xl font-mono font-extrabold text-[#191C19] tracking-wider">
@@ -169,17 +188,17 @@ export function PackingShipmentPanel({ order, onOpenPrintModal }) {
           <span className="font-semibold text-[#191C19]">12/10 – 13/10</span>
         </div>
       </div>
-    
-      {/* In phiếu giao hàng (DG-04) */}
+
+      {/* Chi tiết phiếu giao hàng (DG-04) */}
       <div className="space-y-2">
-        <p className="text-xs font-bold text-[#191C19]">In phiếu giao hàng</p>
+        <p className="text-xs font-bold text-[#191C19]">Chi tiết phiếu giao hàng</p>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => onOpenPrintModal ? onOpenPrintModal() : window.print()}
-            className="px-4 py-2 rounded bg-[#2b2b2b] text-white text-xs font-bold hover:bg-black flex items-center gap-1.5"
+            className="px-4 py-2 rounded bg-[#006B2C] text-white text-xs font-bold hover:bg-[#005222] flex items-center gap-1.5 shadow-sm"
           >
-            <span>🖨️</span> In khổ A5
+            <span>📄</span> In khổ A5
           </button>
           <button
             type="button"
@@ -197,7 +216,7 @@ export function PackingShipmentPanel({ order, onOpenPrintModal }) {
           </button>
         </div>
       </div>
-    
+
       {/* Khi shipper đã lấy hàng */}
       <div className="p-4 rounded-xl border border-[#8a8a8a] bg-[#fafafa] space-y-3">
         <p className="text-xs font-bold text-[#191C19]">Khi shipper đã lấy hàng</p>
@@ -248,13 +267,13 @@ export function PackingScanPanel({
           Chỉ tạo được vận đơn khi đủ {totalCount} / {totalCount} món khớp mã
         </span>
       </div>
-    
+
       {!canPack(order, scope, now) && (
         <p role="status" className="text-xs text-[#BA1A1A] font-semibold">
           Đơn chưa cho phép thao tác hoặc bạn không còn claim hợp lệ. Hãy kiểm tra lại hàng đợi.
         </p>
       )}
-    
+
       <form
         className="flex flex-wrap items-end gap-3"
         onSubmit={(e) => {
@@ -294,18 +313,17 @@ export function PackingScanPanel({
           Quét camera
         </Button>
       </form>
-    
+
       {message && (
         <p
           role="status"
-          className={`text-xs font-bold p-2.5 rounded-lg border ${
-            message.includes('không') ? 'bg-red-50 text-[#BA1A1A] border-red-200' : 'bg-green-50 text-[#006B2C] border-green-200'
-          }`}
+          className={`text-xs font-bold p-2.5 rounded-lg border ${message.includes('không') ? 'bg-red-50 text-[#BA1A1A] border-red-200' : 'bg-green-50 text-[#006B2C] border-green-200'
+            }`}
         >
           {message}
         </p>
       )}
-    
+
       {(uncertain || order.shipmentOutcome === 'UNKNOWN') && (
         <p role="status" className="text-xs text-[#D97706] font-bold bg-amber-50 p-2.5 rounded-lg border border-amber-200">
           Đang kiểm tra kết quả tạo vận đơn. Chưa thể tạo mới.
@@ -356,7 +374,7 @@ export function PackingScanPanel({
           </div>
         </div>
       )}
-    
+
       <div className="flex flex-wrap gap-3 pt-2">
         <Button
           disabled={!operationReady('shipment') || resource.busy || resource.loading || uncertain || !canShip(order, scope, now)}
@@ -390,7 +408,6 @@ export function PackingItemTable({ items, pickedItems, scannedProductIds, toggle
               <th className="py-2.5 px-3">Mã SKU</th>
               <th className="py-2.5 px-3">Sản phẩm</th>
               <th className="py-2.5 px-3">Cỡ</th>
-              <th className="py-2.5 px-3">Vị trí kệ</th>
               <th className="py-2.5 px-3 text-right">Trạng thái</th>
             </tr>
           </thead>
@@ -431,9 +448,6 @@ export function PackingItemTable({ items, pickedItems, scannedProductIds, toggle
                   </td>
                   <td className="py-3 px-3 font-medium text-[#414942]">
                     {item.size || 'M'}
-                  </td>
-                  <td className="py-3 px-3 font-mono font-bold text-[#006B2C]">
-                    {item.shelfLocation || 'B1-18'}
                   </td>
                   <td className="py-3 px-3 text-right">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isScanned ? 'bg-[#E8F5E9] text-[#006B2C]' : 'bg-[#FFF3E0] text-[#D97706]'}`}>

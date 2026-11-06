@@ -89,7 +89,30 @@ export function DegradedCaseModal({
   setDegradedConditionRate,
   handleCreateDegradedCase,
 }) {
+  const [degradedPhotos, setDegradedPhotos] = React.useState([
+    'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=300',
+    'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=300',
+  ]);
+  const [photoInput, setPhotoInput] = React.useState('');
+
   if (!selectedItem) return null;
+
+  const basePrice = selectedItem.compensationAmount || selectedItem.consignPrice || selectedItem.amount || 300000;
+  const fullCompensation = basePrice;
+  const halfCompensation = Math.round(basePrice * 0.5);
+
+  const addPhoto = () => {
+    if (photoInput.trim() && degradedPhotos.length < 5) {
+      setDegradedPhotos((prev) => [...prev, photoInput.trim()]);
+      setPhotoInput('');
+    }
+  };
+
+  const removePhoto = (idx) => {
+    if (degradedPhotos.length > 2) {
+      setDegradedPhotos((prev) => prev.filter((_, i) => i !== idx));
+    }
+  };
 
   return (
     <Modal
@@ -97,47 +120,91 @@ export function DegradedCaseModal({
       onClose={onClose}
       title="Lập biên bản hàng xuống cấp (TH-04 / KG-16)"
     >
-      <div className="space-y-4 text-xs font-sans">
+      <div className="space-y-4 text-xs font-sans max-h-[80vh] overflow-y-auto pr-1">
         <div className="p-3 bg-[#FFFDF5] border border-secondary rounded-xl text-text leading-relaxed">
-          <strong className="text-secondary font-bold">Lưu ý:</strong> Khi hàng trả về bị xuống cấp đáng kể so với ảnh nhập kho, hệ thống lập biên bản để người ký gửi chọn nhận lại món hàng cùng bồi thường một phần hoặc nhận bồi thường toàn bộ (KG-16).
+          <strong className="text-secondary font-bold">Quy tắc F-036 / KG-16:</strong> Hàng trả về bị xuống cấp đáng kể so với ảnh nhập kho. Hệ thống tự động tính mức bồi thường và thông báo để người ký gửi chọn 1 trong 2 phương án trong vòng 7 ngày.
         </div>
 
         <div className="rounded-xl border border-neutral bg-background p-3 space-y-1">
-          <p><strong className="text-text">Yêu cầu trả:</strong> {selectedItem.code}</p>
-          <p><strong className="text-text">Món hàng:</strong> {selectedItem.itemName} ({selectedItem.sku})</p>
-          <p><strong className="text-text">Giá bán ban đầu:</strong> {formatCurrencyVND(selectedItem.amount || 0)}</p>
+          <p><strong className="text-text">Yêu cầu trả:</strong> {selectedItem.code || selectedItem.returnCode}</p>
+          <p><strong className="text-text">Món hàng:</strong> {selectedItem.itemName || selectedItem.productName} ({selectedItem.sku || '—'})</p>
+          <p><strong className="text-text">Giá bán tại đơn:</strong> {formatCurrencyVND(selectedItem.amount || basePrice)}</p>
         </div>
 
+        {/* 2 Mức tiền đền tự động */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-3 rounded-xl border border-[#006B2C] bg-[#E8F5E9]/50 space-y-1">
+            <span className="text-[10px] uppercase font-bold text-[#006B2C]">Mức đền đủ 100%</span>
+            <p className="text-base font-extrabold text-[#006B2C]">{formatCurrencyVND(fullCompensation)}</p>
+            <p className="text-[10px] text-textSecondary leading-tight">
+              Nếu Seller không lấy lại đồ. Hàng thành tài sản nền tảng ReHome.
+            </p>
+          </div>
+          <div className="p-3 rounded-xl border border-[#D97706] bg-[#FFFBEB] space-y-1">
+            <span className="text-[10px] uppercase font-bold text-[#D97706]">Ô 50% tiền đền bù</span>
+            <p className="text-base font-extrabold text-[#D97706]">{formatCurrencyVND(halfCompensation)}</p>
+            <p className="text-[10px] text-textSecondary leading-tight">
+              Seller nhận 50% tiền đền vào ví và có 30 ngày đến kho nhận lại món đồ.
+            </p>
+          </div>
+        </div>
+
+        {/* Upload từ 2 đến 5 ảnh chụp thực tế */}
         <div className="space-y-2">
-          <label className="block font-bold text-text">
-            Tỷ lệ chất lượng còn lại hiện tại (%):
-          </label>
-          <div className="flex items-center gap-3">
-            <input
-              type="range"
-              min="20"
-              max="80"
-              step="5"
-              value={degradedConditionRate}
-              onChange={(e) => setDegradedConditionRate(Number(e.target.value))}
-              className="flex-1 accent-primary"
-            />
-            <span className="font-bold font-mono text-sm px-3 py-1 rounded-xl border border-neutral bg-surface text-text shadow-sm">
-              {degradedConditionRate}%
+          <div className="flex justify-between items-center">
+            <label className="block font-bold text-text">
+              Ảnh chụp hiện vật xuống cấp (2 đến 5 ảnh) *
+            </label>
+            <span className="text-[11px] font-semibold text-[#006B2C]">
+              {degradedPhotos.length} / 5 ảnh
             </span>
           </div>
+
+          <div className="flex flex-wrap gap-2">
+            {degradedPhotos.map((src, i) => (
+              <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-neutral group">
+                <img src={src} alt="Ảnh thực tế" className="w-full h-full object-cover" />
+                {degradedPhotos.length > 2 && (
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(i)}
+                    className="absolute top-1 right-1 bg-black/60 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+            {degradedPhotos.length < 5 && (
+              <div className="flex items-center gap-1.5 w-full mt-1">
+                <input
+                  type="text"
+                  placeholder="Dán link ảnh chụp thực tế..."
+                  value={photoInput}
+                  onChange={(e) => setPhotoInput(e.target.value)}
+                  className="flex-1 p-2 border border-neutral rounded-xl text-xs bg-surface text-text"
+                />
+                <Button type="button" size="sm" variant="outline" onClick={addPhoto}>
+                  Thêm ảnh
+                </Button>
+              </div>
+            )}
+          </div>
+          <p className="text-[10px] text-textSecondary">
+            Chụp rõ vết rách, ố bẩn hoặc hư hỏng để Seller đối chiếu với ảnh nhập kho.
+          </p>
         </div>
 
         <div className="space-y-1.5">
           <label className="block font-bold text-text">
-            Ghi chú chi tiết về tình trạng xuống cấp:
+            Mô tả chi tiết lý do hàng xuống cấp *
           </label>
           <textarea
             rows={3}
             value={degradedNotes}
             onChange={(e) => setDegradedNotes(e.target.value)}
             className="w-full p-2.5 rounded-xl border border-neutral text-xs text-text bg-surface focus:outline-none focus:border-primary"
-            placeholder="Mô tả cụ thể vết bẩn, rách vải, phai màu, đứt khuy..."
+            placeholder="Ghi rõ chi tiết hư hỏng so với ảnh kiểm định lúc nhập kho..."
           />
         </div>
 
@@ -147,10 +214,11 @@ export function DegradedCaseModal({
           </Button>
           <Button
             size="sm"
+            disabled={!degradedNotes?.trim() || degradedPhotos.length < 2}
             className="bg-primary text-white hover:bg-primary-hover font-bold rounded-xl px-4"
-            onClick={handleCreateDegradedCase}
+            onClick={() => handleCreateDegradedCase({ notes: degradedNotes, photos: degradedPhotos, fullCompensation, halfCompensation })}
           >
-            Lập hồ sơ & Thông báo Seller
+            Lập hồ sơ & Báo Seller
           </Button>
         </div>
       </div>
@@ -288,7 +356,7 @@ export function ReturnInspectionVerdict({
               onClick={handleFlagCounterfeit}
               className="px-3.5 py-2 rounded-xl border border-error bg-error-light text-error text-xs font-bold hover:bg-red-100 transition-colors"
             >
-              ⚠️ Báo nghi hàng giả (2 Moderator)
+              ⚠️ Báo nghi hàng giả
             </button>
           )}
           {handleOpenDegradedCase && (

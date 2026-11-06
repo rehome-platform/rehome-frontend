@@ -341,21 +341,21 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     fireEvent.click(inspectBtns[0]);
 
     await waitFor(() => {
-      expect(screen.getByText(/⚠️ Báo nghi hàng giả \(2 Moderator\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/⚠️ Báo nghi hàng giả/i)).toBeInTheDocument();
     });
 
     // Click counterfeit button
-    fireEvent.click(screen.getByText(/⚠️ Báo nghi hàng giả \(2 Moderator\)/i));
+    fireEvent.click(screen.getByText(/⚠️ Báo nghi hàng giả/i));
 
     await waitFor(() => {
-      expect(screen.getByText(/Hội Chẩn Hàng Nghi Giả 2 Moderator/i)).toBeInTheDocument();
+      expect(screen.getByText(/Thẩm Định Hàng Nghi Giả/i)).toBeInTheDocument();
     });
 
     // Fill note and submit
     const noteInput = screen.getByPlaceholderText(/Ghi rõ chi tiết đối chiếu chất liệu vải/i);
     fireEvent.change(noteInput, { target: { value: 'Chất liệu vải nhái thô cứng, chỉ thừa nhiều' } });
 
-    fireEvent.click(screen.getByText(/Lưu biên bản & Thực thi/i));
+    fireEvent.click(screen.getByText(/Lưu kết luận & Thực thi/i));
 
     await waitFor(() => {
       expect(window.alert).toHaveBeenCalled();

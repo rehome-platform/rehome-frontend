@@ -5,6 +5,7 @@ import { queueService, inventoryService } from '../services/warehouseApi.js';
 import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
 import { listItems, ownsClaim } from '../models/warehouseModel.js';
 import { Page, Card, ResourceState } from '../components/WarehouseUi.jsx';
+import { QueueClaimDialog } from '../components/queue/QueueSections.jsx';
 
 const OVERDUE_HOURS = 48;
 const QUEUE_TYPES = [
@@ -38,6 +39,7 @@ function Stat({ label, value, tone }) {
 export default function WarehouseHomePage() {
   const { scope, warehouse } = usePhase2();
   const [feedback, setFeedback] = useState(null);
+  const [claimTarget, setClaimTarget] = useState(null);
 
   const review = useResource((o) => queueService.list({ type: 'FORM_REVIEW' }, o), []);
   const inspection = useResource((o) => queueService.list({ type: 'INSPECTION' }, o), []);
@@ -141,30 +143,49 @@ export default function WarehouseHomePage() {
             <p className="text-sm text-textSecondary">Không có việc nào đang chờ.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px] text-left text-sm">
+              <table className="w-full min-w-[560px] text-left text-xs">
                 <thead>
-                  <tr className="border-b border-neutral text-[10px] uppercase tracking-wide text-textSecondary">
-                    <th className="py-2">Loại việc</th><th>Mã</th><th>Đối tượng</th><th>Chờ</th><th>Người nhận</th><th />
+                  <tr className="border-b border-neutral text-xs font-semibold uppercase tracking-wider text-textSecondary bg-[#FAFBF9]">
+                    <th className="py-2.5 px-3">Loại việc</th>
+                    <th className="py-2.5 px-3">Mã</th>
+                    <th className="py-2.5 px-3">Đối tượng</th>
+                    <th className="py-2.5 px-3">Chờ</th>
+                    <th className="py-2.5 px-3">Người nhận</th>
+                    <th className="py-2.5 px-3 text-right">Thao tác</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-neutral">
                   {sorted.map((task) => {
                     const mine = ownsClaim(task, scope.userId);
                     const link = task.kind === 'PACKING'
                       ? `/moderator/packing?orderId=${encodeURIComponent(task.orderId || task.refId || '')}`
                       : `/moderator/queue?${new URLSearchParams({ type: task.kind, queueId: task.queueId })}`;
                     return (
-                      <tr key={`${task.kind}-${task.queueId}`} className={`border-b border-neutral ${(task.hours ?? 0) >= OVERDUE_HOURS ? 'border-l-4 border-l-primary' : ''}`}>
-                        <td className="py-3 font-medium">{task.kindLabel}</td>
-                        <td>{task.formId || task.orderId || task.queueId}</td>
-                        <td>{task.name || '—'}</td>
-                        <td>{waitedText(task.hours)}</td>
-                        <td className="text-textSecondary">{task.claimedBy ? (mine ? 'bạn đang giữ' : 'người khác giữ') : 'chưa ai nhận'}</td>
-                        <td className="text-right">
+                      <tr key={`${task.kind}-${task.queueId}`} className={`border-b border-neutral ${(task.hours ?? 0) >= OVERDUE_HOURS ? 'border-l-4 border-l-primary bg-amber-50/20' : 'hover:bg-[#FAFBF9]'}`}>
+                        <td className="py-2.5 px-3 font-semibold text-[#191C19]">{task.kindLabel}</td>
+                        <td className="py-2.5 px-3 font-mono font-bold text-[#191C19]">{task.formId || task.orderId || task.queueId}</td>
+                        <td className="py-2.5 px-3">{task.name || '—'}</td>
+                        <td className="py-2.5 px-3">{waitedText(task.hours)}</td>
+                        <td className="py-2.5 px-3">
+                          {task.claimedBy ? (
+                            mine ? (
+                              <span className="font-semibold text-primary">bạn đang giữ</span>
+                            ) : (
+                              <span className="text-textSecondary">người khác giữ</span>
+                            )
+                          ) : (
+                            <span className="text-textSecondary">chưa ai nhận</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
                           {!task.claimedBy ? (
-                            <Button loading={task.source.busy} onClick={() => handleClaim(task)}>Nhận</Button>
+                            <Button size="sm" loading={task.source.busy} onClick={() => setClaimTarget(task)}>
+                              Nhận việc
+                            </Button>
                           ) : mine ? (
-                            <Link className="text-primary underline" to={link}>Mở</Link>
+                            <Link className="text-xs font-semibold text-primary hover:underline" to={link}>
+                              Mở
+                            </Link>
                           ) : (
                             <span className="text-xs text-textSecondary">Đã có người nhận</span>
                           )}
@@ -195,6 +216,16 @@ export default function WarehouseHomePage() {
           </ul>
         </Card>
       </div>
+
+      <QueueClaimDialog
+        claimTarget={claimTarget}
+        resource={claimTarget?.source || review}
+        setClaimTarget={setClaimTarget}
+        handleClaim={(task) => {
+          handleClaim(task);
+          setClaimTarget(null);
+        }}
+      />
     </Page>
   );
 }

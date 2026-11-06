@@ -335,36 +335,50 @@ export function CounterIdentityPanel({ selected, results, confirmed, confirmIden
         </div>
         <div>
           <p className="text-[10px] text-[#717971] uppercase font-bold">Email đăng ký</p>
-          <p className="font-bold text-sm text-[#191C19] mt-0.5">{selected.email || 'member***@rehome.vn'}</p>
+          <p className="font-bold text-sm text-[#191C19] mt-0.5">{selected.email || '—'}</p>
         </div>
       </div>
     
       <div className="grid grid-cols-3 gap-4 text-xs text-[#5B6776]">
         <div>
           <p className="text-[10px] text-[#717971] uppercase font-bold">Tham gia từ</p>
-          <p className="font-medium text-[#191C19] mt-0.5">02/2026</p>
+          <p className="font-medium text-[#191C19] mt-0.5">
+            {selected.joinedAt
+              ? new Date(selected.joinedAt).toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' })
+              : '—'}
+          </p>
         </div>
         <div>
           <p className="text-[10px] text-[#717971] uppercase font-bold">Đến kho gần nhất</p>
-          <p className="font-medium text-[#191C19] mt-0.5">Hôm nay</p>
+          <p className="font-medium text-[#191C19] mt-0.5">
+            {selected.lastWarehouseVisit
+              ? new Date(selected.lastWarehouseVisit).toLocaleDateString('vi-VN')
+              : 'Lần đầu đến kho'}
+          </p>
         </div>
         <div>
           <p className="text-[10px] text-[#717971] uppercase font-bold">Lịch sử</p>
-          <p className="font-medium text-[#191C19] mt-0.5">Chưa có vi phạm</p>
+          <p className="font-medium text-[#191C19] mt-0.5">
+            {selected.violationSummary || 'Chưa có vi phạm'}
+          </p>
         </div>
       </div>
     
       <div className="rounded-xl border border-[#8a8a8a] bg-[#fcfdfc] p-4 space-y-2">
         <h3 className="text-xs font-bold text-[#191C19] uppercase tracking-wide">
-          Đang ký gửi tại kho này · 4 món
+          Đang ký gửi tại kho này · {selected.activeConsignments?.length || 0} món
         </h3>
-        <div className="flex flex-wrap gap-2">
-          {['Quần jeans ống rộng', 'Váy hoa nhí', 'Áo sơ mi linen', 'Áo len cổ lọ'].map((tag, i) => (
-            <span key={i} className="px-2.5 py-1 rounded border border-[#a8a8a8] bg-white text-xs text-[#414942]">
-              {tag}
-            </span>
-          ))}
-        </div>
+        {selected.activeConsignments && selected.activeConsignments.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {selected.activeConsignments.map((tag, i) => (
+              <span key={i} className="px-2.5 py-1 rounded border border-[#a8a8a8] bg-white text-xs text-[#414942]">
+                {tag}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-[#717971]">Không có món hàng nào đang ký gửi tại kho này.</p>
+        )}
       </div>
     
       <div className="rounded-xl border border-dashed border-[#9a9a9a] bg-[#f4f5f4] p-4 text-xs text-[#414942] leading-relaxed">

@@ -8,6 +8,23 @@ import { Card, Field, ResourceState, money } from './WarehouseUi.jsx';
 import PhotoUpload from './PhotoUpload.jsx';
 import BrandQuickAddModal from './BrandQuickAddModal.jsx';
 
+export const COMMON_COLORS = [
+  'Đen',
+  'Trắng',
+  'Xám',
+  'Be',
+  'Be / Kem',
+  'Nâu',
+  'Xanh dương',
+  'Xanh lá',
+  'Đỏ',
+  'Hồng',
+  'Vàng',
+  'Cam',
+  'Tím',
+  'Nhiều màu',
+];
+
 export default function StockInForm({ receipt, form, onSuccess }) {
   const navigate = useNavigate();
   const receiptId = extractReceiptId(receipt);
@@ -24,10 +41,16 @@ export default function StockInForm({ receipt, form, onSuccess }) {
   const operation = useResource(async () => null, [], { enabled: false });
   const [name, setName] = useState(receipt?.productName || form?.productName || form?.name || '');
   const [size, setSize] = useState(receipt?.size || form?.size || '');
-  const [shelf, setShelf] = useState('');
   const [categoryId, setCategory] = useState(receipt?.categoryId || form?.categoryId || '');
   const [brandId, setBrand] = useState(receipt?.brandId || form?.brandId || '');
-  const [color, setColor] = useState(form?.color || '');
+
+  const initialColor = (receipt?.color || form?.color || '').trim();
+  const isPresetColor = COMMON_COLORS.includes(initialColor);
+  const [colorSelect, setColorSelect] = useState(
+    isPresetColor ? initialColor : initialColor ? 'Khác' : ''
+  );
+  const [customColor, setCustomColor] = useState(isPresetColor ? '' : initialColor);
+  const effectiveColor = colorSelect === 'Khác' ? customColor : colorSelect;
   const [description, setDescription] = useState(form?.description || '');
   const [quickAdd, setQuickAdd] = useState(false);
   const [addedBrand, setAddedBrand] = useState(null);
@@ -42,7 +65,7 @@ export default function StockInForm({ receipt, form, onSuccess }) {
   const slot = category?.tryonSlot || category?.slot;
   const supportsTryOn = ['TOP', 'BOTTOM', 'DRESS'].includes(slot);
   const valid = canStockIn(receipt) && verification.data && !verification.data.productSku && !verification.error &&
-    !verification.loading && !uncertain && !catalog.error && !catalog.loading && name.trim() && shelf.trim() &&
+    !verification.loading && !uncertain && !catalog.error && !catalog.loading && name.trim() &&
     categories.some(item => item.id === categoryId) && brands.some(item => item.id === brandId) && photos.length > 0 && !photosPending;
   const errors = operation.error?.fields || {};
   const printUrl = sku => `/moderator/consignments/print-queue?sku=${encodeURIComponent(sku)}`;
@@ -64,7 +87,7 @@ export default function StockInForm({ receipt, form, onSuccess }) {
           event.preventDefault();
           if (!valid) return;
           operation.mutate(options => inventoryService.create({ receiptId, name: name.trim(), size: size.trim(),
-            shelfLocation: shelf.trim(), categoryId, brandId, color: color.trim(), description: description.trim(), photoUrls: photos }, options), {
+            shelfLocation: '', categoryId, brandId, color: effectiveColor.trim(), description: description.trim(), photoUrls: photos }, options), {
             onSuccess: result => {
               const sku = result?.sku || result?.id;
               if (!sku) {
@@ -86,14 +109,39 @@ export default function StockInForm({ receipt, form, onSuccess }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Tên sản phẩm" required value={name} onChange={e => setName(e.target.value)} error={errors.name} />
             <Field label="Size" value={size} onChange={e => setSize(e.target.value)} error={errors.size} />
-            <Field label="Vị trí kệ" required value={shelf} onChange={e => setShelf(e.target.value)} error={errors.shelfLocation} />
             <Field label="Danh mục" error={errors.categoryId}><select required value={categoryId} onChange={e => setCategory(e.target.value)}>
               <option value="">Chọn danh mục</option>{categories.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select></Field>
             <Field label="Thương hiệu" error={errors.brandId}><select required value={brandId} onChange={e => setBrand(e.target.value)}>
               <option value="">Chọn thương hiệu</option>{brands.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select></Field>
-            <Field label="Màu sắc" value={color} onChange={e => setColor(e.target.value)} error={errors.color} />
+            <Field label="Màu sắc" error={errors.color}>
+              <select
+                value={colorSelect}
+                onChange={e => {
+                  const val = e.target.value;
+                  setColorSelect(val);
+                  if (val !== 'Khác') {
+                    setCustomColor('');
+                  }
+                }}
+              >
+                <option value="">Chọn màu sắc</option>
+                {COMMON_COLORS.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+                <option value="Khác">Khác (nhập tay)</option>
+              </select>
+            </Field>
+            {colorSelect === 'Khác' && (
+              <Field
+                label="Nhập màu sắc khác"
+                value={customColor}
+                onChange={e => setCustomColor(e.target.value)}
+                placeholder="Ví dụ: Xanh rêu, Xanh pastel, Bạc ánh kim..."
+                error={errors.color}
+              />
+            )}
           </div>
           <Button type="button" variant="outline" onClick={() => setQuickAdd(true)}>+ Thêm nhanh thương hiệu</Button>
           <Field label="Mô tả bán hàng" error={errors.description}><textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} /></Field>
