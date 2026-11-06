@@ -6,7 +6,7 @@ import QRScannerModal from '../../../components/QRScannerModal.jsx';
 import { inventoryService } from '../services/warehouseApi.js';
 import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
-import { listItems, validateNewShelf } from '../models/warehouseModel.js';
+import { listItems } from '../models/warehouseModel.js';
 import { Page, Status, Pager, ResourceState, money } from '../components/WarehouseUi.jsx';
 
 export const SUPPORTED_INVENTORY_STATUSES = [
@@ -35,7 +35,6 @@ export default function WarehouseInventoryPage() {
   const [search, setSearch] = useSearchParams();
   const navigate = useNavigate();
   const [scanner, setScanner] = useState(false);
-  const [shelfModal, setShelfModal] = useState(null); // { item, newShelf: '' }
   const [skuLookupModal, setSkuLookupModal] = useState(false);
   const [lookupInput, setLookupInput] = useState('');
   const [lookupResult, setLookupResult] = useState(null); // { type: 'FOUND'|'NOT_FOUND'|'OTHER_WAREHOUSE', data?: any }
@@ -45,11 +44,10 @@ export default function WarehouseInventoryPage() {
   const page = Math.max(0, Number(search.get('page')) || 0);
   const sku = search.get('sku') || '';
   const status = search.get('status') || '';
-  const shelf = search.get('shelf') || '';
 
   const resource = useResource(
-    (options) => inventoryService.list({ page, sku, status, shelf }, options),
-    [page, sku, status, shelf],
+    (options) => inventoryService.list({ page, sku, status }, options),
+    [page, sku, status],
   );
 
   const enums = useResource(
@@ -122,17 +120,6 @@ export default function WarehouseInventoryPage() {
       setIsLookingUp(false);
     }
   };
-
-  // Check conflicting shelf for TK-04
-  const conflictingItem = useMemo(() => {
-    if (!shelfModal?.newShelf?.trim()) return null;
-    const target = shelfModal.newShelf.trim().toUpperCase();
-    return items.find(
-      (it) =>
-        it.sku !== shelfModal.item.sku &&
-        it.shelfLocation?.trim().toUpperCase() === target
-    );
-  }, [shelfModal, items]);
 
   return (
     <Page
@@ -215,17 +202,6 @@ export default function WarehouseInventoryPage() {
                 }
               }}
               className="w-full rounded-xl border border-[#8a8a8a] px-3.5 py-2 text-xs font-mono font-bold focus:border-[#006B2C] focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-[#191C19] mb-1">Vị trí kệ</label>
-            <input
-              type="text"
-              placeholder="VD: B1-18, C2-11..."
-              value={shelf}
-              onChange={(e) => change('shelf', e.target.value)}
-              className="w-full rounded-xl border border-[#8a8a8a] px-3.5 py-2 text-xs font-bold focus:border-[#006B2C] focus:outline-none"
             />
           </div>
 
@@ -323,7 +299,6 @@ export default function WarehouseInventoryPage() {
                     <tr className="bg-[#f4f4f4] border-b border-[#8a8a8a] text-[10px] font-bold uppercase tracking-wider text-[#5f5f5f]">
                       <th className="py-2.5 px-4 w-32">Mã SKU</th>
                       <th className="py-2.5 px-4">Sản phẩm</th>
-                      <th className="py-2.5 px-4 w-24">Kệ</th>
                       <th className="py-2.5 px-4">Trạng thái</th>
                       <th className="py-2.5 px-4">Kỳ ký gửi</th>
                       <th className="py-2.5 px-4 text-right">Giá bán</th>
@@ -361,11 +336,6 @@ export default function WarehouseInventoryPage() {
                             </p>
                           </td>
                           <td className="py-3.5 px-4">
-                            <span className="font-bold text-[#006B2C] bg-[#E8F5E9] px-2 py-0.5 rounded border border-[#C8E6C9] font-mono">
-                              {item.shelfLocation || 'Chưa gán'}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-4">
                             {item.status === 'WAITING_END_OF_TERM' ? (
                               <span className="font-bold text-[#2b2b2b]">Chờ xử lý cuối kỳ</span>
                             ) : item.status === 'UNCLAIMED' ? (
@@ -400,13 +370,6 @@ export default function WarehouseInventoryPage() {
                                   Đàm phán giá →
                                 </Link>
                               )}
-                              <button
-                                type="button"
-                                onClick={() => setShelfModal({ item, newShelf: item.shelfLocation || '' })}
-                                className="text-xs text-[#4a4a4a] hover:underline font-semibold"
-                              >
-                                Đổi kệ
-                              </button>
                               <Link
                                 className="text-xs text-primary hover:underline font-semibold"
                                 to={`/moderator/inventory/${encodeURIComponent(item.sku)}`}
@@ -495,7 +458,7 @@ export default function WarehouseInventoryPage() {
                     {lookupResult.data.brandName || lookupResult.data.brand || 'ReHome'} · Size {lookupResult.data.size || 'M'}
                   </p>
                   <p className="text-[11px] text-[#5f5f5f]">
-                    Kệ: <strong className="font-mono text-[#006B2C]">{lookupResult.data.shelfLocation || 'Chưa gán'}</strong> · Trạng thái: <Status>{lookupResult.data.status}</Status>
+                    Trạng thái: <Status>{lookupResult.data.status}</Status>
                   </p>
                 </div>
               </div>
@@ -541,63 +504,6 @@ export default function WarehouseInventoryPage() {
             </div>
           )}
         </div>
-      </Modal>
-
-
-      {/* Modal Đổi kệ */}
-      <Modal
-        isOpen={!!shelfModal}
-        onClose={() => setShelfModal(null)}
-        title="Đổi vị trí kệ"
-      >
-        {shelfModal && (
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (!shelfModal.newShelf?.trim()) return;
-              try {
-                await inventoryService.shelf(shelfModal.item.sku, shelfModal.newShelf.trim(), {});
-                setShelfModal(null);
-                resource.refresh();
-              } catch (err) {
-                alert(err.message || 'Không thể cập nhật kệ');
-              }
-            }}
-            className="space-y-4"
-          >
-            <div>
-              <label htmlFor="new-shelf-input" className="block text-xs font-bold text-[#191C19] mb-1">
-                Vị trí kệ mới
-              </label>
-              <input
-                id="new-shelf-input"
-                aria-label="Vị trí kệ mới"
-                type="text"
-                value={shelfModal.newShelf}
-                onChange={(e) => setShelfModal({ ...shelfModal, newShelf: e.target.value })}
-                placeholder="VD: B2-10"
-                className="w-full rounded-xl border border-[#8a8a8a] px-3.5 py-2 text-xs font-mono font-bold focus:border-[#006B2C] focus:outline-none"
-              />
-            </div>
-            {conflictingItem && (
-              <p className="text-xs text-amber-600">
-                Chú ý: Kệ {shelfModal.newShelf} đang có sản phẩm {conflictingItem.sku}.
-              </p>
-            )}
-            <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={() => setShelfModal(null)}>
-                Hủy
-              </Button>
-              <Button
-                type="submit"
-                disabled={!shelfModal.newShelf?.trim()}
-                className="bg-[#006B2C] text-white hover:bg-[#005221] font-bold text-xs"
-              >
-                Lưu vị trí kệ
-              </Button>
-            </div>
-          </form>
-        )}
       </Modal>
 
       {/* Modal Quét QR SKU */}

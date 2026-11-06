@@ -64,7 +64,7 @@ export function PackingDetail({ orderId, onChanged }) {
                 </span>
               </div>
               <p className="text-xs text-[#5f5f5f]">
-                Lấy đủ {model.totalCount} món theo vị trí kệ, tick từng món, rồi sang bước đối chiếu mã SKU.
+                Lấy đủ {model.totalCount} món, tick từng món, rồi sang bước đối chiếu mã SKU.
               </p>
               <div className="pt-2 text-xs font-bold text-[#191C19] flex items-center gap-2">
                 <span>Tiến độ đối chiếu:</span>
@@ -77,7 +77,7 @@ export function PackingDetail({ orderId, onChanged }) {
               </div>
             </div>
 
-            {/* Bảng món hàng lấy theo vị trí kệ (DG-02) */}
+            {/* Bảng món hàng (DG-02) */}
             <PackingItemTable {...model.sections.PackingItemTable} />
 
             {/* Lưu ý đóng gói & Đơn không huỷ được (DG-02) */}
@@ -170,8 +170,7 @@ export default function PackingOrdersPage() {
       source = source.filter(
         i =>
           (i.orderNo || i.refId || i.orderId || '').toLowerCase().includes(q) ||
-          (i.buyerName || i.name || '').toLowerCase().includes(q) ||
-          (i.shelfLocations || '').toLowerCase().includes(q)
+          (i.buyerName || i.name || '').toLowerCase().includes(q)
       );
     }
     return source;
@@ -257,7 +256,7 @@ export default function PackingOrdersPage() {
 
           <ResourceState resource={queue} />
 
-          {/* BẢNG HÀNG ĐỢI ĐÓNG GÓI 8 CỘT CHUẨN WIREFRAME DG-01 */}
+          {/* BẢNG HÀNG ĐỢI ĐÓNG GÓI 7 CỘT */}
           <div className="rounded-2xl border border-neutral bg-surface overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[800px] text-left text-xs">
@@ -266,7 +265,6 @@ export default function PackingOrdersPage() {
                     <th className="py-3 px-3">Mã đơn</th>
                     <th className="py-3 px-3">Người mua</th>
                     <th className="py-3 px-3">Số món</th>
-                    <th className="py-3 px-3">Vị trí kệ gom hàng</th>
                     <th className="py-3 px-3">Thời gian đặt</th>
                     <th className="py-3 px-3">Chờ</th>
                     <th className="py-3 px-3">Trạng thái</th>
@@ -276,7 +274,7 @@ export default function PackingOrdersPage() {
                 <tbody className="divide-y divide-neutral">
                   {items.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="py-12 text-center text-xs text-textSecondary">
+                      <td colSpan="7" className="py-12 text-center text-xs text-textSecondary">
                         Chưa có dữ liệu phù hợp.
                       </td>
                     </tr>

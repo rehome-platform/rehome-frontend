@@ -157,8 +157,7 @@ export default function ReConsignNegotiationPage() {
                 <div className="flex-1 min-w-0 space-y-1">
                   <h3 className="text-base font-bold text-[#191C19]">{product.name}</h3>
                   <p className="text-xs text-[#5f5f5f]">
-                    {product.brandName || product.brand || 'ReHome'} · Size {product.size || 'M'} · Kệ{' '}
-                    <strong className="text-[#191C19]">{product.shelfLocation || 'Chưa gán'}</strong> ·{' '}
+                    {product.brandName || product.brand || 'ReHome'} · Size {product.size || 'M'} ·{' '}
                     <span className="font-mono font-bold text-[#006B2C]">{product.sku}</span>
                   </p>
                   <p className="text-xs text-[#5f5f5f] pt-1">
@@ -195,7 +194,7 @@ export default function ReConsignNegotiationPage() {
 
             {/* 3. Ghi chú quy tắc kho */}
             <div className="rounded-2xl border border-dashed border-[#9a9a9a] bg-[#fafafa] p-4 text-xs text-[#4a4a4a] leading-relaxed">
-              Hàng <strong className="text-[#191C19]">vẫn ở nguyên kệ ({product.shelfLocation || 'C2-11'})</strong>, không xuất kho rồi nhập lại. Kỳ ký gửi và hoa hồng tính lại từ Kỳ 1 vì đây là lượt ký gửi mới, không phải tiếp tục lượt cũ.
+              Hàng <strong className="text-[#191C19]">vẫn được lưu kho</strong>, không xuất kho rồi nhập lại. Kỳ ký gửi và hoa hồng tính lại từ Kỳ 1 vì đây là lượt ký gửi mới, không phải tiếp tục lượt cũ.
             </div>
           </div>
 
@@ -295,7 +294,7 @@ export default function ReConsignNegotiationPage() {
                     {money(Number(proposedPrice))}
                   </div>
                   <p className="text-xs text-[#4a4a4a] leading-relaxed mt-3">
-                    Biên nhận ký gửi lại <strong className="font-mono text-[#191C19]">{receiptId || 'KG-2026-000214'}</strong> đã sinh. Hàng vẫn ở nguyên kệ, không xuất kho. Bắt đầu Kỳ 1 (ngày 1/30), hoa hồng 10%.
+                    Biên nhận ký gửi lại <strong className="font-mono text-[#191C19]">{receiptId || 'KG-2026-000214'}</strong> đã sinh. Hàng vẫn được lưu kho, không xuất kho. Bắt đầu Kỳ 1 (ngày 1/30), hoa hồng 10%.
                   </p>
                 </div>
 

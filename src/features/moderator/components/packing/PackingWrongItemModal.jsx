@@ -39,12 +39,11 @@ export function PackingWrongItemModal({ isOpen, onClose, wrongItem, currentOrder
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-2 text-xs text-[#414942]">
           <p className="font-semibold text-red-900 leading-relaxed">
             Mã <span className="font-mono font-bold text-[#BA1A1A]">{wrongItem.productId}</span> là{' '}
-            <strong>{wrongItem.name} — {wrongItem.brand} — {wrongItem.size}</strong>, đang nằm ở kệ{' '}
-            <strong className="underline text-[#006B2C]">{wrongItem.shelfLocation}</strong> và thuộc đơn{' '}
+            <strong>{wrongItem.name} — {wrongItem.brand} — {wrongItem.size}</strong> và thuộc đơn{' '}
             <strong className="underline text-blue-800">{wrongItem.belongsToOrderNo}</strong>.
           </p>
           <p className="font-bold text-[#BA1A1A]">
-            👉 Trả món này về kệ {wrongItem.shelfLocation} rồi lấy đúng món còn thiếu bên dưới.
+            👉 Trả lại món này rồi lấy đúng món còn thiếu bên dưới.
           </p>
         </div>
 
@@ -57,7 +56,7 @@ export function PackingWrongItemModal({ isOpen, onClose, wrongItem, currentOrder
             <p className="font-mono font-bold text-[#191C19]">{wrongItem.productId}</p>
             <p className="text-[#5f5f5f]">{wrongItem.name} — {wrongItem.brand}</p>
             <p className="text-[11px] text-[#414942]">
-              Cỡ: <strong>{wrongItem.size}</strong> • Kệ: <strong className="text-[#006B2C]">{wrongItem.shelfLocation}</strong>
+              Cỡ: <strong>{wrongItem.size}</strong>
             </p>
           </div>
 
@@ -68,7 +67,7 @@ export function PackingWrongItemModal({ isOpen, onClose, wrongItem, currentOrder
             <p className="font-mono font-bold text-[#191C19]">{targetItem?.productId || 'RH-C2M08P'}</p>
             <p className="text-[#5f5f5f]">{targetItem?.name || 'Quần jeans ống đứng'} — {targetItem?.brand || "Levi's"}</p>
             <p className="text-[11px] text-[#414942]">
-              Cỡ: <strong>{targetItem?.size || '29'}</strong> • Kệ: <strong className="text-[#006B2C] font-bold">{targetItem?.shelfLocation || 'B1-22'}</strong>
+              Cỡ: <strong>{targetItem?.size || '29'}</strong>
             </p>
           </div>
         </div>

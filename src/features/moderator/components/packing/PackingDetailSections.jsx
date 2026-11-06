@@ -35,7 +35,7 @@ export function PackingIncidentDialog({ setIncidentOpen, setIncidentNote, incide
             <textarea
               value={incidentNote}
               onChange={(e) => setIncidentNote(e.target.value)}
-              placeholder="Ghi rõ vị trí kệ hoặc mã sản phẩm gặp sự cố..."
+              placeholder="Ghi rõ mã sản phẩm hoặc chi tiết gặp sự cố..."
               rows={3}
               className="w-full rounded-xl border border-gray-300 p-2.5 text-xs focus:border-[#006B2C] focus:outline-none"
             />
@@ -405,7 +405,6 @@ export function PackingItemTable({ items, pickedItems, scannedProductIds, toggle
               <th className="py-2.5 px-3">Mã SKU</th>
               <th className="py-2.5 px-3">Sản phẩm</th>
               <th className="py-2.5 px-3">Cỡ</th>
-              <th className="py-2.5 px-3">Vị trí kệ</th>
               <th className="py-2.5 px-3 text-right">Trạng thái</th>
             </tr>
           </thead>
@@ -446,9 +445,6 @@ export function PackingItemTable({ items, pickedItems, scannedProductIds, toggle
                   </td>
                   <td className="py-3 px-3 font-medium text-[#414942]">
                     {item.size || 'M'}
-                  </td>
-                  <td className="py-3 px-3 font-mono font-bold text-[#006B2C]">
-                    {item.shelfLocation || 'B1-18'}
                   </td>
                   <td className="py-3 px-3 text-right">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isScanned ? 'bg-[#E8F5E9] text-[#006B2C]' : 'bg-[#FFF3E0] text-[#D97706]'}`}>

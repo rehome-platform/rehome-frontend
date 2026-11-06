@@ -2,7 +2,7 @@ import React from "react";
 import Button from "../../../../components/common/Button.jsx";
 
 /**
- * Dòng dữ liệu hàng đợi đóng gói theo chuẩn bảng 8 cột Wireframe DG-01-HangDoi
+ * Dòng dữ liệu hàng đợi đóng gói theo chuẩn bảng Wireframe DG-01-HangDoi
  */
 export function PackingQueueItem({
   item,
@@ -38,12 +38,7 @@ export function PackingQueueItem({
         {item.itemCount ? `${item.itemCount} món` : '2 món'}
       </td>
 
-      {/* 4. Vị trí kệ gom hàng */}
-      <td className="py-3 px-3 font-mono font-bold text-[#006B2C]">
-        {item.shelfLocations || 'B1-18, B1-22'}
-      </td>
-
-      {/* 5. Thời gian đặt */}
+      {/* 4. Thời gian đặt */}
       <td className="py-3 px-3 text-[#5f5f5f]">
         {item.orderTime || 'hôm nay 06:48'}
       </td>
