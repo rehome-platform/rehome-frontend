@@ -73,8 +73,8 @@ export function PackingRecipientPanel({ order, scanLogs }) {
   const paidTimeStr = order.paidAt
     ? new Date(order.paidAt).toLocaleString('vi-VN')
     : order.createdAt
-    ? new Date(order.createdAt).toLocaleString('vi-VN')
-    : '';
+      ? new Date(order.createdAt).toLocaleString('vi-VN')
+      : '';
 
   return (
     <div className="space-y-5">
@@ -87,7 +87,7 @@ export function PackingRecipientPanel({ order, scanLogs }) {
           {shippingAddress}
         </p>
       </div>
-    
+
       {/* Thanh toán & Vận chuyển */}
       <div className="rounded-2xl border border-[#8a8a8a] bg-white p-5 shadow-sm space-y-3 text-xs">
         <p className="text-[10px] font-bold uppercase tracking-wider text-[#717971]">Thanh toán</p>
@@ -108,13 +108,13 @@ export function PackingRecipientPanel({ order, scanLogs }) {
             {paidTimeStr}
           </p>
         )}
-    
+
         <div className="pt-3 border-t border-[#E2E8E0] flex justify-between items-center">
           <span className="text-[10px] font-bold uppercase tracking-wider text-[#717971]">Đơn vị vận chuyển</span>
           <span className="font-bold text-[#006B2C]">GHN Express</span>
         </div>
       </div>
-    
+
       {/* Phí GHN báo về (DG-04) */}
       <div className="rounded-2xl border border-[#8a8a8a] bg-white p-4 shadow-sm space-y-2 text-xs">
         <p className="text-[10px] font-bold uppercase tracking-wider text-[#717971]">Phí GHN báo về</p>
@@ -134,7 +134,7 @@ export function PackingRecipientPanel({ order, scanLogs }) {
           Nếu khối lượng thực vượt mức người mua đã trả, kho chịu phần chênh, không đòi thêm người mua.
         </p>
       </div>
-    
+
       {/* Nhật ký nhập mã SKU (DG-03) */}
       <div className="rounded-2xl border border-[#8a8a8a] bg-white p-5 shadow-sm space-y-3">
         <p className="text-[10px] font-bold uppercase tracking-wider text-[#717971]">Nhật ký nhập mã</p>
@@ -152,9 +152,6 @@ export function PackingRecipientPanel({ order, scanLogs }) {
             ))}
           </div>
         )}
-        <div className="rounded-xl border border-dashed border-[#9a9a9a] p-3 text-[11px] text-[#5f5f5f] leading-relaxed">
-          Mã SKU không dùng chữ I, O, số 0 và số 1 để tránh đọc nhầm khi nhập tay. Dòng khớp lưu vào database (order_item.scanned).
-        </div>
       </div>
     </div>
   );
@@ -169,7 +166,7 @@ export function PackingShipmentPanel({ order, onOpenPrintModal }) {
           GHN đã nhận đơn lúc 09:31 · chờ shipper tới lấy
         </p>
       </div>
-    
+
       <div className="p-4 rounded-xl border border-[#2b2b2b] bg-[#f9faf9] space-y-2">
         <p className="text-[10px] font-bold uppercase tracking-wider text-[#717971]">Mã vận đơn GHN</p>
         <p className="text-2xl font-mono font-extrabold text-[#191C19] tracking-wider">
@@ -184,7 +181,7 @@ export function PackingShipmentPanel({ order, onOpenPrintModal }) {
           <span className="font-semibold text-[#191C19]">12/10 – 13/10</span>
         </div>
       </div>
-    
+
       {/* Chi tiết phiếu giao hàng (DG-04) */}
       <div className="space-y-2">
         <p className="text-xs font-bold text-[#191C19]">Chi tiết phiếu giao hàng</p>
@@ -212,7 +209,7 @@ export function PackingShipmentPanel({ order, onOpenPrintModal }) {
           </button>
         </div>
       </div>
-    
+
       {/* Khi shipper đã lấy hàng */}
       <div className="p-4 rounded-xl border border-[#8a8a8a] bg-[#fafafa] space-y-3">
         <p className="text-xs font-bold text-[#191C19]">Khi shipper đã lấy hàng</p>
@@ -263,13 +260,13 @@ export function PackingScanPanel({
           Chỉ tạo được vận đơn khi đủ {totalCount} / {totalCount} món khớp mã
         </span>
       </div>
-    
+
       {!canPack(order, scope, now) && (
         <p role="status" className="text-xs text-[#BA1A1A] font-semibold">
           Đơn chưa cho phép thao tác hoặc bạn không còn claim hợp lệ. Hãy kiểm tra lại hàng đợi.
         </p>
       )}
-    
+
       <form
         className="flex flex-wrap items-end gap-3"
         onSubmit={(e) => {
@@ -309,18 +306,17 @@ export function PackingScanPanel({
           Quét camera
         </Button>
       </form>
-    
+
       {message && (
         <p
           role="status"
-          className={`text-xs font-bold p-2.5 rounded-lg border ${
-            message.includes('không') ? 'bg-red-50 text-[#BA1A1A] border-red-200' : 'bg-green-50 text-[#006B2C] border-green-200'
-          }`}
+          className={`text-xs font-bold p-2.5 rounded-lg border ${message.includes('không') ? 'bg-red-50 text-[#BA1A1A] border-red-200' : 'bg-green-50 text-[#006B2C] border-green-200'
+            }`}
         >
           {message}
         </p>
       )}
-    
+
       {(uncertain || order.shipmentOutcome === 'UNKNOWN') && (
         <p role="status" className="text-xs text-[#D97706] font-bold bg-amber-50 p-2.5 rounded-lg border border-amber-200">
           Đang kiểm tra kết quả tạo vận đơn. Chưa thể tạo mới.
@@ -371,7 +367,7 @@ export function PackingScanPanel({
           </div>
         </div>
       )}
-    
+
       <div className="flex flex-wrap gap-3 pt-2">
         <Button
           disabled={!operationReady('shipment') || resource.busy || resource.loading || uncertain || !canShip(order, scope, now)}

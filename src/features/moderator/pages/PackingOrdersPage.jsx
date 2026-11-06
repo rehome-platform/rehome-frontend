@@ -71,8 +71,8 @@ export function PackingDetail({ orderId, onChanged }) {
               <div className="pt-2 text-xs font-bold text-[#191C19] flex items-center gap-2">
                 <span>Tiến độ đối chiếu:</span>
                 <span className={`px-2.5 py-0.5 rounded-full font-mono text-xs font-bold ${model.scannedCount === model.totalCount
-                    ? 'bg-[#E8F5E9] text-[#006B2C]'
-                    : 'bg-[#FFF3E0] text-[#D97706]'
+                  ? 'bg-[#E8F5E9] text-[#006B2C]'
+                  : 'bg-[#FFF3E0] text-[#D97706]'
                   }`}>
                   {`Đã quét ${model.scannedCount}/${model.totalCount} SKU`}
                 </span>
@@ -81,18 +81,6 @@ export function PackingDetail({ orderId, onChanged }) {
 
             {/* Bảng món hàng (DG-02) */}
             <PackingItemTable {...model.sections.PackingItemTable} />
-
-            {/* Lưu ý đóng gói & Đơn không huỷ được (DG-02) */}
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="rounded-xl border border-[#c4c4c4] bg-[#fcfdfc] p-3.5 text-xs text-[#414942]">
-                <p className="text-[10px] uppercase font-bold text-[#6b6b6b] mb-1">Ghi chú đóng gói của người mua</p>
-                <p>{model.order.buyerNote || 'Giao giờ hành chính, gọi trước khi tới.'}</p>
-              </div>
-              <div className="rounded-xl border border-[#c4c4c4] bg-[#fcfdfc] p-3.5 text-xs text-[#414942]">
-                <p className="text-[10px] uppercase font-bold text-[#6b6b6b] mb-1">Đơn này không huỷ được nữa</p>
-                <p>Người mua đã trả tiền và đã qua cửa sổ huỷ. Nếu có món hỏng hoặc thiếu, chọn <strong>Báo sự cố đơn</strong> — không tự huỷ đơn.</p>
-              </div>
-            </div>
 
             {/* KHUNG QUÉT ĐỐI CHIẾU MÃ SKU (DG-03) */}
             {!model.order.ghnTrackingCode && (
@@ -282,25 +270,25 @@ export default function PackingOrdersPage() {
                     </tr>
                   ) : (
                     items.map((item) => {
-                    const isMine =
-                      item.claimedBy === scope.userId ||
-                      item.claimedBy === 'CURRENT_USER' ||
-                      (item.claimedByName && item.claimedByName.includes('Bạn đang giữ'));
-                    const targetOrderId = item.orderNo || item.orderId || item.refId;
-                    return (
-                      <PackingQueueItem
-                        key={item.queueId || targetOrderId}
-                        item={item}
-                        targetOrderId={targetOrderId}
-                        isMine={Boolean(isMine)}
-                        setSearch={setSearch}
-                        page={page}
-                        queue={queue}
-                        handleClaim={handleClaim}
-                        handleRelease={handleRelease}
-                      />
-                    );
-                  })
+                      const isMine =
+                        item.claimedBy === scope.userId ||
+                        item.claimedBy === 'CURRENT_USER' ||
+                        (item.claimedByName && item.claimedByName.includes('Bạn đang giữ'));
+                      const targetOrderId = item.orderNo || item.orderId || item.refId;
+                      return (
+                        <PackingQueueItem
+                          key={item.queueId || targetOrderId}
+                          item={item}
+                          targetOrderId={targetOrderId}
+                          isMine={Boolean(isMine)}
+                          setSearch={setSearch}
+                          page={page}
+                          queue={queue}
+                          handleClaim={handleClaim}
+                          handleRelease={handleRelease}
+                        />
+                      );
+                    })
                   )}
                 </tbody>
               </table>

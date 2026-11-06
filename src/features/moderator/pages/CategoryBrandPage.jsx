@@ -97,11 +97,10 @@ export default function CategoryBrandPage() {
       {/* Banner thông báo kết quả */}
       {feedback && (
         <div
-          className={`flex items-center justify-between rounded-xl p-3 text-xs font-medium border ${
-            feedback.type === 'success'
+          className={`flex items-center justify-between rounded-xl p-3 text-xs font-medium border ${feedback.type === 'success'
               ? 'bg-[#E8F5E9] text-[#006B2C] border-[#C8E6C9]'
               : 'bg-[#FFEBEE] text-[#BA1A1A] border-[#FFCDD2]'
-          }`}
+            }`}
         >
           <span>{feedback.message}</span>
           <button
@@ -123,11 +122,10 @@ export default function CategoryBrandPage() {
               setKeyword('');
               setSearch({ tab: 'categories' });
             }}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${
-              isCategory
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${isCategory
                 ? 'border-[#006B2C] bg-[#006B2C] text-white shadow-sm'
                 : 'border-[#a8a8a8] bg-white text-[#4a4a4a] hover:bg-[#F0F5EE]'
-            }`}
+              }`}
           >
             Danh mục · {categories.length}
           </button>
@@ -137,11 +135,10 @@ export default function CategoryBrandPage() {
               setKeyword('');
               setSearch({ tab: 'brands' });
             }}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${
-              !isCategory
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${!isCategory
                 ? 'border-[#006B2C] bg-[#006B2C] text-white shadow-sm'
                 : 'border-[#a8a8a8] bg-white text-[#4a4a4a] hover:bg-[#F0F5EE]'
-            }`}
+              }`}
           >
             Thương hiệu · {brands.length}
           </button>
@@ -204,9 +201,8 @@ export default function CategoryBrandPage() {
                   return (
                     <tr
                       key={item.id}
-                      className={`hover:bg-[#fcfdfc] transition-colors ${
-                        isHidden ? 'bg-[#fafafa] text-[#8a8a8a]' : 'text-[#191C19]'
-                      }`}
+                      className={`hover:bg-[#fcfdfc] transition-colors ${isHidden ? 'bg-[#fafafa] text-[#8a8a8a]' : 'text-[#191C19]'
+                        }`}
                     >
                       <td className="py-3 px-4 font-semibold text-xs">
                         <span className={isHidden ? 'line-through text-[#8a8a8a]' : ''}>{item.name}</span>
@@ -270,11 +266,6 @@ export default function CategoryBrandPage() {
           </div>
         </div>
       )}
-
-      {/* 3. LƯU Ý NGHIỆP VỤ BẢNG DANH MỤC (DM-01) */}
-      <div className="rounded-xl border border-dashed border-[#9a9a9a] bg-[#f9faf9] p-4 text-xs leading-relaxed text-[#4a4a4a]">
-        <strong>Lưu ý nghiệp vụ:</strong> Slot thử đồ AI (Áo / Quần / Đầm) chỉ định vị trí sản phẩm cho tính năng Virtual Try-On. "Đã ẩn" hiển thị ngay trong bảng kèm nhãn xám để dễ quản lý. Ẩn mục sẽ ngăn các lần ký gửi mới nhưng toàn bộ dữ liệu lịch sử và sản phẩm đã nhập kho vẫn được bảo toàn nguyên vẹn.
-      </div>
 
       {/* Modal Editor Thêm/Sửa */}
       {editor && (
