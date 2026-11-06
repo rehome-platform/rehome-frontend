@@ -86,8 +86,9 @@ export default function CategoryBrandPage() {
       subtitle="Quản lý cấu hình danh mục sản phẩm, slot thử đồ AI và thương hiệu ký gửi tại kho."
       actions={
         <Button
+          variant="primary"
           onClick={() => setEditor({ kind, item: null })}
-          className="bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs py-2.5 px-4 shadow-sm"
+          className="text-xs py-2 px-3.5 font-semibold"
         >
           + Thêm {isCategory ? 'danh mục mới' : 'thương hiệu mới'}
         </Button>
@@ -124,7 +125,7 @@ export default function CategoryBrandPage() {
             }}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${
               isCategory
-                ? 'border-[#2b2b2b] bg-[#2b2b2b] text-white shadow-sm'
+                ? 'border-[#006B2C] bg-[#006B2C] text-white shadow-sm'
                 : 'border-[#a8a8a8] bg-white text-[#4a4a4a] hover:bg-[#F0F5EE]'
             }`}
           >
@@ -138,7 +139,7 @@ export default function CategoryBrandPage() {
             }}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${
               !isCategory
-                ? 'border-[#2b2b2b] bg-[#2b2b2b] text-white shadow-sm'
+                ? 'border-[#006B2C] bg-[#006B2C] text-white shadow-sm'
                 : 'border-[#a8a8a8] bg-white text-[#4a4a4a] hover:bg-[#F0F5EE]'
             }`}
           >

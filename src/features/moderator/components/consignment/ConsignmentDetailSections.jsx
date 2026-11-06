@@ -329,7 +329,8 @@ export function ConsignmentReviewPanel({ decision, setDecision, setRejectReason,
       <div className="flex gap-3 pt-2">
         {decision === 'APPROVE' ? (
           <Button
-            className="w-full py-3 bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs"
+            variant="primary"
+            className="w-full py-2.5 font-semibold text-sm"
             loading={resource.busy}
             onClick={() =>
               resource.mutate(
@@ -470,7 +471,7 @@ export function ConsignmentProgress({ identified, form }) {
   return (
     <div className="rounded-2xl border border-[#8a8a8a] bg-white p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
       <div className="flex items-center gap-2">
-        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] ${identified ? 'bg-[#2b2b2b] text-white' : 'border border-[#2b2b2b] text-[#2b2b2b]'}`}>
+        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] ${identified ? 'bg-[#006B2C] text-white' : 'border border-[#006B2C] text-[#006B2C]'}`}>
           {identified ? '✓' : '1'}
         </span>
         <span className={identified ? 'font-semibold' : 'text-[#717971]'}>1. Đối chiếu tại quầy</span>
@@ -478,7 +479,7 @@ export function ConsignmentProgress({ identified, form }) {
       <span className="w-8 h-px bg-[#d4d4d4] hidden sm:block" />
 
       <div className="flex items-center gap-2">
-        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] ${form.status === 'INSPECTING' ? 'border-2 border-[#2b2b2b] bg-[#2b2b2b] text-white' : form.status === 'WAITING_CONFIRMATION' || form.status === 'STOCKED' ? 'bg-[#2b2b2b] text-white' : 'border border-[#c4c4c4] text-[#9a9a9a]'}`}>
+        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] ${form.status === 'INSPECTING' ? 'border-2 border-[#006B2C] bg-[#006B2C] text-white' : form.status === 'WAITING_CONFIRMATION' || form.status === 'STOCKED' ? 'bg-[#006B2C] text-white' : 'border border-[#c4c4c4] text-[#9a9a9a]'}`}>
           {form.status === 'WAITING_CONFIRMATION' || form.status === 'STOCKED' ? '✓' : '2'}
         </span>
         <span className={form.status === 'INSPECTING' ? 'font-bold text-[#191C19]' : 'text-[#717971]'}>2. Ghi kết quả kiểm định</span>
@@ -486,7 +487,7 @@ export function ConsignmentProgress({ identified, form }) {
       <span className="w-8 h-px bg-[#d4d4d4] hidden sm:block" />
 
       <div className="flex items-center gap-2">
-        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] ${form.status === 'WAITING_CONFIRMATION' ? 'border-2 border-[#2b2b2b] bg-[#2b2b2b] text-white' : form.status === 'STOCKED' ? 'bg-[#2b2b2b] text-white' : 'border border-[#c4c4c4] text-[#9a9a9a]'}`}>
+        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] ${form.status === 'WAITING_CONFIRMATION' ? 'border-2 border-[#006B2C] bg-[#006B2C] text-white' : form.status === 'STOCKED' ? 'bg-[#006B2C] text-white' : 'border border-[#c4c4c4] text-[#9a9a9a]'}`}>
           {form.status === 'STOCKED' ? '✓' : '3'}
         </span>
         <span className={form.status === 'WAITING_CONFIRMATION' ? 'font-bold text-[#191C19]' : 'text-[#717971]'}>3. Chốt giá & kỳ</span>

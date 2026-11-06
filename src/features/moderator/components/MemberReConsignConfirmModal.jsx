@@ -42,13 +42,13 @@ export default function MemberReConsignConfirmModal({
               SKU: {product.sku} · {product.brandName || product.brand || 'ReHome'}
             </div>
           </div>
-          <span className="text-[10px] font-bold tracking-wider px-2.5 py-1 bg-[#2b2b2b] text-white rounded">
+          <span className="text-[10px] font-bold tracking-wider px-2.5 py-1 bg-[#006B2C] text-white rounded">
             CẦN BẠN DUYỆT
           </span>
         </div>
 
         {/* Khung đề xuất giá */}
-        <div className="border-2 border-[#2b2b2b] p-4 rounded-xl bg-white space-y-3">
+        <div className="border border-[#006B2C] bg-[#E8F5E9]/20 p-4 rounded-xl space-y-3">
           <div className="text-[11px] font-bold uppercase tracking-wider text-[#5f5f5f]">
             Moderator đề xuất giá mới
           </div>
@@ -126,7 +126,7 @@ export default function MemberReConsignConfirmModal({
           <Button
             type="button"
             variant="outline"
-            className="flex-1 py-3 text-xs"
+            className="flex-1 py-2 text-sm"
             onClick={onReject}
             disabled={loading}
           >
@@ -134,7 +134,8 @@ export default function MemberReConsignConfirmModal({
           </Button>
           <Button
             type="button"
-            className="flex-[1.6] py-3 text-xs font-bold bg-[#2b2b2b] text-white hover:bg-black"
+            variant="primary"
+            className="flex-[1.6] py-2 text-sm font-semibold"
             onClick={onConfirm}
             loading={loading}
           >

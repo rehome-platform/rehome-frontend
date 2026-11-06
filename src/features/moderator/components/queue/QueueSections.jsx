@@ -11,36 +11,38 @@ export function QueueClaimDialog({ claimTarget, resource, setClaimTarget, handle
       isOpen={!!claimTarget}
       title="Nhận việc này?"
       onClose={() => {
-        if (!resource.busy) setClaimTarget(null);
+        if (!resource?.busy) setClaimTarget(null);
       }}
+      size="sm"
     >
       {claimTarget && (
-        <div className="space-y-4 text-xs">
-          <div className="p-3.5 rounded-xl border border-[#8a8a8a] bg-[#fafafa]">
+        <div className="space-y-4 text-sm text-[#414942]">
+          <div className="p-3.5 rounded-xl border border-neutral bg-[#F8FAF8]">
             <p className="font-bold text-sm text-[#191C19]">
-              {claimTarget.typeLabel} · {claimTarget.formId || claimTarget.orderId || claimTarget.queueId}
+              {claimTarget.typeLabel || claimTarget.kindLabel} · {claimTarget.formId || claimTarget.orderId || claimTarget.queueId}
             </p>
-            <p className="text-[#5f5f5f] mt-1">
+            <p className="text-xs text-[#5B6776] mt-1">
               {claimTarget.name || claimTarget.memberName || '—'} · chờ {claimTarget.hours || 0} giờ
             </p>
           </div>
 
-          <p className="text-[#4a4a4a] leading-relaxed">
-            Nhận xong thì <strong>chỉ bạn xử lý được</strong> việc này — Moderator khác không nhận được nữa.
+          <p className="text-xs text-[#414942] leading-relaxed">
+            Nhận xong thì <strong className="text-[#191C19]">chỉ bạn xử lý được</strong> việc này — Moderator khác không nhận được nữa.
             Không giới hạn thời gian giữ, nhưng quá 48 giờ không xử lý sẽ tự nhả về hàng đợi và báo Admin.
           </p>
 
           <div className="flex gap-3 pt-2">
             <Button
               variant="outline"
-              className="flex-1 py-2.5"
+              className="flex-1 py-2 text-sm"
               onClick={() => setClaimTarget(null)}
             >
               Hủy
             </Button>
             <Button
-              className="flex-1 py-2.5 bg-[#2b2b2b] text-white hover:bg-black font-semibold"
-              loading={resource.busy}
+              variant="primary"
+              className="flex-1 py-2 text-sm font-semibold"
+              loading={resource?.busy}
               onClick={() => handleClaim(claimTarget)}
             >
               Nhận việc
@@ -58,36 +60,38 @@ export function QueueReleaseDialog({ releaseTarget, resource, setReleaseTarget, 
       isOpen={!!releaseTarget}
       title="Nhả việc này về hàng đợi?"
       onClose={() => {
-        if (!resource.busy) setReleaseTarget(null);
+        if (!resource?.busy) setReleaseTarget(null);
       }}
+      size="sm"
     >
       {releaseTarget && (
-        <div className="space-y-4 text-xs">
-          <div className="p-3.5 rounded-xl border border-[#8a8a8a] bg-[#fafafa]">
+        <div className="space-y-4 text-sm text-[#414942]">
+          <div className="p-3.5 rounded-xl border border-neutral bg-[#F8FAF8]">
             <p className="font-bold text-sm text-[#191C19]">
-              {releaseTarget.typeLabel} · {releaseTarget.formId || releaseTarget.orderId || releaseTarget.queueId}
+              {releaseTarget.typeLabel || releaseTarget.kindLabel} · {releaseTarget.formId || releaseTarget.orderId || releaseTarget.queueId}
             </p>
-            <p className="text-[#5f5f5f] mt-1">
+            <p className="text-xs text-[#5B6776] mt-1">
               {releaseTarget.name || releaseTarget.memberName || '—'} · Bạn đang nhận việc này {releaseTarget.hours || 0} giờ
             </p>
           </div>
     
-          <p className="text-[#4a4a4a] leading-relaxed">
-            Việc quay lại hàng đợi ở trạng thái <strong>chưa ai nhận</strong> — Moderator khác (kể cả bạn) nhận lại được bình thường.
+          <p className="text-xs text-[#414942] leading-relaxed">
+            Việc quay lại hàng đợi ở trạng thái <strong className="text-[#191C19]">chưa ai nhận</strong> — Moderator khác (kể cả bạn) nhận lại được bình thường.
             Dùng khi nhận nhầm hoặc không đủ thông tin để xử lý tiếp.
           </p>
     
           <div className="flex gap-3 pt-2">
             <Button
               variant="outline"
-              className="flex-1 py-2.5"
+              className="flex-1 py-2 text-sm"
               onClick={() => setReleaseTarget(null)}
             >
               Hủy
             </Button>
             <Button
-              className="flex-1 py-2.5 bg-[#2b2b2b] text-white hover:bg-black font-semibold"
-              loading={resource.busy}
+              variant="primary"
+              className="flex-1 py-2 text-sm font-semibold"
+              loading={resource?.busy}
               onClick={() => handleRelease(releaseTarget)}
             >
               Nhả việc
@@ -161,9 +165,10 @@ export function QueueTaskRow({ item, isFocused, isSelected, toggleSelectRow, isM
         <div className="flex items-center justify-end gap-2">
           {!item.claimedBy && (
             <Button
+              size="sm"
+              variant="primary"
               loading={resource.busy}
-              onClick={() => handleClaim(item)}
-              className="text-[11px] py-1.5 px-3 bg-[#2b2b2b] text-white hover:bg-black font-semibold rounded"
+              onClick={() => (setClaimTarget ? setClaimTarget(item) : handleClaim(item))}
             >
               Nhận việc
             </Button>
@@ -173,31 +178,32 @@ export function QueueTaskRow({ item, isFocused, isSelected, toggleSelectRow, isM
               {linkTarget && (
                 <Link
                   to={linkTarget}
-                  className="text-[11px] py-1.5 px-3 bg-[#006B2C] text-white hover:bg-[#005221] font-semibold rounded inline-flex items-center gap-1 shadow-sm transition-colors"
+                  className="text-xs py-1.5 px-3 bg-[#006B2C] text-white hover:bg-[#005221] font-semibold rounded-lg inline-flex items-center gap-1 shadow-sm transition-colors"
                 >
                   {item.type === 'PACKING' ? 'Đóng gói →' : 'Mở việc →'}
                 </Link>
               )}
-              <button
-                type="button"
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={() => {
                   setFeedback?.(null);
                   setReleaseTarget(item);
                 }}
-                className="text-[11px] py-1.5 px-3 border border-[#8a8a8a] bg-white text-[#2b2b2b] hover:bg-[#f4f4f4] rounded font-semibold transition-colors"
               >
                 Nhả việc
-              </button>
+              </Button>
             </>
           )}
           {isClaimedByOther && (
-            <button
-              type="button"
+            <Button
+              size="sm"
               disabled
-              className="text-[11px] py-1.5 px-3 border border-[#c4c4c4] bg-[#efefef] text-[#9a9a9a] rounded font-semibold cursor-not-allowed"
+              variant="outline"
+              className="opacity-50 cursor-not-allowed"
             >
-              Nhận việc
-            </button>
+              Đã có người nhận
+            </Button>
           )}
         </div>
       </td>
@@ -239,7 +245,7 @@ export function QueueFilters({ statusFilter, changeFilter, claimParam, toggleOve
         onClick={toggleOverdue}
         className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
           overdueOnly
-            ? 'border-2 border-[#2b2b2b] bg-[#2b2b2b] text-white'
+            ? 'border-2 border-[#006B2C] bg-[#006B2C] text-white'
             : 'border border-[#8a8a8a] bg-white text-[#191C19] hover:bg-[#F0F5EE]'
         }`}
       >
@@ -279,7 +285,7 @@ export function QueueTabs({ typeParam, changeFilter }) {
             onClick={() => changeFilter('type', tab.key === 'ALL' ? '' : tab.key)}
             className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${
               isSelected
-                ? 'border-[#2b2b2b] bg-[#2b2b2b] text-white shadow-sm'
+                ? 'border-[#006B2C] bg-[#006B2C] text-white shadow-sm'
                 : 'border-[#a8a8a8] bg-white text-[#4a4a4a] hover:bg-[#F0F5EE]'
             }`}
           >

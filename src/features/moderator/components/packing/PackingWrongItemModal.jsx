@@ -76,8 +76,9 @@ export function PackingWrongItemModal({ isOpen, onClose, wrongItem, currentOrder
         <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
           <Button
             type="button"
+            variant="primary"
             onClick={onClose}
-            className="w-full py-2.5 bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs"
+            className="w-full py-2.5 text-sm font-semibold"
           >
             Đã hiểu — Xoá và nhập lại mã món đúng
           </Button>

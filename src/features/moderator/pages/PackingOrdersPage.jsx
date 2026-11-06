@@ -38,7 +38,9 @@ export function PackingDetail({ orderId, onChanged }) {
           </Button>
           {model.order?.ghnTrackingCode && (
             <Button
-              className="text-xs bg-[#2b2b2b] text-white hover:bg-black font-bold flex items-center gap-1.5"
+              variant="primary"
+              size="sm"
+              className="flex items-center gap-1.5"
               onClick={() => model.setPrintModalOpen(true)}
             >
               <span>📄</span> Chi tiết phiếu giao hàng

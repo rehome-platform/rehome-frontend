@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
+import Modal from '../../../components/common/Modal.jsx';
 import ReceiptPanel from '../components/ReceiptPanel.jsx';
 import MemberReConsignConfirmModal from '../components/MemberReConsignConfirmModal.jsx';
 import { inventoryService } from '../services/warehouseApi.js';
@@ -243,9 +244,10 @@ export default function ReConsignNegotiationPage() {
                 <div className="space-y-3 pt-3 border-t border-[#e5e5e5]">
                   {statusState === 'INIT' ? (
                     <Button
+                      variant="primary"
                       onClick={handleSendProposal}
                       loading={isSubmitting}
-                      className="w-full py-3.5 text-sm font-bold bg-[#2b2b2b] text-white hover:bg-black rounded-xl"
+                      className="w-full py-2.5 text-sm font-semibold rounded-xl"
                     >
                       Gửi đề xuất giá mới cho Member
                     </Button>
@@ -254,14 +256,14 @@ export default function ReConsignNegotiationPage() {
                       <div className="flex gap-2">
                         <Button
                           disabled
-                          className="flex-[1.6] py-3 text-xs font-bold bg-[#efefef] text-[#9a9a9a] border border-[#c4c4c4] cursor-not-allowed"
+                          className="flex-[1.6] py-2 text-xs font-semibold bg-[#efefef] text-[#9a9a9a] border border-[#c4c4c4] cursor-not-allowed"
                         >
                           Đang chờ Member phản hồi...
                         </Button>
                         <Button
                           variant="outline"
                           onClick={() => setStatusState('INIT')}
-                          className="flex-1 py-3 text-xs border border-[#2b2b2b] text-[#2b2b2b]"
+                          className="flex-1 py-2 text-xs"
                         >
                           Sửa lại mức đề xuất, gửi lại
                         </Button>
@@ -273,8 +275,10 @@ export default function ReConsignNegotiationPage() {
                           Mô phỏng app Member:
                         </span>
                         <Button
+                          variant="primary"
+                          size="sm"
                           onClick={() => setShowMemberModal(true)}
-                          className="bg-[#006B2C] text-white hover:bg-[#005221] text-xs py-1.5 px-3 font-bold"
+                          className="text-xs py-1.5 px-3 font-semibold"
                         >
                           Mở duyệt giá →
                         </Button>
@@ -285,12 +289,12 @@ export default function ReConsignNegotiationPage() {
               </div>
             ) : (
               /* TRẠNG THÁI: ĐÃ CHỐT (KD-11-DaChot) */
-              <div className="rounded-2xl border-2 border-[#2b2b2b] bg-white p-6 shadow-sm space-y-6">
+              <div className="rounded-2xl border border-neutral bg-white p-6 shadow-sm space-y-6">
                 <div>
                   <div className="text-xs font-bold uppercase tracking-wider text-[#191C19] mb-2">
                     Giá bán đã chốt
                   </div>
-                  <div className="text-3xl font-bold font-mono text-[#006B2C] p-4 bg-[#f9f9f9] border-2 border-[#2b2b2b] rounded-xl">
+                  <div className="text-3xl font-bold font-mono text-[#006B2C] p-4 bg-[#f9f9f9] border border-neutral rounded-xl">
                     {money(Number(proposedPrice))}
                   </div>
                   <p className="text-xs text-[#4a4a4a] leading-relaxed mt-3">
@@ -300,8 +304,9 @@ export default function ReConsignNegotiationPage() {
 
                 <div className="space-y-3 pt-3 border-t border-[#e5e5e5]">
                   <Button
+                    variant="primary"
                     onClick={() => setShowReceiptModal(true)}
-                    className="w-full py-3.5 text-sm font-bold bg-[#2b2b2b] text-white hover:bg-black rounded-xl"
+                    className="w-full py-2.5 text-sm font-semibold rounded-xl"
                   >
                     Xem biên nhận ký gửi lại
                   </Button>
@@ -310,14 +315,14 @@ export default function ReConsignNegotiationPage() {
                     <Button
                       variant="outline"
                       onClick={() => navigate(`/moderator/inventory/${sku}`)}
-                      className="flex-1 py-2.5 text-xs"
+                      className="flex-1 py-2 text-xs"
                     >
                       Chi tiết sản phẩm
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() => navigate('/moderator/inventory')}
-                      className="flex-1 py-2.5 text-xs"
+                      className="flex-1 py-2 text-xs"
                     >
                       Về danh sách tồn kho
                     </Button>
@@ -347,26 +352,21 @@ export default function ReConsignNegotiationPage() {
 
       {/* MODAL XEM BIÊN NHẬN KÝ GỬI LẠI */}
       {showReceiptModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-4">
-            <div className="flex justify-between items-center border-b pb-3">
-              <h3 className="font-bold text-base text-[#191C19]">Biên nhận ký gửi lại</h3>
-              <button
-                type="button"
-                onClick={() => setShowReceiptModal(false)}
-                className="text-gray-500 hover:text-black font-bold"
-              >
-                ✕
-              </button>
-            </div>
+        <Modal
+          isOpen={showReceiptModal}
+          onClose={() => setShowReceiptModal(false)}
+          title="Biên nhận ký gửi lại"
+          size="lg"
+        >
+          <div className="space-y-4">
             <ReceiptPanel receiptId={receiptId || 'KG-2026-000214'} />
-            <div className="flex justify-end pt-3 border-t">
-              <Button onClick={() => setShowReceiptModal(false)} className="bg-[#2b2b2b] text-white">
+            <div className="flex justify-end pt-3 border-t border-neutral">
+              <Button variant="primary" onClick={() => setShowReceiptModal(false)}>
                 Đóng
               </Button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </Page>
   );

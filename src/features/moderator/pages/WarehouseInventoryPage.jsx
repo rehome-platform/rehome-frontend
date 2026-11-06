@@ -166,8 +166,8 @@ export default function WarehouseInventoryPage() {
                 type="button"
                 onClick={() => change('status', tab.value)}
                 className={`text-xs px-3.5 py-1.5 rounded-lg border font-semibold transition-colors ${isActive
-                  ? 'bg-[#2b2b2b] text-white border-[#2b2b2b]'
-                  : 'bg-white text-[#4a4a4a] border-[#a8a8a8] hover:bg-[#f4f4f4]'
+                  ? 'bg-[#006B2C] text-white border-[#006B2C]'
+                  : 'bg-white text-[#4a4a4a] border-[#a8a8a8] hover:bg-[#F0F5EE]'
                   }`}
               >
                 {tab.label}
@@ -421,12 +421,13 @@ export default function WarehouseInventoryPage() {
                 onChange={(e) => setLookupInput(e.target.value.toUpperCase())}
                 onKeyDown={(e) => e.key === 'Enter' && handleLookupSku()}
                 placeholder="VD: RH-K9B47T, RH-M4T19B, RH-D6P23L..."
-                className="flex-1 rounded-xl border-2 border-[#2b2b2b] px-3.5 py-2.5 text-base font-bold font-mono focus:outline-none focus:border-[#006B2C]"
+                className="flex-1 rounded-xl border border-neutral px-3.5 py-2 text-sm font-bold font-mono focus:outline-none focus:border-[#006B2C]"
               />
               <Button
+                variant="primary"
                 onClick={() => handleLookupSku()}
                 loading={isLookingUp}
-                className="bg-[#2b2b2b] text-white hover:bg-black font-bold px-5"
+                className="font-semibold px-5 text-sm"
               >
                 Tra cứu
               </Button>
@@ -444,8 +445,8 @@ export default function WarehouseInventoryPage() {
 
           {lookupResult?.type === 'FOUND' && (
             /* TK-03-TimThay */
-            <div className="border-2 border-[#2b2b2b] p-4 rounded-xl bg-white space-y-3">
-              <span className="text-[10px] font-bold tracking-wider px-2.5 py-1 bg-[#2b2b2b] text-white rounded">
+            <div className="border border-neutral p-4 rounded-xl bg-white space-y-3">
+              <span className="text-[10px] font-bold tracking-wider px-2.5 py-1 bg-[#006B2C] text-white rounded">
                 TÌM THẤY
               </span>
               <div className="flex gap-4 items-start pt-2">
@@ -463,11 +464,12 @@ export default function WarehouseInventoryPage() {
                 </div>
               </div>
               <Button
+                variant="primary"
                 onClick={() => {
                   setSkuLookupModal(false);
                   navigate(`/moderator/inventory/${encodeURIComponent(lookupResult.data.sku)}`);
                 }}
-                className="w-full py-2.5 bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs rounded-xl"
+                className="w-full py-2 text-sm font-semibold rounded-xl"
               >
                 Mở chi tiết sản phẩm →
               </Button>
@@ -604,7 +606,12 @@ export default function WarehouseInventoryPage() {
             </div>
 
             <div className="flex justify-end pt-2">
-              <Button type="button" onClick={() => setDegradedModalItem(null)} className="px-4 py-2 text-xs bg-[#2b2b2b] text-white hover:bg-black font-semibold">
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => setDegradedModalItem(null)}
+                className="px-4 py-2 text-sm font-semibold"
+              >
                 Đóng biên bản
               </Button>
             </div>

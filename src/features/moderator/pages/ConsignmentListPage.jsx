@@ -142,7 +142,7 @@ export default function ConsignmentListPage() {
               aria-selected={isSelected}
               onClick={() => handleTabChange(tab.key)}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${isSelected
-                  ? 'border-[#2b2b2b] bg-[#2b2b2b] text-white shadow-sm'
+                  ? 'border-[#006B2C] bg-[#006B2C] text-white shadow-sm'
                   : 'border-[#a8a8a8] bg-white text-[#4a4a4a] hover:bg-[#F0F5EE]'
                 }`}
             >
@@ -222,7 +222,7 @@ export default function ConsignmentListPage() {
                         <Link
                           to={`/moderator/consignments/${encodeURIComponent(formId)}`}
                           state={{ form }}
-                          className="inline-block font-semibold text-[11px] py-1.5 px-3 bg-[#2b2b2b] text-white hover:bg-black rounded shadow-sm transition-colors"
+                          className="inline-block font-semibold text-xs py-1.5 px-3 bg-[#006B2C] text-white hover:bg-[#005523] rounded-lg shadow-sm transition-colors"
                         >
                           {RESUME_LABELS[form.resumeStep] || 'Mở duyệt'}
                         </Link>

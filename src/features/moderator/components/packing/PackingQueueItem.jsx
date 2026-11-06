@@ -71,16 +71,18 @@ export function PackingQueueItem({
           {isMine ? (
             <>
               <Button
-                className="text-xs bg-[#2b2b2b] text-white hover:bg-black font-bold py-1.5 px-3.5 shadow-sm"
+                size="sm"
+                variant="primary"
                 onClick={() => setSearch({ page: String(page), orderId: targetOrderId })}
               >
                 Mở đơn
               </Button>
               <Button
+                size="sm"
                 variant="outline"
                 disabled={queue.busy}
                 onClick={() => handleRelease(item.queueId || targetOrderId)}
-                className="text-xs text-[#BA1A1A] py-1.5 px-2 hover:bg-red-50 border-gray-300"
+                className="text-xs text-[#BA1A1A] hover:bg-red-50"
                 title="Nhả đơn để người khác nhận"
               >
                 Nhả
@@ -88,18 +90,21 @@ export function PackingQueueItem({
             </>
           ) : !item.claimedBy ? (
             <Button
+              size="sm"
+              variant="primary"
               disabled={queue.busy}
               onClick={() => handleClaim(item.queueId || targetOrderId)}
-              className="text-xs bg-[#2b2b2b] text-white hover:bg-black font-bold py-1.5 px-3.5"
             >
               Nhận việc
             </Button>
           ) : (
             <Button
+              size="sm"
               disabled
-              className="text-xs bg-[#efefef] text-[#9a9a9a] border border-[#c4c4c4] py-1.5 px-3.5 cursor-not-allowed"
+              variant="outline"
+              className="opacity-50 cursor-not-allowed"
             >
-              Nhận việc
+              Đã có người nhận
             </Button>
           )}
         </div>
