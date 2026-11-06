@@ -32,7 +32,7 @@ export function PackingAccessNotice({  }) {
       <div className="pt-2">
         <Link
           to="/moderator/packing"
-          className="inline-flex items-center px-4 py-2 rounded-xl bg-[#2b2b2b] text-white font-bold text-xs hover:bg-black"
+          className="inline-flex items-center px-4 py-2 rounded-xl bg-[#006B2C] text-white font-semibold text-sm hover:bg-[#005523] transition-colors"
         >
           ← Quay lại hàng đợi đóng gói
         </Link>

@@ -155,6 +155,14 @@ describe('L-04 Phase 4: Mock API Integration Suite (APIs 68-72)', () => {
     const claimButtons = screen.getAllByRole('button', { name: 'Nhận việc' });
     fireEvent.click(claimButtons[0]);
 
+    // Xử lý modal xác nhận nhận việc nếu có
+    const modalClaimBtn = screen.getAllByRole('button', { name: 'Nhận việc' }).find(
+      (btn) => btn.closest('[role="dialog"]')
+    );
+    if (modalClaimBtn) {
+      fireEvent.click(modalClaimBtn);
+    }
+
     // Cập nhật trạng thái "Bạn đang nhận việc này"
     await screen.findByText('Bạn đang nhận việc này');
 
@@ -193,8 +201,8 @@ describe('L-04 Phase 4: Mock API Integration Suite (APIs 68-72)', () => {
 
     // Nạp chi tiết đơn đóng gói
     await screen.findByText(/Phiếu lấy hàng — 2 món/);
-    expect(screen.getByText('B1-18')).toBeInTheDocument();
-    expect(screen.getByText('B1-22')).toBeInTheDocument();
+    expect(screen.getByText('Áo sơ mi linen')).toBeInTheDocument();
+    expect(screen.getByText('Quần jeans ống đứng')).toBeInTheDocument();
 
     // API 69: Quét mã SKU thứ 1
     await scanSku('RH-A7F31K');
@@ -203,7 +211,6 @@ describe('L-04 Phase 4: Mock API Integration Suite (APIs 68-72)', () => {
     // Quét mã sai để kiểm tra modal DG-03-SaiMon
     await scanSku('RH-K9B47T');
     await screen.findByText(/Món này không thuộc đơn DH-00244/);
-    expect(screen.getByText(/Trả món này về kệ A3-07/)).toBeInTheDocument();
     fireEvent.click(screen.getByText('Đã hiểu — Xoá và nhập lại mã món đúng'));
 
     // API 69: Quét mã SKU thứ 2

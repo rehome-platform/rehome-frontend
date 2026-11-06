@@ -95,6 +95,10 @@ export default function ViolationReportsPage() {
               </div>
             </div>
 
+            <div className="p-3.5 rounded-xl border border-neutral bg-background text-xs text-textSecondary">
+              Nhiều báo cáo trên cùng một nội dung được hệ thống tự động gộp lại để Moderator xử lý nhanh chóng.
+            </div>
+
             {/* Bảng VP-01 */}
             <div className="bg-surface border border-neutral rounded-2xl overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
@@ -131,9 +135,8 @@ export default function ViolationReportsPage() {
                           <tr
                             key={rep.id}
                             onClick={() => handleOpenDetail(rep)}
-                            className={`cursor-pointer hover:bg-background/60 transition-colors ${
-                              isHighPriority ? 'border-l-4 border-l-error bg-error-light/10' : ''
-                            }`}
+                            className={`cursor-pointer hover:bg-background/60 transition-colors ${isHighPriority ? 'border-l-4 border-l-error bg-error-light/10' : ''
+                              }`}
                           >
                             <td className="py-3.5 px-3.5 font-semibold text-text">
                               {rep.targetTitle}
@@ -141,11 +144,10 @@ export default function ViolationReportsPage() {
                             <td className="py-3.5 px-3.5 text-textSecondary">{rep.targetType}</td>
                             <td className="py-3.5 px-3.5">
                               <span
-                                className={`inline-flex items-center justify-center font-bold px-2.5 py-0.5 rounded-full text-xs ${
-                                  isHighPriority
+                                className={`inline-flex items-center justify-center font-bold px-2.5 py-0.5 rounded-full text-xs ${isHighPriority
                                     ? 'bg-error text-white shadow-sm'
                                     : 'border border-neutral bg-neutral-light text-textSecondary'
-                                }`}
+                                  }`}
                               >
                                 {rep.reportCount}
                               </span>
@@ -167,11 +169,6 @@ export default function ViolationReportsPage() {
                   </tbody>
                 </table>
               </div>
-            </div>
-
-            {/* Note box VP-01 */}
-            <div className="p-3.5 border border-dashed border-neutral rounded-xl text-xs leading-relaxed text-textSecondary bg-background">
-              Nhiều báo cáo trên <strong className="font-semibold text-text">cùng một đối tượng</strong> gộp thành 1 dòng, số báo cáo nổi bật kèm viền đậm — ưu tiên xử lý trước vì khả năng vi phạm thật cao hơn.
             </div>
           </div>
         )}

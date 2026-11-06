@@ -149,7 +149,7 @@ export default function ReceiptPanel({ receiptId, form, allowStockIn = false, on
                   <ul className="space-y-2 text-[#5B6776] text-[11px] list-decimal list-inside">
                     <li>Nhập thông tin sản phẩm, chụp ảnh bán hàng và tách nền</li>
                     <li>Hệ thống cấp SKU, in tem dán lên món hàng</li>
-                    <li>Xếp lên kệ, ghi vị trí, sản phẩm lên sàn ngay</li>
+                    <li>Sản phẩm sẵn sàng lên sàn ngay</li>
                   </ul>
                 </div>
               </div>

@@ -20,9 +20,6 @@ export function EndTermInventoryRow({ item, sku, change }) {
           <Status>{item.status}</Status>
         </div>
         <div className="flex items-center gap-3 text-xs text-textSecondary flex-wrap">
-          <span>
-            Vị trí kệ: <span className="font-medium text-text">{item.shelfLocation}</span>
-          </span>
           {item.deadline && (
             <span>
               Hạn: <span className="font-medium text-text">{date(item.deadline)}</span>

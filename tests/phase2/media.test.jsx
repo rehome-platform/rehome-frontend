@@ -61,7 +61,6 @@ describe('photo upload and ambiguous stock-in recovery', () => {
     );
     await user.type(await screen.findByLabelText('Tên sản phẩm'), 'Áo mới');
     await user.type(screen.getByLabelText('Size'), 'M');
-    await user.type(screen.getByLabelText('Vị trí kệ'), 'A1');
     await user.selectOptions(screen.getByLabelText('Danh mục'), 'cat');
     await user.selectOptions(screen.getByLabelText('Thương hiệu'), 'brand');
     await user.upload(screen.getByLabelText('Ảnh sản phẩm'), file());

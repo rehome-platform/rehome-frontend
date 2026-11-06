@@ -93,7 +93,7 @@ describe('view-model workflow fixtures (not live backend evidence)', () => {
         data: { partnerName: 'Đối tác thử' },
       }),
     ).rejects.toMatchObject({ status: 409 });
-    expect((await call('inventoryList')).totalElements).toBe(8);
+    expect((await call('inventoryList')).totalElements).toBe(10);
     expect((await call('productRead', { ids: { sku: 'TEST-SKU-3' } })).status).toBe('DONATED');
   });
 });

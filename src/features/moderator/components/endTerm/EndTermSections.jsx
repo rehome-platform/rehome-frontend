@@ -146,10 +146,6 @@ export function EndTermProductSummary({ data }) {
         <p className="font-semibold text-text">{data.name}</p>
       </div>
       <div>
-        <p className="text-xs text-textSecondary uppercase font-medium">Vị trí kệ</p>
-        <p className="font-semibold text-text">{data.shelfLocation}</p>
-      </div>
-      <div>
         <p className="text-xs text-textSecondary uppercase font-medium">Trạng thái kho</p>
         <div className="mt-1">
           <Status>{data.status}</Status>

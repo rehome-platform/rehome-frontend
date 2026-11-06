@@ -14,10 +14,27 @@ function normalizeOrderResult(result, orderId, scope) {
     ? result.allowedActions
     : (['PAID', 'PACKING'].includes(result.status) ? ['SCAN', 'CREATE_SHIPMENT'] : []);
 
+  const fullAddress = [
+    result.shippingAddressDetail,
+    result.shippingWardName,
+    result.shippingProvinceName
+  ].filter(Boolean).join(', ') || result.shippingAddress || '';
+
+  const recipientName = result.shippingRecipientName || result.recipientName || '';
+  const recipientPhone = result.shippingPhone || result.recipientPhone || '';
+
   return {
     ...result,
     orderId: id,
     id,
+    orderNo: result.orderNo || id,
+    recipientName,
+    shippingRecipientName: recipientName,
+    recipientPhone,
+    shippingPhone: recipientPhone,
+    shippingAddress: fullAddress,
+    warehouseName: result.warehouseName || scope?.warehouseName || 'Kho Quận 7',
+    ghnTrackingCode: result.ghnTrackingCode || '',
     items,
     scannedProductIds,
     scannedCount: result.scannedCount ?? scannedProductIds.length,

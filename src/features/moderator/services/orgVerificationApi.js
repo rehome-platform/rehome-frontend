@@ -62,6 +62,40 @@ export const orgVerificationService = {
   },
 
   /**
+   * API F-082: Lấy danh sách tổ chức hiện hữu (đã xác thực) từ real backend
+   */
+  getExistingOrganizations: async (params = {}, options = {}) => {
+    if (isFixtureMode) return orgVerificationMockApi.getExistingOrganizations(params);
+
+    const res = await callBackend(
+      {
+        method: 'get',
+        url: API_ENDPOINTS.MODERATOR.ORGANIZATIONS,
+        params,
+      },
+      { signal: options?.signal }
+    );
+
+    return parseListResponse(res, 'Dữ liệu tổ chức hiện hữu không hợp lệ.');
+  },
+
+  /**
+   * API F-082: Lấy chi tiết hồ sơ công khai của 1 tổ chức hiện hữu
+   */
+  getOrgPublicDetail: async (orgId, options = {}) => {
+    if (isFixtureMode) return orgVerificationMockApi.getOrgPublicDetail?.(orgId);
+
+    const res = await callBackend(
+      {
+        method: 'get',
+        url: API_ENDPOINTS.MODERATOR.ORGANIZATION_PUBLIC_DETAIL(orgId),
+      },
+      { signal: options?.signal }
+    );
+    return res?.data || res;
+  },
+
+  /**
    * API 131 / F-140: Lấy chi tiết 1 yêu cầu thay đổi thông tin pháp lý
    */
   getLegalChangeDetail: async (changeId, options = {}) => {

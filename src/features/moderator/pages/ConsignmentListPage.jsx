@@ -39,6 +39,19 @@ export default function ConsignmentListPage() {
   const rawItems = listItems(resource.data);
   const totalPages = resource.data?.totalPages || 1;
 
+  const [lastConsignment, setLastConsignment] = useState(null);
+  React.useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem('rehome_last_consignment');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Date.now() - parsed.timestamp < 3600000 * 6) {
+          setLastConsignment(parsed);
+        }
+      }
+    } catch {}
+  }, []);
+
   const handleTabChange = (key) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
@@ -77,6 +90,46 @@ export default function ConsignmentListPage() {
         </div>
       }
     >
+      {/* THẺ GHIM ĐƠN VỪA THAO TÁC GẦN ĐÂY */}
+      {lastConsignment && (
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl text-xs text-[#92400E] shadow-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-bold text-[#D97706]">Đơn vừa mở gần đây:</span>
+            <span className="font-semibold text-[#191C19]">{lastConsignment.name}</span>
+            <span className="text-[#717971]">({lastConsignment.formId})</span>
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FEA619] text-[#191C19]">
+              {lastConsignment.status}
+            </span>
+          </div>
+          <Link
+            to={`/moderator/consignments/${encodeURIComponent(lastConsignment.formId)}`}
+            className="font-bold text-[#006B2C] hover:underline flex items-center gap-1"
+          >
+            Tiếp tục kiểm định →
+          </Link>
+        </div>
+      )}
+
+      {/* THẺ GHIM ĐƠN VỪA THAO TÁC GẦN ĐÂY */}
+      {lastConsignment && (
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl text-xs text-[#92400E] shadow-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-bold text-[#D97706]">📌 Đơn vừa mở gần đây:</span>
+            <span className="font-semibold text-[#191C19]">{lastConsignment.name}</span>
+            <span className="text-[#717971]">({lastConsignment.formId})</span>
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FEA619] text-[#191C19]">
+              {lastConsignment.status}
+            </span>
+          </div>
+          <Link
+            to={`/moderator/consignments/${encodeURIComponent(lastConsignment.formId)}`}
+            className="font-bold text-[#006B2C] hover:underline flex items-center gap-1"
+          >
+            Tiếp tục kiểm định →
+          </Link>
+        </div>
+      )}
+
       {/* 1. THANH SUBTABS TRẠNG THÁI (KD-01-DanhSachForm.dc.html) */}
       <div role="tablist" aria-label="Trạng thái form ký gửi" className="flex flex-wrap gap-2">
         {TABS.map((tab) => {
@@ -89,7 +142,7 @@ export default function ConsignmentListPage() {
               aria-selected={isSelected}
               onClick={() => handleTabChange(tab.key)}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${isSelected
-                  ? 'border-[#2b2b2b] bg-[#2b2b2b] text-white shadow-sm'
+                  ? 'border-[#006B2C] bg-[#006B2C] text-white shadow-sm'
                   : 'border-[#a8a8a8] bg-white text-[#4a4a4a] hover:bg-[#F0F5EE]'
                 }`}
             >
@@ -169,7 +222,7 @@ export default function ConsignmentListPage() {
                         <Link
                           to={`/moderator/consignments/${encodeURIComponent(formId)}`}
                           state={{ form }}
-                          className="inline-block font-semibold text-[11px] py-1.5 px-3 bg-[#2b2b2b] text-white hover:bg-black rounded shadow-sm transition-colors"
+                          className="inline-block font-semibold text-xs py-1.5 px-3 bg-[#006B2C] text-white hover:bg-[#005523] rounded-lg shadow-sm transition-colors"
                         >
                           {RESUME_LABELS[form.resumeStep] || 'Mở duyệt'}
                         </Link>

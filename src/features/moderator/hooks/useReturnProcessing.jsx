@@ -278,7 +278,7 @@ export function useReturnProcessing() {
       setIsCounterfeitModalOpen(false);
       setViewMode('QUEUE');
       setSelectedItem(null);
-      alert('Đã hoàn tất hội chẩn 2 Moderator và lưu kết luận hàng nghi giả!');
+      alert('Đã lưu kết luận thẩm định hàng nghi giả thành công!');
     } catch (err) {
       alert('Có lỗi khi lưu kết luận hội chẩn: ' + (err.message || ''));
     } finally {

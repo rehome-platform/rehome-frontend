@@ -151,13 +151,14 @@ export function ConsignmentInspectionPanel({ allChecked, checkedCount, checklist
 
 export function ConsignmentStartPanel({ resource, formId, proof, setFeedback, onOpenReturn }) {
   const [quickChecks, setQuickChecks] = React.useState({
-    itemMatch: true,
-    brandSizeMatch: true,
-    conditionMatch: true,
-    notProhibited: true,
+    itemMatch: false,
+    brandSizeMatch: false,
+    conditionMatch: false,
+    notProhibited: false,
   });
 
   const toggle = (k) => setQuickChecks((p) => ({ ...p, [k]: !p[k] }));
+  const allQuickChecksPassed = quickChecks.itemMatch && quickChecks.brandSizeMatch && quickChecks.conditionMatch && quickChecks.notProhibited;
 
   return (
     <div className="rounded-2xl border-2 border-[#2b2b2b] bg-white p-5 space-y-4 shadow-sm">
@@ -214,25 +215,31 @@ export function ConsignmentStartPanel({ resource, formId, proof, setFeedback, on
       </div>
 
       <div className="flex flex-wrap gap-2 pt-1">
-        <Button
-          className="flex-1 py-3 bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs"
-          loading={resource.busy}
-          onClick={() =>
-            resource.mutate(
-              (opts) => consignmentService.start(formId, proof, opts),
-              {
-                onSuccess: () => {
-                  setFeedback({
-                    type: 'success',
-                    message: 'Đã bắt đầu kiểm định tại quầy. Mời đối chiếu sản phẩm theo checklist.',
-                  });
+        {allQuickChecksPassed ? (
+          <Button
+            className="flex-1 py-3 bg-[#006B2C] text-white hover:bg-[#005221] font-bold text-xs shadow-sm transition-all"
+            loading={resource.busy}
+            onClick={() =>
+              resource.mutate(
+                (opts) => consignmentService.start(formId, proof, opts),
+                {
+                  onSuccess: () => {
+                    setFeedback({
+                      type: 'success',
+                      message: 'Đã bắt đầu kiểm định tại quầy. Mời đối chiếu sản phẩm theo checklist.',
+                    });
+                  },
                 },
-              },
-            )
-          }
-        >
-          Bắt đầu kiểm định tại quầy
-        </Button>
+              )
+            }
+          >
+            Bắt đầu kiểm định tại quầy
+          </Button>
+        ) : (
+          <div className="flex-1 py-2.5 px-3 bg-[#f5f5f5] text-[#717971] text-xs font-semibold rounded-xl text-center border border-dashed border-[#ccc]">
+            Tích đủ 4 tiêu chí trên để mở nút kiểm định
+          </div>
+        )}
         {onOpenReturn && (
           <Button
             variant="outline"
@@ -322,7 +329,8 @@ export function ConsignmentReviewPanel({ decision, setDecision, setRejectReason,
       <div className="flex gap-3 pt-2">
         {decision === 'APPROVE' ? (
           <Button
-            className="w-full py-3 bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs"
+            variant="primary"
+            className="w-full py-2.5 font-semibold text-sm"
             loading={resource.busy}
             onClick={() =>
               resource.mutate(
@@ -463,7 +471,7 @@ export function ConsignmentProgress({ identified, form }) {
   return (
     <div className="rounded-2xl border border-[#8a8a8a] bg-white p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
       <div className="flex items-center gap-2">
-        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] ${identified ? 'bg-[#2b2b2b] text-white' : 'border border-[#2b2b2b] text-[#2b2b2b]'}`}>
+        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] ${identified ? 'bg-[#006B2C] text-white' : 'border border-[#006B2C] text-[#006B2C]'}`}>
           {identified ? '✓' : '1'}
         </span>
         <span className={identified ? 'font-semibold' : 'text-[#717971]'}>1. Đối chiếu tại quầy</span>
@@ -471,7 +479,7 @@ export function ConsignmentProgress({ identified, form }) {
       <span className="w-8 h-px bg-[#d4d4d4] hidden sm:block" />
 
       <div className="flex items-center gap-2">
-        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] ${form.status === 'INSPECTING' ? 'border-2 border-[#2b2b2b] bg-[#2b2b2b] text-white' : form.status === 'WAITING_CONFIRMATION' || form.status === 'STOCKED' ? 'bg-[#2b2b2b] text-white' : 'border border-[#c4c4c4] text-[#9a9a9a]'}`}>
+        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] ${form.status === 'INSPECTING' ? 'border-2 border-[#006B2C] bg-[#006B2C] text-white' : form.status === 'WAITING_CONFIRMATION' || form.status === 'STOCKED' ? 'bg-[#006B2C] text-white' : 'border border-[#c4c4c4] text-[#9a9a9a]'}`}>
           {form.status === 'WAITING_CONFIRMATION' || form.status === 'STOCKED' ? '✓' : '2'}
         </span>
         <span className={form.status === 'INSPECTING' ? 'font-bold text-[#191C19]' : 'text-[#717971]'}>2. Ghi kết quả kiểm định</span>
@@ -479,7 +487,7 @@ export function ConsignmentProgress({ identified, form }) {
       <span className="w-8 h-px bg-[#d4d4d4] hidden sm:block" />
 
       <div className="flex items-center gap-2">
-        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] ${form.status === 'WAITING_CONFIRMATION' ? 'border-2 border-[#2b2b2b] bg-[#2b2b2b] text-white' : form.status === 'STOCKED' ? 'bg-[#2b2b2b] text-white' : 'border border-[#c4c4c4] text-[#9a9a9a]'}`}>
+        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] ${form.status === 'WAITING_CONFIRMATION' ? 'border-2 border-[#006B2C] bg-[#006B2C] text-white' : form.status === 'STOCKED' ? 'bg-[#006B2C] text-white' : 'border border-[#c4c4c4] text-[#9a9a9a]'}`}>
           {form.status === 'STOCKED' ? '✓' : '3'}
         </span>
         <span className={form.status === 'WAITING_CONFIRMATION' ? 'font-bold text-[#191C19]' : 'text-[#717971]'}>3. Chốt giá & kỳ</span>

@@ -5,7 +5,7 @@ import BarcodePrintModal from '../components/BarcodePrintModal.jsx';
 import PhotoUpload from '../components/PhotoUpload.jsx';
 import { inventoryService } from '../services/warehouseApi.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
-import { listItems, validateNewShelf } from '../models/warehouseModel.js';
+import { listItems } from '../models/warehouseModel.js';
 import { Page, Card, Photos, Status, ResourceState, date, money } from '../components/WarehouseUi.jsx';
 
 export default function InventoryDetailPage() {
@@ -19,8 +19,6 @@ export default function InventoryDetailPage() {
 
   const movements = useResource((options) => inventoryService.movements(sku, options), [sku]);
 
-  const [shelf, setShelf] = useState('');
-  const [shelfFeedback, setShelfFeedback] = useState('');
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [print, setPrint] = useState(false);
   const [photoUrls, setPhotos] = useState([]);
@@ -40,22 +38,6 @@ export default function InventoryDetailPage() {
     navigator.clipboard?.writeText(sku);
     setCopyFeedback(true);
     setTimeout(() => setCopyFeedback(false), 2000);
-  };
-
-  const shelfValidation = data ? validateNewShelf(shelf, data.shelfLocation) : { valid: false };
-
-  const handleShelfSubmit = (e) => {
-    e.preventDefault();
-    if (!shelfValidation.valid) return;
-
-    product.mutate((options) => inventoryService.shelf(sku, shelfValidation.value, options), {
-      onSuccess: () => {
-        setShelfFeedback(`Đã chuyển vị trí kệ thành công sang ${shelfValidation.value}`);
-        movements.refresh();
-        setShelf('');
-        setTimeout(() => setShelfFeedback(''), 5000);
-      },
-    });
   };
 
   // 1. Xử lý lỗi phân quyền (403) và không tìm thấy (404)
@@ -93,7 +75,7 @@ export default function InventoryDetailPage() {
             <h3 className="font-bold text-amber-900 text-base">Sản phẩm không thuộc kho bạn quản lý</h3>
           </div>
           <p className="text-xs text-amber-800 leading-relaxed">
-            Sản phẩm với mã SKU <strong>{sku}</strong> đang được lưu trữ tại chi nhánh kho khác. Bạn chỉ có quyền kiểm kê, điều chuyển kệ và in tem đối với các sản phẩm thuộc kho bạn được phân công.
+            Sản phẩm với mã SKU <strong>{sku}</strong> đang được lưu trữ tại chi nhánh kho khác. Bạn chỉ có quyền kiểm kê và in tem đối với các sản phẩm thuộc kho bạn được phân công.
           </p>
           <Button variant="outline" onClick={() => navigate('/moderator/inventory')}>
             Quay lại danh sách tồn kho
@@ -155,10 +137,6 @@ export default function InventoryDetailPage() {
             {/* Bảng thuộc tính chi tiết chuẩn TK-02 */}
             <div className="border border-[#c4c4c4] rounded-xl overflow-hidden divide-y divide-[#e0e0e0] text-xs">
               <div className="flex items-center p-3 gap-3 bg-[#fafafa]">
-                <span className="w-28 text-[#5f5f5f] flex-shrink-0">Vị trí kệ:</span>
-                <span className="font-bold text-[#191C19] font-mono text-sm">{data.shelfLocation || 'Chưa gán'}</span>
-              </div>
-              <div className="flex items-center p-3 gap-3">
                 <span className="w-28 text-[#5f5f5f] flex-shrink-0">Người ký gửi:</span>
                 <span className="text-[#191C19]">
                   <strong className="font-mono">{data.member?.memberCode || data.memberId || 'MB-004821'}</strong> · {data.member?.fullName || 'Ngô Hải F'}
@@ -180,14 +158,7 @@ export default function InventoryDetailPage() {
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3 pt-2 border-t border-[#e5e5e5]">
-              <div className="p-3.5 rounded-xl border border-[#C8E6C9] bg-[#E8F5E9]">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-[#006B2C]">Vị trí kệ hiện tại</p>
-                <p className="text-lg font-bold text-[#006B2C] mt-0.5 font-mono">
-                  {data.shelfLocation || 'Chưa gán kệ'}
-                </p>
-              </div>
-
+            <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-[#e5e5e5]">
               <div className="p-3.5 rounded-xl border border-[#e0e0e0] bg-[#fafafa]">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#5f5f5f]">Giá niêm yết</p>
                 <p className="text-lg font-bold text-[#191C19] mt-0.5">
@@ -213,42 +184,11 @@ export default function InventoryDetailPage() {
           </div>
 
           {/* BANNER XỬ LÝ CUỐI KỲ (L-02 · TK-02) */}
-
-          {/* Cập nhật vị trí kệ mới (L-02 · TK-02) */}
-          <div className="rounded-2xl border border-[#c4c4c4] bg-white p-5 shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[#191C19]">Điều chuyển vị trí kệ mới</h3>
-              <span className="text-xs text-[#5f5f5f]">
-                Kệ hiện tại: <strong className="font-mono text-[#006B2C]">{data.shelfLocation || 'Chưa gán'}</strong>
-              </span>
-            </div>
-            <form onSubmit={handleShelfSubmit} className="flex flex-wrap items-center gap-3">
-              <input
-                type="text"
-                aria-label="Vị trí kệ mới"
-                placeholder="Ví dụ: B2-15"
-                value={shelf}
-                onChange={(e) => setShelf(e.target.value.toUpperCase())}
-                className="px-3.5 py-2 border border-[#c4c4c4] rounded-xl text-sm font-mono uppercase focus:outline-none focus:border-[#006B2C]"
-              />
-              <Button
-                type="submit"
-                disabled={!shelfValidation.valid || product.busy}
-                loading={product.busy}
-                className="bg-[#006B2C] text-white hover:bg-[#005221] font-bold text-xs py-2 px-4 rounded-xl shadow-sm"
-              >
-                Lưu vị trí kệ
-              </Button>
-            </form>
-            {shelfFeedback && (
-              <p className="text-xs text-[#006B2C] font-semibold">{shelfFeedback}</p>
-            )}
-          </div>
           {(data.decision === 'RE_CONSIGN' || data.allowedActions?.includes('RE_CONSIGN') || data.reConsignStatus === 'PROPOSAL_SENT' || data.status === 'WAITING_END_OF_TERM') && (
-            <div className="rounded-2xl border-2 border-[#2b2b2b] bg-[#f9f9f9] p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
+            <div className="rounded-2xl border border-neutral bg-[#F8FAF8] p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-[#2b2b2b] text-white rounded">
+                  <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-[#006B2C] text-white rounded">
                     {data.reConsignStatus === 'PROPOSAL_SENT' ? 'ĐÃ GỬI ĐỀ XUẤT' : 'ĐƯỢC YÊU CẦU KÝ GỬI LẠI'}
                   </span>
                   <h3 className="text-sm font-bold text-[#191C19]">Ký gửi lại cuối kỳ (Hết kỳ 3: 90 ngày)</h3>
@@ -258,8 +198,9 @@ export default function InventoryDetailPage() {
                 </p>
               </div>
               <Button
+                variant="primary"
                 onClick={() => navigate(`/moderator/inventory/${encodeURIComponent(sku)}/re-consign`)}
-                className="bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs py-2.5 px-4 rounded-xl shadow-sm"
+                className="text-xs py-2 px-3.5 font-semibold"
               >
                 Đàm phán giá →
               </Button>
@@ -339,7 +280,7 @@ export default function InventoryDetailPage() {
                       </div>
 
                       <div className="text-sm font-bold text-[#191C19]">
-                        {movement.locationText || (movement.shelfLocation ? `Kệ ${movement.shelfLocation}` : '—')}
+                        {movement.locationText || '—'}
                       </div>
 
                       {movement.note && (

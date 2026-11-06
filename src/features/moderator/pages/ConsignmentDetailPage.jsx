@@ -23,6 +23,33 @@ import ReceiptPanel from '../components/ReceiptPanel.jsx';
 
 export default function ConsignmentDetailPage() {
   const model = useConsignmentDetail();
+
+  React.useEffect(() => {
+    if (model.form) {
+      try {
+        sessionStorage.setItem(
+          'rehome_last_consignment',
+          JSON.stringify({
+            formId: model.form.id || model.form.formId,
+            name: model.form.name || model.form.productName,
+            status: model.form.status,
+            timestamp: Date.now(),
+          })
+        );
+      } catch {}
+    }
+  }, [model.form]);
+
+  const backStatus = model.form?.status || 'PENDING';
+  const backLabel =
+    backStatus === 'APPROVED'
+      ? 'Đã duyệt, chờ mang đến'
+      : backStatus === 'INSPECTING'
+      ? 'Đang kiểm định'
+      : backStatus === 'STOCKED'
+      ? 'Nhập kho hôm nay'
+      : 'Chờ duyệt';
+
   return (
     <Page
       title={model.form?.name ? `Chi tiết ký gửi · ${model.form.name}` : `Chi tiết ký gửi ${model.formId}`}
@@ -34,8 +61,8 @@ export default function ConsignmentDetailPage() {
               BẠN ĐANG NHẬN VIỆC NÀY
             </span>
           )}
-          <Link to="/moderator/consignments">
-            <Button variant="outline">Danh sách form</Button>
+          <Link to={`/moderator/consignments?status=${backStatus}`}>
+            <Button variant="outline">← Tab {backLabel}</Button>
           </Link>
           <Button
             variant="outline"
@@ -50,6 +77,14 @@ export default function ConsignmentDetailPage() {
         </div>
       }
     >
+      <div className="mb-3">
+        <Link
+          to={`/moderator/consignments?status=${backStatus}`}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#006B2C] hover:underline"
+        >
+          ← Quay lại danh sách form ({backLabel})
+        </Link>
+      </div>
       {!model.receiptStep && <ResourceState resource={{ ...model.resource, error: model.resource.actionError ? null : model.resource.error }} />}
 
       {model.feedback && (
@@ -105,7 +140,7 @@ export default function ConsignmentDetailPage() {
               )}
 
               {/* ================= THAO TÁC 1: DUYỆT FORM ONLINE (KD-02) ================= */}
-              {(model.allowed('APPROVE') || model.allowed('REJECT')) && (
+              {(model.form.status === 'PENDING' || model.allowed('APPROVE') || model.allowed('REJECT')) && (
                 <ConsignmentReviewPanel {...model.sections.ConsignmentReviewPanel} />
               )}
 

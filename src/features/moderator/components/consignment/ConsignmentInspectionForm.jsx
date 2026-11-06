@@ -70,9 +70,17 @@ export function ConsignmentInspectionForm({ price, term, conditionNote, allCheck
         <Field
           label="Giá chốt thỏa thuận (VND)"
           required
+          type="number"
+          min="1000"
+          step="1000"
           inputMode="numeric"
           value={price}
-          onChange={(e) => setPrice(e.target.value)}
+          onChange={(e) => setPrice(e.target.value.replace(/\D/g, ''))}
+          onKeyDown={(e) => {
+            if (['e', 'E', '+', '-', '.'].includes(e.key)) {
+              e.preventDefault();
+            }
+          }}
           error={errors.agreedPrice || (price && !validMoney(price) ? 'Số nguyên dương hợp lệ.' : null)}
           placeholder="VD: 850000"
         />

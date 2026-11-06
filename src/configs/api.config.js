@@ -121,6 +121,7 @@ export const API_ENDPOINTS = {
     COUNTERFEIT_CONCLUSION: (id) => `/return-requests/${moderatorId(id)}/counterfeit-conclusion`,
     MARK_LOST: (id) => `/return-requests/${moderatorId(id)}/mark-lost`,
     DEGRADED_CASES: "/degraded-item-cases",
+    WAREHOUSE_DEGRADED_CASES: "/degraded-item-cases/warehouse",
     CREATE_DEGRADED_CASE: "/degraded-item-cases",
     DEGRADED_CASE_DETAIL: (id) => `/degraded-item-cases/${moderatorId(id)}`,
 
@@ -133,6 +134,8 @@ export const API_ENDPOINTS = {
     LEGAL_CHANGE_DETAIL: (id) => `/api/organizations/legal-change-requests/${moderatorId(id)}`,
     APPROVE_LEGAL_CHANGE: (id) => `/api/organizations/legal-change-requests/${moderatorId(id)}/approve`,
     REJECT_LEGAL_CHANGE: (id) => `/api/organizations/legal-change-requests/${moderatorId(id)}/reject`,
+    ORGANIZATIONS: "/api/organizations",
+    ORGANIZATION_PUBLIC_DETAIL: (id) => `/api/organizations/${moderatorId(id)}`,
 
     // Báo cáo vi phạm nội dung
     VIOLATION_REPORTS: "/violation-reports",

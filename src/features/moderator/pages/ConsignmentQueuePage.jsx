@@ -99,7 +99,7 @@ export default function ConsignmentQueuePage() {
                     />
                   </th>
                   <th className="py-2.5 px-3">Loại việc</th>
-                  <th className="py-2.5 px-3">Mã</th>
+                  <th className="py-2.5 px-3">Tên</th>
                   <th className="py-2.5 px-3">Đối tượng</th>
                   <th className="py-2.5 px-3">Tạo lúc</th>
                   <th className="py-2.5 px-3">Đã chờ</th>

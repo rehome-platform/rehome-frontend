@@ -43,7 +43,6 @@ describe('L-04 Moderator Packing Wireframe Test Suite (DG-01 to DG-04)', () => {
     expect(screen.getByText('Mã đơn')).toBeInTheDocument();
     expect(screen.getByText('Người mua')).toBeInTheDocument();
     expect(screen.getByText('Số món')).toBeInTheDocument();
-    expect(screen.getByText('Vị trí kệ gom hàng')).toBeInTheDocument();
     expect(screen.getByText('Thời gian đặt')).toBeInTheDocument();
     expect(screen.getByText('Chờ')).toBeInTheDocument();
     expect(screen.getByText('Trạng thái')).toBeInTheDocument();
@@ -52,14 +51,12 @@ describe('L-04 Moderator Packing Wireframe Test Suite (DG-01 to DG-04)', () => {
     // Kiểm tra render các đơn từ wireframe DG-01-HangDoi
     await screen.findByText('DH-00239');
     expect(screen.getByText('Vũ Thanh H')).toBeInTheDocument();
-    expect(screen.getByText('A1-04, A3-07, C2-11')).toBeInTheDocument();
 
     expect(screen.getByText('DH-00244')).toBeInTheDocument();
     expect(screen.getByText('Ngô Hải F')).toBeInTheDocument();
-    expect(screen.getByText('B1-18, B1-22')).toBeInTheDocument();
   });
 
-  it('DG-02: Renders picking sheet with shelf locations and buyer note', async () => {
+  it('DG-02: Renders picking sheet and buyer note', async () => {
     render(
       <MemoryRouter initialEntries={['/moderator/packing?orderId=DH-00244']}>
         <Phase2Provider>
@@ -68,10 +65,8 @@ describe('L-04 Moderator Packing Wireframe Test Suite (DG-01 to DG-04)', () => {
       </MemoryRouter>
     );
 
-    // Tiêu đề phiếu lấy hàng và vị trí kệ
+    // Tiêu đề phiếu lấy hàng
     await screen.findByText(/Phiếu lấy hàng — 2 món/);
-    expect(screen.getByText('B1-18')).toBeInTheDocument();
-    expect(screen.getByText('B1-22')).toBeInTheDocument();
     expect(screen.getByText('Áo sơ mi linen')).toBeInTheDocument();
     expect(screen.getByText('Quần jeans ống đứng')).toBeInTheDocument();
 
@@ -98,7 +93,6 @@ describe('L-04 Moderator Packing Wireframe Test Suite (DG-01 to DG-04)', () => {
     // Kiểm tra hiển thị modal cảnh báo DG-03-SaiMon
     await screen.findByText(/Món này không thuộc đơn DH-00244/);
     expect(screen.getByText(/Áo khoác denim — Zara — L/)).toBeInTheDocument();
-    expect(screen.getByText(/Trả món này về kệ A3-07/)).toBeInTheDocument();
 
     // Đóng modal cảnh báo
     fireEvent.click(screen.getByText('Đã hiểu — Xoá và nhập lại mã món đúng'));
@@ -137,7 +131,10 @@ describe('L-04 Moderator Packing Wireframe Test Suite (DG-01 to DG-04)', () => {
     fireEvent.click(shipmentBtn);
 
     // Xuất hiện modal in phiếu vận đơn
-    await screen.findByText('In phiếu giao hàng GHN');
+    await screen.findByRole('heading', { name: 'Chi tiết phiếu giao hàng' });
+    expect(screen.getByText('Đơn hàng')).toBeInTheDocument();
+    expect(screen.getByText('Vận đơn')).toBeInTheDocument();
+    expect(screen.getByText('Người nhận')).toBeInTheDocument();
     expect(screen.getAllByText('GHN5LK9P2XQ').length).toBeGreaterThan(0);
     expect(screen.getByText('Khổ A5')).toBeInTheDocument();
     expect(screen.getByText('80 x 80mm')).toBeInTheDocument();
