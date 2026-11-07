@@ -1,11 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import { getSockJsUrl } from '../../src/configs/api.config.js';
+import { getSockJsUrl, getWsSockJsUrl } from '../../src/configs/api.config.js';
 
 describe('WebSocket Config & Events', () => {
-  it('should return /ws-sockjs with http/https scheme', () => {
-    expect(getSockJsUrl('https://api.rehome.vn')).toBe('https://api.rehome.vn/ws-sockjs');
-    expect(getSockJsUrl('wss://api.rehome.vn')).toBe('https://api.rehome.vn/ws-sockjs');
-    expect(getSockJsUrl('http://localhost:8080/')).toBe('http://localhost:8080/ws-sockjs');
+  it('should return /ws-sockjs with http/https scheme when using getWsSockJsUrl or endpoint parameter', () => {
+    expect(getWsSockJsUrl('https://api.rehome.vn')).toBe('https://api.rehome.vn/ws-sockjs');
+    expect(getWsSockJsUrl('wss://api.rehome.vn')).toBe('https://api.rehome.vn/ws-sockjs');
+    expect(getSockJsUrl('http://localhost:8080/', '/ws-sockjs')).toBe('http://localhost:8080/ws-sockjs');
+    // Backward compatibility with Phase 2 contract default:
+    expect(getSockJsUrl('https://example.test')).toBe('https://example.test/ws');
   });
 
   it('should dispatch auth:token_refreshed event on window when token is refreshed', () => {
@@ -22,3 +24,4 @@ describe('WebSocket Config & Events', () => {
     window.removeEventListener('auth:token_refreshed', handler);
   });
 });
+

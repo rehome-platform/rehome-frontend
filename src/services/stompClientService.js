@@ -4,12 +4,12 @@
  */
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-import { getSockJsUrl } from '../configs/api.config.js';
+import { getWsSockJsUrl } from '../configs/api.config.js';
 import { getToken } from './baseApi.js';
 
 export class StompClientService {
   constructor(options = {}) {
-    this.getSockJsUrl = options.getSockJsUrl || getSockJsUrl;
+    this.getSockJsUrl = options.getSockJsUrl || getWsSockJsUrl;
     this.getAccessToken = options.getAccessToken || getToken;
     this.webSocketFactory = options.webSocketFactory || ((url) => new SockJS(url));
     this.onStatusChange = options.onStatusChange || null;
