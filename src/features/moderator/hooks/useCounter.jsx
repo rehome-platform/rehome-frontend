@@ -5,6 +5,12 @@ import { usePhase2, useResource } from "./warehouseHooks.jsx";
 import { listItems, lookupParams, normalizeMemberTasks, Phase2Error } from "../models/warehouseModel.js";
 import { useRecentServed } from './useRecentServed.jsx';
 
+export function detectLookupKind(value) {
+  const trimmed = String(value || '').trim();
+  // Nếu toàn chữ số bắt đầu bằng 0 thì coi là phone, ngược lại memberCode
+  return /^0\d+$/.test(trimmed) ? 'phone' : 'memberCode';
+}
+
 export function useCounter() {
   const { identity, setIdentity, scope } = usePhase2();
   const [kind, setKind] = useState('memberCode');
@@ -75,9 +81,12 @@ export function useCounter() {
   };
 
   const handleFormSubmit = (event) => {
-    event.preventDefault();
-    if (query.trim()) {
-      executeLookup(kind, query.trim());
+    event?.preventDefault?.();
+    const trimmed = query.trim();
+    if (trimmed) {
+      const detectedKind = detectLookupKind(trimmed);
+      setKind(detectedKind);
+      executeLookup(detectedKind, trimmed);
     }
   };
 
