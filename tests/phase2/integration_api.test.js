@@ -29,6 +29,14 @@ afterEach(() => expect(fixtureRequest).not.toHaveBeenCalled());
 afterAll(() => server.close());
 
 describe('API 25-48 Integration & Safety Resilience Tests', () => {
+  it('API 28: normalizes backend target and subtitle for queue consumers', async () => {
+    server.use(http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.QUEUES}`, () => HttpResponse.json([{
+      id: 'q-real', refId: 'form-real', type: 'FORM_REVIEW', claimedBy: null,
+      createdAt: '2026-11-06T11:00:00Z', targetName: 'Áo khoác len', subjectSubtitle: 'Nguyễn Minh An',
+    }])));
+    const [item] = await queueService.list({ type: 'FORM_REVIEW' });
+    expect(item).toMatchObject({ name: 'Áo khoác len', memberName: 'Nguyễn Minh An' });
+  });
   // 1. Success case: API 28 list queue items
   it('API 28: fetches queue items successfully with type query', async () => {
     server.use(

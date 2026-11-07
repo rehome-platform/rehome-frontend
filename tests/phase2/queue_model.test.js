@@ -3,7 +3,19 @@ import {
   QUEUE_TYPE_LABELS,
   taskTypeLabel,
   queueItemMeta,
+  formatWaitTime,
 } from '../../src/features/moderator/models/queueModel.js';
+
+describe('queue waits across whole days', () => {
+  it.each([
+    [23 * 60, '23h'],
+    [24 * 60, '1 ngày'],
+    [25 * 60, '1 ngày 1 giờ'],
+    [48 * 60, '2 ngày'],
+  ])('formats %i minutes as %s', (minutes, expected) => {
+    expect(formatWaitTime(minutes)).toBe(expected);
+  });
+});
 
 describe('Queue Model: taskTypeLabel & 7 Queue Types', () => {
   it('maps all 7 backend QueueType enums to user-friendly Vietnamese labels', () => {
