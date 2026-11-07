@@ -136,6 +136,19 @@ describe('Notification Integration into Layouts', () => {
       expect(screen.queryByRole('button', { name: 'Thông báo' })).not.toBeInTheDocument();
       expect(screen.queryByTestId('notification-badge')).not.toBeInTheDocument();
     });
+
+    it('does not render NotificationBell in Header when user is admin', () => {
+      renderWithProviders(<Header />, {
+        auth: {
+          isAuthenticated: true,
+          user: { id: 'admin-1', role: 'admin', fullName: 'Admin ReHome' },
+          logout: vi.fn(),
+        },
+      });
+
+      expect(screen.queryByRole('button', { name: 'Thông báo' })).not.toBeInTheDocument();
+      expect(screen.queryByTestId('notification-badge')).not.toBeInTheDocument();
+    });
   });
 
   describe('ModeratorLayout.jsx Integration', () => {

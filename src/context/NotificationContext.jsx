@@ -224,7 +224,8 @@ export const NotificationProvider = ({ children }) => {
     }
 
     const normalized = normalizeNotification(item);
-    const notifId = normalized.id;
+    const notifId = normalized.id || `ws-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    normalized.id = notifId;
 
     const alreadyExists = notificationsRef.current.some((n) => String(n.id) === String(notifId));
     if (alreadyExists) {

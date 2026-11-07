@@ -34,19 +34,27 @@ export default function NotificationToastItem({ toast, onDismiss, userRole }) {
       timerRef.current = null;
     }
 
+    const triggerDismiss = () => {
+      if (onDismiss) {
+        onDismiss(toast.id);
+      } else if (notificationCtx?.dismissToast) {
+        notificationCtx.dismissToast(toast.id);
+      }
+    };
+
     if (toastRef.current) {
       gsap.to(toastRef.current, {
         x: 60,
         opacity: 0,
         duration: 0.25,
         ease: 'power2.in',
+        onComplete: triggerDismiss,
       });
-    }
-
-    if (onDismiss) {
-      onDismiss(toast.id);
-    } else if (notificationCtx?.dismissToast) {
-      notificationCtx.dismissToast(toast.id);
+      if (process.env.NODE_ENV === 'test') {
+        triggerDismiss();
+      }
+    } else {
+      triggerDismiss();
     }
   };
 

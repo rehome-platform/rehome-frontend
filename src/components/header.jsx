@@ -97,8 +97,8 @@ export default function Header() {
                 )}
               </div>
 
-              {/* Notification icon */}
-              <NotificationBell userRole={user?.role} />
+              {/* Notification icon - chỉ hiển thị cho nhân sự/thành viên (Admin không dùng) */}
+              {!isAdmin && <NotificationBell userRole={user?.role} />}
 
               {/* User Dropdown */}
               <Dropdown
