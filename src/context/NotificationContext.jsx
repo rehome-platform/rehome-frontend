@@ -159,7 +159,7 @@ export const NotificationProvider = ({ children }) => {
 
   const markAsRead = useCallback(async (id) => {
     const target = notificationsRef.current.find((n) => String(n.id) === String(id));
-    if (!target || target.isRead) return;
+    if (target && target.isRead) return;
 
     try {
       try {
@@ -243,14 +243,14 @@ export const NotificationProvider = ({ children }) => {
     }
 
     const toast = {
-      id: notifId || `toast-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      ...normalized,
+      id: notifId || normalized.id || `toast-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       title: normalized.title || '',
       message: normalized.message || '',
       targetType: normalized.targetType || null,
       targetId: normalized.targetId || null,
       createdAt: normalized.createdAt || new Date().toISOString(),
       type: normalized.type || null,
-      ...normalized,
     };
 
     setActiveToasts((prev) => {
