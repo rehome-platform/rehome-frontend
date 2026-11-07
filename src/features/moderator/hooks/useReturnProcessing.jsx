@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { formatCurrencyVND } from "../../../utils/formatters.js";
 import { returnService } from "../services/returnApi.js";
+import { inventoryService } from "../services/inventoryApi.js";
 
 export function useReturnProcessing() {
   const [searchParams] = useSearchParams();
@@ -23,11 +24,7 @@ export function useReturnProcessing() {
   const [rejectReason, setRejectReason] = useState('');
 
   // TH-03 Inspection states (F04: require explicit verification)
-  const [scannedSku, setScannedSku] = useState('');
-  const [skuMatched, setSkuMatched] = useState(false);
   const [checklist, setChecklist] = useState({
-    skuCorrect: false,
-    labelIntact: false,
     noNewDamage: false,
     noUsageSign: false,
     accessoriesComplete: false,
@@ -48,6 +45,59 @@ export function useReturnProcessing() {
   const [isDegradedModalOpen, setIsDegradedModalOpen] = useState(false);
   const [degradedNotes, setDegradedNotes] = useState('');
   const [degradedConditionRate, setDegradedConditionRate] = useState(60);
+
+  const [evidenceImageUrls, setEvidenceImageUrls] = useState([]);
+  const [evidenceUploading, setEvidenceUploading] = useState(false);
+  const [evidenceError, setEvidenceError] = useState('');
+  const failedEvidence = useRef([]);
+  const evidenceLock = useRef(false);
+  const selectionEpoch = useRef(0);
+  const uploadEvidence = async (files) => {
+    if (evidenceLock.current || !files?.length) return;
+    if (evidenceImageUrls.length + files.length > 5) {
+      setEvidenceError('Chỉ được tải tối đa 5 ảnh bằng chứng.');
+      return;
+    }
+    const epoch = selectionEpoch.current;
+    evidenceLock.current = true;
+    setEvidenceUploading(true);
+    setEvidenceError('');
+    failedEvidence.current = [];
+    const failures = [];
+    let errorMessage = '';
+    try {
+      for (const file of files) {
+        if (!file.type?.startsWith('image/')) {
+          errorMessage = 'Vui lòng chọn tệp ảnh.';
+          continue;
+        }
+        try {
+          const result = await inventoryService.upload(file);
+          if (!result?.url || !/^https?:\/\//i.test(result.url)) throw new Error('Máy chủ chưa trả về địa chỉ ảnh đã tải lên.');
+          if (epoch === selectionEpoch.current) setEvidenceImageUrls(prev => [...prev, result.url]);
+        } catch (error) {
+          failures.push(file);
+          errorMessage = error.message || 'Không thể tải ảnh lên.';
+        }
+      }
+      if (epoch === selectionEpoch.current) {
+        failedEvidence.current = failures;
+        setEvidenceError(errorMessage);
+      }
+    } finally {
+      evidenceLock.current = false;
+      if (epoch === selectionEpoch.current) setEvidenceUploading(false);
+    }
+  };
+  const retryEvidence = () => uploadEvidence(failedEvidence.current);
+  const removeEvidence = index => { if (!evidenceLock.current) setEvidenceImageUrls(prev => prev.filter((_, i) => i !== index)); };
+  const evidenceReady = !evidenceUploading && !evidenceError && evidenceImageUrls.length >= 2 && evidenceImageUrls.length <= 5;
+  const requireEvidence = () => {
+    if (evidenceReady && !evidenceLock.current) return true;
+    alert('Cần tải lên thành công từ 2 đến 5 ảnh bằng chứng kiểm hàng trước khi lưu.');
+    return false;
+  };
+  const evidenceProps = { evidenceImageUrls, evidenceUploading, evidenceError, uploadEvidence, retryEvidence, removeEvidence };
 
   const fetchReturns = async () => {
     try {
@@ -104,8 +154,6 @@ export function useReturnProcessing() {
               setViewMode('REVIEW');
             } else if (item.status === 'RECEIVED_INSPECT' || item.status === 'RETURNING') {
               setViewMode('INSPECT');
-              setScannedSku('');
-              setSkuMatched(false);
             } else {
               setViewMode('REVIEW');
             }
@@ -135,18 +183,33 @@ export function useReturnProcessing() {
     );
   });
 
-  const handleOpenReview = (item) => {
-    setSelectedItem(item);
-    setViewMode('REVIEW');
+  const handleOpenReview = async (item) => {
+    const epoch = ++selectionEpoch.current;
+    setSelectedItem(null);
+    try {
+      const detail = await returnService.detail(item.id);
+      if (epoch !== selectionEpoch.current) return;
+      setSelectedItem(detail);
+      setViewMode('REVIEW');
+    } catch (error) { alert('Không thể tải chi tiết yêu cầu trả hàng: ' + error.message); }
   };
 
-  const handleOpenInspect = (item) => {
-    setSelectedItem(item);
-    setScannedSku('');
-    setSkuMatched(false);
+  const handleOpenInspect = async (item) => {
+    const epoch = ++selectionEpoch.current;
+    setSelectedItem(null);
+    setEvidenceImageUrls([]);
+    setEvidenceError('');
+    setEvidenceUploading(false);
+    failedEvidence.current = [];
+    try {
+      const detail = await returnService.detail(item.id);
+      if (epoch !== selectionEpoch.current) return;
+      setSelectedItem(detail);
+    } catch (error) {
+      alert('Không thể tải chi tiết yêu cầu trả hàng: ' + error.message);
+      return;
+    }
     setChecklist({
-      skuCorrect: false,
-      labelIntact: false,
       noNewDamage: false,
       noUsageSign: false,
       accessoriesComplete: false,
@@ -195,7 +258,7 @@ export function useReturnProcessing() {
   };
 
   const handleSaveInspection = async () => {
-    if (!selectedItem || !inspectionVerdict || resolvingRef.current) return;
+    if (!selectedItem || !inspectionVerdict || resolvingRef.current || !requireEvidence()) return;
     resolvingRef.current = true;
     try {
       if (inspectionVerdict === 'INVALID') {
@@ -204,6 +267,7 @@ export function useReturnProcessing() {
           return;
         }
         await returnService.inspect(selectedItem.id, {
+          evidenceImageUrls,
           matchesOriginal: false,
           degraded: checklist.noNewDamage === false,
           counterfeitSuspected: false,
@@ -217,6 +281,7 @@ export function useReturnProcessing() {
       } else {
         // Hợp lệ -> lưu inspect trước rồi mở modal TH-04 để chọn Relist hay Return Seller
         await returnService.inspect(selectedItem.id, {
+          evidenceImageUrls,
           matchesOriginal: true,
           degraded: false,
           counterfeitSuspected: false,
@@ -257,9 +322,10 @@ export function useReturnProcessing() {
 
   // 2-Moderator Counterfeit Verdict Handlers (F-134, F-135)
   const handleFlagCounterfeit = async () => {
-    if (!selectedItem || resolvingRef.current) return;
+    if (!selectedItem || resolvingRef.current || !requireEvidence()) return;
     resolvingRef.current = true;
     try {
+      await returnService.inspect(selectedItem.id, { matchesOriginal: true, degraded: false, counterfeitSuspected: true, conditionNote: 'Nghi ngờ hàng giả, chờ thẩm định', evidenceImageUrls });
       await returnService.flagCounterfeit(selectedItem.id);
       setIsCounterfeitModalOpen(true);
     } catch (err) {
@@ -294,17 +360,16 @@ export function useReturnProcessing() {
   };
 
   const handleCreateDegradedCase = async (caseData = {}) => {
-    if (!selectedItem || resolvingRef.current) return;
+    if (!selectedItem || resolvingRef.current || !requireEvidence()) return;
     resolvingRef.current = true;
     try {
       const notes = caseData.notes || degradedNotes || 'Hàng trả về có dấu hiệu xuống cấp';
-      const photos = caseData.photos || [];
-      const photoNote = photos.length > 0 ? ` [Kèm ${photos.length} ảnh bằng chứng hư hại]` : '';
       await returnService.inspect(selectedItem.id, {
+        evidenceImageUrls,
         matchesOriginal: true,
         degraded: true,
         counterfeitSuspected: false,
-        conditionNote: `${notes}${photoNote}`,
+        conditionNote: notes,
       });
       await returnService.resolveValid(selectedItem.id, 'RELIST');
       await fetchReturns();
@@ -344,6 +409,8 @@ export function useReturnProcessing() {
   };
 
   return {
+    ...evidenceProps,
+    evidenceReady,
     viewMode,
     setActiveTab,
     activeTab,
@@ -360,10 +427,6 @@ export function useReturnProcessing() {
     setIsCompareModalOpen,
     handleApproveAndCreateWaybill,
     setIsRejectModalOpen,
-    scannedSku,
-    setScannedSku,
-    setSkuMatched,
-    skuMatched,
     checklist,
     setChecklist,
     inspectionVerdict,
@@ -411,15 +474,13 @@ export function useReturnProcessing() {
         setIsRejectModalOpen,
       },
       ReturnInspectionProduct: {
+        ...evidenceProps,
         selectedItem,
-        scannedSku,
-        setScannedSku,
-        setSkuMatched,
-        skuMatched,
         checklist,
         setChecklist,
       },
       ReturnInspectionVerdict: {
+        evidenceReady,
         selectedItem,
         inspectionVerdict,
         setInspectionVerdict,
@@ -453,6 +514,8 @@ export function useReturnProcessing() {
         onConfirmVerdict: handleConfirmCounterfeitVerdict,
       },
       DegradedCaseModal: {
+        ...evidenceProps,
+        evidenceReady,
         isOpen: isDegradedModalOpen,
         onClose: () => setIsDegradedModalOpen(false),
         selectedItem,

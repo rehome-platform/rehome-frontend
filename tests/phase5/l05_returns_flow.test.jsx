@@ -41,6 +41,43 @@ beforeEach(() => {
       });
     }),
 
+    // GET /return-requests/:id/detail
+    http.get(`${API_BASE_URL}/return-requests/:id/detail`, async ({ params }) => {
+      const item = moderatorMockData.returnRequests.find((r) => String(r.id) === String(params.id));
+      return HttpResponse.json({
+        result: item || { id: params.id, code: params.id },
+        isSuccess: true,
+        statusCode: 200,
+      });
+    }),
+    http.get(`${API_BASE_URL}/return-requests/:id`, async ({ params }) => {
+      const item = moderatorMockData.returnRequests.find((r) => String(r.id) === String(params.id));
+      return HttpResponse.json({
+        result: item || { id: params.id, code: params.id },
+        isSuccess: true,
+        statusCode: 200,
+      });
+    }),
+
+    // GET /orders/:id
+    http.get(`${API_BASE_URL}/orders/:id`, async ({ params }) => {
+      return HttpResponse.json({
+        result: { id: params.id, orderNo: params.id, items: [] },
+        isSuccess: true,
+        statusCode: 200,
+      });
+    }),
+
+    // POST /uploads
+    http.post(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.UPLOADS}`, async () => {
+      return HttpResponse.json({
+        result: { url: 'https://photos.test/evidence-upload.jpg' },
+        url: 'https://photos.test/evidence-upload.jpg',
+        isSuccess: true,
+        statusCode: 200,
+      });
+    }),
+
     // POST /return-requests/:id/approve and /return-requests/:id/approve-return
     http.post(`${API_BASE_URL}/return-requests/:id/approve`, async ({ params }) => {
       const item = moderatorMockData.returnRequests.find((r) => String(r.id) === String(params.id));
@@ -291,12 +328,17 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
       expect(screen.getByText(/Đối chiếu hàng về với ảnh nhập kho/i)).toBeInTheDocument();
     });
 
-    // Enter matching SKU (RH-A7F31K)
-    const skuInput = screen.getByPlaceholderText(/Nhập SKU.../i);
-    fireEvent.change(skuInput, { target: { value: 'RH-A7F31K' } });
+    // Upload evidence photos (2 to 5 photos required)
+    const fileInput = screen.getByLabelText(/Tải ảnh bằng chứng kiểm hàng/i);
+    const file1 = new File(['a'], 'ev1.jpg', { type: 'image/jpeg' });
+    const file2 = new File(['b'], 'ev2.jpg', { type: 'image/jpeg' });
+    fireEvent.change(fileInput, { target: { files: [file1, file2] } });
 
-    // Check all checklist items
-    fireEvent.click(screen.getByLabelText(/Đúng món theo mã SKU/i));
+    await waitFor(() => {
+      expect(screen.getByText(/2 \/ 5 ảnh đã tải lên/i)).toBeInTheDocument();
+    });
+
+    // Check checklist items
     fireEvent.click(screen.getByLabelText(/Còn nguyên tem SKU trên sản phẩm/i));
     fireEvent.click(screen.getByLabelText(/Không có hư hỏng mới so với ảnh nhập kho/i));
     fireEvent.click(screen.getByLabelText(/Không có dấu vết đã qua sử dụng thêm/i));
@@ -342,6 +384,16 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/⚠️ Báo nghi hàng giả/i)).toBeInTheDocument();
+    });
+
+    // Upload evidence photos before flagging counterfeit
+    const fileInput = screen.getByLabelText(/Tải ảnh bằng chứng kiểm hàng/i);
+    const file1 = new File(['a'], 'ev1.jpg', { type: 'image/jpeg' });
+    const file2 = new File(['b'], 'ev2.jpg', { type: 'image/jpeg' });
+    fireEvent.change(fileInput, { target: { files: [file1, file2] } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/2 \/ 5 ảnh đã tải lên/i)).toBeInTheDocument();
     });
 
     // Click counterfeit button

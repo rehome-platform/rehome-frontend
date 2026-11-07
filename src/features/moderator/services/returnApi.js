@@ -48,12 +48,12 @@ export function mapReturnItem(raw) {
     rawOrderId: raw.orderId || null,
     orderId: raw.orderNo || raw.orderId || null,
     orderNo: raw.orderNo || raw.orderId || null,
-    sku: raw.sku || raw.productId || 'RH-M4T19B',
+    sku: raw.sku || raw.productId || null,
     itemName: raw.productName || raw.itemName || 'Sản phẩm ký gửi',
-    itemDetails: raw.itemDetails || [raw.brandName || raw.brand, raw.size, raw.condition].filter(Boolean).join(' · ') || 'Áo khoác bomber · Adidas · L',
-    brand: raw.brandName || raw.brand || 'Adidas',
+    itemDetails: raw.itemDetails || [raw.brandName || raw.brand, raw.size, raw.condition].filter(Boolean).join(' · ') || 'Chưa có thông tin chi tiết',
+    brand: raw.brandName || raw.brand || null,
     category: raw.categoryName || raw.category || null,
-    size: raw.size || 'L',
+    size: raw.size || null,
     condition: raw.condition || null,
     consignPrice: raw.consignPrice ?? raw.originalPrice ?? null,
     amount,
@@ -246,6 +246,11 @@ export const returnService = {
    * API 85 / F-132: Kiểm tra hàng về kho (Đối chiếu SKU, tình trạng hàng)
    */
   inspect: async (retId, inspectionData = {}, options = {}) => {
+    const evidenceImageUrls = inspectionData.evidenceImageUrls;
+    if (!Array.isArray(evidenceImageUrls) || evidenceImageUrls.length < 2 || evidenceImageUrls.length > 5 ||
+        evidenceImageUrls.some(url => typeof url !== 'string' || !/^https?:\/\//i.test(url))) {
+      throw new Error('Cần tải lên từ 2 đến 5 ảnh bằng chứng kiểm hàng.');
+    }
     const fallback = () => returnMockApi.inspect(retId, inspectionData);
     if (isFixtureMode) return fallback();
 
@@ -258,6 +263,7 @@ export const returnService = {
           degraded: inspectionData.degraded ?? false,
           counterfeitSuspected: inspectionData.counterfeitSuspected ?? false,
           conditionNote: inspectionData.conditionNote || 'Đã kiểm tra hàng về kho',
+          evidenceImageUrls,
         },
       },
       { signal: options?.signal }
