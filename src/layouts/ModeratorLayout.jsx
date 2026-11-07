@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { NotificationBell } from '../components/notification/index.js';
 
 /**
  * Layout chuyên biệt dành cho Nhân viên Điểm kí gửi / Kiểm duyệt viên (Moderator)
@@ -126,6 +127,7 @@ export default function ModeratorLayout({ children, apiColors = false }) {
                 className="w-60 rounded-lg border border-[#E2E8E0] px-3 py-1.5 text-[11px] focus:border-[#006B2C] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/20"
               />
             </form>
+            <NotificationBell userRole={user?.role} />
             <Link to="/profile" className="flex items-center space-x-2.5 hover:opacity-85 transition-opacity">
               <div className="w-[30px] h-[30px] rounded-full bg-[#006B2C]/10 text-[#006B2C] font-bold flex items-center justify-center text-xs border border-[#006B2C]/20 shrink-0 overflow-hidden">
                 {user?.avatarUrl || user?.avatar ? (

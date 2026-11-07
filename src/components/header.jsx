@@ -1,13 +1,12 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useNotification } from '../context/NotificationContext.jsx';
+import { NotificationBell } from './notification/index.js';
 import Dropdown from './common/Dropdown.jsx';
 import Logo from './common/Logo.jsx';
 
 export default function Header() {
   const { user, isAuthenticated, logout } = useAuth();
-  const { unreadCount } = useNotification();
   const navigate = useNavigate();
 
   const isAdmin = user?.role === 'admin';
@@ -99,18 +98,7 @@ export default function Header() {
               </div>
 
               {/* Notification icon */}
-              <button
-                className="relative p-2 text-[#5B6776] hover:text-[#006B2C] hover:bg-[#F6F9F4] rounded-xl transition-colors"
-                aria-label="Thông báo"
-                onClick={() => navigate('/notifications')}
-              >
-                <span className="material-symbols-outlined text-[22px]">notifications</span>
-                {unreadCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#D92D20] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
-              </button>
+              <NotificationBell userRole={user?.role} />
 
               {/* User Dropdown */}
               <Dropdown
