@@ -5,6 +5,7 @@ export const QUEUE_TYPE_LABELS = {
   FORM_REVIEW: 'Duyệt form ký gửi',
   INSPECTION: 'Kiểm định tại quầy',
   PACKING: 'Đóng gói đơn hàng',
+  ITEM_WITHDRAWAL: 'Yêu cầu rút hàng',
   RETURN: 'Yêu cầu trả hàng',
   ORG_VERIFICATION: 'Xác minh tổ chức',
   LEGAL_CHANGE: 'Đổi pháp lý tổ chức',
