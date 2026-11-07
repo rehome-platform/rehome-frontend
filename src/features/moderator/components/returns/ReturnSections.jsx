@@ -3,6 +3,7 @@ import React from "react";
 import { Button, Modal } from "../../../../components/common/index.js";
 import { formatCurrencyVND } from "../../../../utils/formatters.js";
 import { ReturnEvidence } from './ReturnEvidence.jsx';
+import { useToast } from "../../../../context/ToastContext.jsx";
 
 export function ReturnCompareDialog({ isCompareModalOpen, setIsCompareModalOpen, selectedItem }) {
   if (!selectedItem) return null;
@@ -334,6 +335,7 @@ export function ReturnInspectionVerdict({
   handleFlagCounterfeit,
   handleOpenDegradedCase,
 }) {
+  const toast = useToast();
   return (
     <div className="lg:col-span-6 space-y-4 font-sans">
       {/* Cảnh báo kiểm định viên */}
@@ -349,7 +351,7 @@ export function ReturnInspectionVerdict({
           </div>
           <button
             type="button"
-            onClick={() => alert('Đã chuyển ca kiểm tra cho Moderator khác trong ca trực.')}
+            onClick={() => toast.info('Đã chuyển ca kiểm tra cho Moderator khác trong ca trực.')}
             className="shrink-0 text-xs font-semibold px-3 py-1.5 border border-neutral rounded-xl bg-surface hover:bg-background text-text transition-colors"
           >
             Chuyển cho<br />người khác

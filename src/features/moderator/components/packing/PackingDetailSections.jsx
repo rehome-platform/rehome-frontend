@@ -3,8 +3,10 @@ import Button from "../../../../components/common/Button.jsx";
 import { safeDocumentUrl } from "../../models/warehouseModel.js";
 import { canPack, canShip } from "../../models/packingModel.js";
 import { operationReady } from "../../config/packingContract.js";
+import { useToast } from "../../../../context/ToastContext.jsx";
 
 export function PackingIncidentDialog({ setIncidentOpen, setIncidentNote, incidentNote }) {
+  const toast = useToast();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl space-y-4">
@@ -22,7 +24,7 @@ export function PackingIncidentDialog({ setIncidentOpen, setIncidentNote, incide
           className="space-y-4 text-xs"
           onSubmit={(e) => {
             e.preventDefault();
-            alert('Đã ghi nhận báo cáo sự cố đóng gói. Quản lý kho sẽ kiểm tra.');
+            toast.success('Đã ghi nhận báo cáo sự cố đóng gói. Quản lý kho sẽ kiểm tra.');
             setIncidentOpen(false);
             setIncidentNote('');
           }}
@@ -165,6 +167,7 @@ export function PackingRecipientPanel({ order, scanLogs }) {
 }
 
 export function PackingShipmentPanel({ order, onOpenPrintModal }) {
+  const toast = useToast();
   return (
     <div className="rounded-2xl border-2 border-[#006B2C] bg-white p-5 space-y-4 shadow-sm animate-in fade-in duration-200">
       <div>
@@ -226,7 +229,7 @@ export function PackingShipmentPanel({ order, onOpenPrintModal }) {
         <Button
           variant="outline"
           className="text-xs font-bold py-2 border-[#2b2b2b] text-[#006B2C] hover:bg-[#F0F5EE]"
-          onClick={() => alert('Đã xác nhận bàn giao hàng cho shipper GHN!')}
+          onClick={() => toast.success('Đã xác nhận bàn giao hàng cho shipper GHN!')}
         >
           ✓ Đã bàn giao cho GHN
         </Button>

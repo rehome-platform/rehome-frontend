@@ -1,5 +1,6 @@
 import React from "react";
 import { Button, Badge, Modal } from "../../../../components/common/index.js";
+import { useToast } from "../../../../context/ToastContext.jsx";
 
 export function VerificationRejectDialog({ isRejectModalOpen, setIsRejectModalOpen, rejectReason, setRejectReason, handleConfirmReject }) {
   return (
@@ -370,6 +371,7 @@ export function VerificationDocuments({ selectedOrg, setViewingDoc }) {
 }
 
 export function VerificationLegalChanges({ legalChanges = [], handleApproveLegalChange, handleRejectLegalChange }) {
+  const toast = useToast();
   const [selectedChangeModal, setSelectedChangeModal] = React.useState(null);
 
   return (
@@ -529,7 +531,7 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
                 </div>
                 <button
                   type="button"
-                  onClick={() => alert('Mở xem tài liệu pháp lý đính kèm')}
+                  onClick={() => toast.info('Mở xem tài liệu pháp lý đính kèm')}
                   className="px-2.5 py-1 text-xs border border-primary text-primary font-bold rounded-lg hover:bg-primary hover:text-white transition-colors"
                 >
                   Xem tài liệu

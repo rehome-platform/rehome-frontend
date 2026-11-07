@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 import { Button, Badge } from '../../../components/common/index.js';
 import { violationReportService } from '../services/violationReportApi.js';
+import { useToast } from '../../../context/ToastContext.jsx';
 
 /**
  * Trang Xử Lý Báo Cáo Vi Phạm & Kiểm Duyệt Nội Dung
@@ -10,6 +11,7 @@ import { violationReportService } from '../services/violationReportApi.js';
  * - VP-02: Chi tiết báo cáo & xử lý (xem nội dung, danh sách báo cáo, chọn hành động xử lý)
  */
 export default function ViolationReportsPage() {
+  const toast = useToast();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -49,7 +51,7 @@ export default function ViolationReportsPage() {
   const handleConfirmAction = async () => {
     if (!selectedReport) return;
     if (selectedAction !== 'DISMISS' && !actionReason.trim()) {
-      alert('Vui lòng nhập lý do xử lý vi phạm.');
+      toast.warn('Vui lòng nhập lý do xử lý vi phạm.');
       return;
     }
 
@@ -67,11 +69,11 @@ export default function ViolationReportsPage() {
         actionReason
       );
       await fetchReports();
-      alert(`Đã thực thi [${actionLabels[selectedAction]}] thành công! Kết quả được ghi nhận vào Audit Log.`);
+      toast.success(`Đã thực thi [${actionLabels[selectedAction]}] thành công! Kết quả được ghi nhận vào Audit Log.`);
       setViewMode('QUEUE');
       setSelectedReport(null);
     } catch (err) {
-      alert('Có lỗi xảy ra khi xử lý báo cáo.');
+      toast.error('Có lỗi xảy ra khi xử lý báo cáo.');
     }
   };
 
