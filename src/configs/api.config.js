@@ -23,7 +23,7 @@ export function getSockJsUrl(baseUrl = API_BASE_URL) {
     .replace(/^ws:\/\//i, "http://")
     .replace(/^wss:\/\//i, "https://");
   const cleanBase = httpUrl.replace(/\/+$/, "");
-  return `${cleanBase}/ws`;
+  return `${cleanBase}/ws-sockjs`;
 }
 
 export const WS_BASE_URL = getSockJsUrl(API_BASE_URL);
