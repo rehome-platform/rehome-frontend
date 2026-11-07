@@ -94,26 +94,6 @@ export default function ConsignmentListPage() {
       {lastConsignment && (
         <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl text-xs text-[#92400E] shadow-sm">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-bold text-[#D97706]">Đơn vừa mở gần đây:</span>
-            <span className="font-semibold text-[#191C19]">{lastConsignment.name}</span>
-            <span className="text-[#717971]">({lastConsignment.formId})</span>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FEA619] text-[#191C19]">
-              {lastConsignment.status}
-            </span>
-          </div>
-          <Link
-            to={`/moderator/consignments/${encodeURIComponent(lastConsignment.formId)}`}
-            className="font-bold text-[#006B2C] hover:underline flex items-center gap-1"
-          >
-            Tiếp tục kiểm định →
-          </Link>
-        </div>
-      )}
-
-      {/* THẺ GHIM ĐƠN VỪA THAO TÁC GẦN ĐÂY */}
-      {lastConsignment && (
-        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl text-xs text-[#92400E] shadow-sm">
-          <div className="flex flex-wrap items-center gap-2">
             <span className="font-bold text-[#D97706]">📌 Đơn vừa mở gần đây:</span>
             <span className="font-semibold text-[#191C19]">{lastConsignment.name}</span>
             <span className="text-[#717971]">({lastConsignment.formId})</span>
@@ -121,12 +101,23 @@ export default function ConsignmentListPage() {
               {lastConsignment.status}
             </span>
           </div>
-          <Link
-            to={`/moderator/consignments/${encodeURIComponent(lastConsignment.formId)}`}
-            className="font-bold text-[#006B2C] hover:underline flex items-center gap-1"
-          >
-            Tiếp tục kiểm định →
-          </Link>
+          <div className="flex items-center gap-3">
+            {lastConsignment.status && lastConsignment.status !== currentStatus && (
+              <button
+                type="button"
+                onClick={() => handleTabChange(lastConsignment.status)}
+                className="text-xs text-[#5B6776] underline hover:text-[#191C19]"
+              >
+                Mở tab {TABS.find((t) => t.key === lastConsignment.status)?.label || lastConsignment.status}
+              </button>
+            )}
+            <Link
+              to={`/moderator/consignments/${encodeURIComponent(lastConsignment.formId)}`}
+              className="font-bold text-[#006B2C] hover:underline flex items-center gap-1"
+            >
+              Tiếp tục kiểm định →
+            </Link>
+          </div>
         </div>
       )}
 

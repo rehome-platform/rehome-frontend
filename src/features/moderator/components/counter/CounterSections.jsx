@@ -162,7 +162,7 @@ export function CounterWorkflowGuide({ recentServed, reopen, loading }) {
       </div>
       <div className="divide-y divide-[#E2E8E0]">
         {!recentServed.length && (
-          <p className="p-3.5 text-xs text-[#717971]">Chưa có Member được phục vụ trong phiên này</p>
+          <p className="p-3.5 text-xs text-[#717971]">Chưa có Member được phục vụ hôm nay</p>
         )}
         {recentServed.map((item) => (
           <div key={item.memberCode} className="p-3.5 flex items-center justify-between text-xs">
@@ -359,7 +359,11 @@ export function CounterIdentityPanel({ selected, results, confirmed, confirmIden
         <div>
           <p className="text-[10px] text-[#717971] uppercase font-bold">Lịch sử</p>
           <p className="font-medium text-[#191C19] mt-0.5">
-            {selected.violationSummary || 'Chưa có vi phạm'}
+            {typeof selected.violationSummary === 'object' && selected.violationSummary !== null
+              ? (selected.violationSummary.totalViolations > 0
+                  ? `${selected.violationSummary.totalViolations} lần vi phạm`
+                  : 'Chưa có vi phạm')
+              : (selected.violationSummary || 'Chưa có vi phạm')}
           </p>
         </div>
       </div>
@@ -370,11 +374,16 @@ export function CounterIdentityPanel({ selected, results, confirmed, confirmIden
         </h3>
         {selected.activeConsignments && selected.activeConsignments.length > 0 ? (
           <div className="flex flex-wrap gap-2">
-            {selected.activeConsignments.map((tag, i) => (
-              <span key={i} className="px-2.5 py-1 rounded border border-[#a8a8a8] bg-white text-xs text-[#414942]">
-                {tag}
-              </span>
-            ))}
+            {selected.activeConsignments.map((tag, i) => {
+              const name = typeof tag === 'object' && tag !== null
+                ? (tag.productName || tag.formNo || 'Món ký gửi')
+                : tag;
+              return (
+                <span key={i} className="px-2.5 py-1 rounded border border-[#a8a8a8] bg-white text-xs text-[#414942]">
+                  {name}
+                </span>
+              );
+            })}
           </div>
         ) : (
           <p className="text-xs text-[#717971]">Không có món hàng nào đang ký gửi tại kho này.</p>

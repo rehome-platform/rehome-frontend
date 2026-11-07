@@ -5,6 +5,7 @@ import { isFixtureMode } from "../config/warehouseContract.js";
 import { normalizeConsignmentForm } from "../models/warehouseModel.js";
 import { callBackend } from './warehouseTransport.js';
 import { queueService } from './queueApi.js';
+import { enrichListRows } from './listDetailEnrichment.js';
 
 export const consignmentService = {
   // KD-01: Moderator form list is independent from queue membership.
@@ -29,9 +30,9 @@ export const consignmentService = {
     );
 
     const keep = item => !clientStatus || item.status === clientStatus;
-    if (Array.isArray(res)) return res.map(item => normalizeConsignmentForm(item)).filter(keep);
+    if (Array.isArray(res)) return enrichFormBrands(res.map(item => normalizeConsignmentForm(item)).filter(keep), options);
     if (res && (Array.isArray(res.content) || Array.isArray(res.items))) {
-      const items = (res.content || res.items).map(item => normalizeConsignmentForm(item)).filter(keep);
+      const items = await enrichFormBrands((res.content || res.items).map(item => normalizeConsignmentForm(item)).filter(keep), options);
       return {
         ...res,
         content: items,
@@ -150,3 +151,15 @@ export const consignmentService = {
     return { pdfUrl: URL.createObjectURL(blob) };
   },
 };
+
+function enrichFormBrands(items, options) {
+  return enrichListRows(
+    items,
+    item => !item.brandName || !String(item.brandName).trim(),
+    async item => {
+      const detail = await consignmentService.read(item.formId, options);
+      return detail?.brandName ? { ...item, brand: detail.brandName, brandName: detail.brandName } : item;
+    },
+    options,
+  );
+}

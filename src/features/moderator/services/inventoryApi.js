@@ -6,6 +6,7 @@ import { API_ENDPOINTS } from '../../../configs/api.config.js';
 import { isFixtureMode } from "../config/warehouseContract.js";
 import { formatStockMovement, Phase2Error } from "../models/warehouseModel.js";
 import { callBackend } from './warehouseTransport.js';
+import { enrichListRows } from './listDetailEnrichment.js';
 
 export const inventoryService = {
   // API 40: GET /inventory
@@ -43,7 +44,7 @@ export const inventoryService = {
         const combined = [...itemsWithdrawn, ...itemsUnclaimed];
         const totalElements = (resWithdrawn?.totalElements ?? itemsWithdrawn.length) + (resUnclaimed?.totalElements ?? itemsUnclaimed.length);
 
-        return inventoryResult(
+        return enrichInventoryResult(inventoryResult(
           {
             ...resWithdrawn,
             content: combined,
@@ -52,7 +53,7 @@ export const inventoryService = {
             totalPages: Math.ceil(totalElements / (params?.size ?? 20)),
           },
           params
-        );
+        ), options);
       }
 
       // Backend ProductStatus enum does not support WAITING_END_OF_TERM
@@ -67,7 +68,7 @@ export const inventoryService = {
         { fallback, signal: options?.signal }
       );
 
-      return inventoryResult(result, params);
+      return enrichInventoryResult(inventoryResult(result, params), options);
     } catch (err) {
       if (isFixtureMode && fallback) return fallback();
       throw err;
@@ -241,6 +242,26 @@ export const inventoryService = {
     }
   },
 };
+
+const INVENTORY_DETAIL_FIELDS = ['currentTerm', 'daysIntoTerm', 'currentPrice'];
+
+async function enrichInventoryResult(result, options) {
+  if (!options?.enrichDetails) return result;
+  const items = await enrichListRows(
+    result.items,
+    item => INVENTORY_DETAIL_FIELDS.some(field => item[field] == null),
+    async item => {
+      const detail = await inventoryService.read(item.sku, options);
+      const fields = {};
+      for (const field of INVENTORY_DETAIL_FIELDS) {
+        if (item[field] == null && detail[field] != null) fields[field] = detail[field];
+      }
+      return { ...item, ...fields };
+    },
+    options,
+  );
+  return { ...result, items, content: items };
+}
 
 function movementResult(res) {
   const raw = Array.isArray(res) ? res : [];

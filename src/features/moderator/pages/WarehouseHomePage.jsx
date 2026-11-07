@@ -6,6 +6,7 @@ import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
 import { listItems, ownsClaim } from '../models/warehouseModel.js';
 import { Page, Card, ResourceState } from '../components/WarehouseUi.jsx';
 import { QueueClaimDialog } from '../components/queue/QueueSections.jsx';
+import { formatElapsedHours } from '../models/queueModel.js';
 
 const OVERDUE_HOURS = 48;
 const QUEUE_TYPES = [
@@ -25,7 +26,6 @@ const waitedHours = (item) => {
   const time = created ? new Date(created).getTime() : NaN;
   return Number.isFinite(time) ? Math.max(0, Math.floor((Date.now() - time) / 3600000)) : null;
 };
-const waitedText = (hours) => (hours == null ? '—' : hours >= 1 ? `${hours} giờ` : '< 1 giờ');
 
 function Stat({ label, value, tone }) {
   return (
@@ -164,8 +164,11 @@ export default function WarehouseHomePage() {
                       <tr key={`${task.kind}-${task.queueId}`} className={`border-b border-neutral ${(task.hours ?? 0) >= OVERDUE_HOURS ? 'border-l-4 border-l-primary bg-amber-50/20' : 'hover:bg-[#FAFBF9]'}`}>
                         <td className="py-2.5 px-3 font-semibold text-[#191C19]">{task.kindLabel}</td>
                         <td className="py-2.5 px-3 font-mono font-bold text-[#191C19]">{task.formId || task.orderId || task.queueId}</td>
-                        <td className="py-2.5 px-3">{task.name || '—'}</td>
-                        <td className="py-2.5 px-3">{waitedText(task.hours)}</td>
+                        <td className="py-2.5 px-3">
+                          <span>{task.targetName || task.name || '—'}</span>
+                          {(task.subjectSubtitle || task.memberName) && <span className="block text-textSecondary">{task.subjectSubtitle || task.memberName}</span>}
+                        </td>
+                        <td className="py-2.5 px-3">{formatElapsedHours(task.hours)}</td>
                         <td className="py-2.5 px-3">
                           {task.claimedBy ? (
                             mine ? (

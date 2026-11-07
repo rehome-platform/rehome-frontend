@@ -4,6 +4,7 @@ import Button from "../../../../components/common/Button.jsx";
 import Modal from "../../../../components/common/Modal.jsx";
 
 import { WORK_TYPES } from "../../pages/ConsignmentQueuePage.config.js";
+import { formatElapsedHours } from '../../models/queueModel.js';
 
 export function QueueClaimDialog({ claimTarget, resource, setClaimTarget, handleClaim }) {
   return (
@@ -22,7 +23,7 @@ export function QueueClaimDialog({ claimTarget, resource, setClaimTarget, handle
               {claimTarget.typeLabel || claimTarget.kindLabel} · {claimTarget.formId || claimTarget.orderId || claimTarget.queueId}
             </p>
             <p className="text-xs text-[#5B6776] mt-1">
-              {claimTarget.name || claimTarget.memberName || '—'} · chờ {claimTarget.hours || 0} giờ
+              {claimTarget.targetName || claimTarget.name || claimTarget.memberName || '—'} · chờ {formatElapsedHours(claimTarget.hours ?? 0)}
             </p>
           </div>
 
@@ -55,6 +56,10 @@ export function QueueClaimDialog({ claimTarget, resource, setClaimTarget, handle
 }
 
 export function QueueReleaseDialog({ releaseTarget, resource, setReleaseTarget, handleRelease }) {
+  const claimedTime = releaseTarget?.claimedAt ? new Date(releaseTarget.claimedAt).getTime() : NaN;
+  const heldHours = Number.isFinite(claimedTime)
+    ? (Date.now() - claimedTime) / 3600000
+    : releaseTarget?.hours ?? 0;
   return (
     <Modal
       isOpen={!!releaseTarget}
@@ -71,7 +76,7 @@ export function QueueReleaseDialog({ releaseTarget, resource, setReleaseTarget, 
               {releaseTarget.typeLabel || releaseTarget.kindLabel} · {releaseTarget.formId || releaseTarget.orderId || releaseTarget.queueId}
             </p>
             <p className="text-xs text-[#5B6776] mt-1">
-              {releaseTarget.name || releaseTarget.memberName || '—'} · Bạn đang nhận việc này {releaseTarget.hours || 0} giờ
+              {releaseTarget.targetName || releaseTarget.name || releaseTarget.memberName || '—'} · Bạn đang nhận việc này {formatElapsedHours(heldHours)}
             </p>
           </div>
     
@@ -149,7 +154,7 @@ export function QueueTaskRow({ item, isFocused, isSelected, toggleSelectRow, isM
       </td>
       <td className="py-3 px-3">
         <span className={`font-semibold ${item.isOverdue ? 'text-[#BA1A1A]' : 'text-[#191C19]'}`}>
-          {item.waitTimeFormatted || (item.hours >= 1 ? `${item.hours} giờ` : '< 1 giờ')}
+          {item.waitTimeFormatted || formatElapsedHours(item.hours ?? 0)}
         </span>
       </td>
       <td className="py-3 px-3 text-[#5f5f5f]">

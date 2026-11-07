@@ -2,41 +2,62 @@ import { ReturnQueueRow } from './ReturnQueueRow.jsx';
 import React from "react";
 import { Button, Modal } from "../../../../components/common/index.js";
 import { formatCurrencyVND } from "../../../../utils/formatters.js";
+import { ReturnEvidence } from './ReturnEvidence.jsx';
 
 export function ReturnCompareDialog({ isCompareModalOpen, setIsCompareModalOpen, selectedItem }) {
+  if (!selectedItem) return null;
+  const stockPhotos = selectedItem.stockInPhotos || [];
+  const buyerPhotos = selectedItem.buyerPhotos || [];
+
   return (
     <Modal
       isOpen={isCompareModalOpen}
       onClose={() => setIsCompareModalOpen(false)}
       title="So sánh ảnh nhập kho vs ảnh người mua gửi"
     >
-      {selectedItem && (
-        <div className="space-y-4 font-sans text-xs">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="font-bold text-text mb-2">Ảnh lưu trữ khi nhập kho</div>
-              <img
-                src={selectedItem.stockInPhotos?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400'}
-                alt="Điểm kí gửi"
-                className="w-full h-64 object-contain rounded-xl border border-neutral bg-background"
-              />
-            </div>
-            <div>
-              <div className="font-bold text-text mb-2">Ảnh người mua chụp gửi</div>
-              <img
-                src={selectedItem.buyerPhotos?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400'}
-                alt="Khách"
-                className="w-full h-64 object-contain rounded-xl border border-neutral bg-background"
-              />
-            </div>
+      <div className="space-y-4 font-sans text-xs">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <div className="font-bold text-text mb-2">Ảnh lưu trữ khi nhập kho</div>
+            {stockPhotos.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {stockPhotos.map((src, i) => (
+                  <img
+                    key={i}
+                    src={src}
+                    alt={`Ảnh nhập kho ${i + 1}`}
+                    className="w-full h-64 object-contain rounded-xl border border-neutral bg-background"
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-[#717971]">Chưa có ảnh nhập kho</p>
+            )}
           </div>
-          <div className="text-right">
-            <Button size="sm" variant="outline" className="rounded-xl border-neutral" onClick={() => setIsCompareModalOpen(false)}>
-              Đóng
-            </Button>
+          <div>
+            <div className="font-bold text-text mb-2">Ảnh người mua chụp gửi</div>
+            {buyerPhotos.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {buyerPhotos.map((src, i) => (
+                  <img
+                    key={i}
+                    src={src}
+                    alt={`Ảnh người mua ${i + 1}`}
+                    className="w-full h-64 object-contain rounded-xl border border-neutral bg-background"
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-[#717971]">Chưa có ảnh người mua</p>
+            )}
           </div>
         </div>
-      )}
+        <div className="text-right">
+          <Button size="sm" variant="outline" className="rounded-xl border-neutral" onClick={() => setIsCompareModalOpen(false)}>
+            Đóng
+          </Button>
+        </div>
+      </div>
     </Modal>
   );
 }
@@ -89,17 +110,13 @@ export function DegradedCaseModal({
   setDegradedConditionRate,
   handleCreateDegradedCase,
 }) {
-  const [degradedPhotos, setDegradedPhotos] = React.useState([
-    'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=300',
-    'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=300',
-  ]);
+  const [degradedPhotos, setDegradedPhotos] = React.useState([]);
   const [photoInput, setPhotoInput] = React.useState('');
 
   if (!selectedItem) return null;
 
-  const basePrice = selectedItem.compensationAmount || selectedItem.consignPrice || selectedItem.amount || 300000;
-  const fullCompensation = basePrice;
-  const halfCompensation = Math.round(basePrice * 0.5);
+  const fullCompensation = selectedItem.compensationAmount || selectedItem.consignPrice || selectedItem.amount || 0;
+  const halfCompensation = selectedItem.halfCompensationAmount || Math.round(fullCompensation * 0.5);
 
   const addPhoto = () => {
     if (photoInput.trim() && degradedPhotos.length < 5) {
@@ -109,9 +126,7 @@ export function DegradedCaseModal({
   };
 
   const removePhoto = (idx) => {
-    if (degradedPhotos.length > 2) {
-      setDegradedPhotos((prev) => prev.filter((_, i) => i !== idx));
-    }
+    setDegradedPhotos((prev) => prev.filter((_, i) => i !== idx));
   };
 
   return (
@@ -128,7 +143,7 @@ export function DegradedCaseModal({
         <div className="rounded-xl border border-neutral bg-background p-3 space-y-1">
           <p><strong className="text-text">Yêu cầu trả:</strong> {selectedItem.code || selectedItem.returnCode}</p>
           <p><strong className="text-text">Món hàng:</strong> {selectedItem.itemName || selectedItem.productName} ({selectedItem.sku || '—'})</p>
-          <p><strong className="text-text">Giá bán tại đơn:</strong> {formatCurrencyVND(selectedItem.amount || basePrice)}</p>
+          <p><strong className="text-text">Giá bán tại đơn:</strong> {formatCurrencyVND(selectedItem.amount || 0)}</p>
         </div>
 
         {/* 2 Mức tiền đền tự động */}
@@ -164,15 +179,13 @@ export function DegradedCaseModal({
             {degradedPhotos.map((src, i) => (
               <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-neutral group">
                 <img src={src} alt="Ảnh thực tế" className="w-full h-full object-cover" />
-                {degradedPhotos.length > 2 && (
-                  <button
-                    type="button"
-                    onClick={() => removePhoto(i)}
-                    className="absolute top-1 right-1 bg-black/60 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]"
-                  >
-                    ×
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => removePhoto(i)}
+                  className="absolute top-1 right-1 bg-black/60 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]"
+                >
+                  ×
+                </button>
               </div>
             ))}
             {degradedPhotos.length < 5 && (
@@ -437,18 +450,6 @@ export function ReturnInspectionChecklist({ checklist, setChecklist, selectedIte
         <label className="p-3.5 flex items-start gap-3 cursor-pointer hover:bg-background transition-colors">
           <input
             type="checkbox"
-            checked={checklist?.skuCorrect}
-            onChange={(e) => setChecklist({ ...checklist, skuCorrect: e.target.checked })}
-            className="mt-0.5 rounded border-neutral text-primary focus:ring-primary"
-          />
-          <div>
-            <span className="font-semibold text-text">Đúng món theo mã SKU</span>
-            <span className="block text-[10px] text-textSecondary">{selectedItem?.sku || 'SKU'} khớp với món đã gửi đi</span>
-          </div>
-        </label>
-        <label className="p-3.5 flex items-start gap-3 cursor-pointer hover:bg-background transition-colors">
-          <input
-            type="checkbox"
             checked={checklist?.labelIntact}
             onChange={(e) => setChecklist({ ...checklist, labelIntact: e.target.checked })}
             className="mt-0.5 rounded border-neutral text-primary focus:ring-primary"
@@ -495,7 +496,17 @@ export function ReturnInspectionChecklist({ checklist, setChecklist, selectedIte
   );
 }
 
-export function ReturnInspectionProduct({ selectedItem, scannedSku, setScannedSku, setSkuMatched, skuMatched, checklist, setChecklist }) {
+export function ReturnInspectionProduct({
+  selectedItem,
+  checklist,
+  setChecklist,
+  evidenceImageUrls = [],
+  evidenceUploading = false,
+  evidenceError = '',
+  uploadEvidence,
+  retryEvidence,
+  removeEvidence,
+}) {
   const stockPhotos = selectedItem?.stockInPhotos || [];
   const buyerPhotos = selectedItem?.buyerPhotos || [];
 
@@ -510,57 +521,48 @@ export function ReturnInspectionProduct({ selectedItem, scannedSku, setScannedSk
         </p>
       </div>
     
-      {/* Bước 1: Nhập SKU */}
-      <div className="border-2 border-neutral rounded-2xl p-4 bg-surface flex justify-between items-center gap-4 shadow-sm">
-        <div>
-          <div className="text-[10px] uppercase font-bold text-textSecondary tracking-wider mb-1">
-            Bước 1 · Nhập mã SKU trên tem
-          </div>
-          <div className="text-xs text-textSecondary">
-            Xác nhận đúng món đã gửi đi. Khác món là ca gian lận, xử lý theo nhánh riêng.
-          </div>
-        </div>
-        <div className="text-right shrink-0">
-          <input
-            type="text"
-            value={scannedSku}
-            placeholder="Nhập SKU..."
-            onChange={(e) => {
-              const val = e.target.value;
-              setScannedSku(val);
-              setSkuMatched(Boolean(val.trim() && selectedItem?.sku && val.trim().toUpperCase() === selectedItem.sku.toUpperCase()));
-            }}
-            className="border-2 border-neutral focus:border-primary rounded-xl px-3 py-1.5 font-mono font-bold text-sm text-center uppercase w-36 outline-none transition-colors"
-          />
-          <div className={`text-[10px] font-bold mt-1 ${skuMatched ? 'text-primary' : 'text-error'}`}>
-            {skuMatched ? '✓ Khớp · đúng món' : '✗ Không khớp SKU'}
-          </div>
-        </div>
-      </div>
-    
       {/* So sánh ảnh */}
       <div className="grid grid-cols-2 gap-3">
         <div>
           <div className="text-[10px] uppercase font-bold text-textSecondary mb-1.5">
             Ảnh nhập kho · {selectedItem?.stockInDate || 'Kho'}
           </div>
-          <div className="flex gap-2">
-            {stockPhotos.map((src, i) => (
-              <img key={i} src={src} alt="Điểm kí gửi" className="w-20 h-24 object-cover rounded-xl border border-neutral bg-background" />
-            ))}
-          </div>
+          {stockPhotos.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {stockPhotos.map((src, i) => (
+                <img key={i} src={src} alt="Điểm kí gửi" className="w-20 h-24 object-cover rounded-xl border border-neutral bg-background" />
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-[#717971]">Chưa có ảnh nhập kho</p>
+          )}
         </div>
         <div>
           <div className="text-[10px] uppercase font-bold text-textSecondary mb-1.5">
             Ảnh người mua gửi
           </div>
-          <div className="flex gap-2">
-            {buyerPhotos.map((src, i) => (
-              <img key={i} src={src} alt="Khách" className="w-20 h-24 object-cover rounded-xl border border-neutral bg-background" />
-            ))}
-          </div>
+          {buyerPhotos.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {buyerPhotos.map((src, i) => (
+                <img key={i} src={src} alt="Khách" className="w-20 h-24 object-cover rounded-xl border border-neutral bg-background" />
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-[#717971]">Chưa có ảnh người mua</p>
+          )}
         </div>
       </div>
+
+      {uploadEvidence && (
+        <ReturnEvidence
+          evidenceImageUrls={evidenceImageUrls}
+          evidenceUploading={evidenceUploading}
+          evidenceError={evidenceError}
+          uploadEvidence={uploadEvidence}
+          retryEvidence={retryEvidence}
+          removeEvidence={removeEvidence}
+        />
+      )}
     
       {/* Bước 2: Checklist */}
       <ReturnInspectionChecklist checklist={checklist} setChecklist={setChecklist} selectedItem={selectedItem} />
@@ -574,7 +576,7 @@ export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybi
       <div>
         <h2 className="text-base font-bold text-text">Đơn và món liên quan</h2>
         <p className="text-xs text-textSecondary">
-          Đơn #{selectedItem?.orderId} · Người mua: {selectedItem?.buyerName}
+          Đơn #{selectedItem?.orderNo || selectedItem?.orderId} · Người mua: {selectedItem?.buyerName}
         </p>
       </div>
     

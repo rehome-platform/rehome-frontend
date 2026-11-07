@@ -47,6 +47,8 @@ export const queueService = {
       claimedBy: item.claimedBy,
       claimedAt: item.claimedAt,
       createdAt: item.createdAt,
+      name: item.targetName ?? item.name ?? item.productName ?? item.orderNo ?? item.orgName,
+      memberName: item.subjectSubtitle ?? item.memberName ?? item.recipientName,
       status: item.status || (item.claimedBy ? 'PROCESSING' : 'PENDING'),
     });
 
