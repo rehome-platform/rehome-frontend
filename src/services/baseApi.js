@@ -167,6 +167,11 @@ baseApi.interceptors.response.use(
           if (newRefreshToken) {
             saveRefreshToken(newRefreshToken);
           }
+          window.dispatchEvent(
+            new CustomEvent("auth:token_refreshed", {
+              detail: { token: newAccessToken },
+            })
+          );
           processQueue(null, newAccessToken);
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           return baseApi(originalRequest);

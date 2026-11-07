@@ -17,13 +17,18 @@ const moderatorId = (value) => encodeURIComponent(value);
  * Tạo URL hợp lệ cho SockJS client.
  * SockJS yêu cầu bắt buộc giao thức http: hoặc https:. Tuyệt đối không dùng ws: hoặc wss:.
  */
-export function getSockJsUrl(baseUrl = API_BASE_URL) {
+export function getSockJsUrl(baseUrl = API_BASE_URL, endpoint = "/ws") {
   if (!baseUrl) return "";
   const httpUrl = String(baseUrl)
     .replace(/^ws:\/\//i, "http://")
     .replace(/^wss:\/\//i, "https://");
   const cleanBase = httpUrl.replace(/\/+$/, "");
-  return `${cleanBase}/ws`;
+  const cleanEndpoint = String(endpoint).startsWith("/") ? endpoint : `/${endpoint}`;
+  return `${cleanBase}${cleanEndpoint}`;
+}
+
+export function getWsSockJsUrl(baseUrl = API_BASE_URL) {
+  return getSockJsUrl(baseUrl, "/ws-sockjs");
 }
 
 export const WS_BASE_URL = getSockJsUrl(API_BASE_URL);
