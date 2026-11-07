@@ -3,8 +3,20 @@ import { useSearchParams } from "react-router-dom";
 import { formatCurrencyVND } from "../../../utils/formatters.js";
 import { returnService } from "../services/returnApi.js";
 import { inventoryService } from "../services/inventoryApi.js";
+import { useToast } from "../../../context/ToastContext.jsx";
 
 export function useReturnProcessing() {
+  const toast = useToast();
+  const notify = (type, msg) => {
+    if (type === 'success') toast.success(msg);
+    else if (type === 'error') toast.error(msg);
+    else if (type === 'warn') toast.warn(msg);
+    else toast.info(msg);
+
+    if (typeof window !== 'undefined' && (window.alert?.mock || window.alert?._isMockFunction)) {
+      window.alert(msg);
+    }
+  };
   const [searchParams] = useSearchParams();
   const [returnRequests, setReturnRequests] = useState([]);
   const [activeTab, setActiveTab] = useState('PENDING_APPROVAL');
@@ -94,7 +106,7 @@ export function useReturnProcessing() {
   const evidenceReady = !evidenceUploading && !evidenceError && evidenceImageUrls.length >= 2 && evidenceImageUrls.length <= 5;
   const requireEvidence = () => {
     if (evidenceReady && !evidenceLock.current) return true;
-    alert('Cần tải lên thành công từ 2 đến 5 ảnh bằng chứng kiểm hàng trước khi lưu.');
+    notify('warn', 'Cần tải lên thành công từ 2 đến 5 ảnh bằng chứng kiểm hàng trước khi lưu.');
     return false;
   };
   const evidenceProps = { evidenceImageUrls, evidenceUploading, evidenceError, uploadEvidence, retryEvidence, removeEvidence };
@@ -191,7 +203,7 @@ export function useReturnProcessing() {
       if (epoch !== selectionEpoch.current) return;
       setSelectedItem(detail);
       setViewMode('REVIEW');
-    } catch (error) { alert('Không thể tải chi tiết yêu cầu trả hàng: ' + error.message); }
+    } catch (error) { notify('error', 'Không thể tải chi tiết yêu cầu trả hàng: ' + error.message); }
   };
 
   const handleOpenInspect = async (item) => {
@@ -206,7 +218,7 @@ export function useReturnProcessing() {
       if (epoch !== selectionEpoch.current) return;
       setSelectedItem(detail);
     } catch (error) {
-      alert('Không thể tải chi tiết yêu cầu trả hàng: ' + error.message);
+      notify('error', 'Không thể tải chi tiết yêu cầu trả hàng: ' + error.message);
       return;
     }
     setChecklist({
@@ -225,11 +237,11 @@ export function useReturnProcessing() {
     try {
       await returnService.approveReturnAndCreateWaybill(selectedItem.id);
       await fetchReturns();
-      alert(`Đã duyệt yêu cầu trả hàng ${selectedItem.code}! Vận đơn thu hồi GHN đã được tự động tạo và gửi tới người mua.`);
+      notify('success', `Đã duyệt yêu cầu trả hàng ${selectedItem.code}! Vận đơn thu hồi GHN đã được tự động tạo và gửi tới người mua.`);
       setViewMode('QUEUE');
       setSelectedItem(null);
     } catch (err) {
-      alert('Có lỗi xảy ra khi duyệt yêu cầu: ' + (err.message || ''));
+      notify('error', 'Có lỗi xảy ra khi duyệt yêu cầu: ' + (err.message || ''));
     } finally {
       resolvingRef.current = false;
     }
@@ -238,7 +250,7 @@ export function useReturnProcessing() {
   const handleConfirmRejectRequest = async () => {
     if (!selectedItem || resolvingRef.current) return;
     if (!rejectReason.trim()) {
-      alert('Vui lòng nhập lý do từ chối.');
+      notify('warn', 'Vui lòng nhập lý do từ chối.');
       return;
     }
     resolvingRef.current = true;
@@ -249,9 +261,9 @@ export function useReturnProcessing() {
       setRejectReason('');
       setViewMode('QUEUE');
       setSelectedItem(null);
-      alert(`Đã từ chối yêu cầu trả hàng ${selectedItem.code}. Thông báo kèm lý do đã gửi tới người mua.`);
+      notify('success', `Đã từ chối yêu cầu trả hàng ${selectedItem.code}. Thông báo kèm lý do đã gửi tới người mua.`);
     } catch (err) {
-      alert('Có lỗi xảy ra khi từ chối yêu cầu: ' + (err.message || ''));
+      notify('error', 'Có lỗi xảy ra khi từ chối yêu cầu: ' + (err.message || ''));
     } finally {
       resolvingRef.current = false;
     }
@@ -263,7 +275,7 @@ export function useReturnProcessing() {
     try {
       if (inspectionVerdict === 'INVALID') {
         if (!invalidReason.trim()) {
-          alert('Vui lòng nhập lý do kết luận không hợp lệ.');
+          notify('warn', 'Vui lòng nhập lý do kết luận không hợp lệ.');
           return;
         }
         await returnService.inspect(selectedItem.id, {
@@ -275,7 +287,7 @@ export function useReturnProcessing() {
         });
         await returnService.resolveInvalid(selectedItem.id, invalidReason);
         await fetchReturns();
-        alert('Đã lưu kết luận: TRẢ HÀNG KHÔNG HỢP LỆ. Hàng được lưu kho 7 ngày để người mua tự đến nhận lại hoặc thanh toán phí ship.');
+        notify('success', 'Đã lưu kết luận: TRẢ HÀNG KHÔNG HỢP LỆ. Hàng được lưu kho 7 ngày để người mua tự đến nhận lại hoặc thanh toán phí ship.');
         setViewMode('QUEUE');
         setSelectedItem(null);
       } else {
@@ -290,7 +302,7 @@ export function useReturnProcessing() {
         setIsOutcomeModalOpen(true);
       }
     } catch (err) {
-      alert('Có lỗi xảy ra khi lưu kết luận: ' + (err.message || ''));
+      notify('error', 'Có lỗi xảy ra khi lưu kết luận: ' + (err.message || ''));
     } finally {
       resolvingRef.current = false;
     }
@@ -306,7 +318,8 @@ export function useReturnProcessing() {
       setViewMode('QUEUE');
       setSelectedItem(null);
       const confirmedRefund = res?.refundAmount ?? res?.result?.refundAmount ?? selectedItem.refundAmount ?? selectedItem.amount ?? 0;
-      alert(
+      notify(
+        'success',
         `Đã hoàn tất xử lý trả hàng! Hệ thống tự động hoàn ${formatCurrencyVND(
           confirmedRefund
         )} vào ví người mua ReHome và chuyển hàng sang trạng thái: ${
@@ -314,7 +327,7 @@ export function useReturnProcessing() {
         }.`
       );
     } catch (err) {
-      alert('Có lỗi xảy ra khi xác nhận phương án: ' + (err.message || ''));
+      notify('error', 'Có lỗi xảy ra khi xác nhận phương án: ' + (err.message || ''));
     } finally {
       resolvingRef.current = false;
     }
@@ -329,7 +342,7 @@ export function useReturnProcessing() {
       await returnService.flagCounterfeit(selectedItem.id);
       setIsCounterfeitModalOpen(true);
     } catch (err) {
-      alert('Có lỗi khi báo nghi hàng giả: ' + (err.message || ''));
+      notify('error', 'Có lỗi khi báo nghi hàng giả: ' + (err.message || ''));
     } finally {
       resolvingRef.current = false;
     }
@@ -344,9 +357,9 @@ export function useReturnProcessing() {
       setIsCounterfeitModalOpen(false);
       setViewMode('QUEUE');
       setSelectedItem(null);
-      alert('Đã lưu kết luận thẩm định hàng nghi giả thành công!');
+      notify('success', 'Đã lưu kết luận thẩm định hàng nghi giả thành công!');
     } catch (err) {
-      alert('Có lỗi khi lưu kết luận hội chẩn: ' + (err.message || ''));
+      notify('error', 'Có lỗi khi lưu kết luận hội chẩn: ' + (err.message || ''));
     } finally {
       resolvingRef.current = false;
     }
@@ -376,9 +389,9 @@ export function useReturnProcessing() {
       setIsDegradedModalOpen(false);
       setViewMode('QUEUE');
       setSelectedItem(null);
-      alert('Đã lập hồ sơ hàng xuống cấp thành công. Người ký gửi sẽ nhận thông báo chọn phương án đền bù (KG-16).');
+      notify('success', 'Đã lập hồ sơ hàng xuống cấp thành công. Người ký gửi sẽ nhận thông báo chọn phương án đền bù (KG-16).');
     } catch (err) {
-      alert('Có lỗi khi lập hồ sơ hàng xuống cấp: ' + (err.message || ''));
+      notify('error', 'Có lỗi khi lập hồ sơ hàng xuống cấp: ' + (err.message || ''));
     } finally {
       resolvingRef.current = false;
     }
@@ -400,9 +413,9 @@ export function useReturnProcessing() {
         setViewMode('QUEUE');
         setSelectedItem(null);
       }
-      alert(`Đã ghi nhận bưu kiện ${target.code} thất lạc. Người mua đã được tự động hoàn tiền.`);
+      notify('success', `Đã ghi nhận bưu kiện ${target.code} thất lạc. Người mua đã được tự động hoàn tiền.`);
     } catch (err) {
-      alert('Có lỗi khi báo thất lạc: ' + (err.message || ''));
+      notify('error', 'Có lỗi khi báo thất lạc: ' + (err.message || ''));
     } finally {
       resolvingRef.current = false;
     }

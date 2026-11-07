@@ -83,4 +83,21 @@ export const catalogService = {
       { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
     );
   },
+
+  delete: async (kind, id, options) => {
+    const isCategory = kind === 'category';
+    const fallback = fixtureFallback(`${kind}Delete`, { ids: { id }, ...options });
+
+    const url = isCategory
+      ? API_ENDPOINTS.MODERATOR.CATEGORY_DETAIL(id)
+      : API_ENDPOINTS.MODERATOR.BRAND_DETAIL(id);
+
+    return callBackend(
+      {
+        method: 'delete',
+        url,
+      },
+      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+    );
+  },
 };

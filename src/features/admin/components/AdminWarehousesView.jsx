@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Badge, Modal, Input } from '../../../components/common/index.js';
 import adminApi from '../services/adminApi.js';
+import { useToast } from '../../../context/ToastContext.jsx';
 
 /**
  * View Quản lý Điểm Kí Gửi ReHome (Admin)
@@ -8,6 +9,7 @@ import adminApi from '../services/adminApi.js';
  * Thực thi nghiêm ngặt: Hết hàng kí gửi (inventoryCount === 0) mới được ẩn kho (F-155)
  */
 export default function AdminWarehousesView({ onLogAction }) {
+  const toast = useToast();
   const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState(null);
@@ -95,6 +97,7 @@ export default function AdminWarehousesView({ onLogAction }) {
       try {
         await adminApi.updateWarehouse(editingWarehouse.id, formData);
         await fetchWarehouses();
+        toast.success(`Cập nhật thông tin điểm kí gửi "${formData.name}" thành công!`);
         if (onLogAction) {
           onLogAction({
             time: new Date().toLocaleString('vi-VN'),
@@ -105,12 +108,13 @@ export default function AdminWarehousesView({ onLogAction }) {
         }
       } catch (err) {
         console.error('Lỗi API cập nhật kho:', err);
-        alert('Cập nhật điểm kí gửi thất bại.');
+        toast.error('Cập nhật điểm kí gửi thất bại.');
       }
     } else {
       try {
         await adminApi.createWarehouse(formData);
         await fetchWarehouses();
+        toast.success(`Tạo mới điểm kí gửi "${formData.name}" thành công!`);
         if (onLogAction) {
           onLogAction({
             time: new Date().toLocaleString('vi-VN'),
@@ -121,7 +125,7 @@ export default function AdminWarehousesView({ onLogAction }) {
         }
       } catch (err) {
         console.error('Lỗi API tạo kho:', err);
-        alert('Tạo điểm kí gửi mới thất bại.');
+        toast.error('Tạo điểm kí gửi mới thất bại.');
       }
     }
     setIsModalOpen(false);
@@ -138,6 +142,7 @@ export default function AdminWarehousesView({ onLogAction }) {
       try {
         await adminApi.hideWarehouse(w.id);
         await fetchWarehouses();
+        toast.success(`Đã ẩn điểm kí gửi "${w.name}".`);
         if (onLogAction) {
           onLogAction({
             time: new Date().toLocaleString('vi-VN'),
@@ -148,10 +153,10 @@ export default function AdminWarehousesView({ onLogAction }) {
         }
       } catch (err) {
         if (err.response?.status === 409 || err.response?.data?.code === 'WAREHOUSE_HAS_STOCK') {
-          alert(`⚠️ Không thể ẩn điểm kí gửi "${w.name}" vì kho vẫn còn sản phẩm tồn chưa xử lý (Mã lỗi: WAREHOUSE_HAS_STOCK)!`);
+          toast.error(`Không thể ẩn điểm kí gửi "${w.name}" vì kho vẫn còn sản phẩm tồn chưa xử lý (Mã lỗi: WAREHOUSE_HAS_STOCK)!`);
           return;
         }
-        alert('Không thể thực hiện thao tác ẩn điểm kí gửi.');
+        toast.error('Không thể thực hiện thao tác ẩn điểm kí gửi.');
       }
     } else {
       // Mở lại kho nếu đang bị ẩn

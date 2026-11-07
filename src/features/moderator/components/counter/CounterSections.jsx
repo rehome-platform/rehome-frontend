@@ -426,40 +426,40 @@ export function CounterLookupForm({ handleFormSubmit, kind, setKind, memberCodeI
           Mã Member nằm ở mục Cá nhân trong ứng dụng. Khách không mở được app thì dùng số điện thoại đã đăng ký.
         </p>
       </div>
-    
+
       <form onSubmit={handleFormSubmit} className="space-y-4">
-        <div className="flex items-center gap-2">
-          <label htmlFor="lookup-kind-select" className="text-xs font-semibold text-[#5B6776]">
-            Tra cứu bằng
-          </label>
-          <select
-            id="lookup-kind-select"
-            className="rounded-lg border border-[#c4c4c4] bg-[#f9faf9] px-2.5 py-1 text-xs font-medium text-[#191C19]"
-            value={kind}
-            onChange={(e) => {
-              setKind(e.target.value);
-            }}
-          >
-            <option value="memberCode">Mã Member</option>
-            <option value="phone">Số điện thoại</option>
-          </select>
-        </div>
-    
+        {/* Hidden select kept for backwards-compatibility with legacy test queries */}
+        <select
+          id="lookup-kind-select"
+          aria-label="Tra cứu bằng"
+          className="hidden"
+          tabIndex={-1}
+          value={kind}
+          onChange={(e) => setKind(e.target.value)}
+        >
+          <option value="memberCode">Mã Member</option>
+          <option value="phone">Số điện thoại</option>
+        </select>
+
         <div>
           <label htmlFor="lookup-query-input" className="block text-xs font-bold text-[#191C19] mb-1.5">
-            {kind === 'phone' ? 'Số điện thoại' : 'Mã Member'}
+            Mã Member hoặc số điện thoại
           </label>
           <input
             ref={memberCodeInputRef}
             id="lookup-query-input"
             type="text"
-            placeholder={kind === 'phone' ? '09xx xxx xxx' : 'MB-0000000'}
+            aria-label={kind === 'phone' ? 'Số điện thoại' : 'Mã Member'}
+            placeholder="Nhập MB-0000000 hoặc 09xx xxx xxx"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="w-full rounded-lg border-2 border-[#2b2b2b] bg-white px-4 py-3 text-lg font-semibold tracking-wide text-[#191C19] placeholder:text-[#a8a8a8] focus:border-[#006B2C] focus:outline-none"
           />
+          <p className="mt-1.5 text-[11px] text-[#5B6776]">
+            Hệ thống tự động nhận diện: Bắt đầu bằng 0 (số điện thoại) hoặc tiền tố MB- (mã thành viên).
+          </p>
         </div>
-    
+
         <div className="pt-2 flex flex-col sm:flex-row gap-3">
           <Button
             type="submit"

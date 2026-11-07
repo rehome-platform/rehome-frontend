@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { warehouseInboxService } from '../services/warehouseInboxApi.js';
+import { useToast } from '../../../context/ToastContext.jsx';
 
 /**
  * Trang Hộp Thư Điểm Kí Gửi ReHome
@@ -11,6 +12,7 @@ import { warehouseInboxService } from '../services/warehouseInboxApi.js';
  * - MC-02: Phòng chat với Member — 3 cột (danh sách | hội thoại chat | thông tin member & SKU liên quan)
  */
 export default function WarehouseInboxPage() {
+  const toast = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [conversations, setConversations] = useState([]);
@@ -86,7 +88,7 @@ export default function WarehouseInboxPage() {
         );
       }
     } catch (err) {
-      alert('Có lỗi xảy ra khi gửi tin nhắn.');
+      toast.error('Có lỗi xảy ra khi gửi tin nhắn.');
     }
   };
 
@@ -98,9 +100,9 @@ export default function WarehouseInboxPage() {
       setConversations((prev) =>
         (prev || []).map((c) => (c.id === updated.id ? updated : c))
       );
-      alert(`Đã đánh dấu hoàn tất hội thoại với Member ${selectedConv?.memberName || 'Member'}!`);
+      toast.success(`Đã đánh dấu hoàn tất hội thoại với Member ${selectedConv?.memberName || 'Member'}!`);
     } catch (err) {
-      alert('Có lỗi xảy ra khi cập nhật trạng thái.');
+      toast.error('Có lỗi xảy ra khi cập nhật trạng thái.');
     }
   };
 
@@ -334,7 +336,7 @@ export default function WarehouseInboxPage() {
               >
                 <button
                   type="button"
-                  onClick={() => alert('Đã mở cửa sổ chọn ảnh đính kèm')}
+                  onClick={() => toast.info('Đã mở cửa sổ chọn ảnh đính kèm')}
                   className="text-xs font-semibold px-3 py-2 border border-neutral rounded-xl bg-surface hover:bg-background text-text cursor-pointer"
                 >
                   Ảnh

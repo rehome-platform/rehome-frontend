@@ -13,6 +13,9 @@ function getQueueLinkTarget(item, typeParam) {
   if (type === 'PACKING') {
     return `/moderator/packing?orderId=${encodeURIComponent(item.orderId || item.refId || '')}`;
   }
+  if (type === 'ITEM_WITHDRAWAL') {
+    return `/moderator/counter`;
+  }
   if (type === 'FORM_REVIEW' || type === 'INSPECTION') {
     return `/moderator/consignments/${encodeURIComponent(item.formId || item.refId || '')}`;
   }

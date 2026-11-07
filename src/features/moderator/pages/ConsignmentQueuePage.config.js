@@ -5,6 +5,7 @@ export const WORK_TYPES = [
   { key: 'FORM_REVIEW', label: 'Duyệt form' },
   { key: 'INSPECTION', label: 'Kiểm định' },
   { key: 'PACKING', label: 'Đóng gói' },
+  { key: 'ITEM_WITHDRAWAL', label: 'Yêu cầu rút hàng' },
   { key: 'RETURN', label: 'Trả hàng', directUrl: '/moderator/returns' },
   { key: 'ORG_VERIFICATION', label: 'Xác minh tổ chức', directUrl: '/moderator/verifications' },
   { key: 'VIOLATION_REPORT', label: 'Vi phạm', directUrl: '/moderator/reports' },
