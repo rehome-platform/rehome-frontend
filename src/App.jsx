@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext.jsx';
+import { WebSocketProvider } from './context/WebSocketContext.jsx';
 import { NotificationProvider } from './context/NotificationContext.jsx';
 import AppRouter from './routes/AppRouter.jsx';
 import { Phase2Provider } from './features/moderator/hooks/warehouseHooks.jsx';
@@ -12,9 +13,11 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <NotificationProvider>
-          <Phase2Provider><AppRouter /></Phase2Provider>
-        </NotificationProvider>
+        <WebSocketProvider>
+          <NotificationProvider>
+            <Phase2Provider><AppRouter /></Phase2Provider>
+          </NotificationProvider>
+        </WebSocketProvider>
       </AuthProvider>
     </BrowserRouter>
   );

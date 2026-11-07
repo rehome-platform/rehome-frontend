@@ -2,7 +2,17 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { StompClientService } from '../services/stompClientService.js';
 import { AuthContext } from './AuthContext.jsx';
 
-export const WebSocketContext = createContext(null);
+const defaultWebSocketValue = {
+  service: null,
+  status: 'DISCONNECTED',
+  isConnected: false,
+  isConnecting: false,
+  error: null,
+  reconnect: () => {},
+  disconnect: () => {},
+};
+
+export const WebSocketContext = createContext(defaultWebSocketValue);
 
 export const WebSocketProvider = ({
   children,
@@ -82,10 +92,7 @@ export const WebSocketProvider = ({
 
 export const useWebSocket = () => {
   const context = useContext(WebSocketContext);
-  if (!context) {
-    throw new Error('useWebSocket must be used within a WebSocketProvider');
-  }
-  return context;
+  return context || defaultWebSocketValue;
 };
 
 export default WebSocketContext;
