@@ -9,6 +9,7 @@ export default defineConfig({
       'tests/phase4/**/*.test.{js,jsx}',
       'tests/phase5/**/*.test.{js,jsx}',
       'tests/websocket/**/*.test.{js,jsx}',
+      'tests/notification/**/*.test.{js,jsx}',
     ],
     setupFiles: ['./tests/phase2/setup.js'],
     restoreMocks: true,
