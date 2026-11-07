@@ -120,3 +120,4 @@ function parseStompFrame(raw) {
 
   return { command, headers, body };
 }
+
