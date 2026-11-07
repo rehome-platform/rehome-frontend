@@ -194,6 +194,8 @@ export const API_ENDPOINTS = {
   NOTIFICATIONS: {
     LIST: "/notifications",
     MARK_READ: (id) => `/notifications/${id}/read`,
+    UNREAD_COUNT: "/notifications/unread-count",
+    MARK_ALL_READ: "/notifications/read-all",
   },
 
   // 5. Thanh toán MoMo - trang hiển thị kết quả sau khi được redirect về

@@ -1,7 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { getSockJsUrl, getWsSockJsUrl } from '../../src/configs/api.config.js';
+import { getSockJsUrl, getWsSockJsUrl, API_ENDPOINTS } from '../../src/configs/api.config.js';
 
 describe('WebSocket Config & Events', () => {
+  it('declares UNREAD_COUNT and MARK_ALL_READ in API_ENDPOINTS.NOTIFICATIONS', () => {
+    expect(API_ENDPOINTS.NOTIFICATIONS.UNREAD_COUNT).toBe('/notifications/unread-count');
+    expect(API_ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ).toBe('/notifications/read-all');
+  });
   it('should return /ws-sockjs with http/https scheme when using getWsSockJsUrl or endpoint parameter', () => {
     expect(getWsSockJsUrl('https://api.rehome.vn')).toBe('https://api.rehome.vn/ws-sockjs');
     expect(getWsSockJsUrl('wss://api.rehome.vn')).toBe('https://api.rehome.vn/ws-sockjs');
