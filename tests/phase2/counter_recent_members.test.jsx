@@ -2,15 +2,16 @@ import React, { StrictMode } from 'react';
 import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Phase2Provider } from '../../src/features/moderator/hooks/warehouseHooks.jsx';
 import { useCounter } from '../../src/features/moderator/hooks/useCounter.jsx';
 import CounterPage from '../../src/features/moderator/pages/CounterPage.jsx';
 import { counterService } from '../../src/features/moderator/services/warehouseApi.js';
 import { Phase2Error } from '../../src/features/moderator/models/warehouseModel.js';
 
+const auth = vi.hoisted(() => ({ user: { id: 'mod-a', role: 'MODERATOR', warehouseId: 'warehouse-a' } }));
 vi.mock('../../src/context/AuthContext.jsx', () => ({
-  useAuth: () => ({ isAuthenticated: true, user: { id: 'mod-a', role: 'MODERATOR', warehouseId: 'warehouse-a' } }),
+  useAuth: () => ({ isAuthenticated: true, user: auth.user }),
 }));
 
 const member = { memberId: '11111111-1111-4111-8111-111111111111', memberCode: 'MB001', fullName: 'Member thật', phone: '0912345678' };
@@ -25,16 +26,19 @@ function deferred() {
 }
 
 beforeEach(() => {
+  localStorage.clear();
+  auth.user = { id: 'mod-a', role: 'MODERATOR', warehouseId: 'warehouse-a' };
   vi.spyOn(counterService, 'lookup').mockResolvedValue([member]);
   vi.spyOn(counterService, 'confirm').mockImplementation(async (memberId) => ({ memberId, identityToken: `proof-${memberId}` }));
   vi.spyOn(counterService, 'tasks').mockResolvedValue({ pendingForms: [], pendingWithdrawals: [], pendingEndOfTerm: [] });
 });
+afterEach(() => vi.useRealTimers());
 
 describe('Member gần đây tại quầy', () => {
   it('starts empty and reopens through lookup, confirming the fresh account ID', async () => {
     const user = userEvent.setup();
     render(<CounterPage />, { wrapper: Wrapper });
-    expect(screen.getByText('Chưa có Member được phục vụ trong phiên này')).toBeInTheDocument();
+    expect(screen.getByText('Chưa có Member được phục vụ hôm nay')).toBeInTheDocument();
     await user.type(screen.getByRole('textbox', { name: 'Mã Member' }), member.memberCode);
     await user.click(screen.getByRole('button', { name: 'Tra cứu' }));
     await user.click(await screen.findByRole('button', { name: `Chọn Member ${member.memberCode}` }));
@@ -110,7 +114,7 @@ describe('Member gần đây tại quầy', () => {
     expect(result.current.confirmed).toBe(false);
   });
 
-  it('keeps five unique members in most recently served order and clears on remount', async () => {
+  it('keeps five unique members in most recently served order across remount without restoring identity', async () => {
     const { result, unmount } = renderHook(useCounter, { wrapper: Wrapper });
     const members = Array.from({ length: 6 }, (_, i) => ({ ...member, memberId: `account-${i}`, memberCode: `MB${i}` }));
     for (const item of members) {
@@ -123,6 +127,63 @@ describe('Member gần đây tại quầy', () => {
     expect(result.current.recentServed.map((item) => item.memberCode)).toEqual(['MB2', 'MB5', 'MB4', 'MB3', 'MB1']);
     unmount();
     const next = renderHook(useCounter, { wrapper: Wrapper });
+    expect(next.result.current.recentServed.map((item) => item.memberCode)).toEqual(['MB2', 'MB5', 'MB4', 'MB3', 'MB1']);
+    expect(next.result.current.selected).toBeNull();
+    expect(next.result.current.confirmed).toBe(false);
+    expect(JSON.stringify(localStorage)).not.toContain('proof-');
+    expect(next.result.current.recentServed[0].servedAt).toBeTruthy();
+  });
+
+  it('resets at Vietnam midnight while mounted and after reload', async () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+    vi.setSystemTime(new Date('2026-11-07T16:59:59.000Z'));
+    const { result, unmount } = renderHook(useCounter, { wrapper: Wrapper });
+    act(() => result.current.choose(member));
+    await act(async () => result.current.sections.CounterIdentityPanel.confirmIdentity());
+    expect(result.current.recentServed).toHaveLength(1);
+    await act(async () => vi.advanceTimersByTime(1000));
+    expect(result.current.recentServed).toEqual([]);
+    unmount();
+    const next = renderHook(useCounter, { wrapper: Wrapper });
     expect(next.result.current.recentServed).toEqual([]);
+  });
+
+  it('does not restore yesterday entries when reopening the next Vietnam day', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-07T16:59:59Z'));
+    const first = renderHook(useCounter, { wrapper: Wrapper });
+    act(() => first.result.current.choose(member));
+    await act(async () => first.result.current.sections.CounterIdentityPanel.confirmIdentity());
+    first.unmount();
+    vi.setSystemTime(new Date('2026-11-07T17:00:01Z'));
+    const next = renderHook(useCounter, { wrapper: Wrapper });
+    expect(next.result.current.recentServed).toEqual([]);
+  });
+
+  it.each([
+    { id: 'mod-b', role: 'MODERATOR', warehouseId: 'warehouse-a' },
+    { id: 'mod-a', role: 'MODERATOR', warehouseId: 'warehouse-b' },
+  ])('isolates stored recent members by moderator and warehouse: %s', async (otherUser) => {
+    const first = renderHook(useCounter, { wrapper: Wrapper });
+    act(() => first.result.current.choose(member));
+    await act(async () => first.result.current.sections.CounterIdentityPanel.confirmIdentity());
+    first.unmount();
+    auth.user = otherUser;
+    const other = renderHook(useCounter, { wrapper: Wrapper });
+    expect(other.result.current.recentServed).toEqual([]);
+    other.unmount();
+    auth.user = { id: 'mod-a', role: 'MODERATOR', warehouseId: 'warehouse-a' };
+    const original = renderHook(useCounter, { wrapper: Wrapper });
+    expect(original.result.current.recentServed[0].memberCode).toBe('MB001');
+  });
+
+  it('still serves members when browser storage is unavailable', async () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('Storage blocked'); });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('Storage full'); });
+    const { result } = renderHook(useCounter, { wrapper: Wrapper });
+    act(() => result.current.choose(member));
+    await act(async () => result.current.sections.CounterIdentityPanel.confirmIdentity());
+    expect(result.current.confirmed).toBe(true);
+    expect(result.current.recentServed[0].memberCode).toBe('MB001');
   });
 });

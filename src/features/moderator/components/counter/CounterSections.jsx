@@ -162,7 +162,7 @@ export function CounterWorkflowGuide({ recentServed, reopen, loading }) {
       </div>
       <div className="divide-y divide-[#E2E8E0]">
         {!recentServed.length && (
-          <p className="p-3.5 text-xs text-[#717971]">Chưa có Member được phục vụ trong phiên này</p>
+          <p className="p-3.5 text-xs text-[#717971]">Chưa có Member được phục vụ hôm nay</p>
         )}
         {recentServed.map((item) => (
           <div key={item.memberCode} className="p-3.5 flex items-center justify-between text-xs">

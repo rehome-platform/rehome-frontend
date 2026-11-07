@@ -3,9 +3,10 @@ import React, { useRef, useState, useEffect } from "react";
 import { counterService } from "../services/warehouseApi.js";
 import { usePhase2, useResource } from "./warehouseHooks.jsx";
 import { listItems, lookupParams, normalizeMemberTasks, Phase2Error } from "../models/warehouseModel.js";
+import { useRecentServed } from './useRecentServed.jsx';
 
 export function useCounter() {
-  const { identity, setIdentity } = usePhase2();
+  const { identity, setIdentity, scope } = usePhase2();
   const [kind, setKind] = useState('memberCode');
   const [query, setQuery] = useState('');
   const [submitted, setSubmitted] = useState(null);
@@ -14,7 +15,7 @@ export function useCounter() {
   const [confirmHandover, setConfirmHandover] = useState(null);
   const [handoverLoading, setHandoverLoading] = useState(false);
   const [handoverFeedback, setHandoverFeedback] = useState(null);
-  const [recentServed, setRecentServed] = useState([]);
+  const { recentServed, rememberServed } = useRecentServed(scope);
   const lookupRequestRef = useRef(null);
   const selectionVersionRef = useRef(0);
 
@@ -91,19 +92,6 @@ export function useCounter() {
     results.clearActionError();
   };
 
-  const rememberServed = (member, taskNote = 'Vừa phục vụ tại quầy') => {
-    setRecentServed((prev) => [
-      {
-        name: member.fullName || member.name,
-        memberCode: member.memberCode,
-        memberId: member.memberId,
-        phone: member.phone || '',
-        taskNote,
-      },
-      ...prev.filter((item) => item.memberCode !== member.memberCode).slice(0, 4),
-    ]);
-  };
-
   const confirmIdentity = () => {
     const member = selectedRef.current;
     const version = selectionVersionRef.current;
@@ -130,7 +118,7 @@ export function useCounter() {
         type: 'success',
         message: `Đã bàn giao thành công. Đã hoàn tất bàn giao "${item.productName || item.productId}" cho khách hàng!`,
       });
-      rememberServed(selected, `Bàn giao hàng · ${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`);
+      rememberServed(selected, `Bàn giao hàng · ${new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })}`);
       setConfirmHandover(null);
       tasks.refresh();
     } catch (err) {
