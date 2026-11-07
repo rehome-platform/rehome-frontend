@@ -97,9 +97,8 @@ export function DegradedCaseModal({
 
   if (!selectedItem) return null;
 
-  const basePrice = selectedItem.compensationAmount || selectedItem.consignPrice || selectedItem.amount || 300000;
-  const fullCompensation = basePrice;
-  const halfCompensation = Math.round(basePrice * 0.5);
+  const fullCompensation = selectedItem.compensationAmount || selectedItem.consignPrice || selectedItem.amount || 300000;
+  const halfCompensation = selectedItem.halfCompensationAmount || Math.round(fullCompensation * 0.5);
 
   const addPhoto = () => {
     if (photoInput.trim() && degradedPhotos.length < 5) {
@@ -574,7 +573,7 @@ export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybi
       <div>
         <h2 className="text-base font-bold text-text">Đơn và món liên quan</h2>
         <p className="text-xs text-textSecondary">
-          Đơn #{selectedItem?.orderId} · Người mua: {selectedItem?.buyerName}
+          Đơn #{selectedItem?.orderNo || selectedItem?.orderId} · Người mua: {selectedItem?.buyerName}
         </p>
       </div>
     

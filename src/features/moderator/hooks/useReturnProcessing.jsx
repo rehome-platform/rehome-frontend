@@ -293,15 +293,18 @@ export function useReturnProcessing() {
     setIsDegradedModalOpen(true);
   };
 
-  const handleCreateDegradedCase = async () => {
+  const handleCreateDegradedCase = async (caseData = {}) => {
     if (!selectedItem || resolvingRef.current) return;
     resolvingRef.current = true;
     try {
+      const notes = caseData.notes || degradedNotes || 'Hàng trả về có dấu hiệu xuống cấp';
+      const photos = caseData.photos || [];
+      const photoNote = photos.length > 0 ? ` [Kèm ${photos.length} ảnh bằng chứng hư hại]` : '';
       await returnService.inspect(selectedItem.id, {
         matchesOriginal: true,
         degraded: true,
         counterfeitSuspected: false,
-        conditionNote: degradedNotes || 'Hàng trả về có dấu hiệu xuống cấp',
+        conditionNote: `${notes}${photoNote}`,
       });
       await returnService.resolveValid(selectedItem.id, 'RELIST');
       await fetchReturns();
