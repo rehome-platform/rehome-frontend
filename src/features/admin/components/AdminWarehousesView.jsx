@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button, Badge, Modal, Input } from '../../../components/common/index.js';
 import adminApi from '../services/adminApi.js';
 import { useToast } from '../../../context/ToastContext.jsx';
+import OpeningHoursPicker from './OpeningHoursPicker.jsx';
 
 /**
  * View Quản lý Điểm Kí Gửi ReHome (Admin)
@@ -18,12 +19,62 @@ export default function AdminWarehousesView({ onLogAction }) {
   const [editingWarehouse, setEditingWarehouse] = useState(null);
   const [stockBlockModal, setStockBlockModal] = useState(null);
 
+  // Danh mục hành chính 2 cấp GHN
+  const [provinces, setProvinces] = useState([]);
+  const [wards, setWards] = useState([]);
+  const [loadingProvinces, setLoadingProvinces] = useState(false);
+  const [loadingWards, setLoadingWards] = useState(false);
+  const [geoLoading, setGeoLoading] = useState(false);
+
+  // Form State chuẩn hóa theo hợp đồng Backend
   const [formData, setFormData] = useState({
     name: '',
-    address: '',
-    coordinates: '',
-    openingHours: '08:00 - 18:00',
+    streetAddress: '',
+    provinceId: '',
+    provinceName: '',
+    wardCode: '',
+    wardName: '',
+    latitude: '10.7769',
+    longitude: '106.7009',
+    openingHours: '08:00 - 20:00 (Thứ 2 - Chủ nhật)',
   });
+
+  // Tải danh mục Tỉnh / Thành phố từ Backend GHN
+  const loadProvinces = async () => {
+    try {
+      setLoadingProvinces(true);
+      const res = await adminApi.getProvinces();
+      const list = Array.isArray(res) ? res : res?.result || [];
+      setProvinces(list);
+      return list;
+    } catch (err) {
+      console.error('Lỗi tải danh mục tỉnh thành:', err);
+      return [];
+    } finally {
+      setLoadingProvinces(false);
+    }
+  };
+
+  // Tải danh mục Phường / Xã khi người dùng chọn Tỉnh / Thành phố
+  const loadWards = async (provinceId) => {
+    if (!provinceId) {
+      setWards([]);
+      return [];
+    }
+    try {
+      setLoadingWards(true);
+      const res = await adminApi.getWards(provinceId);
+      const list = Array.isArray(res) ? res : res?.result || [];
+      setWards(list);
+      return list;
+    } catch (err) {
+      console.error('Lỗi tải danh mục phường xã:', err);
+      setWards([]);
+      return [];
+    } finally {
+      setLoadingWards(false);
+    }
+  };
 
   // Tải danh sách điểm kí gửi từ Backend API
   const fetchWarehouses = async () => {
@@ -33,17 +84,30 @@ export default function AdminWarehousesView({ onLogAction }) {
       const res = await adminApi.getWarehouses();
       const rawList = Array.isArray(res) ? res : res?.content || res?.result || [];
       if (rawList && rawList.length > 0) {
-        const mapped = rawList.map((w, idx) => ({
-          id: w.warehouseId || w.id || `WH-0${idx + 1}`,
-          name: w.name,
-          address: w.address,
-          coordinates: w.coordinates || 'Chưa cập nhật',
-          openingHours: w.openingHours || '08:00 - 18:00 (Thứ 2 - Thứ 7)',
-          moderatorCount: w.moderatorCount ?? 0,
-          inventoryCount: w.inventoryCount ?? 0,
-          activeOrders: w.activeOrders ?? 0,
-          status: w.status || 'ACTIVE',
-        }));
+        const mapped = rawList.map((w, idx) => {
+          const lat = w.latitude;
+          const lng = w.longitude;
+          const coordsStr =
+            lat != null && lng != null
+              ? `${lat}, ${lng}`
+              : w.coordinates || 'Chưa cập nhật';
+
+          return {
+            id: w.warehouseId || w.id || `WH-0${idx + 1}`,
+            name: w.name,
+            address: w.address,
+            latitude: lat,
+            longitude: lng,
+            coordinates: coordsStr,
+            openingHours: w.openingHours || '08:00 - 20:00 (Thứ 2 - Chủ nhật)',
+            wardName: w.wardName,
+            provinceName: w.provinceName,
+            moderatorCount: w.moderatorCount ?? 0,
+            inventoryCount: w.inventoryCount ?? 0,
+            activeOrders: w.activeOrders ?? 0,
+            status: w.status || 'ACTIVE',
+          };
+        });
         setWarehouses(mapped);
       } else {
         setWarehouses([]);
@@ -67,35 +131,203 @@ export default function AdminWarehousesView({ onLogAction }) {
       w.address.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleOpenCreate = () => {
+  const handleOpenCreate = async () => {
     setEditingWarehouse(null);
+    setWards([]);
     setFormData({
       name: '',
-      address: '',
-      coordinates: '',
-      openingHours: '08:00 - 18:00',
+      streetAddress: '',
+      provinceId: '',
+      provinceName: '',
+      wardCode: '',
+      wardName: '',
+      latitude: '10.7769',
+      longitude: '106.7009',
+      openingHours: '08:00 - 20:00 (Thứ 2 - Chủ nhật)',
     });
     setIsModalOpen(true);
+    if (provinces.length === 0) {
+      await loadProvinces();
+    }
   };
 
-  const handleOpenEdit = (w) => {
+  const handleOpenEdit = async (w) => {
     setEditingWarehouse(w);
+    setIsModalOpen(true);
+
+    let currentProvinces = provinces;
+    if (currentProvinces.length === 0) {
+      currentProvinces = await loadProvinces();
+    }
+
+    let provId = '';
+    let provName = w.provinceName || '';
+    let wCode = '';
+    let wName = w.wardName || '';
+    let street = w.address || '';
+
+    // Khớp Tỉnh/Thành
+    if (provName && currentProvinces.length > 0) {
+      const foundProv = currentProvinces.find(
+        (p) => p.name.toLowerCase() === provName.toLowerCase() || provName.includes(p.name)
+      );
+      if (foundProv) {
+        provId = foundProv.code;
+        provName = foundProv.name;
+        const loadedWards = await loadWards(foundProv.code);
+        if (wName && loadedWards.length > 0) {
+          const foundWard = loadedWards.find(
+            (wd) => wd.name.toLowerCase() === wName.toLowerCase() || wName.includes(wd.name)
+          );
+          if (foundWard) {
+            wCode = foundWard.code;
+            wName = foundWard.name;
+          }
+        }
+      }
+    }
+
+    // Tách số nhà/tên đường nếu address chứa wardName và provinceName
+    if (wName && street.includes(wName)) {
+      street = street.replace(`, ${wName}`, '').replace(wName, '');
+    }
+    if (provName && street.includes(provName)) {
+      street = street.replace(`, ${provName}`, '').replace(provName, '');
+    }
+    street = street.replace(/,\s*$/, '').trim();
+
     setFormData({
       name: w.name,
-      address: w.address,
-      coordinates: w.coordinates,
-      openingHours: w.openingHours,
+      streetAddress: street,
+      provinceId: provId,
+      provinceName: provName,
+      wardCode: wCode,
+      wardName: wName,
+      latitude: w.latitude != null ? String(w.latitude) : '10.7769',
+      longitude: w.longitude != null ? String(w.longitude) : '106.7009',
+      openingHours: w.openingHours || '08:00 - 20:00 (Thứ 2 - Chủ nhật)',
     });
-    setIsModalOpen(true);
+  };
+
+  // Khi chọn Tỉnh/Thành
+  const handleProvinceChange = async (e) => {
+    const selectedId = e.target.value;
+    const selectedProv = provinces.find((p) => p.code === selectedId);
+    setFormData((prev) => ({
+      ...prev,
+      provinceId: selectedId,
+      provinceName: selectedProv ? selectedProv.name : '',
+      wardCode: '',
+      wardName: '',
+    }));
+    if (selectedId) {
+      await loadWards(selectedId);
+    } else {
+      setWards([]);
+    }
+  };
+
+  // Khi chọn Phường/Xã
+  const handleWardChange = (e) => {
+    const selectedCode = e.target.value;
+    const selectedWard = wards.find((w) => w.code === selectedCode);
+    setFormData((prev) => ({
+      ...prev,
+      wardCode: selectedCode,
+      wardName: selectedWard ? selectedWard.name : '',
+    }));
+  };
+
+  // Lấy vị trí hiện tại qua Geolocation API
+  const handleGetCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Trình duyệt của bạn không hỗ trợ định vị GPS (Geolocation).');
+      return;
+    }
+    setGeoLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude.toFixed(6);
+        const lng = position.coords.longitude.toFixed(6);
+        setFormData((prev) => ({
+          ...prev,
+          latitude: lat,
+          longitude: lng,
+        }));
+        setGeoLoading(false);
+        toast.success(`Đã lấy vị trí hiện tại: ${lat}, ${lng}`);
+      },
+      (error) => {
+        setGeoLoading(false);
+        console.warn('Geolocation error:', error);
+        let msg = 'Không thể lấy vị trí hiện tại.';
+        if (error.code === 1) {
+          msg = 'Bạn đã từ chối cấp quyền truy cập vị trí trên trình duyệt.';
+        } else if (error.code === 2) {
+          msg = 'Thông tin vị trí hiện không khả dụng.';
+        } else if (error.code === 3) {
+          msg = 'Yêu cầu định vị đã hết thời gian chờ.';
+        }
+        toast.error(msg);
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  };
+
+  // Chọn nhanh tọa độ thành phố lớn
+  const setCityPreset = (lat, lng) => {
+    setFormData((prev) => ({
+      ...prev,
+      latitude: String(lat),
+      longitude: String(lng),
+    }));
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.address.trim()) return;
+
+    if (!formData.name.trim()) {
+      toast.error('Vui lòng nhập tên điểm kí gửi.');
+      return;
+    }
+    if (!formData.streetAddress.trim()) {
+      toast.error('Vui lòng nhập số nhà, tên đường chi tiết.');
+      return;
+    }
+
+    const latNum = parseFloat(formData.latitude);
+    const lngNum = parseFloat(formData.longitude);
+    if (isNaN(latNum) || latNum < -90 || latNum > 90) {
+      toast.error('Vĩ độ (Latitude) không hợp lệ (phải trong khoảng -90 đến 90).');
+      return;
+    }
+    if (isNaN(lngNum) || lngNum < -180 || lngNum > 180) {
+      toast.error('Kinh độ (Longitude) không hợp lệ (phải trong khoảng -180 đến 180).');
+      return;
+    }
+
+    // Ghép địa chỉ đầy đủ chuẩn hóa
+    const addressParts = [formData.streetAddress.trim()];
+    if (formData.wardName) addressParts.push(formData.wardName);
+    if (formData.provinceName) addressParts.push(formData.provinceName);
+    const fullAddress = addressParts.join(', ');
+
+    const payload = {
+      name: formData.name.trim(),
+      address: fullAddress,
+      latitude: latNum,
+      longitude: lngNum,
+      openingHours: formData.openingHours.trim(),
+      wardName: formData.wardName || undefined,
+      provinceName: formData.provinceName || undefined,
+      provinceId: formData.provinceId ? parseInt(formData.provinceId, 10) : undefined,
+      wardCode: formData.wardCode || undefined,
+      isNewAddress: true,
+    };
 
     if (editingWarehouse) {
       try {
-        await adminApi.updateWarehouse(editingWarehouse.id, formData);
+        await adminApi.updateWarehouse(editingWarehouse.id, payload);
         await fetchWarehouses();
         toast.success(`Cập nhật thông tin điểm kí gửi "${formData.name}" thành công!`);
         if (onLogAction) {
@@ -106,13 +338,16 @@ export default function AdminWarehousesView({ onLogAction }) {
             action: `Cập nhật thông tin điểm kí gửi "${formData.name}"`,
           });
         }
+        setIsModalOpen(false);
       } catch (err) {
         console.error('Lỗi API cập nhật kho:', err);
-        toast.error('Cập nhật điểm kí gửi thất bại.');
+        const errMsg =
+          err.response?.data?.message || err.message || 'Cập nhật điểm kí gửi thất bại.';
+        toast.error(`Cập nhật thất bại: ${errMsg}`);
       }
     } else {
       try {
-        await adminApi.createWarehouse(formData);
+        await adminApi.createWarehouse(payload);
         await fetchWarehouses();
         toast.success(`Tạo mới điểm kí gửi "${formData.name}" thành công!`);
         if (onLogAction) {
@@ -123,12 +358,14 @@ export default function AdminWarehousesView({ onLogAction }) {
             action: `Tạo mới điểm kí gửi "${formData.name}"`,
           });
         }
+        setIsModalOpen(false);
       } catch (err) {
         console.error('Lỗi API tạo kho:', err);
-        toast.error('Tạo điểm kí gửi mới thất bại.');
+        const errMsg =
+          err.response?.data?.message || err.message || 'Tạo điểm kí gửi mới thất bại.';
+        toast.error(`Tạo kho thất bại: ${errMsg}`);
       }
     }
-    setIsModalOpen(false);
   };
 
   // Ẩn / Mở lại điểm kí gửi (Quy tắc F-155: Hết hàng kí gửi rồi mới được ẩn)
@@ -153,7 +390,9 @@ export default function AdminWarehousesView({ onLogAction }) {
         }
       } catch (err) {
         if (err.response?.status === 409 || err.response?.data?.code === 'WAREHOUSE_HAS_STOCK') {
-          toast.error(`Không thể ẩn điểm kí gửi "${w.name}" vì kho vẫn còn sản phẩm tồn chưa xử lý (Mã lỗi: WAREHOUSE_HAS_STOCK)!`);
+          toast.error(
+            `Không thể ẩn điểm kí gửi "${w.name}" vì kho vẫn còn sản phẩm tồn chưa xử lý (Mã lỗi: WAREHOUSE_HAS_STOCK)!`
+          );
           return;
         }
         toast.error('Không thể thực hiện thao tác ẩn điểm kí gửi.');
@@ -161,7 +400,14 @@ export default function AdminWarehousesView({ onLogAction }) {
     } else {
       // Mở lại kho nếu đang bị ẩn
       try {
-        await adminApi.updateWarehouse(w.id, { ...w, status: 'ACTIVE' });
+        await adminApi.updateWarehouse(w.id, {
+          name: w.name,
+          address: w.address,
+          latitude: w.latitude,
+          longitude: w.longitude,
+          openingHours: w.openingHours,
+          status: 'ACTIVE',
+        });
         await fetchWarehouses();
         if (onLogAction) {
           onLogAction({
@@ -176,6 +422,16 @@ export default function AdminWarehousesView({ onLogAction }) {
       }
     }
   };
+
+  const parsedLat = parseFloat(formData.latitude);
+  const parsedLng = parseFloat(formData.longitude);
+  const hasValidCoords =
+    !isNaN(parsedLat) &&
+    !isNaN(parsedLng) &&
+    parsedLat >= -90 &&
+    parsedLat <= 90 &&
+    parsedLng >= -180 &&
+    parsedLng <= 180;
 
   return (
     <div className="space-y-6">
@@ -355,9 +611,11 @@ export default function AdminWarehousesView({ onLogAction }) {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        size="lg"
         title={editingWarehouse ? 'Chỉnh sửa thông tin điểm kí gửi' : 'Mở điểm kí gửi mới'}
       >
-        <form onSubmit={handleSave} className="space-y-4">
+        <form onSubmit={handleSave} className="space-y-4 max-h-[80vh] overflow-y-auto px-1 py-1">
+          {/* Tên kho */}
           <Input
             label="Tên điểm kí gửi"
             required
@@ -365,27 +623,207 @@ export default function AdminWarehousesView({ onLogAction }) {
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="Ví dụ: Điểm kí gửi Tân Bình - Chi nhánh số 5"
           />
-          <Input
-            label="Địa chỉ chi tiết"
-            required
-            value={formData.address}
-            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-            placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
-          />
-          <Input
-            label="Tọa độ bản đồ (Latitude, Longitude)"
-            required
-            value={formData.coordinates}
-            onChange={(e) => setFormData({ ...formData, coordinates: e.target.value })}
-            placeholder="Ví dụ: 10.7769, 106.7009"
-          />
-          <Input
-            label="Giờ mở cửa phục vụ tại quầy"
-            required
+
+          {/* Địa chỉ 2 cấp GHN */}
+          <div className="p-3.5 rounded-xl border border-[#E2E8E0] bg-[#FBFDFB] space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold text-[#191C19]">
+                Địa chỉ chi tiết chuẩn hóa (2 cấp GHN) <span className="text-[#BA1A1A]">*</span>
+              </label>
+              <span className="text-[11px] text-[#717971]">Hệ thống hành chính sau 01/07/2025</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Dropdown Tỉnh/Thành */}
+              <div>
+                <label htmlFor="warehouse-province-select" className="text-[11px] font-medium text-[#414942] block mb-1">
+                  Tỉnh / Thành phố
+                </label>
+                <select
+                  id="warehouse-province-select"
+                  aria-label="Tỉnh / Thành phố"
+                  value={formData.provinceId}
+                  onChange={handleProvinceChange}
+                  disabled={loadingProvinces}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+                >
+                  <option value="">-- Chọn Tỉnh / Thành phố --</option>
+                  {provinces.map((p) => (
+                    <option key={p.code} value={p.code}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Dropdown Phường/Xã */}
+              <div>
+                <label htmlFor="warehouse-ward-select" className="text-[11px] font-medium text-[#414942] block mb-1">
+                  Phường / Xã
+                </label>
+                <select
+                  id="warehouse-ward-select"
+                  aria-label="Phường / Xã"
+                  value={formData.wardCode}
+                  onChange={handleWardChange}
+                  disabled={loadingWards || !formData.provinceId}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C] disabled:bg-[#F5F5F5] disabled:text-[#9E9E9E]"
+                >
+                  <option value="">
+                    {loadingWards
+                      ? 'Đang tải danh sách phường/xã...'
+                      : !formData.provinceId
+                      ? '-- Vui lòng chọn Tỉnh/Thành trước --'
+                      : '-- Chọn Phường / Xã --'}
+                  </option>
+                  {wards.map((w) => (
+                    <option key={w.code} value={w.code}>
+                      {w.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Ô nhập số nhà / tên đường */}
+            <div>
+              <label htmlFor="warehouse-street-address-input" className="text-[11px] font-medium text-[#414942] block mb-1">
+                Số nhà, tên đường cụ thể <span className="text-[#BA1A1A]">*</span>
+              </label>
+              <input
+                id="warehouse-street-address-input"
+                type="text"
+                required
+                value={formData.streetAddress}
+                onChange={(e) => setFormData({ ...formData, streetAddress: e.target.value })}
+                placeholder="Số nhà, tên đường (ví dụ: 123 Nguyễn Thị Thập)"
+                className="w-full px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+              />
+            </div>
+
+            {/* Preview địa chỉ ghép hoàn chỉnh */}
+            {(formData.streetAddress || formData.wardName || formData.provinceName) && (
+              <div className="text-[11px] text-[#414942] bg-white p-2.5 rounded-lg border border-[#E2E8E0] flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm text-[#006B2C]">pin_drop</span>
+                <span className="font-medium text-[#191C19]">Địa chỉ đầy đủ:</span>
+                <span>
+                  {[formData.streetAddress.trim(), formData.wardName, formData.provinceName]
+                    .filter(Boolean)
+                    .join(', ')}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Giờ mở cửa trực quan */}
+          <OpeningHoursPicker
             value={formData.openingHours}
-            onChange={(e) => setFormData({ ...formData, openingHours: e.target.value })}
-            placeholder="08:00 - 18:00 (Thứ 2 - Thứ 7)"
+            onChange={(val) => setFormData({ ...formData, openingHours: val })}
           />
+
+          {/* Tọa độ bản đồ (Latitude, Longitude) & Geolocation */}
+          <div className="p-3.5 rounded-xl border border-[#E2E8E0] bg-[#FBFDFB] space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <label className="block text-xs font-semibold text-[#191C19]">
+                Tọa độ bản đồ (Latitude, Longitude) <span className="text-[#BA1A1A]">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={handleGetCurrentLocation}
+                disabled={geoLoading}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#006B2C] hover:text-[#005221] bg-[#E8F5E9] hover:bg-[#C8E6C9] px-2.5 py-1 rounded-lg transition-colors border border-[#C8E6C9] self-start sm:self-auto"
+              >
+                <span className={`material-symbols-outlined text-[16px] ${geoLoading ? 'animate-spin' : ''}`}>
+                  {geoLoading ? 'progress_activity' : 'my_location'}
+                </span>
+                <span>{geoLoading ? 'Đang định vị...' : 'Lấy vị trí hiện tại'}</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] font-medium text-[#414942] block mb-1">
+                  Vĩ độ (Latitude) [-90 đến 90]
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  required
+                  value={formData.latitude}
+                  onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
+                  placeholder="10.7769"
+                  className="w-full px-3 py-2 text-xs font-mono rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-[#414942] block mb-1">
+                  Kinh độ (Longitude) [-180 đến 180]
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  required
+                  value={formData.longitude}
+                  onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
+                  placeholder="106.7009"
+                  className="w-full px-3 py-2 text-xs font-mono rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+                />
+              </div>
+            </div>
+
+            {/* Nút chọn nhanh tọa độ */}
+            <div className="flex items-center gap-1.5 flex-wrap pt-1 text-[11px] text-[#717971]">
+              <span>Gợi ý nhanh:</span>
+              <button
+                type="button"
+                onClick={() => setCityPreset(10.7769, 106.7009)}
+                className="px-2 py-0.5 rounded bg-white border border-[#E2E8E0] hover:bg-[#F0F5EE] text-[#414942]"
+              >
+                TP.HCM (10.7769, 106.7009)
+              </button>
+              <button
+                type="button"
+                onClick={() => setCityPreset(21.0285, 105.8542)}
+                className="px-2 py-0.5 rounded bg-white border border-[#E2E8E0] hover:bg-[#F0F5EE] text-[#414942]"
+              >
+                Hà Nội (21.0285, 105.8542)
+              </button>
+              <button
+                type="button"
+                onClick={() => setCityPreset(16.0544, 108.2022)}
+                className="px-2 py-0.5 rounded bg-white border border-[#E2E8E0] hover:bg-[#F0F5EE] text-[#414942]"
+              >
+                Đà Nẵng (16.0544, 108.2022)
+              </button>
+            </div>
+
+            {/* Bản đồ preview nhúng trực quan */}
+            {hasValidCoords && (
+              <div className="pt-2">
+                <div className="flex items-center justify-between mb-1.5 text-[11px] text-[#717971]">
+                  <span>Xem trước vị trí trên bản đồ:</span>
+                  <a
+                    href={`https://www.google.com/maps?q=${parsedLat},${parsedLng}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[#006B2C] hover:underline flex items-center gap-0.5"
+                  >
+                    <span>Mở Google Maps</span>
+                    <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+                  </a>
+                </div>
+                <iframe
+                  title="Bản đồ vị trí kho"
+                  width="100%"
+                  height="160"
+                  className="rounded-xl border border-[#E2E8E0] bg-white shadow-2xs"
+                  loading="lazy"
+                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${parsedLng - 0.005}%2C${parsedLat - 0.005}%2C${parsedLng + 0.005}%2C${parsedLat + 0.005}&layer=mapnik&marker=${parsedLat}%2C${parsedLng}`}
+                />
+              </div>
+            )}
+          </div>
+
           <div className="flex justify-end space-x-2 pt-3 border-t border-[#E2E8E0]">
             <Button variant="ghost" onClick={() => setIsModalOpen(false)}>
               Hủy
