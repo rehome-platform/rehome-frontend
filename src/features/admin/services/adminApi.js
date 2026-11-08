@@ -76,6 +76,19 @@ export const adminApi = {
     return unwrap(res);
   },
 
+  // Đơn vị hành chính GHN 2 cấp
+  async getProvinces() {
+    const res = await baseApi.get(API_ENDPOINTS.ADDRESS_UNITS.PROVINCES);
+    return unwrap(res);
+  },
+
+  async getWards(provinceId) {
+    const res = await baseApi.get(API_ENDPOINTS.ADDRESS_UNITS.WARDS, {
+      params: { provinceId },
+    });
+    return unwrap(res);
+  },
+
   // 4. Quản lý Nhân sự Moderator
   async getModerators({ warehouseId, search, status, page = 0, size = 50 } = {}) {
     const params = { page, size };
