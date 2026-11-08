@@ -207,4 +207,10 @@ export const API_ENDPOINTS = {
   VNPAY: {
     RETURN_INFO: "/api/vnpay/return-info",
   },
+
+  // 7. Đơn vị hành chính GHN 2 cấp (Tỉnh/Thành -> Phường/Xã)
+  ADDRESS_UNITS: {
+    PROVINCES: "/address-units/provinces",
+    WARDS: "/address-units/wards",
+  },
 };
