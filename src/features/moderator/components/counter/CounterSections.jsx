@@ -155,15 +155,14 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
 }
 
 export function CounterWorkflowGuide({ recentServed, reopen, loading }) {
+  if (!recentServed || !recentServed.length) return null;
+
   return (
     <div className="rounded-2xl border border-[#8a8a8a] bg-white overflow-hidden shadow-sm">
       <div className="bg-[#f4f4f4] border-b border-[#8a8a8a] px-4 py-3 text-xs font-bold text-[#191C19]">
         Đã phục vụ gần đây
       </div>
       <div className="divide-y divide-[#E2E8E0]">
-        {!recentServed.length && (
-          <p className="p-3.5 text-xs text-[#717971]">Chưa có Member được phục vụ hôm nay</p>
-        )}
         {recentServed.map((item) => (
           <div key={item.memberCode} className="p-3.5 flex items-center justify-between text-xs">
             <div>
@@ -388,14 +387,6 @@ export function CounterIdentityPanel({ selected, results, confirmed, confirmIden
         ) : (
           <p className="text-xs text-[#717971]">Không có món hàng nào đang ký gửi tại kho này.</p>
         )}
-      </div>
-    
-      <div className="rounded-xl border border-dashed border-[#9a9a9a] bg-[#f4f5f4] p-4 text-xs text-[#414942] leading-relaxed">
-        <p className="font-bold text-[#191C19] mb-1">Trước khi bàn giao hàng</p>
-        <p>
-          Hỏi khách email hoặc tên món đang gửi để chắc đúng người. Mã Member và số điện thoại người khác cũng có thể biết.
-          Nếu chỉ nhận hàng ký gửi thì không cần — khách đang đưa đồ cho mình, không lấy gì đi.
-        </p>
       </div>
     
       <div className="flex gap-4">

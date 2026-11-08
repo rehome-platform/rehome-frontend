@@ -84,10 +84,10 @@ describe('ConsignmentListPage & Flow separation', () => {
     expect(openButtons).toHaveLength(2);
     expect(openButtons[0]).toHaveAttribute('href', '/moderator/consignments/KG-F-002318');
 
-    // Ghi chú chân trang (KD-01)
+    // Ghi chú chân trang thừa đã được gỡ bỏ để giữ giao diện gọn gàng
     expect(
-      screen.getByText(/Member chỉ được giữ tối đa/i)
-    ).toBeInTheDocument();
+      screen.queryByText(/Member chỉ được giữ tối đa/i)
+    ).not.toBeInTheDocument();
   });
 
   it('HQ-02: ConsignmentQueuePage changes "Nhận việc" to "Nhả việc" with no "Mở" button in table', async () => {
