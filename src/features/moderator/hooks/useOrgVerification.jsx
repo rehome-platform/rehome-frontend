@@ -160,10 +160,30 @@ export function useOrgVerification() {
     }
   };
 
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+
   useEffect(() => {
     loadData();
     fetchExistingOrgs();
   }, []);
+
+  useEffect(() => {
+    const paramId = searchParams.get('id');
+    const paramTab = searchParams.get('tab');
+    if (paramTab === 'LEGAL_CHANGES') {
+      setActiveQueueTab('LEGAL_CHANGES');
+    }
+    if (!loading && paramId) {
+      const found = orgsQueue.find(
+        (o) => String(o.id) === String(paramId) || String(o.refId) === String(paramId) || String(o.targetId) === String(paramId)
+      );
+      if (found) {
+        handleOpenDetail(found);
+      } else {
+        handleOpenDetail({ id: paramId, refId: paramId, targetId: paramId, name: 'Hồ sơ tổ chức' });
+      }
+    }
+  }, [loading, orgsQueue, searchParams]);
 
   const handleOpenDetail = (org) => {
     setSelectedOrg(org);

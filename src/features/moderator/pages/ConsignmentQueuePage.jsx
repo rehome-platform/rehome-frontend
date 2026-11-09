@@ -10,29 +10,30 @@ import { Page, Pager, ResourceState } from "../components/WarehouseUi.jsx";
 
 function getQueueLinkTarget(item, typeParam) {
   const type = item?.type || typeParam;
+  const refId = item.refId || item.id || '';
   if (type === 'PACKING') {
-    return `/moderator/packing?orderId=${encodeURIComponent(item.orderId || item.refId || '')}`;
+    return `/moderator/packing?orderId=${encodeURIComponent(item.orderId || refId)}`;
   }
   if (type === 'ITEM_WITHDRAWAL') {
     return `/moderator/counter`;
   }
   if (type === 'FORM_REVIEW' || type === 'INSPECTION') {
-    return `/moderator/consignments/${encodeURIComponent(item.formId || item.refId || '')}`;
+    return `/moderator/consignments/${encodeURIComponent(item.formId || refId)}`;
   }
   if (type === 'RETURN') {
-    const id = item.returnId || item.refId || item.id || '';
+    const id = item.returnId || refId;
     return id ? `/moderator/returns?id=${encodeURIComponent(id)}` : `/moderator/returns`;
   }
   if (type === 'ORG_VERIFICATION') {
-    return `/moderator/verifications`;
+    return refId ? `/moderator/verifications?id=${encodeURIComponent(refId)}` : `/moderator/verifications`;
   }
   if (type === 'LEGAL_CHANGE') {
-    return `/moderator/verifications?tab=LEGAL_CHANGES`;
+    return refId ? `/moderator/verifications?tab=LEGAL_CHANGES&id=${encodeURIComponent(refId)}` : `/moderator/verifications?tab=LEGAL_CHANGES`;
   }
   if (type === 'VIOLATION_REPORT') {
-    return `/moderator/reports`;
+    return refId ? `/moderator/reports?id=${encodeURIComponent(refId)}` : `/moderator/reports`;
   }
-  return `/moderator/consignments/${encodeURIComponent(item.formId || item.refId || '')}`;
+  return `/moderator/consignments/${encodeURIComponent(item.formId || refId)}`;
 }
 
 export default function ConsignmentQueuePage() {
@@ -87,21 +88,12 @@ export default function ConsignmentQueuePage() {
 
       {/* 3. BẢNG HÀNG ĐỢI CÔNG VIỆC CHUẨN WIREFRAME (HQ-01) */}
       {!!model.filteredItems.length && (
-        <div className="rounded-2xl border border-[#8a8a8a] bg-white overflow-hidden shadow-sm">
+        <div className="rounded-2xl border border-neutral bg-surface overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[780px] text-left text-xs">
               <thead>
-                <tr className="bg-[#f4f4f4] border-b border-[#8a8a8a] text-[10px] uppercase font-bold tracking-wider text-[#5f5f5f]">
-                  <th className="py-2.5 px-3.5 w-10 text-center">
-                    <input
-                      type="checkbox"
-                      aria-label="Chọn tất cả"
-                      checked={model.selectedIds.length === model.filteredItems.length && model.filteredItems.length > 0}
-                      onChange={model.toggleSelectAll}
-                      className="rounded"
-                    />
-                  </th>
-                  <th className="py-2.5 px-3">Loại việc</th>
+                <tr className="bg-background border-b border-neutral text-[10px] uppercase font-bold tracking-wider text-textSecondary">
+                  <th className="py-2.5 px-4">Loại việc</th>
                   <th className="py-2.5 px-3">Tên</th>
                   <th className="py-2.5 px-3">Đối tượng</th>
                   <th className="py-2.5 px-3">Tạo lúc</th>
@@ -110,12 +102,10 @@ export default function ConsignmentQueuePage() {
                   <th className="py-2.5 px-3 text-right">Hành động</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#e0e0e0]">
+              <tbody className="divide-y divide-neutral">
                 {model.filteredItems.map((item) => {
                   const isMine = ownsClaim(item, model.scope.userId);
                   const isClaimedByOther = item.claimedBy && !isMine;
-                  const isSelected = model.selectedIds.includes(item.queueId);
-
                   const linkTarget = getQueueLinkTarget(item, model.typeParam);
 
                   return (
@@ -123,8 +113,6 @@ export default function ConsignmentQueuePage() {
                       key={item.queueId}
                       item={item}
                       isFocused={item.queueId === model.focusedQueueId}
-                      isSelected={isSelected}
-                      toggleSelectRow={model.toggleSelectRow}
                       isMine={isMine}
                       isClaimedByOther={isClaimedByOther}
                       resource={model.resource}

@@ -24,7 +24,6 @@ export function useConsignmentQueue() {
   // Modal nhận việc & nhả việc (HQ-02-NhanViec & HQ-02-NhaViec)
   const [claimTarget, setClaimTarget] = useState(null);
   const [releaseTarget, setReleaseTarget] = useState(null);
-  const [selectedIds, setSelectedIds] = useState([]);
   const [feedback, setFeedback] = useState(null);
 
   // Gọi API lấy dữ liệu hàng đợi
@@ -70,20 +69,6 @@ export function useConsignmentQueue() {
     changeFilter('overdue', overdueOnly ? '' : '1');
   };
 
-  const toggleSelectAll = (e) => {
-    if (e.target.checked) {
-      setSelectedIds(filteredItems.map((i) => i.queueId));
-    } else {
-      setSelectedIds([]);
-    }
-  };
-
-  const toggleSelectRow = (queueId) => {
-    setSelectedIds((prev) =>
-      prev.includes(queueId) ? prev.filter((id) => id !== queueId) : [...prev, queueId],
-    );
-  };
-
   const mutateTask = (item, release) => {
     setFeedback(null);
     const action = release ? queueService.release : queueService.claim;
@@ -121,10 +106,7 @@ export function useConsignmentQueue() {
     filteredItems,
     rawItems,
     feedback,
-    selectedIds,
-    toggleSelectAll,
     scope,
-    toggleSelectRow,
     handleClaim,
     claimTarget,
     setClaimTarget,
