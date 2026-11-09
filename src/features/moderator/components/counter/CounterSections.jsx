@@ -155,18 +155,7 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
 }
 
 export function CounterWorkflowGuide({ recentServed, reopen, loading }) {
-  if (!recentServed || !recentServed.length) {
-    return (
-      <div className="rounded-2xl border border-neutral bg-surface overflow-hidden shadow-sm">
-        <div className="bg-background border-b border-neutral px-4 py-3 text-xs font-bold text-text">
-          Đã phục vụ gần đây
-        </div>
-        <div className="p-4 text-xs text-textSecondary text-center">
-          Chưa có Member được phục vụ hôm nay
-        </div>
-      </div>
-    );
-  }
+  if (!recentServed || !recentServed.length) return null;
 
   return (
     <div className="rounded-2xl border border-neutral bg-surface overflow-hidden shadow-sm">
