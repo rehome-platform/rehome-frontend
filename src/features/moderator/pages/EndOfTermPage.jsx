@@ -86,7 +86,14 @@ function EndTermDetail({ sku, onClose, onChanged }) {
                   <p className="text-textSecondary">
                     Yêu cầu kiểm tra danh tính Member trước khi bàn giao sản phẩm:
                   </p>
-                  <Link className="text-primary font-medium underline inline-block mt-1" to="/moderator/counter">
+                  <Link
+                    className="text-primary font-medium underline inline-block mt-1"
+                    to={
+                      model.data.member?.memberCode
+                        ? `/moderator/counter?memberCode=${encodeURIComponent(model.data.member.memberCode)}&refId=${encodeURIComponent(sku)}`
+                        : '/moderator/counter'
+                    }
+                  >
                     Chuyển sang Quầy tiếp nhận để xác nhận CCCD/SĐT
                   </Link>
                 </div>
