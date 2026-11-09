@@ -35,16 +35,19 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe('Member gần đây tại quầy', () => {
-  it('starts empty and reopens through lookup, confirming the fresh account ID', async () => {
+  it('hides recent members until confirmation and reopens through lookup, confirming the fresh account ID', async () => {
     const user = userEvent.setup();
     render(<CounterPage />, { wrapper: Wrapper });
-    expect(screen.getByText('Chưa có Member được phục vụ hôm nay')).toBeInTheDocument();
+    expect(screen.queryByText('Đã phục vụ gần đây')).not.toBeInTheDocument();
+    expect(screen.queryByText('Chưa có Member được phục vụ hôm nay')).not.toBeInTheDocument();
     await user.type(screen.getByRole('textbox', { name: 'Mã Member' }), member.memberCode);
     await user.click(screen.getByRole('button', { name: 'Tra cứu' }));
     await user.click(await screen.findByRole('button', { name: `Chọn Member ${member.memberCode}` }));
+    expect(screen.queryByText('Đã phục vụ gần đây')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Mở lại' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Tôi đã đối chiếu đúng Member' }));
     await screen.findByText('Đã xác nhận danh tính');
+    expect(screen.getByText('Đã phục vụ gần đây')).toBeInTheDocument();
     const pending = deferred();
     counterService.lookup.mockReturnValue(pending.promise);
     counterService.tasks.mockClear();
