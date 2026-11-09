@@ -102,6 +102,7 @@ export default function AdminWarehousesView({ onLogAction }) {
             openingHours: w.openingHours || '08:00 - 20:00 (Thứ 2 - Chủ nhật)',
             wardName: w.wardName,
             provinceName: w.provinceName,
+            isNewAddress: w.isNewAddress,
             moderatorCount: w.moderatorCount ?? 0,
             inventoryCount: w.inventoryCount ?? 0,
             activeOrders: w.activeOrders ?? 0,
@@ -212,7 +213,7 @@ export default function AdminWarehousesView({ onLogAction }) {
   // Khi chọn Tỉnh/Thành
   const handleProvinceChange = async (e) => {
     const selectedId = e.target.value;
-    const selectedProv = provinces.find((p) => p.code === selectedId);
+    const selectedProv = provinces.find((p) => String(p.code) === selectedId);
     setFormData((prev) => ({
       ...prev,
       provinceId: selectedId,
@@ -230,7 +231,7 @@ export default function AdminWarehousesView({ onLogAction }) {
   // Khi chọn Phường/Xã
   const handleWardChange = (e) => {
     const selectedCode = e.target.value;
-    const selectedWard = wards.find((w) => w.code === selectedCode);
+    const selectedWard = wards.find((w) => String(w.code) === selectedCode);
     setFormData((prev) => ({
       ...prev,
       wardCode: selectedCode,
@@ -292,6 +293,11 @@ export default function AdminWarehousesView({ onLogAction }) {
     }
     if (!formData.streetAddress.trim()) {
       toast.error('Vui lòng nhập số nhà, tên đường chi tiết.');
+      return;
+    }
+
+    if (!formData.provinceId || !formData.provinceName || !formData.wardCode || !formData.wardName) {
+      toast.error('Vui lòng chọn đầy đủ Tỉnh / Thành phố và Phường / Xã.');
       return;
     }
 

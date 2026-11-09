@@ -4,11 +4,26 @@ import { returnService } from '../../src/features/moderator/services/returnApi.j
 import { warehouseInboxService } from '../../src/features/moderator/services/warehouseInboxApi.js';
 import { orgVerificationService } from '../../src/features/moderator/services/orgVerificationApi.js';
 import { callBackend } from '../../src/features/moderator/services/warehouseTransport.js';
+import { catalogService } from '../../src/features/moderator/services/catalogApi.js';
 
 vi.mock('../../src/features/moderator/services/warehouseTransport.js', () => ({ callBackend: vi.fn() }));
 beforeEach(() => vi.clearAllMocks());
 
 describe('updated Moderator backend contracts', () => {
+  it.each(['category', 'brand'])('deletes a %s through the backend endpoint', async (kind) => {
+    vi.mocked(callBackend).mockResolvedValue(null);
+    await catalogService.delete(kind, 'catalog-1');
+    expect(callBackend).toHaveBeenCalledWith(expect.objectContaining({
+      method: 'delete', url: `/${kind === 'category' ? 'categories' : 'brands'}/catalog-1`,
+    }), expect.any(Object));
+  });
+
+  it('loads WITHDRAWAL tasks while preserving the request reference for counter handover', async () => {
+    vi.mocked(callBackend).mockResolvedValue([{ id: 'queue-w', type: 'WITHDRAWAL', refId: 'withdrawal-1', targetName: 'Áo', subjectSubtitle: 'Member' }]);
+    await expect(queueService.list({ type: 'WITHDRAWAL' })).resolves.toEqual([expect.objectContaining({ queueId: 'queue-w', refId: 'withdrawal-1', name: 'Áo', memberName: 'Member' })]);
+    expect(callBackend).toHaveBeenCalledWith(expect.objectContaining({ url: '/queues', params: { type: 'WITHDRAWAL' } }), expect.any(Object));
+  });
+
   it('keeps queue item identity separate from the return request identity', async () => {
     vi.mocked(callBackend).mockResolvedValue([{ id: 'queue-1', refId: 'return-1', type: 'RETURN', targetName: 'DH-01' }]);
     const [item] = await queueService.list({ type: 'RETURN' });
