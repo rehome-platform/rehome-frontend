@@ -177,8 +177,8 @@ export const API_ENDPOINTS = {
     ASSIGN_WAREHOUSE: (id) => `/api/admin/moderators/${id}/warehouse`,
 
     WAREHOUSES: "/api/admin/warehouses",
-    CREATE_WAREHOUSE: "/api/admin/warehouses",
-    UPDATE_WAREHOUSE: (id) => `/api/admin/warehouses/${id}`,
+    CREATE_WAREHOUSE: "/warehouses",
+    UPDATE_WAREHOUSE: (id) => `/warehouses/${encodeURIComponent(id)}`,
     HIDE_WAREHOUSE: (id) => `/api/admin/warehouses/${id}/hide`,
 
     CONFIGS: "/api/admin/config",

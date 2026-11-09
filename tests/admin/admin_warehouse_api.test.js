@@ -20,8 +20,8 @@ describe('Admin Warehouse API and Address Units config', () => {
     expect(API_ENDPOINTS.ADDRESS_UNITS).toBeDefined();
     expect(API_ENDPOINTS.ADDRESS_UNITS.PROVINCES).toBe('/address-units/provinces');
     expect(API_ENDPOINTS.ADDRESS_UNITS.WARDS).toBe('/address-units/wards');
-    expect(API_ENDPOINTS.ADMIN.CREATE_WAREHOUSE).toBe('/api/admin/warehouses');
-    expect(API_ENDPOINTS.ADMIN.UPDATE_WAREHOUSE('w-123')).toBe('/api/admin/warehouses/w-123');
+    expect(API_ENDPOINTS.ADMIN.CREATE_WAREHOUSE).toBe('/warehouses');
+    expect(API_ENDPOINTS.ADMIN.UPDATE_WAREHOUSE('w-123')).toBe('/warehouses/w-123');
   });
 
   it('calls getProvinces and unwrap results correctly', async () => {
@@ -66,6 +66,11 @@ describe('Admin Warehouse API and Address Units config', () => {
       address: '123 Cộng Hòa, Phường 4, Hồ Chí Minh',
       latitude: 10.8,
       longitude: 106.65,
+      provinceId: 202,
+      wardCode: '1A01',
+      provinceName: 'Hồ Chí Minh',
+      wardName: 'Phường 4',
+      isNewAddress: true,
       openingHours: '08:00 - 20:00 (Thứ 2 - Chủ nhật)',
     };
     baseApi.post.mockResolvedValueOnce({
@@ -76,8 +81,16 @@ describe('Admin Warehouse API and Address Units config', () => {
     });
 
     const res = await adminApi.createWarehouse(payload);
-    expect(baseApi.post).toHaveBeenCalledWith('/api/admin/warehouses', payload);
+    expect(baseApi.post).toHaveBeenCalledWith('/warehouses', payload);
     expect(res.id).toBe('w-1');
+    expect(res).toMatchObject(payload);
+  });
+
+  it('updates warehouse addresses through the short alias and preserves response fields', async () => {
+    const payload = { name: 'Kho mới', address: '12 ABC', provinceId: 202, wardCode: '1A01', provinceName: 'Hồ Chí Minh', wardName: 'Phường 4', isNewAddress: true };
+    baseApi.put.mockResolvedValueOnce({ data: { result: { id: 'w-1', ...payload } } });
+    await expect(adminApi.updateWarehouse('w-1', payload)).resolves.toMatchObject(payload);
+    expect(baseApi.put).toHaveBeenCalledWith('/warehouses/w-1', payload);
   });
 });
 

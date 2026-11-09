@@ -661,11 +661,11 @@ export default function WarehouseInboxPage() {
                     </span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-textSecondary">Hàng ký gửi</span>
+                    <span className="text-textSecondary">Form ký gửi đang hoạt động</span>
                     <span className="font-bold text-primary">
                       {formatCountDisplay(
                         selectedConv?.consignCount ?? selectedConv?.counterpart?.consignCount,
-                        'món'
+                        'form'
                       )}
                     </span>
                   </div>

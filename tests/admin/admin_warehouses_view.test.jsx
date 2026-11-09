@@ -36,7 +36,7 @@ describe('AdminWarehousesView component', () => {
 
   const mockProvinces = [
     { code: '201', name: 'Hà Nội' },
-    { code: '202', name: 'Hồ Chí Minh' },
+    { code: 202, name: 'Hồ Chí Minh' },
   ];
 
   const mockWards = [
@@ -117,10 +117,42 @@ describe('AdminWarehousesView component', () => {
           longitude: 106.6527,
           wardName: 'Phường Tân Phú',
           provinceName: 'Hồ Chí Minh',
+          provinceId: 202,
+          wardCode: '1A02',
           isNewAddress: true,
         })
       );
     });
+  });
+
+  it('restores the returned address names when editing and submits the resolved codes', async () => {
+    adminApi.updateWarehouse.mockResolvedValue({ ...mockWarehouses[0], isNewAddress: true });
+    renderComponent();
+    await screen.findByText('Kho Quận 7');
+    fireEvent.click(screen.getByText('Sửa thông tin'));
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Phường \/ Xã/i)).toHaveValue('1A02');
+    });
+    expect(screen.getByLabelText(/Tỉnh \/ Thành phố/i)).toHaveValue('202');
+    const street = screen.getByPlaceholderText('Số nhà, tên đường (ví dụ: 123 Nguyễn Thị Thập)');
+    expect(street).toHaveValue('105 Nguyễn Thị Thập');
+    fireEvent.submit(street.closest('form'));
+    await waitFor(() => expect(adminApi.updateWarehouse).toHaveBeenCalledWith('WH-01', expect.objectContaining({
+      address: mockWarehouses[0].address, provinceId: 202, wardCode: '1A02',
+      provinceName: 'Hồ Chí Minh', wardName: 'Phường Tân Phú', isNewAddress: true,
+    })));
+  });
+
+  it('does not submit an incomplete two-level address', async () => {
+    renderComponent();
+    await screen.findByText('Kho Quận 7');
+    fireEvent.click(screen.getByText('Thêm điểm kí gửi mới'));
+    const name = await screen.findByPlaceholderText('Ví dụ: Điểm kí gửi Tân Bình - Chi nhánh số 5');
+    fireEvent.change(name, { target: { value: 'Kho mới' } });
+    const street = screen.getByPlaceholderText('Số nhà, tên đường (ví dụ: 123 Nguyễn Thị Thập)');
+    fireEvent.change(street, { target: { value: '12 ABC' } });
+    fireEvent.submit(street.closest('form'));
+    expect(adminApi.createWarehouse).not.toHaveBeenCalled();
   });
 
   it('uses browser geolocation API when clicking Lấy vị trí hiện tại', async () => {

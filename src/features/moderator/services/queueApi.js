@@ -41,6 +41,8 @@ export const queueService = {
       queueId: item.queueId ?? item.id,
       id: item.id ?? item.queueId,
       refId: item.refId ?? item.id,
+      // RETURN refId points to the return request; claim/release uses queueId.
+      ...(item.type === 'RETURN' ? { returnId: item.returnId ?? item.refId } : {}),
       formId: item.formId ?? item.refId ?? item.id,
       orderId: item.orderId ?? item.refId,
       type: item.type,

@@ -217,10 +217,16 @@ export default function InventoryDetailPage() {
                   <h3 className="text-sm font-bold text-amber-900">Khách đã chọn nhận lại cuối kỳ (miễn phí)</h3>
                 </div>
                 <p className="text-xs text-amber-800">
-                  {`     Khách đã chọn nhận lại hàng ${moment(data.takeBackDate).format('DD/MM/YYYY')} — còn ${data.daysToTakeBack}còn 5 ngày đến quầy lấy. Quá 30 ngày không lấy sẽ thành hàng vô thừa `}nhận.
+                  Khách đã chọn nhận lại hàng{data.takeBackDate ? ` ${date(data.takeBackDate)}` : ''} — còn {data.daysToTakeBack ?? 5} ngày đến quầy lấy. Quá 30 ngày không lấy sẽ thành hàng vô thừa nhận.
                 </p>
               </div>
-              <Link to="/moderator/counter">
+              <Link
+                to={
+                  (data.member?.memberCode || data.memberCode)
+                    ? `/moderator/counter?memberCode=${encodeURIComponent(data.member?.memberCode || data.memberCode)}&refId=${encodeURIComponent(data.id || data.sku || sku || '')}`
+                    : '/moderator/counter'
+                }
+              >
                 <Button variant="outline" className="text-xs border-amber-800 text-amber-900 font-bold">
                   Quầy tiếp nhận →
                 </Button>
