@@ -331,7 +331,7 @@ describe('WarehouseInboxPage Crash Resistance & Design Tokens', () => {
     await waitFor(() => {
       expect(screen.getAllByText('Võ Thị Mai').length).toBeGreaterThan(0);
       expect(screen.getByText('0987654321')).toBeInTheDocument();
-      expect(screen.getByText('0 món')).toBeInTheDocument();
+      expect(screen.getByText('0 form')).toBeInTheDocument();
       expect(screen.getByText('0 đơn')).toBeInTheDocument();
       expect(screen.getByText('0 yêu cầu')).toBeInTheDocument();
     });
