@@ -151,6 +151,7 @@ export const API_ENDPOINTS = {
     // Hộp thư hỗ trợ kho
     WAREHOUSE_INBOX: "/conversations",
     WAREHOUSE_INBOX_DETAIL: (id) => `/conversations/${moderatorId(id)}`,
+    WAREHOUSE_INBOX_MESSAGES: (id) => `/conversations/${moderatorId(id)}/messages`,
     SEND_INBOX_MESSAGE: (id) => `/conversations/${moderatorId(id)}/messages`,
     MARK_INBOX_DONE: (id) => `/conversations/${moderatorId(id)}/done`,
   },

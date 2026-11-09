@@ -56,11 +56,6 @@ export default function ReturnProcessingPage() {
 
             {/* Bảng TH-01 */}
             <ReturnQueueTable {...model.sections.ReturnQueueTable} />
-
-            {/* Note box TH-01 */}
-            <div className="p-3.5 border border-dashed border-neutral rounded-2xl text-xs leading-relaxed text-textSecondary bg-background">
-              Cột <strong className="font-semibold text-text">Đã chờ</strong> chỉ đếm ở hai tab đầu — những bước phụ thuộc người mua hoặc đơn vị vận chuyển thì kho không kiểm soát được thời gian, đếm ở đó chỉ gây áp lực sai chỗ.
-            </div>
           </div>
         )}
 

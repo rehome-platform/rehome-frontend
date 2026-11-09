@@ -1043,30 +1043,45 @@ export const warehouseInboxService = {
     return { data: [...inboxConversationsData], total: inboxConversationsData.length };
   },
 
-  async sendMessage(convId, text, moderatorName = 'Nguyễn Văn A') {
+  async getMessages(convId, params = {}) {
     await delay();
+    const conv = inboxConversationsData.find((c) => String(c.id) === String(convId));
+    const list = conv ? [...(conv.messages || [])] : [];
+    return { data: list, total: list.length };
+  },
+
+  async sendMessage(convId, payload, moderatorName = 'Nguyễn Văn A') {
+    await delay();
+    const isObj = payload && typeof payload === 'object' && !Array.isArray(payload);
+    const content = isObj ? payload.content : payload;
+    const imageUrls = isObj && Array.isArray(payload.imageUrls) ? payload.imageUrls : [];
+
     const newMsg = {
-      id: Date.now(),
+      id: Date.now().toString(),
       sender: 'moderator',
       senderName: `Moderator ${moderatorName}`,
-      text,
+      text: content,
+      content,
+      imageUrls,
+      createdAt: new Date().toISOString(),
+      isMine: true,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
     inboxConversationsData = inboxConversationsData.map((conv) => {
-      if (conv.id === convId) {
+      if (String(conv.id) === String(convId)) {
         return {
           ...conv,
           unread: false,
-          messages: [...conv.messages, newMsg],
-          lastMessage: text,
+          messages: [...(conv.messages || []), newMsg],
+          lastMessage: content || (imageUrls.length ? '[Hình ảnh]' : ''),
           lastTime: newMsg.time,
         };
       }
       return conv;
     });
 
-    return inboxConversationsData.find((conv) => conv.id === convId);
+    return newMsg;
   },
 
   async markAsDone(convId) {

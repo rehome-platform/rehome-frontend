@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import WarehouseInboxPage from '../../src/features/moderator/pages/WarehouseInboxPage.jsx';
 import { warehouseInboxService } from '../../src/features/moderator/services/warehouseInboxApi.js';
@@ -8,7 +8,9 @@ import { warehouseInboxService } from '../../src/features/moderator/services/war
 vi.mock('../../src/features/moderator/services/warehouseInboxApi.js', () => ({
   warehouseInboxService: {
     getConversations: vi.fn(),
+    getMessages: vi.fn(),
     sendMessage: vi.fn(),
+    uploadImage: vi.fn(),
     markAsDone: vi.fn(),
   },
 }));
@@ -18,10 +20,22 @@ vi.mock('../../src/layouts/ModeratorLayout.jsx', () => ({
 }));
 
 vi.mock('../../src/context/AuthContext.jsx', () => ({
-  useAuth: () => ({ user: { name: 'Moderator 1', role: 'MODERATOR' } }),
+  useAuth: () => ({ user: { id: 'mod-1', name: 'Moderator 1', role: 'MODERATOR' } }),
+}));
+
+vi.mock('../../src/hooks/useWebSocket.js', () => ({
+  useConversationTopic: vi.fn(),
 }));
 
 describe('WarehouseInboxPage Crash Resistance & Design Tokens', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
   it('does NOT crash when selectedConv.messages is undefined (reproduces & fixes issue 228)', async () => {
     // API returns conversation without messages array (e.g. backend ConversationSummaryResponse)
     const mockConvWithoutMessages = [
@@ -32,13 +46,16 @@ describe('WarehouseInboxPage Crash Resistance & Design Tokens', () => {
         status: 'UNANSWERED',
         lastMessage: 'Cho mình hỏi đơn hàng ký gửi',
         waitTime: '5 phút trước',
-        // messages field is deliberately missing/undefined
       },
     ];
 
     vi.mocked(warehouseInboxService.getConversations).mockResolvedValueOnce({
       data: mockConvWithoutMessages,
       total: 1,
+    });
+    vi.mocked(warehouseInboxService.getMessages).mockResolvedValueOnce({
+      data: [],
+      total: 0,
     });
 
     render(
@@ -54,9 +71,11 @@ describe('WarehouseInboxPage Crash Resistance & Design Tokens', () => {
     });
 
     // Verify it rendered empty messages placeholder instead of crashing with TypeError
-    expect(
-      screen.getByText('Chưa có tin nhắn nào trong hội thoại này.')
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByText('Chưa có tin nhắn nào trong hội thoại này.')
+      ).toBeInTheDocument();
+    });
   });
 
   it('displays friendly Error state and does NOT crash when API returns 500 error', async () => {
@@ -113,6 +132,10 @@ describe('WarehouseInboxPage Crash Resistance & Design Tokens', () => {
       data: mockConvWithMessages,
       total: 1,
     });
+    vi.mocked(warehouseInboxService.getMessages).mockResolvedValueOnce({
+      data: mockConvWithMessages[0].messages,
+      total: 2,
+    });
 
     render(
       <MemoryRouter>
@@ -124,10 +147,94 @@ describe('WarehouseInboxPage Crash Resistance & Design Tokens', () => {
       expect(screen.getAllByText('Lê Thị C').length).toBeGreaterThan(0);
     });
 
-    expect(screen.getByText('Chào shop, áo của mình đã bán được chưa?')).toBeInTheDocument();
-    const modBubble = screen.getByText('Dạ ReHome đã nhận và đang trưng bày bạn nhé!');
-    expect(modBubble).toBeInTheDocument();
-    expect(modBubble.className).toContain('bg-primary');
-    expect(modBubble.className).toContain('rounded-xl');
+    await waitFor(() => {
+      expect(screen.getByText('Chào shop, áo của mình đã bán được chưa?')).toBeInTheDocument();
+      const modBubble = screen.getByText('Dạ ReHome đã nhận và đang trưng bày bạn nhé!');
+      expect(modBubble).toBeInTheDocument();
+      expect(modBubble.closest('.bg-primary')).not.toBeNull();
+      expect(modBubble.closest('.rounded-xl')).not.toBeNull();
+    });
+  });
+
+  it('API 112 & API 113: fetches messages on conversation select and sends response message with content and imageUrls', async () => {
+    const mockConv = [
+      {
+        id: 'conv-300',
+        memberName: 'Phạm Minh D',
+        memberCode: 'MB-0077',
+        status: 'UNANSWERED',
+        lastMessage: 'Cần hỗ trợ đơn hàng',
+        counterpart: { id: 'member-300', displayName: 'Phạm Minh D' },
+      },
+    ];
+
+    vi.mocked(warehouseInboxService.getConversations).mockResolvedValueOnce({
+      data: mockConv,
+      total: 1,
+    });
+
+    // API 112: getMessages returns content list
+    vi.mocked(warehouseInboxService.getMessages).mockResolvedValueOnce({
+      data: [
+        {
+          id: 'msg-1',
+          senderId: 'member-300',
+          content: 'Xin chào kho ReHome!',
+          imageUrls: [],
+          createdAt: '2026-11-08T10:00:00Z',
+          isMine: false,
+        },
+      ],
+      total: 1,
+    });
+
+    // API 113: sendMessage response
+    vi.mocked(warehouseInboxService.sendMessage).mockResolvedValueOnce({
+      id: 'msg-2',
+      senderId: 'mod-1',
+      content: 'Chào bạn, kho có thể hỗ trợ gì ạ?',
+      imageUrls: ['https://res.cloudinary.com/demo/image/upload/v1/sample.jpg'],
+      createdAt: '2026-11-08T10:01:00Z',
+      isMine: true,
+    });
+
+    render(
+      <MemoryRouter>
+        <WarehouseInboxPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Xin chào kho ReHome!')).toBeInTheDocument();
+    });
+
+    expect(warehouseInboxService.getMessages).toHaveBeenCalledWith('conv-300', expect.any(Object));
+
+    // Type text and submit form
+    const input = screen.getByPlaceholderText('Nhập câu trả lời…');
+    fireEvent.change(input, { target: { value: 'Chào bạn, kho có thể hỗ trợ gì ạ?' } });
+
+    const form = input.closest('form');
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(warehouseInboxService.sendMessage).toHaveBeenCalledWith(
+        'conv-300',
+        {
+          content: 'Chào bạn, kho có thể hỗ trợ gì ạ?',
+          imageUrls: [],
+        },
+        'Moderator 1'
+      );
+    });
+
+    // Verify new message is immediately rendered in chat window
+    await waitFor(() => {
+      expect(screen.getAllByText('Chào bạn, kho có thể hỗ trợ gì ạ?').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByAltText('Ảnh đính kèm 1')).toHaveAttribute(
+        'src',
+        'https://res.cloudinary.com/demo/image/upload/v1/sample.jpg'
+      );
+    });
   });
 });
