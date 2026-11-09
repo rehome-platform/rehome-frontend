@@ -18,7 +18,7 @@ export default function WarehouseInboxPage() {
   const { user } = useAuth();
 
   const [conversations, setConversations] = useState([]);
-  const [activeTab, setActiveTab] = useState('UNANSWERED'); // 'UNANSWERED' | 'ALL' | 'DONE'
+  const [activeTab, setActiveTab] = useState('ALL'); // Mặc định mở tab 'Tất cả' ('ALL' | 'DONE' | 'UNANSWERED')
   const [selectedConv, setSelectedConv] = useState(null);
 
   // Tin nhắn của hội thoại đang chọn
@@ -295,13 +295,23 @@ export default function WarehouseInboxPage() {
     }
   };
 
+  // Chuẩn hóa hiển thị số lượng thống kê của Member (0 món, 0 đơn thay vì null / —)
+  const formatCountDisplay = (val, unit) => {
+    if (val === undefined || val === null || val === '') return `0 ${unit}`;
+    if (typeof val === 'number') return `${val} ${unit}`;
+    if (typeof val === 'string') {
+      return isNaN(Number(val)) ? val : `${val} ${unit}`;
+    }
+    return `0 ${unit}`;
+  };
+
   return (
     <ModeratorLayout>
-      <div className="space-y-4">
+      <div className="space-y-6">
         {/* Header MC-01 / MC-02 */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral pb-4">
           <div>
-            <h1 className="text-xl font-bold font-heading text-text">
+            <h1 className="text-2xl font-bold font-heading text-text">
               Hộp thư điểm kí gửi
             </h1>
           </div>
@@ -314,19 +324,8 @@ export default function WarehouseInboxPage() {
         <div className="bg-surface border border-neutral rounded-2xl shadow-sm flex flex-col lg:flex-row min-h-[640px] overflow-hidden">
           {/* CỘT 1 (360px): DANH SÁCH HỘI THOẠI */}
           <div className="w-full lg:w-[360px] border-r border-neutral flex flex-col shrink-0">
-            {/* Tabs */}
+            {/* Tabs: Thứ tự Tất cả -> Đã xong -> Chưa trả lời */}
             <div className="flex border-b border-neutral text-xs font-semibold bg-background">
-              <button
-                type="button"
-                onClick={() => setActiveTab('UNANSWERED')}
-                className={`py-2.5 px-3.5 transition-all ${
-                  activeTab === 'UNANSWERED'
-                    ? 'border-b-2 border-primary text-primary font-bold bg-surface'
-                    : 'text-textSecondary hover:text-text'
-                }`}
-              >
-                Chưa trả lời · {unansweredCount}
-              </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('ALL')}
@@ -348,6 +347,17 @@ export default function WarehouseInboxPage() {
                 }`}
               >
                 Đã xong
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('UNANSWERED')}
+                className={`py-2.5 px-3.5 transition-all ${
+                  activeTab === 'UNANSWERED'
+                    ? 'border-b-2 border-primary text-primary font-bold bg-surface'
+                    : 'text-textSecondary hover:text-text'
+                }`}
+              >
+                Chưa trả lời · {unansweredCount}
               </button>
             </div>
 
@@ -646,19 +656,36 @@ export default function WarehouseInboxPage() {
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-textSecondary">Số điện thoại</span>
-                    <span className="font-bold text-text">{selectedConv?.phone || '—'}</span>
+                    <span className="font-bold text-text">
+                      {selectedConv?.phone || selectedConv?.counterpart?.phone || '—'}
+                    </span>
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-textSecondary">Hàng ký gửi</span>
-                    <span className="font-bold text-primary">{selectedConv?.consignCount ?? '—'}</span>
+                    <span className="font-bold text-primary">
+                      {formatCountDisplay(
+                        selectedConv?.consignCount ?? selectedConv?.counterpart?.consignCount,
+                        'món'
+                      )}
+                    </span>
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-textSecondary">Đơn đang giao</span>
-                    <span className="font-bold text-text">{selectedConv?.shippingCount ?? '—'}</span>
+                    <span className="font-bold text-text">
+                      {formatCountDisplay(
+                        selectedConv?.shippingCount ?? selectedConv?.counterpart?.shippingCount,
+                        'đơn'
+                      )}
+                    </span>
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-textSecondary">Yêu cầu trả hàng</span>
-                    <span className="font-bold text-error">{selectedConv?.returnCount ?? '—'}</span>
+                    <span className="font-bold text-error">
+                      {formatCountDisplay(
+                        selectedConv?.returnCount ?? selectedConv?.counterpart?.returnCount,
+                        'yêu cầu'
+                      )}
+                    </span>
                   </div>
                 </div>
               </div>

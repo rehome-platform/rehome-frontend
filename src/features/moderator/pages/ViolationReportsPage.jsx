@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 import { Button, Badge } from '../../../components/common/index.js';
 import { violationReportService } from '../services/violationReportApi.js';
@@ -37,9 +38,32 @@ export default function ViolationReportsPage() {
     }
   };
 
+  const [searchParams] = useSearchParams();
+
   useEffect(() => {
     fetchReports();
   }, []);
+
+  useEffect(() => {
+    const paramId = searchParams.get('id');
+    if (!loading && paramId && reports.length > 0) {
+      const found = reports.find(
+        (r) => String(r.id) === String(paramId) || String(r.refId) === String(paramId)
+      );
+      if (found) {
+        handleOpenDetail(found);
+      } else {
+        handleOpenDetail({
+          id: paramId,
+          refId: paramId,
+          targetName: 'Đối tượng bị báo cáo',
+          targetType: 'Nội dung',
+          reportsCount: 1,
+          reports: [],
+        });
+      }
+    }
+  }, [loading, reports, searchParams]);
 
   const handleOpenDetail = (rep) => {
     setSelectedReport(rep);
@@ -82,12 +106,12 @@ export default function ViolationReportsPage() {
       <div className="space-y-6">
         {/* VIEW 1: HÀNG ĐỢI BÁO CÁO (VP-01) */}
         {viewMode === 'QUEUE' && (
-          <div className="space-y-5">
+          <div className="space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-neutral pb-4">
               <div>
                 <div className="flex items-center space-x-2">
-                  <h1 className="text-xl font-bold font-heading text-text">
+                  <h1 className="text-2xl font-bold font-heading text-text">
                     Báo cáo vi phạm · {reports.length}
                   </h1>
                 </div>

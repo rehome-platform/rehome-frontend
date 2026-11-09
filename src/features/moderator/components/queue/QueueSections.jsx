@@ -17,18 +17,18 @@ export function QueueClaimDialog({ claimTarget, resource, setClaimTarget, handle
       size="sm"
     >
       {claimTarget && (
-        <div className="space-y-4 text-sm text-[#414942]">
-          <div className="p-3.5 rounded-xl border border-neutral bg-[#F8FAF8]">
-            <p className="font-bold text-sm text-[#191C19]">
+        <div className="space-y-4 text-sm text-textSecondary">
+          <div className="p-3.5 rounded-xl border border-neutral bg-[#F6F9F4]">
+            <p className="font-bold text-sm text-text">
               {claimTarget.typeLabel || claimTarget.kindLabel} · {claimTarget.formId || claimTarget.orderId || claimTarget.queueId}
             </p>
-            <p className="text-xs text-[#5B6776] mt-1">
+            <p className="text-xs text-textSecondary mt-1">
               {claimTarget.targetName || claimTarget.name || claimTarget.memberName || '—'} · chờ {formatElapsedHours(claimTarget.hours ?? 0)}
             </p>
           </div>
 
-          <p className="text-xs text-[#414942] leading-relaxed">
-            Nhận xong thì <strong className="text-[#191C19]">chỉ bạn xử lý được</strong> việc này — Moderator khác không nhận được nữa.
+          <p className="text-xs text-textSecondary leading-relaxed">
+            Nhận xong thì <strong className="text-text">chỉ bạn xử lý được</strong> việc này — Moderator khác không nhận được nữa.
             Không giới hạn thời gian giữ, nhưng quá 48 giờ không xử lý sẽ tự nhả về hàng đợi và báo Admin.
           </p>
 
@@ -70,18 +70,18 @@ export function QueueReleaseDialog({ releaseTarget, resource, setReleaseTarget, 
       size="sm"
     >
       {releaseTarget && (
-        <div className="space-y-4 text-sm text-[#414942]">
-          <div className="p-3.5 rounded-xl border border-neutral bg-[#F8FAF8]">
-            <p className="font-bold text-sm text-[#191C19]">
+        <div className="space-y-4 text-sm text-textSecondary">
+          <div className="p-3.5 rounded-xl border border-neutral bg-[#F6F9F4]">
+            <p className="font-bold text-sm text-text">
               {releaseTarget.typeLabel || releaseTarget.kindLabel} · {releaseTarget.formId || releaseTarget.orderId || releaseTarget.queueId}
             </p>
-            <p className="text-xs text-[#5B6776] mt-1">
+            <p className="text-xs text-textSecondary mt-1">
               {releaseTarget.targetName || releaseTarget.name || releaseTarget.memberName || '—'} · Bạn đang nhận việc này {formatElapsedHours(heldHours)}
             </p>
           </div>
     
-          <p className="text-xs text-[#414942] leading-relaxed">
-            Việc quay lại hàng đợi ở trạng thái <strong className="text-[#191C19]">chưa ai nhận</strong> — Moderator khác (kể cả bạn) nhận lại được bình thường.
+          <p className="text-xs text-textSecondary leading-relaxed">
+            Việc quay lại hàng đợi ở trạng thái <strong className="text-text">chưa ai nhận</strong> — Moderator khác (kể cả bạn) nhận lại được bình thường.
             Dùng khi nhận nhầm hoặc không đủ thông tin để xử lý tiếp.
           </p>
     
@@ -108,7 +108,7 @@ export function QueueReleaseDialog({ releaseTarget, resource, setReleaseTarget, 
   );
 }
 
-export function QueueTaskRow({ item, isFocused, isSelected, toggleSelectRow, isMine, isClaimedByOther, resource, handleClaim, setClaimTarget, linkTarget, setFeedback, setReleaseTarget }) {
+export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resource, handleClaim, setClaimTarget, linkTarget, setFeedback, setReleaseTarget }) {
   const rowRef = React.useRef(null);
   React.useEffect(() => {
     if (isFocused && !resource.loading) {
@@ -120,44 +120,37 @@ export function QueueTaskRow({ item, isFocused, isSelected, toggleSelectRow, isM
     <tr
       ref={rowRef}
       key={item.queueId}
-      className={`transition-colors hover:bg-[#F9FAF9] ${
-        item.isOverdue ? 'border-l-4 border-l-[#2b2b2b] bg-[#fafafa]' : ''
-      } ${isSelected || isFocused ? 'bg-[#F0F5EE]' : ''} ${isFocused ? 'ring-2 ring-inset ring-primary' : ''}`}
+      className={`transition-colors hover:bg-[#F6F9F4] ${
+        item.isOverdue ? 'border-l-4 border-l-[#006B2C] bg-[#F6F9F4]' : ''
+      } ${isFocused ? 'bg-[#EBF1E8] ring-2 ring-inset ring-primary' : ''}`}
     >
-      <td className="py-3 px-3.5 text-center">
-        <input
-          type="checkbox"
-          aria-label={`Chọn việc ${item.queueId}`}
-          checked={isSelected}
-          onChange={() => toggleSelectRow(item.queueId)}
-          className="rounded"
-        />
-      </td>
-      <td className="py-3 px-3 font-semibold text-[#191C19]">
+      <td className="py-3 px-4 font-semibold text-text">
         {item.typeLabel}
       </td>
-      <td className="py-3 px-3 font-medium text-[#191C19]">
-        {linkTarget ? (
+      <td className="py-3 px-3 font-medium text-text">
+        {isMine && linkTarget ? (
           <Link to={linkTarget} className="text-[#006B2C] hover:underline font-bold">
             {item.targetName || item.orgName || item.productName || item.orderNo || item.name || item.formId || item.orderId || item.queueId}
           </Link>
         ) : (
-          item.targetName || item.orgName || item.productName || item.orderNo || item.name || item.formId || item.orderId || item.queueId
+          <span>
+            {item.targetName || item.orgName || item.productName || item.orderNo || item.name || item.formId || item.orderId || item.queueId}
+          </span>
         )}
-        {isFocused && <span className="ml-2 inline-block rounded bg-primary px-2 py-1 text-[10px] text-white">Việc vừa mở</span>}
+        {isFocused && <span className="ml-2 inline-block rounded-full bg-primary px-2.5 py-0.5 text-[10px] text-white font-medium">Việc vừa mở</span>}
       </td>
-      <td className="py-3 px-3 text-[#414942]">
+      <td className="py-3 px-3 text-textSecondary">
         {item.subjectSubtitle || item.fieldChanged || item.buyerName || item.memberName || item.sellerName || item.memberCode || '—'}
       </td>
-      <td className="py-3 px-3 text-[#5f5f5f]">
+      <td className="py-3 px-3 text-textSecondary">
         {item.formattedTime}
       </td>
       <td className="py-3 px-3">
-        <span className={`font-semibold ${item.isOverdue ? 'text-[#BA1A1A]' : 'text-[#191C19]'}`}>
+        <span className={`font-semibold ${item.isOverdue ? 'text-error' : 'text-text'}`}>
           {item.waitTimeFormatted || formatElapsedHours(item.hours ?? 0)}
         </span>
       </td>
-      <td className="py-3 px-3 text-[#5f5f5f]">
+      <td className="py-3 px-3 text-textSecondary">
         {isMine ? (
           <span className="font-bold text-[#006B2C]">Bạn đang nhận việc này</span>
         ) : isClaimedByOther ? (
@@ -183,9 +176,9 @@ export function QueueTaskRow({ item, isFocused, isSelected, toggleSelectRow, isM
               {linkTarget && (
                 <Link
                   to={linkTarget}
-                  className="text-xs py-1.5 px-3 bg-[#006B2C] text-white hover:bg-[#005221] font-semibold rounded-lg inline-flex items-center gap-1 shadow-sm transition-colors"
+                  className="text-xs py-1.5 px-3 bg-[#006B2C] text-white hover:bg-[#005523] hover:text-white font-semibold rounded-xl inline-flex items-center gap-1 shadow-sm transition-colors"
                 >
-                  {item.type === 'PACKING' ? 'Đóng gói →' : 'Mở việc →'}
+                  {item.type === 'PACKING' ? 'Đóng gói →' : 'Mở việc'}
                 </Link>
               )}
               <Button
@@ -224,7 +217,7 @@ export function QueueFilters({ statusFilter, changeFilter, claimParam, toggleOve
         value={statusFilter}
         onChange={(e) => changeFilter('status', e.target.value)}
         aria-label="Lọc trạng thái"
-        className="rounded-lg border border-[#8a8a8a] bg-white px-3 py-1.5 text-xs font-semibold text-[#191C19] focus:border-[#006B2C] focus:outline-none"
+        className="rounded-xl border border-neutral bg-white px-3 py-1.5 text-xs font-semibold text-text focus:border-[#006B2C] focus:outline-none"
       >
         <option value="">Mọi trạng thái</option>
         <option value="PENDING">Chờ duyệt (PENDING)</option>
@@ -237,7 +230,7 @@ export function QueueFilters({ statusFilter, changeFilter, claimParam, toggleOve
         value={claimParam}
         onChange={(e) => changeFilter('claim', e.target.value)}
         aria-label="Lọc người nhận"
-        className="rounded-lg border border-[#8a8a8a] bg-white px-3 py-1.5 text-xs font-semibold text-[#191C19] focus:border-[#006B2C] focus:outline-none"
+        className="rounded-xl border border-neutral bg-white px-3 py-1.5 text-xs font-semibold text-text focus:border-[#006B2C] focus:outline-none"
       >
         <option value="">Mọi người nhận</option>
         <option value="mine">Việc của tôi</option>
@@ -248,17 +241,17 @@ export function QueueFilters({ statusFilter, changeFilter, claimParam, toggleOve
       <button
         type="button"
         onClick={toggleOverdue}
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${
           overdueOnly
             ? 'border-2 border-[#006B2C] bg-[#006B2C] text-white'
-            : 'border border-[#8a8a8a] bg-white text-[#191C19] hover:bg-[#F0F5EE]'
+            : 'border border-neutral bg-white text-text hover:bg-[#F6F9F4]'
         }`}
       >
         <span>Chỉ việc quá hạn</span>
         {overdueOnly && <span>✕</span>}
       </button>
     
-      <span className="ml-auto text-xs text-[#5f5f5f]">
+      <span className="ml-auto text-xs text-textSecondary">
         Hiển thị {filteredItems.length} / {rawItems.length} việc
       </span>
     </div>
@@ -274,7 +267,7 @@ export function QueueTabs({ typeParam, changeFilter }) {
             <Link
               key={tab.key}
               to={tab.directUrl}
-              className="px-3.5 py-1.5 rounded-lg border border-[#a8a8a8] bg-white text-xs font-semibold text-[#4a4a4a] hover:bg-[#F0F5EE] hover:text-[#006B2C] transition-colors"
+              className="px-3.5 py-1.5 rounded-xl border border-neutral bg-white text-xs font-semibold text-textSecondary hover:bg-[#F6F9F4] hover:text-[#006B2C] transition-colors"
             >
               {tab.label}
             </Link>
@@ -288,10 +281,10 @@ export function QueueTabs({ typeParam, changeFilter }) {
             role="tab"
             aria-selected={isSelected}
             onClick={() => changeFilter('type', tab.key === 'ALL' ? '' : tab.key)}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
               isSelected
                 ? 'border-[#006B2C] bg-[#006B2C] text-white shadow-sm'
-                : 'border-[#a8a8a8] bg-white text-[#4a4a4a] hover:bg-[#F0F5EE]'
+                : 'border-neutral bg-white text-textSecondary hover:bg-[#F6F9F4] hover:text-[#006B2C]'
             }`}
           >
             {tab.label}

@@ -223,7 +223,7 @@ describe('L-06 Withdrawal & Counter Handover Flow (BG-01, QT-01 to QT-03)', () =
       expect(screen.getAllByText(/Member rút hàng/i).length).toBeGreaterThan(0);
     });
 
-    const confirmBtn = screen.getByRole('button', { name: /Xác nhận đã bàn giao/i });
+    const confirmBtn = screen.getByRole('button', { name: /^Xác nhận bàn giao$/i });
     // Initially disabled because SKU is empty and checkbox is unchecked
     expect(confirmBtn).toBeDisabled();
 

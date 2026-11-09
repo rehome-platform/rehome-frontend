@@ -176,9 +176,9 @@ export default function CategoryBrandPage() {
                 setStatusFilter('ALL');
                 setSearch({ tab: 'categories' });
               }}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${isCategory
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${isCategory
                   ? 'border-[#006B2C] bg-[#006B2C] text-white shadow-sm'
-                  : 'border-[#a8a8a8] bg-white text-[#4a4a4a] hover:bg-[#F0F5EE]'
+                  : 'border-neutral bg-white text-textSecondary hover:bg-[#F6F9F4]'
                 }`}
             >
               Danh mục · {categories.length}
@@ -191,9 +191,9 @@ export default function CategoryBrandPage() {
                 setStatusFilter('ALL');
                 setSearch({ tab: 'brands' });
               }}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${!isCategory
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${!isCategory
                   ? 'border-[#006B2C] bg-[#006B2C] text-white shadow-sm'
-                  : 'border-[#a8a8a8] bg-white text-[#4a4a4a] hover:bg-[#F0F5EE]'
+                  : 'border-neutral bg-white text-textSecondary hover:bg-[#F6F9F4]'
                 }`}
             >
               Thương hiệu · {brands.length}
@@ -233,7 +233,7 @@ export default function CategoryBrandPage() {
                 aria-label="Lọc slot thử đồ"
                 value={slotFilter}
                 onChange={(e) => setSlotFilter(e.target.value)}
-                className="rounded-lg border border-[#8a8a8a] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#191C19] focus:border-[#006B2C] focus:outline-none"
+                className="rounded-xl border border-neutral bg-white px-2.5 py-1.5 text-xs font-semibold text-text focus:border-[#006B2C] focus:outline-none"
               >
                 <option value="ALL">Tất cả slot</option>
                 <option value="TOP">TOP · Áo</option>
@@ -243,8 +243,8 @@ export default function CategoryBrandPage() {
               </select>
             </div>
 
-            <div className="flex items-center gap-1.5 text-xs text-[#5B6776]">
-              <label htmlFor="category-status-filter" className="font-semibold text-[#191C19]">
+            <div className="flex items-center gap-1.5 text-xs text-textSecondary">
+              <label htmlFor="category-status-filter" className="font-semibold text-text">
                 Trạng thái:
               </label>
               <select
@@ -252,7 +252,7 @@ export default function CategoryBrandPage() {
                 aria-label="Lọc trạng thái"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="rounded-lg border border-[#8a8a8a] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#191C19] focus:border-[#006B2C] focus:outline-none"
+                className="rounded-xl border border-neutral bg-white px-2.5 py-1.5 text-xs font-semibold text-text focus:border-[#006B2C] focus:outline-none"
               >
                 <option value="ALL">Tất cả trạng thái</option>
                 <option value="ACTIVE">Đang hiện (ACTIVE)</option>

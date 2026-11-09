@@ -133,20 +133,15 @@ export const adminApi = {
     return unwrap(res);
   },
 
-  // 6. Cấu hình Tham số Hệ thống (API 146: PUT /api/admin/config/{key})
+  // 6. Cấu hình đang áp dụng và cập nhật từng tham số.
   async getConfigs() {
-    try {
-      const raw = localStorage.getItem('rehome_admin_saved_configs');
-      if (raw) return JSON.parse(raw);
-    } catch {
-      // Bỏ qua lỗi parse
-    }
-    return null;
+    const res = await baseApi.get(API_ENDPOINTS.ADMIN.CONFIGS);
+    return unwrap(res);
   },
 
   async updateConfig(key, value) {
     const res = await baseApi.put(API_ENDPOINTS.ADMIN.UPDATE_CONFIG(key), { value: String(value) });
-    return res.data?.data || res.data;
+    return unwrap(res);
   },
 
   // 7. Thư viện Từ vựng Vi phạm (Local Persistence Adapter - Quản trị từ khóa vi phạm trực tiếp)

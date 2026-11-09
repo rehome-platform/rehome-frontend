@@ -87,28 +87,71 @@
 .moderator-api-colors[class~="focus:border-[#006B2C]"]:focus { border-color: #006B2C; }
 .moderator-api-colors [class~="focus:border-[#2b2b2b]"]:focus,
 .moderator-api-colors[class~="focus:border-[#2b2b2b]"]:focus { border-color: #006B2C; }
+
+/* Primary Button Hover: Darker green #005523 with white text #FFFFFF */
 .moderator-api-colors [class~="hover:bg-[#005221]"]:hover,
-.moderator-api-colors[class~="hover:bg-[#005221]"]:hover { background-color: #F6F9F4; }
+.moderator-api-colors[class~="hover:bg-[#005221]"]:hover,
+.moderator-api-colors [class~="hover:bg-[#005523]"]:hover,
+.moderator-api-colors[class~="hover:bg-[#005523]"]:hover,
 .moderator-api-colors [class~="hover:bg-[#2b2b2b]"]:hover,
-.moderator-api-colors[class~="hover:bg-[#2b2b2b]"]:hover { background-color: #006B2C; }
+.moderator-api-colors[class~="hover:bg-[#2b2b2b]"]:hover {
+  background-color: #005523 !important;
+  color: #FFFFFF !important;
+}
+
+/* Danger Button Hover: Darker red #B42318 with white text #FFFFFF */
+.moderator-api-colors [class~="hover:bg-[#B42318]"]:hover,
+.moderator-api-colors[class~="hover:bg-[#B42318]"]:hover,
+.moderator-api-colors [class~="hover:bg-[#BA1A1A]"]:hover,
+.moderator-api-colors[class~="hover:bg-[#BA1A1A]"]:hover,
+.moderator-api-colors [class~="hover:bg-[#b91c1c]"]:hover,
+.moderator-api-colors[class~="hover:bg-[#b91c1c]"]:hover {
+  background-color: #B42318 !important;
+  color: #FFFFFF !important;
+}
+
+/* Secondary Button / Row Hover: Light background #F6F9F4 with dark text #1F2A37 */
+.moderator-api-colors [class~="hover:bg-[#F6F9F4]"]:hover,
+.moderator-api-colors[class~="hover:bg-[#F6F9F4]"]:hover,
 .moderator-api-colors [class~="hover:bg-[#F0F5EE]"]:hover,
-.moderator-api-colors[class~="hover:bg-[#F0F5EE]"]:hover { background-color: #F6F9F4; }
+.moderator-api-colors[class~="hover:bg-[#F0F5EE]"]:hover,
 .moderator-api-colors [class~="hover:bg-[#F8FAF8]"]:hover,
-.moderator-api-colors[class~="hover:bg-[#F8FAF8]"]:hover { background-color: #F6F9F4; }
+.moderator-api-colors[class~="hover:bg-[#F8FAF8]"]:hover,
 .moderator-api-colors [class~="hover:bg-[#F9FAF9]"]:hover,
-.moderator-api-colors[class~="hover:bg-[#F9FAF9]"]:hover { background-color: #F6F9F4; }
+.moderator-api-colors[class~="hover:bg-[#F9FAF9]"]:hover,
 .moderator-api-colors [class~="hover:bg-[#e0e0e0]"]:hover,
-.moderator-api-colors[class~="hover:bg-[#e0e0e0]"]:hover { background-color: #F6F9F4; }
+.moderator-api-colors[class~="hover:bg-[#e0e0e0]"]:hover,
 .moderator-api-colors [class~="hover:bg-[#f4f4f4]"]:hover,
-.moderator-api-colors[class~="hover:bg-[#f4f4f4]"]:hover { background-color: #F6F9F4; }
+.moderator-api-colors[class~="hover:bg-[#f4f4f4]"]:hover,
 .moderator-api-colors [class~="hover:bg-[#fafafa]"]:hover,
-.moderator-api-colors[class~="hover:bg-[#fafafa]"]:hover { background-color: #F6F9F4; }
+.moderator-api-colors[class~="hover:bg-[#fafafa]"]:hover,
 .moderator-api-colors [class~="hover:bg-[#fcfdfc]"]:hover,
-.moderator-api-colors[class~="hover:bg-[#fcfdfc]"]:hover { background-color: #F6F9F4; }
+.moderator-api-colors[class~="hover:bg-[#fcfdfc]"]:hover {
+  background-color: #F6F9F4;
+}
+
+/* Secondary Button Hover Border: #006B2C */
+.moderator-api-colors [class~="hover:border-[#006B2C]"]:hover,
+.moderator-api-colors[class~="hover:border-[#006B2C]"]:hover {
+  border-color: #006B2C !important;
+}
+
+.moderator-api-colors [class~="hover:text-white"]:hover,
+.moderator-api-colors[class~="hover:text-white"]:hover {
+  color: #FFFFFF !important;
+}
+.moderator-api-colors [class~="hover:text-[#006B2C]"]:hover,
+.moderator-api-colors[class~="hover:text-[#006B2C]"]:hover {
+  color: #006B2C !important;
+}
 .moderator-api-colors [class~="hover:text-[#191C19]"]:hover,
-.moderator-api-colors[class~="hover:text-[#191C19]"]:hover { color: #1F2A37; }
+.moderator-api-colors[class~="hover:text-[#191C19]"]:hover {
+  color: #1F2A37;
+}
 .moderator-api-colors [class~="hover:text-[#BA1A1A]"]:hover,
-.moderator-api-colors[class~="hover:text-[#BA1A1A]"]:hover { color: #D92D20; }
+.moderator-api-colors[class~="hover:text-[#BA1A1A]"]:hover {
+  color: #D92D20;
+}
 .moderator-api-colors [class~="text-[#191C19]"],
 .moderator-api-colors[class~="text-[#191C19]"] { color: #1F2A37; }
 .moderator-api-colors [class~="text-[#2b2b2b]"],

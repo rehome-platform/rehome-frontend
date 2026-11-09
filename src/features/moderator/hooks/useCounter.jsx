@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { counterService } from "../services/warehouseApi.js";
 import { usePhase2, useResource } from "./warehouseHooks.jsx";
@@ -13,6 +14,10 @@ export function detectLookupKind(value) {
 
 export function useCounter() {
   const { identity, setIdentity, scope } = usePhase2();
+  const [searchParams] = useSearchParams();
+  const urlMemberCode = searchParams.get('memberCode')?.trim();
+  const urlRefId = searchParams.get('refId')?.trim();
+
   const [kind, setKind] = useState('memberCode');
   const [query, setQuery] = useState('');
   const [submitted, setSubmitted] = useState(null);
@@ -28,6 +33,16 @@ export function useCounter() {
   const memberCodeInputRef = useRef(null);
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
+
+  useEffect(() => {
+    if (urlMemberCode && !selectedRef.current && !submitted) {
+      setKind('memberCode');
+      setQuery(urlMemberCode);
+      const request = { params: lookupParams('memberCode', urlMemberCode), reopen: true };
+      lookupRequestRef.current = request;
+      setSubmitted(request);
+    }
+  }, [urlMemberCode]);
 
   useEffect(() => {
     if (!selected) {
@@ -177,7 +192,8 @@ export function useCounter() {
     confirmHandover,
     handoverLoading,
     executeHandover,
-      sections: {
+      activeRefId: urlRefId,
+    sections: {
       CounterLookupForm: { handleFormSubmit, kind, setKind, memberCodeInputRef, query, setQuery, setScanner },
       CounterIdentityPanel: { selected, results, confirmed, confirmIdentity, reset },
       CounterMemberResults: { submitted, results, resultList, selected, choose },

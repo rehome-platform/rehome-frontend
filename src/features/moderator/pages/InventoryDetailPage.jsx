@@ -266,20 +266,20 @@ export default function InventoryDetailPage() {
                       <div className="h-1.5 w-1.5 rounded-full bg-white" />
                     </div>
 
-                    <div className="flex-1 rounded-xl border border-[#e5e5e5] bg-[#fafafa] p-4 space-y-2">
+                    <div className="flex-1 rounded-xl border border-neutral bg-background p-4 space-y-2">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span
-                          className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${movement.badgeClass || 'bg-gray-100 text-gray-800 border-gray-200'
+                          className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${movement.badgeClass || 'bg-background text-text border-neutral'
                             }`}
                         >
                           {movement.label || movement.type}
                         </span>
-                        <span className="text-[11px] text-[#717971]">
+                        <span className="text-[11px] text-textSecondary">
                           {date(movement.createdAt)}
                         </span>
                       </div>
 
-                      <div className="text-sm font-bold text-[#191C19]">
+                      <div className="text-sm font-bold text-text">
                         {movement.locationText || '—'}
                       </div>
 

@@ -145,7 +145,7 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
               }`}
               onClick={() => executeHandover(confirmHandover.item, confirmHandover.context)}
             >
-              Xác nhận đã bàn giao
+              {context === 'ITEM_WITHDRAWAL' ? 'Xác nhận bàn giao' : 'Xác nhận đã bàn giao'}
             </Button>
           </div>
         </div>
@@ -158,18 +158,18 @@ export function CounterWorkflowGuide({ recentServed, reopen, loading }) {
   if (!recentServed || !recentServed.length) return null;
 
   return (
-    <div className="rounded-2xl border border-[#8a8a8a] bg-white overflow-hidden shadow-sm">
-      <div className="bg-[#f4f4f4] border-b border-[#8a8a8a] px-4 py-3 text-xs font-bold text-[#191C19]">
+    <div className="rounded-2xl border border-neutral bg-surface overflow-hidden shadow-sm">
+      <div className="bg-background border-b border-neutral px-4 py-3 text-xs font-bold text-text">
         Đã phục vụ gần đây
       </div>
-      <div className="divide-y divide-[#E2E8E0]">
+      <div className="divide-y divide-neutral">
         {recentServed.map((item) => (
           <div key={item.memberCode} className="p-3.5 flex items-center justify-between text-xs">
             <div>
-              <p className="font-semibold text-[#191C19]">
+              <p className="font-semibold text-text">
                 {item.name} · {item.memberCode}
               </p>
-              <p className="text-[11px] text-[#717971]">{item.taskNote}</p>
+              <p className="text-[11px] text-textSecondary">{item.taskNote}</p>
             </div>
             <button
               type="button"
