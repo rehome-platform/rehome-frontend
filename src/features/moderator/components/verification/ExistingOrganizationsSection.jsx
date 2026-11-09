@@ -196,7 +196,7 @@ export function ExistingOrganizationsSection({
                       {/* Cột 2: Loại hình & MST */}
                       <td className="py-3 px-3">
                         <div className="space-y-0.5">
-                          <span className="inline-block px-2 py-0.5 rounded-lg bg-primary/10 text-primary text-[11px] font-semibold">
+                          <span className="inline-block px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold">
                             {orgType}
                           </span>
                           <div className="text-[11px] font-mono text-textSecondary">

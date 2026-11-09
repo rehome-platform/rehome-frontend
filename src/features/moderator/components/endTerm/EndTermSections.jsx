@@ -117,7 +117,7 @@ export function EndTermTransferPanel({ partner, setPartner, partnerValidation, r
           <button
             key={suggestion}
             type="button"
-            className="text-xs bg-white hover:bg-neutral px-2.5 py-1 rounded-lg border border-neutral transition-colors text-text"
+            className="text-xs bg-white hover:bg-[#F6F9F4] hover:border-[#006B2C] px-2.5 py-1 rounded-xl border border-neutral transition-colors text-text"
             onClick={() => setPartner(suggestion)}
           >
             {suggestion}

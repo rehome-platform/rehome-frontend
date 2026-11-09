@@ -30,15 +30,15 @@ export default function ReturnProcessingPage() {
   const model = useReturnProcessing();
   return (
     <ModeratorLayout>
-      <div className="space-y-6 font-sans">
+      <div className="space-y-6">
         {/* VIEW 1: QUEUE (TH-01) */}
         {model.viewMode === 'QUEUE' && (
-          <div className="space-y-5">
+          <div className="space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-neutral pb-4">
               <div>
                 <div className="flex items-center space-x-2">
-                  <h1 className="text-xl font-bold font-heading text-text">
+                  <h1 className="text-2xl font-bold font-heading text-text">
                     Yêu cầu trả hàng
                   </h1>
                 </div>

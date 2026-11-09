@@ -194,9 +194,9 @@ export default function WarehouseInventoryPage() {
                 key={tab.label}
                 type="button"
                 onClick={() => change('status', tab.value)}
-                className={`text-xs px-3.5 py-1.5 rounded-lg border font-semibold transition-colors ${isActive
+                className={`text-xs px-3.5 py-1.5 rounded-xl border font-semibold transition-colors ${isActive
                   ? 'bg-[#006B2C] text-white border-[#006B2C]'
-                  : 'bg-white text-[#4a4a4a] border-[#a8a8a8] hover:bg-[#F0F5EE]'
+                  : 'bg-white text-textSecondary border-neutral hover:bg-[#F6F9F4]'
                   }`}
               >
                 {tab.label}

@@ -207,7 +207,7 @@ export default function PackingOrdersPage() {
       {!orderId ? (
         <div className="space-y-4">
           {/* Header tìm kiếm chuẩn DG-01 */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-neutral shadow-sm">
             <div className="flex items-center gap-2 flex-1 min-w-[280px]">
               <input
                 type="text"
@@ -220,13 +220,13 @@ export default function PackingOrdersPage() {
                 <button
                   type="button"
                   onClick={() => setKeyword('')}
-                  className="text-gray-400 hover:text-gray-600 text-xs font-bold"
+                  className="text-textSecondary hover:text-text text-xs font-bold"
                 >
                   ✕
                 </button>
               )}
             </div>
-            <div className="text-xs text-[#5f5f5f]">
+            <div className="text-xs text-textSecondary">
               Đang có <strong>{items.length}</strong> đơn trong hàng đợi
             </div>
           </div>

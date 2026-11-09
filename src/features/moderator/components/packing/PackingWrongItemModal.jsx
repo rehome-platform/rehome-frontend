@@ -40,7 +40,7 @@ export function PackingWrongItemModal({ isOpen, onClose, wrongItem, currentOrder
           <p className="font-semibold text-red-900 leading-relaxed">
             Mã <span className="font-mono font-bold text-[#BA1A1A]">{wrongItem.productId}</span> là{' '}
             <strong>{wrongItem.name} — {wrongItem.brand} — {wrongItem.size}</strong> và thuộc đơn{' '}
-            <strong className="underline text-blue-800">{wrongItem.belongsToOrderNo}</strong>.
+            <strong className="underline text-primary font-bold">{wrongItem.belongsToOrderNo}</strong>.
           </p>
           <p className="font-bold text-[#BA1A1A]">
             👉 Trả lại món này rồi lấy đúng món còn thiếu bên dưới.

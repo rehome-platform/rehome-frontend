@@ -297,11 +297,11 @@ export default function WarehouseInboxPage() {
 
   return (
     <ModeratorLayout>
-      <div className="space-y-4">
+      <div className="space-y-6">
         {/* Header MC-01 / MC-02 */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral pb-4">
           <div>
-            <h1 className="text-xl font-bold font-heading text-text">
+            <h1 className="text-2xl font-bold font-heading text-text">
               Hộp thư điểm kí gửi
             </h1>
           </div>
