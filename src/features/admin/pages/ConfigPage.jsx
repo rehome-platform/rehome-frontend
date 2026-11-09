@@ -2,24 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { Input, Button } from '../../../components/common/index.js';
-import { DEFAULT_SYSTEM_CONFIGS } from '../../../configs/systemParams.config.js';
+import { DEFAULT_SYSTEM_CONFIGS, SYSTEM_CONFIG_FIELDS } from '../../../configs/systemParams.config.js';
 import adminApi from '../services/adminApi';
 
 /**
  * Trang Cấu Hình Tham Số Hệ Thống ReHome
- * Kết nối Real Data với backend Spring Boot (API 146 - PUT /api/admin/config/{key}):
- * - Tự động đồng bộ các tham số quy định: kỳ ký gửi, hoa hồng, giá sàn, đền bù, hạn lưu trữ
- * - Mọi thay đổi đều được cập nhật vào backend và ghi nhận vào Audit Log hệ thống.
+ * GET /api/admin/config is the source of effective values and validation limits.
+ * Only fields present in the backend catalog can be saved with PUT /{key}.
  */
 export default function ConfigPage() {
   const { user } = useAuth();
   const { onLogAction } = useOutletContext() || {};
   const [activeTab, setActiveTab] = useState('consignment');
   const [configs, setConfigs] = useState(DEFAULT_SYSTEM_CONFIGS);
-  const [initialConfigs, setInitialConfigs] = useState(DEFAULT_SYSTEM_CONFIGS);
+  const [specs, setSpecs] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    if (!savedSuccess) return;
+    const timer = setTimeout(() => setSavedSuccess(false), 4000);
+    return () => clearTimeout(timer);
+  }, [savedSuccess]);
 
   const tabs = [
     { id: 'consignment', label: '1. Kỳ ký gửi', icon: 'timelapse' },
@@ -33,80 +40,100 @@ export default function ConfigPage() {
     loadBackendConfigs();
   }, []);
 
-  const loadBackendConfigs = async () => {
-    try {
-      const data = await adminApi.getConfigs();
-      if (data && typeof data === 'object') {
-        const updated = JSON.parse(JSON.stringify(DEFAULT_SYSTEM_CONFIGS));
-        // Khôi phục từ cấu hình đã lưu
-        if (data.consignment) updated.consignment = { ...updated.consignment, ...data.consignment };
-        if (data.pricingAndCommission) updated.pricingAndCommission = { ...updated.pricingAndCommission, ...data.pricingAndCommission };
-        if (data.walletAndPayout) updated.walletAndPayout = { ...updated.walletAndPayout, ...data.walletAndPayout };
-        if (data.ordersAndReturns) updated.ordersAndReturns = { ...updated.ordersAndReturns, ...data.ordersAndReturns };
-        if (data.operationsAndCommunity) updated.operationsAndCommunity = { ...updated.operationsAndCommunity, ...data.operationsAndCommunity };
-
-        setConfigs(updated);
-        setInitialConfigs(JSON.parse(JSON.stringify(updated)));
+  const fetchBackendConfigs = async () => {
+    const data = await adminApi.getConfigs();
+    if (!Array.isArray(data)) throw new Error('Dữ liệu cấu hình từ máy chủ không hợp lệ.');
+    const updated = JSON.parse(JSON.stringify(DEFAULT_SYSTEM_CONFIGS));
+    const nextSpecs = {};
+    for (const mapping of SYSTEM_CONFIG_FIELDS) {
+      const spec = data.find(item => item.key === mapping.key);
+      if (!spec) continue;
+      if (spec.value == null || String(spec.value).trim() === '' || !Number.isFinite(Number(spec.value))
+          || !['INT', 'DECIMAL'].includes(spec.type)
+          || spec.min == null || spec.max == null
+          || !Number.isFinite(Number(spec.min)) || !Number.isFinite(Number(spec.max))) {
+        throw new Error(`Dữ liệu cấu hình [${mapping.key}] không hợp lệ.`);
       }
-    } catch {
-      // Giữ default nếu chưa có cấu hình lưu trữ
+      updated[mapping.group][mapping.field] = mapping.percent
+        ? Number((Number(spec.value) * 100).toPrecision(15)) : Number(spec.value);
+      nextSpecs[mapping.key] = spec;
     }
+    if (!Object.keys(nextSpecs).length) throw new Error('Máy chủ chưa trả về tham số cấu hình được hỗ trợ.');
+    setConfigs(updated);
+    setSpecs(nextSpecs);
+    setLoaded(true);
+  };
+
+  const loadBackendConfigs = async () => {
+    setLoading(true);
+    setLoaded(false);
+    setSavedSuccess(false);
+    setErrorMessage('');
+    try {
+      await fetchBackendConfigs();
+    } catch (err) {
+      setErrorMessage(err.response?.data?.message || err.message || 'Không thể tải cấu hình từ máy chủ.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getFieldProps = (group, field) => {
+    const mapping = SYSTEM_CONFIG_FIELDS.find(item => item.group === group && item.field === field);
+    const spec = mapping && specs[mapping.key];
+    const scale = mapping?.percent ? 100 : 1;
+    return {
+      value: loaded && spec ? configs[group][field] : '',
+      disabled: loading || saving || !loaded || !spec,
+      required: Boolean(spec),
+      min: spec ? Number((Number(spec.min) * scale).toPrecision(15)) : undefined,
+      max: spec ? Number((Number(spec.max) * scale).toPrecision(15)) : undefined,
+      step: spec?.type === 'INT' ? 1 : 'any',
+      helperText: !mapping ? 'Chưa áp dụng: backend chưa hỗ trợ chỉnh tham số này.'
+        : loaded && !spec ? 'Chưa áp dụng: máy chủ chưa cung cấp tham số này.' : undefined,
+    };
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
+    if (loading || saving || !loaded) return;
     setSaving(true);
+    setSavedSuccess(false);
     setErrorMessage('');
 
     try {
-      // Danh sách các cặp key-value cần gửi tới backend (API 146: PUT /api/admin/config/{key})
-      const configKeyMap = [
-        { key: 'term_length_days', value: String(configs.consignment.termDays) },
-        { key: 'max_renewals', value: String(configs.consignment.maxRenewals) },
-        { key: 'free_withdrawal_window_days', value: String(configs.consignment.freeWithdrawalDays) },
-        { key: 'commission_rate_term1', value: (configs.pricingAndCommission.commissionTerm1 / 100).toFixed(2) },
-        { key: 'commission_rate_term2', value: (configs.pricingAndCommission.commissionTerm2 / 100).toFixed(2) },
-        { key: 'commission_rate_term3', value: (configs.pricingAndCommission.commissionTerm3 / 100).toFixed(2) },
-        { key: 'floor_price_ratio', value: (configs.pricingAndCommission.floorPricePercent / 100).toFixed(2) },
-        { key: 'withdrawal_fee', value: String(configs.pricingAndCommission.withdrawalFee) },
-        { key: 'degraded_compensation_rate', value: (configs.pricingAndCommission.degradedCompensationRate / 100).toFixed(2) },
-        { key: 'max_concurrent_campaigns', value: String(configs.operationsAndCommunity.maxConcurrentCampaignsPerOrg) },
-        { key: 'legal_image_retention_days', value: String(configs.operationsAndCommunity.legalDocsRetentionDays) },
-        { key: 'overdue_task_hours', value: String(configs.operationsAndCommunity.taskAutoReleaseHours) },
-      ];
-
-      // Gửi các PUT request song song cho các key lên backend Azure
-      const updatePromises = configKeyMap.map(async ({ key, value }) => {
-        try {
-          return await adminApi.updateConfig(key, value);
-        } catch (err) {
-          console.warn(`Lưu tham số [${key}] thất bại:`, err.message);
-          return null;
+      const configKeyMap = SYSTEM_CONFIG_FIELDS.filter(item => specs[item.key]).map(({ key, group, field, percent }) => {
+        const raw = configs[group][field];
+        const value = percent ? Number((Number(raw) / 100).toPrecision(15)) : Number(raw);
+        const spec = specs[key];
+        if (String(raw).trim() === '' || !Number.isFinite(value)
+            || value < Number(spec.min) || value > Number(spec.max)
+            || (spec.type === 'INT' && !Number.isInteger(value))) {
+          throw new Error(`Tham số [${key}] phải ${spec.type === 'INT' ? 'là số nguyên và ' : ''}nằm trong khoảng ${Number(spec.min) * (percent ? 100 : 1)} – ${Number(spec.max) * (percent ? 100 : 1)}${percent ? '%' : ''}.`);
         }
+        return { key, value: String(value) };
       });
-
-      await Promise.all(updatePromises);
-
-      // Lưu lại snapshot vào localStorage
-      try {
-        localStorage.setItem('rehome_admin_saved_configs', JSON.stringify(configs));
-      } catch {}
-
+      // Wait for every request: PUTs are independent, so a failure can be partial.
+      const results = await Promise.allSettled(configKeyMap.map(({ key, value }) => adminApi.updateConfig(key, value)));
+      const failures = results.flatMap((result, index) => result.status === 'rejected'
+        ? [`${configKeyMap[index].key}: ${result.reason?.response?.data?.message || result.reason?.message || 'Lỗi máy chủ'}`] : []);
+      if (failures.length) {
+        throw new Error(`Chưa lưu đầy đủ cấu hình. Một số tham số có thể đã được cập nhật. Vui lòng kiểm tra và thử lưu lại. ${failures.join('; ')}`);
+      }
+      // Confirm effective values instead of persisting a browser-only snapshot.
+      await fetchBackendConfigs();
       setSavedSuccess(true);
-      setInitialConfigs(JSON.parse(JSON.stringify(configs)));
 
       if (onLogAction) {
         onLogAction({
           time: new Date().toLocaleString('vi-VN'),
-          user: user?.fullName || user?.name || 'Trần Minh Quân',
+          user: user?.fullName || user?.name || 'Admin',
           role: 'Admin',
           action: 'Cập nhật cấu hình tham số hệ thống (API 146 - PUT /api/admin/config/{key})',
         });
       }
 
-      setTimeout(() => setSavedSuccess(false), 4000);
     } catch (err) {
-      console.error('Lỗi khi lưu cấu hình tham số:', err);
       setErrorMessage(err.response?.data?.message || err.message || 'Lỗi khi cập nhật cấu hình tham số.');
     } finally {
       setSaving(false);
@@ -128,6 +155,7 @@ export default function ConfigPage() {
           type="submit"
           form="config-form"
           loading={saving}
+          disabled={loading || !loaded}
           className="bg-[#006B2C] hover:bg-[#005221] text-white shrink-0 shadow-sm"
         >
           <span className="material-symbols-outlined text-sm mr-1.5">save</span>
@@ -135,20 +163,22 @@ export default function ConfigPage() {
         </Button>
       </div>
 
+      {loading && <p role="status" className="text-sm text-[#717971]">Đang tải cấu hình từ máy chủ...</p>}
+
       {savedSuccess && (
         <div className="p-4 bg-[#E8F5E9] border border-[#C8E6C9] text-[#006B2C] rounded-2xl text-xs font-semibold flex items-center justify-between shadow-sm animate-fade-in">
           <div className="flex items-center space-x-2">
             <span className="material-symbols-outlined text-lg">check_circle</span>
             <span>Đã đồng bộ tham số hệ thống tới máy chủ thành công và ghi nhận vào Audit Log!</span>
           </div>
-          <span className="text-[11px] text-[#00685F]">Áp dụng ngay cho các giao dịch mới</span>
         </div>
       )}
 
       {errorMessage && (
-        <div className="p-4 bg-[#FFF5F5] border border-[#DC2626]/20 text-[#DC2626] rounded-2xl text-xs font-semibold flex items-center space-x-2 shadow-sm animate-fade-in">
+        <div role="alert" className="p-4 bg-[#FFF5F5] border border-[#DC2626]/20 text-[#DC2626] rounded-2xl text-xs font-semibold flex items-center space-x-2 shadow-sm animate-fade-in">
           <span className="material-symbols-outlined text-lg">error</span>
           <span>{errorMessage}</span>
+          {!loaded && !loading && <Button size="sm" variant="outline" onClick={loadBackendConfigs}>Thử lại</Button>}
         </div>
       )}
 
@@ -175,7 +205,7 @@ export default function ConfigPage() {
       </div>
 
       {/* Form container */}
-      <form id="config-form" onSubmit={handleSave} className="bg-white p-6 sm:p-8 rounded-2xl border border-[#DDE5D9] shadow-sm space-y-6">
+      <form id="config-form" noValidate onSubmit={handleSave} className="bg-white p-6 sm:p-8 rounded-2xl border border-[#DDE5D9] shadow-sm space-y-6">
         {/* TAB 1: Kỳ ký gửi */}
         {activeTab === 'consignment' && (
           <div className="space-y-5">
@@ -190,67 +220,61 @@ export default function ConfigPage() {
               <Input
                 label="Độ dài một kỳ (ngày) [term_length_days]"
                 type="number"
-                value={configs.consignment.termDays}
+                {...getFieldProps('consignment', 'termDays')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  consignment: { ...configs.consignment, termDays: Number(e.target.value) }
+                  consignment: { ...configs.consignment, termDays: e.target.value }
                 })}
-                required
               />
 
               <Input
                 label="Số lần gia hạn tối đa [max_renewals]"
                 type="number"
-                value={configs.consignment.maxRenewals}
+                {...getFieldProps('consignment', 'maxRenewals')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  consignment: { ...configs.consignment, maxRenewals: Number(e.target.value) }
+                  consignment: { ...configs.consignment, maxRenewals: e.target.value }
                 })}
-                required
               />
 
               <Input
                 label="Cửa sổ rút hàng miễn phí (ngày) [free_withdrawal_window_days]"
                 type="number"
-                value={configs.consignment.freeWithdrawalDays}
+                {...getFieldProps('consignment', 'freeWithdrawalDays')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  consignment: { ...configs.consignment, freeWithdrawalDays: Number(e.target.value) }
+                  consignment: { ...configs.consignment, freeWithdrawalDays: e.target.value }
                 })}
-                required
               />
 
               <Input
                 label="Hạn chọn xử lý cuối kỳ (ngày)"
                 type="number"
-                value={configs.consignment.unclaimedDeadlineDays}
+                {...getFieldProps('consignment', 'unclaimedDeadlineDays')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  consignment: { ...configs.consignment, unclaimedDeadlineDays: Number(e.target.value) }
+                  consignment: { ...configs.consignment, unclaimedDeadlineDays: e.target.value }
                 })}
-                required
               />
 
               <Input
                 label="Hạn mang đồ đến kho sau duyệt (ngày)"
                 type="number"
-                value={configs.consignment.bringItemDeadlineDays}
+                {...getFieldProps('consignment', 'bringItemDeadlineDays')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  consignment: { ...configs.consignment, bringItemDeadlineDays: Number(e.target.value) }
+                  consignment: { ...configs.consignment, bringItemDeadlineDays: e.target.value }
                 })}
-                required
               />
 
               <Input
                 label="Số form đang chờ tối đa / Member"
                 type="number"
-                value={configs.consignment.maxPendingFormsPerMember}
+                {...getFieldProps('consignment', 'maxPendingFormsPerMember')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  consignment: { ...configs.consignment, maxPendingFormsPerMember: Number(e.target.value) }
+                  consignment: { ...configs.consignment, maxPendingFormsPerMember: e.target.value }
                 })}
-                required
               />
             </div>
           </div>
@@ -270,32 +294,29 @@ export default function ConfigPage() {
               <Input
                 label="Hoa hồng kỳ 1 (%) [commission_rate_term1]"
                 type="number"
-                value={configs.pricingAndCommission.commissionTerm1}
+                {...getFieldProps('pricingAndCommission', 'commissionTerm1')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  pricingAndCommission: { ...configs.pricingAndCommission, commissionTerm1: Number(e.target.value) }
+                  pricingAndCommission: { ...configs.pricingAndCommission, commissionTerm1: e.target.value }
                 })}
-                required
               />
               <Input
                 label="Hoa hồng kỳ 2 (%) [commission_rate_term2]"
                 type="number"
-                value={configs.pricingAndCommission.commissionTerm2}
+                {...getFieldProps('pricingAndCommission', 'commissionTerm2')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  pricingAndCommission: { ...configs.pricingAndCommission, commissionTerm2: Number(e.target.value) }
+                  pricingAndCommission: { ...configs.pricingAndCommission, commissionTerm2: e.target.value }
                 })}
-                required
               />
               <Input
                 label="Hoa hồng kỳ 3 (%) [commission_rate_term3]"
                 type="number"
-                value={configs.pricingAndCommission.commissionTerm3}
+                {...getFieldProps('pricingAndCommission', 'commissionTerm3')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  pricingAndCommission: { ...configs.pricingAndCommission, commissionTerm3: Number(e.target.value) }
+                  pricingAndCommission: { ...configs.pricingAndCommission, commissionTerm3: e.target.value }
                 })}
-                required
               />
             </div>
 
@@ -303,45 +324,41 @@ export default function ConfigPage() {
               <Input
                 label="Tỷ lệ Giá sàn (% giá chốt) [floor_price_ratio]"
                 type="number"
-                value={configs.pricingAndCommission.floorPricePercent}
+                {...getFieldProps('pricingAndCommission', 'floorPricePercent')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  pricingAndCommission: { ...configs.pricingAndCommission, floorPricePercent: Number(e.target.value) }
+                  pricingAndCommission: { ...configs.pricingAndCommission, floorPricePercent: e.target.value }
                 })}
-                required
               />
 
               <Input
                 label="Số lần đổi giá tối đa / ngày"
                 type="number"
-                value={configs.pricingAndCommission.maxPriceChangesPerDay}
+                {...getFieldProps('pricingAndCommission', 'maxPriceChangesPerDay')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  pricingAndCommission: { ...configs.pricingAndCommission, maxPriceChangesPerDay: Number(e.target.value) }
+                  pricingAndCommission: { ...configs.pricingAndCommission, maxPriceChangesPerDay: e.target.value }
                 })}
-                required
               />
 
               <Input
                 label="Phí rút lại hàng cố định (VNĐ) [withdrawal_fee]"
                 type="number"
-                value={configs.pricingAndCommission.withdrawalFee}
+                {...getFieldProps('pricingAndCommission', 'withdrawalFee')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  pricingAndCommission: { ...configs.pricingAndCommission, withdrawalFee: Number(e.target.value) }
+                  pricingAndCommission: { ...configs.pricingAndCommission, withdrawalFee: e.target.value }
                 })}
-                required
               />
 
               <Input
                 label="Tỷ lệ đền hàng xuống cấp (%) [degraded_compensation_rate]"
                 type="number"
-                value={configs.pricingAndCommission.degradedCompensationRate}
+                {...getFieldProps('pricingAndCommission', 'degradedCompensationRate')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  pricingAndCommission: { ...configs.pricingAndCommission, degradedCompensationRate: Number(e.target.value) }
+                  pricingAndCommission: { ...configs.pricingAndCommission, degradedCompensationRate: e.target.value }
                 })}
-                required
               />
             </div>
           </div>
@@ -361,23 +378,21 @@ export default function ConfigPage() {
               <Input
                 label="Số tiền rút tối thiểu (VNĐ)"
                 type="number"
-                value={configs.walletAndPayout.minWithdrawalAmount}
+                {...getFieldProps('walletAndPayout', 'minWithdrawalAmount')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  walletAndPayout: { ...configs.walletAndPayout, minWithdrawalAmount: Number(e.target.value) }
+                  walletAndPayout: { ...configs.walletAndPayout, minWithdrawalAmount: e.target.value }
                 })}
-                required
               />
 
               <Input
                 label="Số lần rút tối đa mỗi ngày"
                 type="number"
-                value={configs.walletAndPayout.maxWithdrawalsPerDay}
+                {...getFieldProps('walletAndPayout', 'maxWithdrawalsPerDay')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  walletAndPayout: { ...configs.walletAndPayout, maxWithdrawalsPerDay: Number(e.target.value) }
+                  walletAndPayout: { ...configs.walletAndPayout, maxWithdrawalsPerDay: e.target.value }
                 })}
-                required
               />
             </div>
           </div>
@@ -397,56 +412,51 @@ export default function ConfigPage() {
               <Input
                 label="Thời hạn thanh toán đơn (phút)"
                 type="number"
-                value={configs.ordersAndReturns.paymentTimeoutMinutes}
+                {...getFieldProps('ordersAndReturns', 'paymentTimeoutMinutes')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  ordersAndReturns: { ...configs.ordersAndReturns, paymentTimeoutMinutes: Number(e.target.value) }
+                  ordersAndReturns: { ...configs.ordersAndReturns, paymentTimeoutMinutes: e.target.value }
                 })}
-                required
               />
 
               <Input
                 label="Thời hạn tự hoàn thành sau giao (ngày)"
                 type="number"
-                value={configs.ordersAndReturns.autoCompleteDeliveredDays}
+                {...getFieldProps('ordersAndReturns', 'autoCompleteDeliveredDays')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  ordersAndReturns: { ...configs.ordersAndReturns, autoCompleteDeliveredDays: Number(e.target.value) }
+                  ordersAndReturns: { ...configs.ordersAndReturns, autoCompleteDeliveredDays: e.target.value }
                 })}
-                required
               />
 
               <Input
                 label="Thời hạn gửi yêu cầu trả hàng (ngày)"
                 type="number"
-                value={configs.ordersAndReturns.returnRequestWindowDays}
+                {...getFieldProps('ordersAndReturns', 'returnRequestWindowDays')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  ordersAndReturns: { ...configs.ordersAndReturns, returnRequestWindowDays: Number(e.target.value) }
+                  ordersAndReturns: { ...configs.ordersAndReturns, returnRequestWindowDays: e.target.value }
                 })}
-                required
               />
 
               <Input
                 label="Thời hạn bàn giao hàng trả cho GHN (ngày)"
                 type="number"
-                value={configs.ordersAndReturns.returnHandoverCarrierDays}
+                {...getFieldProps('ordersAndReturns', 'returnHandoverCarrierDays')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  ordersAndReturns: { ...configs.ordersAndReturns, returnHandoverCarrierDays: Number(e.target.value) }
+                  ordersAndReturns: { ...configs.ordersAndReturns, returnHandoverCarrierDays: e.target.value }
                 })}
-                required
               />
 
               <Input
                 label="Thời hạn đến kho nhận hàng trả / rút (ngày)"
                 type="number"
-                value={configs.ordersAndReturns.counterPickupDays}
+                {...getFieldProps('ordersAndReturns', 'counterPickupDays')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  ordersAndReturns: { ...configs.ordersAndReturns, counterPickupDays: Number(e.target.value) }
+                  ordersAndReturns: { ...configs.ordersAndReturns, counterPickupDays: e.target.value }
                 })}
-                required
               />
             </div>
           </div>
@@ -466,34 +476,31 @@ export default function ConfigPage() {
               <Input
                 label="Thời gian cảnh báo quá hạn việc (giờ) [overdue_task_hours]"
                 type="number"
-                value={configs.operationsAndCommunity.taskAutoReleaseHours}
+                {...getFieldProps('operationsAndCommunity', 'taskAutoReleaseHours')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  operationsAndCommunity: { ...configs.operationsAndCommunity, taskAutoReleaseHours: Number(e.target.value) }
+                  operationsAndCommunity: { ...configs.operationsAndCommunity, taskAutoReleaseHours: e.target.value }
                 })}
-                required
               />
 
               <Input
                 label="Số chiến dịch đồng thời / Tổ chức [max_concurrent_campaigns]"
                 type="number"
-                value={configs.operationsAndCommunity.maxConcurrentCampaignsPerOrg}
+                {...getFieldProps('operationsAndCommunity', 'maxConcurrentCampaignsPerOrg')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  operationsAndCommunity: { ...configs.operationsAndCommunity, maxConcurrentCampaignsPerOrg: Number(e.target.value) }
+                  operationsAndCommunity: { ...configs.operationsAndCommunity, maxConcurrentCampaignsPerOrg: e.target.value }
                 })}
-                required
               />
 
               <Input
                 label="Số ngày giữ ảnh giấy tờ CCCD sau duyệt (ngày) [legal_image_retention_days]"
                 type="number"
-                value={configs.operationsAndCommunity.legalDocsRetentionDays}
+                {...getFieldProps('operationsAndCommunity', 'legalDocsRetentionDays')}
                 onChange={(e) => setConfigs({
                   ...configs,
-                  operationsAndCommunity: { ...configs.operationsAndCommunity, legalDocsRetentionDays: Number(e.target.value) }
+                  operationsAndCommunity: { ...configs.operationsAndCommunity, legalDocsRetentionDays: e.target.value }
                 })}
-                required
               />
             </div>
           </div>
