@@ -14,8 +14,13 @@ function getQueueLinkTarget(item, typeParam) {
   if (type === 'PACKING') {
     return `/moderator/packing?orderId=${encodeURIComponent(item.orderId || refId)}`;
   }
-  if (type === 'ITEM_WITHDRAWAL') {
-    return `/moderator/counter`;
+  if (type === 'WITHDRAWAL' || type === 'ITEM_WITHDRAWAL') {
+    const params = new URLSearchParams();
+    if (refId) params.set('refId', refId);
+    if (item.memberCode) params.set('memberCode', item.memberCode);
+    if (item.accountId) params.set('accountId', item.accountId);
+    const query = params.toString();
+    return query ? `/moderator/counter?${query}` : `/moderator/counter`;
   }
   if (type === 'FORM_REVIEW' || type === 'INSPECTION') {
     return `/moderator/consignments/${encodeURIComponent(item.formId || refId)}`;
@@ -58,11 +63,10 @@ export default function ConsignmentQueuePage() {
       {model.feedback && (
         <div
           role="alert"
-          className={`rounded-xl p-4 text-xs font-semibold flex items-center justify-between shadow-sm transition-all ${
-            model.feedback.type === 'success'
-              ? 'bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7]'
-              : 'bg-[#FFEBEE] text-[#C62828] border border-[#FFCDD2]'
-          }`}
+          className={`rounded-xl p-4 text-xs font-semibold flex items-center justify-between shadow-sm transition-all ${model.feedback.type === 'success'
+            ? 'bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7]'
+            : 'bg-[#FFEBEE] text-[#C62828] border border-[#FFCDD2]'
+            }`}
         >
           <div className="flex items-center gap-2">
             <span className="font-bold text-sm">

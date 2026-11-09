@@ -146,7 +146,7 @@ describe('Member selection', () => {
     if (quickMatch) await user.click(quickMatch);
     const idCheckbox = screen.queryByLabelText(/Tôi đã hỏi và xác nhận đúng người nhận/i);
     if (idCheckbox) await user.click(idCheckbox);
-    await user.click(screen.getByRole('button', { name: 'Xác nhận đã bàn giao' }));
+    await user.click(screen.getByRole('button', { name: /Xác nhận (đã )?bàn giao/i }));
 
     expect(handoverSpy).toHaveBeenCalledWith(
       expect.objectContaining({

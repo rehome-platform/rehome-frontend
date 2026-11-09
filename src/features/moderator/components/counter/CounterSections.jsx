@@ -145,7 +145,7 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
               }`}
               onClick={() => executeHandover(confirmHandover.item, confirmHandover.context)}
             >
-              Xác nhận đã bàn giao
+              {context === 'ITEM_WITHDRAWAL' ? 'Xác nhận bàn giao' : 'Xác nhận đã bàn giao'}
             </Button>
           </div>
         </div>
