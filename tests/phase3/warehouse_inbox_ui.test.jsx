@@ -237,4 +237,103 @@ describe('WarehouseInboxPage Crash Resistance & Design Tokens', () => {
       );
     });
   });
+
+  it('Issue 2 & 3: opens with default tab "Tất cả" and orders tabs: Tất cả -> Đã xong -> Chưa trả lời', async () => {
+    const mockList = [
+      {
+        id: 'c1',
+        status: 'UNANSWERED',
+        memberName: 'Member 1',
+        phone: '0901234567',
+        consignCount: 0,
+        shippingCount: 0,
+        returnCount: 0,
+      },
+      {
+        id: 'c2',
+        status: 'DONE',
+        memberName: 'Member 2',
+        phone: '0909999888',
+        consignCount: 3,
+        shippingCount: 1,
+        returnCount: 0,
+      },
+    ];
+
+    vi.mocked(warehouseInboxService.getConversations).mockResolvedValueOnce({
+      data: mockList,
+      total: 2,
+    });
+    vi.mocked(warehouseInboxService.getMessages).mockResolvedValue({
+      data: [],
+      total: 0,
+    });
+
+    render(
+      <MemoryRouter>
+        <WarehouseInboxPage />
+      </MemoryRouter>
+    );
+
+    // Wait for load
+    await waitFor(() => {
+      expect(screen.getAllByText('Member 1').length).toBeGreaterThan(0);
+      expect(screen.getByText('Member 2')).toBeInTheDocument();
+    });
+
+    // Check tab order: buttons inside tabs container
+    const tabButtons = screen.getAllByRole('button').filter((b) =>
+      b.textContent?.includes('Tất cả') ||
+      b.textContent?.includes('Đã xong') ||
+      b.textContent?.includes('Chưa trả lời')
+    );
+
+    expect(tabButtons).toHaveLength(3);
+    expect(tabButtons[0]).toHaveTextContent('Tất cả');
+    expect(tabButtons[1]).toHaveTextContent('Đã xong');
+    expect(tabButtons[2]).toHaveTextContent(/Chưa trả lời/);
+
+    // Tab "Tất cả" is active by default (contains active classes)
+    expect(tabButtons[0]).toHaveClass('border-primary');
+  });
+
+  it('Issue 1: connects real member info and formats counts (e.g. 0 món, 0 đơn instead of —)', async () => {
+    const mockConv = [
+      {
+        id: 'conv-real-data',
+        memberName: 'Võ Thị Mai',
+        phone: '0987654321',
+        consignCount: 0,
+        shippingCount: 0,
+        returnCount: 0,
+        counterpart: {
+          id: 'member-999',
+          displayName: 'Võ Thị Mai',
+        },
+      },
+    ];
+
+    vi.mocked(warehouseInboxService.getConversations).mockResolvedValueOnce({
+      data: mockConv,
+      total: 1,
+    });
+    vi.mocked(warehouseInboxService.getMessages).mockResolvedValueOnce({
+      data: [],
+      total: 0,
+    });
+
+    render(
+      <MemoryRouter>
+        <WarehouseInboxPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Võ Thị Mai').length).toBeGreaterThan(0);
+      expect(screen.getByText('0987654321')).toBeInTheDocument();
+      expect(screen.getByText('0 món')).toBeInTheDocument();
+      expect(screen.getByText('0 đơn')).toBeInTheDocument();
+      expect(screen.getByText('0 yêu cầu')).toBeInTheDocument();
+    });
+  });
 });
