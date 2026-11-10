@@ -11,6 +11,7 @@ export const fixtureOptions = {
   categorySlots: ['TOP', 'BOTTOM'],
   inventoryStatuses: [
     'ON_SALE',
+    'WAREHOUSE',
     'RESERVED',
     'SOLD',
     'WITHDRAWN',
@@ -311,6 +312,23 @@ export function resetFixtures() {
     }
   );
 
+  db.degradedCases = db.products.filter(product => product.status === 'DEGRADED').map((product, index) => {
+    const receivedAt = product.degradedDate;
+    const decision = product.decisionStatus === 'FULL_COMPENSATION' ? 'FULL_COMPENSATION' : null;
+    product.status = decision ? 'PLATFORM_OWNED' : 'WAREHOUSE';
+    return {
+      id: `fixture-case-${index + 1}`, productId: product.id, productName: product.name,
+      warehouseId: product.warehouseId, photos: product.returnPhotos || [],
+      moderatorNote: product.degradedReason, reason: null,
+      compensationAmount: product.compensationAmount, degradedCompensationRate: 0.5,
+      paidAmount: decision ? product.compensationAmount : null,
+      receivedAt, decisionDeadline: new Date(Date.parse(receivedAt) + 30 * 86400000).toISOString(),
+      pickupDeadline: null, autoDecided: false, decision,
+      status: decision ? 'DECIDED' : 'PENDING_DECISION', decidedAt: decision ? receivedAt : null,
+    };
+  });
+  db.products.push({ id: 'RH-DG-ONSALE', sku: 'RH-DG-ONSALE', name: 'Áo sơ mi kiểm kho', warehouseId: 'warehouse-a', status: 'ON_SALE', currentPrice: 200000, currentTerm: 1, photos: [], allowedActions: [] });
+
   // Initial movements for RH-M4T19B
   db.movements.push(
     {
@@ -579,6 +597,34 @@ export async function fixtureRequest(
         createdAt: new Date().toISOString(),
       });
       result = product;
+      break;
+    }
+    case 'degradedCaseList':
+      result = db.degradedCases.filter(item => item.warehouseId === scope.warehouseId && (!params.status || item.status === params.status));
+      break;
+    case 'degradedCaseRead':
+      result = find(db.degradedCases, 'id', ids.id, scope);
+      break;
+    case 'degradedCaseCreate':
+    case 'degradedCaseCreateFromReturn': {
+      const fromReturn = operation === 'degradedCaseCreateFromReturn';
+      const product = db.products.find(row => row.id === data.productId && row.warehouseId === scope.warehouseId);
+      if (!fromReturn && !product) fail('Không tìm thấy sản phẩm trong kho.', 404);
+      if (!fromReturn && product.status !== 'ON_SALE') fail('Chỉ mở ca cho sản phẩm đang bán.', 409);
+      if (db.degradedCases.some(row => row.productId === data.productId && !row.decision)) fail('Sản phẩm đã có ca đang chờ quyết định.', 409);
+      const receivedAt = new Date().toISOString();
+      result = {
+        id: `fixture-case-${crypto.randomUUID()}`, productId: data.productId,
+        productName: product?.name || data.productName, warehouseId: scope.warehouseId,
+        photos: data.photos || [], moderatorNote: data.notes || '', reason: data.reason || null,
+        compensationAmount: data.compensationAmount ?? (product ? Math.round(product.currentPrice * (1 - (product.currentTerm === 3 ? 0.2 : product.currentTerm === 2 ? 0.15 : 0.1))) : null),
+        degradedCompensationRate: data.degradedCompensationRate ?? 0.5,
+        paidAmount: null, receivedAt,
+        decisionDeadline: new Date(Date.parse(receivedAt) + 30 * 86400000).toISOString(),
+        pickupDeadline: null, autoDecided: false, decision: null, decidedAt: null, status: 'PENDING_DECISION',
+      };
+      db.degradedCases.push(result);
+      if (product) product.status = 'WAREHOUSE';
       break;
     }
     case 'inventoryList':
