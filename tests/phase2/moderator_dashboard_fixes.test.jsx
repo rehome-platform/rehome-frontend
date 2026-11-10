@@ -317,6 +317,7 @@ describe('TASK-01: Stop Sending Unsupported WAITING_END_OF_TERM Status', () => {
       'UNCLAIMED',
       'DONATED',
       'DESTROYED',
+      'PLATFORM_OWNED',
     ]);
     expect(SUPPORTED_INVENTORY_STATUSES).not.toContain('WAITING_END_OF_TERM');
     expect(SUPPORTED_INVENTORY_STATUSES).not.toContain('PAID');
