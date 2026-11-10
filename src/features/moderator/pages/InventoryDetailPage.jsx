@@ -194,7 +194,7 @@ export default function InventoryDetailPage() {
               <div className="flex items-center p-3 gap-3 bg-[#fafafa]">
                 <span className="w-28 text-[#5f5f5f] flex-shrink-0">Người ký gửi:</span>
                 <span className="text-[#191C19]">
-                  <strong className="font-mono">{data.member?.memberCode || data.memberId || 'MB-004821'}</strong> · {data.member?.fullName || 'Ngô Hải F'}
+                  <strong className="font-mono">{data.member?.memberCode || data.memberCode || data.memberId || '—'}</strong> · {data.member?.fullName || data.memberName || 'Chưa có thông tin'}
                 </span>
               </div>
               <div className="flex items-center p-3 gap-3">

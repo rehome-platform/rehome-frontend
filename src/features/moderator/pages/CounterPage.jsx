@@ -100,6 +100,7 @@ export default function CounterPage() {
                         items={model.taskGroups.pendingWithdrawals}
                         context="ITEM_WITHDRAWAL"
                         setConfirmHandover={model.setConfirmHandover}
+                        activeRefId={model.activeRefId}
                       />
                     )}
 
@@ -109,6 +110,7 @@ export default function CounterPage() {
                         items={model.taskGroups.pendingEndOfTerm}
                         context="END_OF_TERM_TAKE_BACK"
                         setConfirmHandover={model.setConfirmHandover}
+                        activeRefId={model.activeRefId}
                       />
                     )}
 
@@ -118,6 +120,7 @@ export default function CounterPage() {
                         items={model.taskGroups.pendingInvalidReturns}
                         context="INVALID_RETURN_PICKUP"
                         setConfirmHandover={model.setConfirmHandover}
+                        activeRefId={model.activeRefId}
                       />
                     )}
 
@@ -127,6 +130,7 @@ export default function CounterPage() {
                         items={model.taskGroups.pendingDegradedItems}
                         context="DEGRADED_ITEM_PICKUP"
                         setConfirmHandover={model.setConfirmHandover}
+                        activeRefId={model.activeRefId}
                       />
                     )}
                   </div>

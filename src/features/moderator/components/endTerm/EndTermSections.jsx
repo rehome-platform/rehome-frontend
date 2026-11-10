@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 import Button from "../../../../components/common/Button.jsx";
 import Modal from "../../../../components/common/Modal.jsx";
@@ -53,43 +54,25 @@ export function EndTermConfirmDialog({ confirm, resource, setConfirm, sku, price
   );
 }
 
-export function EndTermReconsignPanel({ price, setPrice, resource, term, setTerm, enums, setConfirm }) {
+export function EndTermReconsignPanel({ sku, price, setPrice, resource, term, setTerm, enums, setConfirm }) {
   return (
     <div className="space-y-3 rounded-xl border border-neutral p-4 bg-background">
-      <h3 className="font-semibold text-text">Chốt tái ký gửi lại</h3>
-      <Field
-        label="Giá ký gửi lại (VND)"
-        value={price}
-        inputMode="numeric"
-        onChange={(event) => setPrice(event.target.value)}
-        error={
-          price && !validMoney(price)
-            ? 'Giá phải là số nguyên dương.'
-            : resource.error?.fields?.agreedPrice
-        }
-      />
-      <Field label="Độ dài kỳ mới">
-        <select
-          className="rounded-xl border-neutral w-full p-2"
-          value={term}
-          onChange={(event) => setTerm(event.target.value)}
-        >
-          <option value="">Chọn kỳ</option>
-          {(enums.data?.termLengthDays || []).map((days) => (
-            <option key={days} value={days}>
-              {days} ngày
-            </option>
-          ))}
-        </select>
-      </Field>
-      <Button
-        disabled={
-          !validMoney(price) || !(enums.data?.termLengthDays || []).includes(Number(term))
-        }
-        onClick={() => setConfirm('RE_CONSIGN')}
-      >
-        Chốt giá ký gửi lại
-      </Button>
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-text">Tái ký gửi lại cuối kỳ (KD-11)</h3>
+        <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-[#006B2C] text-white rounded">
+          HẾT KỲ 3
+        </span>
+      </div>
+      <p className="text-xs text-textSecondary leading-relaxed">
+        Sản phẩm đã hết hạn 3 kỳ (90 ngày). Member đã lựa chọn phương án ký gửi lại với mức giá mới. Moderator cần đàm phán giá thị trường và gửi đề xuất cho Member duyệt.
+      </p>
+      <div className="pt-1">
+        <Link to={`/moderator/inventory/${encodeURIComponent(sku)}/re-consign`}>
+          <Button variant="primary" className="text-xs py-2 px-4 font-bold bg-[#006B2C] hover:bg-[#005523]">
+            Mở màn hình đàm phán giá mới (KD-11) →
+          </Button>
+        </Link>
+      </div>
     </div>
   );
 }
