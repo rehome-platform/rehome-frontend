@@ -1,6 +1,6 @@
 import { beforeEach, expect, it } from 'vitest';
 import { fixtureRequest, resetFixtures } from '../../src/features/moderator/fixtures/warehouseFixtures.js';
-const scope = { userId: 'mod-1', warehouseId: 'warehouse-a' };
+const scope = { userId: 'mod-1', warehouseId: 'warehouse-degraded' };
 beforeEach(resetFixtures);
 it('persists the case evidence and deadline and hides a fixture product after opening', async () => {
   const created = await fixtureRequest('degradedCaseCreate', { scope, data: { productId: 'RH-DG-ONSALE', notes: 'Damage note', photos: ['https://photos.test/damage'] } });

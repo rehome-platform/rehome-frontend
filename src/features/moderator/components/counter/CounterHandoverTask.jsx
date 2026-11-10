@@ -96,7 +96,7 @@ export function CounterHandoverTask({ item, context, setConfirmHandover, activeR
           )}
         </div>
         {(!degraded || deadlineValue) && <span className="text-[11px] text-[#717971]">
-          {style.deadlineLabel} {deadlineValue ? date(deadlineValue) : '30 ngày'}
+          {style.deadlineLabel} {deadlineValue ? date(deadlineValue) : 'Chưa có thông tin thời hạn'}
         </span>}
       </div>
       <div className="p-4 flex flex-wrap items-center justify-between gap-4">

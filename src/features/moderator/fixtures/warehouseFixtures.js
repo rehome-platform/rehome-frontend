@@ -327,7 +327,7 @@ export function resetFixtures() {
       status: decision ? 'DECIDED' : 'PENDING_DECISION', decidedAt: decision ? receivedAt : null,
     };
   });
-  db.products.push({ id: 'RH-DG-ONSALE', sku: 'RH-DG-ONSALE', name: 'Áo sơ mi kiểm kho', warehouseId: 'warehouse-a', status: 'ON_SALE', currentPrice: 200000, currentTerm: 1, photos: [], allowedActions: [] });
+  db.products.push({ id: 'RH-DG-ONSALE', sku: 'RH-DG-ONSALE', name: 'Áo sơ mi kiểm kho', warehouseId: 'warehouse-degraded', status: 'ON_SALE', currentPrice: 200000, currentTerm: 1, photos: [], allowedActions: [] });
 
   // Initial movements for RH-M4T19B
   db.movements.push(

@@ -13,7 +13,6 @@ import { Page, Status, Pager, ResourceState, money } from '../components/Warehou
 
 export const SUPPORTED_INVENTORY_STATUSES = [
   'ON_SALE',
-  'WAREHOUSE',
   'RESERVED',
   'SOLD',
   'WITHDRAWN',
