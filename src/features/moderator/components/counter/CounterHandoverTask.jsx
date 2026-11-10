@@ -33,6 +33,16 @@ const STYLES = {
     badge: 'bg-[#FFEBEE] text-[#C62828]',
     badgeLabel: 'Người mua nhận hàng trả',
   },
+  DEGRADED_ITEM_PICKUP: {
+    border: 'border-[#006B2C]/40',
+    header: 'bg-[#E8F5E9] border-[#C8E6C9]',
+    color: 'text-[#006B2C]',
+    title: 'Hàng xuống cấp (Member chọn nhận lại + đền 50%)',
+    deadlineLabel: 'Thời hạn đến nhận:',
+    groupTitle: '5. Khách đến nhận lại hàng xuống cấp',
+    badge: 'bg-[#E8F5E9] text-[#006B2C]',
+    badgeLabel: 'Đền 50% & nhận lại',
+  },
 };
 
 export function CounterHandoverTasks({ items = [], context, setConfirmHandover }) {
@@ -53,13 +63,14 @@ export function CounterHandoverTasks({ items = [], context, setConfirmHandover }
 export function CounterHandoverTask({ item, context, setConfirmHandover }) {
   const style = STYLES[context] || STYLES.ITEM_WITHDRAWAL;
   const withdrawal = context === 'ITEM_WITHDRAWAL';
+  const degraded = context === 'DEGRADED_ITEM_PICKUP';
   const deadlineValue = item.pickupDeadline || item.deadline || item.handoverDeadline;
   return (
     <div className={`rounded-2xl border-2 ${style.border} bg-white overflow-hidden shadow-sm`}>
       <div className={`${style.header} border-b px-4 py-2.5 flex items-center justify-between`}>
         <span className={`text-xs font-bold ${style.color}`}>{style.title}</span>
         <span className="text-[11px] text-[#717971]">
-          {style.deadlineLabel} {deadlineValue ? date(deadlineValue) : '7 ngày'}
+          {style.deadlineLabel} {deadlineValue ? date(deadlineValue) : '30 ngày'}
         </span>
       </div>
       <div className="p-4 flex flex-wrap items-center justify-between gap-4">
@@ -68,6 +79,7 @@ export function CounterHandoverTask({ item, context, setConfirmHandover }) {
           <p className="text-xs text-[#5B6776] mt-0.5">
             Mã SP: <span className="font-mono font-bold text-[#191C19]">{item.productId || item.id}</span>{item.sku && <span className="font-mono font-bold text-[#191C19] ml-1"> · SKU: {item.sku}</span>}
             {withdrawal && <> · Phí rút: {item.feeCharged ? money(item.feeCharged) : 'Miễn phí'}</>}
+            {degraded && <> · Tiền đền 50%: <span className="font-bold text-[#006B2C]">{money(item.paidAmount || item.compensationAmount || 0)}</span> (đã vào ví Member)</>}
           </p>
         </div>
         <Button

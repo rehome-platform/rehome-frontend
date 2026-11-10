@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { formatCurrencyVND } from "../../../utils/formatters.js";
 import { returnService } from "../services/returnApi.js";
 import { inventoryService } from "../services/inventoryApi.js";
@@ -18,6 +18,7 @@ export function useReturnProcessing() {
     }
   };
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [returnRequests, setReturnRequests] = useState([]);
   const [activeTab, setActiveTab] = useState('PENDING_APPROVAL');
   const [loading, setLoading] = useState(true);
@@ -53,10 +54,11 @@ export function useReturnProcessing() {
   // 2-Moderator Counterfeit Modal (F-134, F-135)
   const [isCounterfeitModalOpen, setIsCounterfeitModalOpen] = useState(false);
 
-  // Degraded Item Modal (TH-04-XuongCap, KG-16)
+  // Degraded Item Modal (TH-04-XuongCap, KG-16) & View TH-07
   const [isDegradedModalOpen, setIsDegradedModalOpen] = useState(false);
   const [degradedNotes, setDegradedNotes] = useState('');
   const [degradedConditionRate, setDegradedConditionRate] = useState(60);
+  const [degradedCaseState, setDegradedCaseState] = useState('CHO_KET_LUAN');
 
   const [evidenceImageUrls, setEvidenceImageUrls] = useState([]);
   const [evidenceUploading, setEvidenceUploading] = useState(false);
@@ -365,31 +367,86 @@ export function useReturnProcessing() {
     }
   };
 
-  // Degraded Item Handlers (TH-04-XuongCap, KG-16)
+  // Degraded Item Handlers (TH-04-XuongCap, KG-16, TH-07)
   const handleOpenDegradedCase = () => {
     setDegradedConditionRate(60);
     setDegradedNotes(`Hàng trả về có dấu hiệu xuống cấp so với thời điểm xuất kho. Tình trạng thực tế ước tính 60%.`);
     setIsDegradedModalOpen(true);
   };
 
+  const handleOpenDegradedCaseView = (item, state = null) => {
+    setSelectedItem(item);
+    let resolvedState = state;
+    if (!resolvedState) {
+      if (item.decision || item.degradedDecision || item.decisionStatus === 'FULL_COMPENSATION' || item.decisionStatus === 'PARTIAL_WITH_ITEM_BACK') {
+        resolvedState = 'DA_CHON';
+      } else if (item.status === 'RESOLVED' || item.degradedCaseStatus === 'PROPOSAL_SENT' || item.degradedCaseStatus === 'OPEN') {
+        resolvedState = 'DA_GUI';
+      } else {
+        resolvedState = 'CHO_KET_LUAN';
+      }
+    }
+    setDegradedCaseState(resolvedState);
+    setViewMode('DEGRADED_CASE');
+  };
+
+  const handleSendTwoOptions = async () => {
+    if (!selectedItem) return;
+    try {
+      const notes = degradedNotes || 'Hàng trả về có dấu hiệu xuống cấp';
+      const photos = evidenceImageUrls.length ? evidenceImageUrls : (selectedItem.buyerPhotos || []);
+      await returnService.createDegradedCase({
+        productId: selectedItem.sku || selectedItem.productId,
+        notes,
+        photos,
+      });
+      setDegradedCaseState('DA_GUI');
+      notify('success', 'Đã gửi 2 phương án bồi thường cho người ký gửi (hạn 7 ngày).');
+    } catch (err) {
+      notify('error', 'Lỗi khi gửi 2 phương án: ' + (err.message || ''));
+    }
+  };
+
   const handleCreateDegradedCase = async (caseData = {}) => {
-    if (!selectedItem || resolvingRef.current || !requireEvidence()) return;
+    if (!selectedItem || resolvingRef.current) return;
     resolvingRef.current = true;
     try {
+      const combinedPhotos = Array.from(new Set([
+        ...(evidenceImageUrls || []),
+        ...(caseData.photos || []),
+      ]));
       const notes = caseData.notes || degradedNotes || 'Hàng trả về có dấu hiệu xuống cấp';
+
+      // 1. Kiểm hàng trả về
       await returnService.inspect(selectedItem.id, {
-        evidenceImageUrls,
+        evidenceImageUrls: combinedPhotos,
         matchesOriginal: true,
         degraded: true,
         counterfeitSuspected: false,
         conditionNote: notes,
       });
-      await returnService.resolveValid(selectedItem.id, 'RELIST');
-      await fetchReturns();
+
+      // 2. Mở ca bồi thường hàng xuống cấp
+      try {
+        await returnService.createDegradedCase({
+          productId: selectedItem.sku || selectedItem.productId,
+          notes,
+          photos: combinedPhotos,
+        });
+      } catch (err) {
+        console.warn('createDegradedCase warning/duplicate:', err);
+      }
+
+      // 3. Hoàn tiền người mua và đổi luồng sang bồi thường
+      await returnService.resolveValid(selectedItem.id, 'RELIST', {
+        resolutionNote: 'Hàng xuống cấp, chuyển sang quy trình bồi thường (KG-16)',
+      });
+
       setIsDegradedModalOpen(false);
-      setViewMode('QUEUE');
-      setSelectedItem(null);
-      notify('success', 'Đã lập hồ sơ hàng xuống cấp thành công. Người ký gửi sẽ nhận thông báo chọn phương án đền bù (KG-16).');
+      setDegradedCaseState('DA_GUI');
+      setViewMode('DEGRADED_CASE');
+      await fetchReturns();
+      notify('success', 'Đã lập hồ sơ hàng xuống cấp thành công. Đã gửi 2 phương án bồi thường cho người ký gửi.');
     } catch (err) {
       notify('error', 'Có lỗi khi lập hồ sơ hàng xuống cấp: ' + (err.message || ''));
     } finally {
@@ -460,15 +517,19 @@ export function useReturnProcessing() {
     setIsCounterfeitModalOpen,
     handleFlagCounterfeit,
     handleConfirmCounterfeitVerdict,
-    // Degraded
+    // Degraded (TH-04, TH-07)
     isDegradedModalOpen,
     setIsDegradedModalOpen,
     degradedNotes,
     setDegradedNotes,
     degradedConditionRate,
     setDegradedConditionRate,
+    degradedCaseState,
+    setDegradedCaseState,
     handleOpenDegradedCase,
     handleCreateDegradedCase,
+    handleOpenDegradedCaseView,
+    handleSendTwoOptions,
     // Lost
     handleMarkLost,
     sections: {
@@ -480,6 +541,7 @@ export function useReturnProcessing() {
         handleOpenReview,
         handleOpenInspect,
         handleMarkLost,
+        handleOpenDegradedCaseView,
       },
       ReturnReviewDecision: {
         selectedItem,
@@ -537,6 +599,16 @@ export function useReturnProcessing() {
         degradedConditionRate,
         setDegradedConditionRate,
         handleCreateDegradedCase,
+      },
+      DegradedCaseViewTH07: {
+        selectedItem,
+        degradedCaseState,
+        onBackToQueue: () => {
+          setViewMode('QUEUE');
+          setSelectedItem(null);
+        },
+        onSendTwoOptions: handleSendTwoOptions,
+        onNavigateToCounter: () => navigate('/moderator/counter'),
       },
     },
   };

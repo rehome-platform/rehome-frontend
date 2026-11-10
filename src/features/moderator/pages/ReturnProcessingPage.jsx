@@ -10,6 +10,7 @@ import {
   ReturnQueueTable,
   ReturnQueueTabs,
   DegradedCaseModal,
+  DegradedCaseViewTH07,
 } from "../components/returns/ReturnSections.jsx";
 import SuspiciousCounterfeitModal from '../components/SuspiciousCounterfeitModal.jsx';
 import React from "react";
@@ -136,6 +137,11 @@ export default function ReturnProcessingPage() {
               <ReturnInspectionVerdict {...model.sections.ReturnInspectionVerdict} />
             </div>
           </div>
+        )}
+
+        {/* VIEW 4: KẾT LUẬN HÀNG XUỐNG CẤP (TH-07) */}
+        {model.viewMode === 'DEGRADED_CASE' && model.selectedItem && (
+          <DegradedCaseViewTH07 {...model.sections.DegradedCaseViewTH07} />
         )}
 
         {/* MODAL: Từ chối yêu cầu trả (TH-02) */}

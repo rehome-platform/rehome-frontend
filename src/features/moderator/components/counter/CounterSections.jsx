@@ -20,6 +20,7 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
     ITEM_WITHDRAWAL: 'Member rút hàng',
     END_OF_TERM_TAKE_BACK: 'Nhận lại cuối kỳ',
     INVALID_RETURN_PICKUP: 'Người mua nhận hàng trả',
+    DEGRADED_ITEM_PICKUP: 'Hàng xuống cấp (Đền 50% & nhận lại)',
   };
 
   return (
@@ -53,6 +54,12 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
             <span className="text-[#5B6776]">Sản phẩm:</span>
             <span className="font-bold text-[#006B2C]">{item.productName || item.name || item.productId}</span>
           </div>
+          {context === 'DEGRADED_ITEM_PICKUP' && (
+            <div className="flex justify-between">
+              <span className="text-[#5B6776]">Tiền đền bù 50%:</span>
+              <span className="font-bold text-[#006B2C]">{money(item.paidAmount || item.compensationAmount || 0)} (đã cộng vào ví)</span>
+            </div>
+          )}
         </div>
 
         {/* Bước 2: Đối chiếu mã SKU */}

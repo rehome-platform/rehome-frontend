@@ -120,6 +120,15 @@ export default function CounterPage() {
                         setConfirmHandover={model.setConfirmHandover}
                       />
                     )}
+
+                    {/* 5. Nhận lại hàng xuống cấp (F-036 / API 95 PARTIAL_WITH_ITEM_BACK) */}
+                    {model.taskGroups.pendingDegradedItems?.length > 0 && (
+                      <CounterHandoverTasks
+                        items={model.taskGroups.pendingDegradedItems}
+                        context="DEGRADED_ITEM_PICKUP"
+                        setConfirmHandover={model.setConfirmHandover}
+                      />
+                    )}
                   </div>
                 </ResourceState>
 
