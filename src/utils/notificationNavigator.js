@@ -79,7 +79,7 @@ export function resolveNotificationUrl(notification, userRole) {
 
     case 'DEGRADED_ITEM':
     case 'DEGRADED_ITEM_CASE':
-      return id ? `/moderator/returns?view=DEGRADED_CASE&id=${encodeURIComponent(id)}` : '/moderator/inventory?tab=DEGRADED';
+      return id ? `/moderator/inventory?status=DEGRADED&caseId=${encodeURIComponent(id)}` : '/moderator/inventory?status=DEGRADED';
 
     case 'END_OF_TERM':
     case 'TERM_EXPIRY':

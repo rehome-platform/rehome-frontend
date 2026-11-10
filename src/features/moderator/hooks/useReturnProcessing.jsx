@@ -58,7 +58,8 @@ export function useReturnProcessing() {
   // Degraded Item Modal (TH-04-XuongCap, KG-16) & View TH-07
   const [isDegradedModalOpen, setIsDegradedModalOpen] = useState(false);
   const [degradedNotes, setDegradedNotes] = useState('');
-  const [degradedConditionRate, setDegradedConditionRate] = useState(60);
+  const [degradedSubmitting, setDegradedSubmitting] = useState(false);
+  const resolvedDegradedReturns = useRef(new Set());
   const [degradedCaseState, setDegradedCaseState] = useState('CHO_KET_LUAN');
 
   const [evidenceImageUrls, setEvidenceImageUrls] = useState([]);
@@ -382,90 +383,84 @@ export function useReturnProcessing() {
     }
   };
 
-  // Degraded Item Handlers (TH-04-XuongCap, KG-16, TH-07)
+  // Return resolution owns case creation and refund in one backend transaction.
   const handleOpenDegradedCase = () => {
-    setDegradedConditionRate(60);
-    setDegradedNotes(`Hàng trả về có dấu hiệu xuống cấp so với thời điểm xuất kho. Tình trạng thực tế ước tính 60%.`);
+    setDegradedNotes(selectedItem?.conditionNote || '');
     setIsDegradedModalOpen(true);
   };
 
-  const handleOpenDegradedCaseView = (item, state = null) => {
-    setSelectedItem(item);
-    let resolvedState = state;
-    if (!resolvedState) {
-      if (item.decision || item.degradedDecision || item.decisionStatus === 'FULL_COMPENSATION' || item.decisionStatus === 'PARTIAL_WITH_ITEM_BACK') {
-        resolvedState = 'DA_CHON';
-      } else if (item.status === 'RESOLVED' || item.degradedCaseStatus === 'PROPOSAL_SENT' || item.degradedCaseStatus === 'OPEN') {
-        resolvedState = 'DA_GUI';
-      } else {
-        resolvedState = 'CHO_KET_LUAN';
+  const handleOpenDegradedCaseView = async (item) => {
+    const epoch = ++selectionEpoch.current;
+    try {
+      const detail = await returnService.detail(item.id);
+      if (epoch !== selectionEpoch.current) return;
+      setSelectedItem(detail);
+      if (detail.status !== 'RESOLVED' && !['VALID', 'COMPLETED'].includes(detail.rawStatus)) {
+        await handleOpenInspect(detail);
+        setDegradedNotes(detail.conditionNote || '');
+        setIsDegradedModalOpen(true);
+        return;
       }
+      setDegradedCaseState('DA_GUI');
+      setViewMode('DEGRADED_CASE');
+    } catch (error) {
+      notify('error', 'Không thể tải chi tiết yêu cầu trả hàng: ' + error.message);
     }
-    setDegradedCaseState(resolvedState);
-    setViewMode('DEGRADED_CASE');
   };
 
-  const handleSendTwoOptions = async () => {
-    if (!selectedItem) return;
-    try {
-      const notes = degradedNotes || 'Hàng trả về có dấu hiệu xuống cấp';
-      const photos = evidenceImageUrls.length ? evidenceImageUrls : (selectedItem.buyerPhotos || []);
-      await returnService.createDegradedCase({
-        productId: selectedItem.sku || selectedItem.productId,
-        notes,
-        photos,
-      });
-      setDegradedCaseState('DA_GUI');
-      notify('success', 'Đã gửi 2 phương án bồi thường cho người ký gửi (hạn 7 ngày).');
-    } catch (err) {
-      notify('error', 'Lỗi khi gửi 2 phương án: ' + (err.message || ''));
-    }
-  };
+  // The pre-conclusion action only opens the evidence form; it never creates a case.
+  const handleSendTwoOptions = handleOpenDegradedCase;
 
   const handleCreateDegradedCase = async (caseData = {}) => {
-    if (!selectedItem || resolvingRef.current) return;
+    if (!selectedItem || resolvingRef.current || resolvedDegradedReturns.current.has(selectedItem.id) || selectedItem.status === 'RESOLVED') return;
+    const photos = Array.from(new Set(caseData.photos ?? evidenceImageUrls));
+    const notes = (caseData.notes ?? degradedNotes).trim();
+    if (evidenceLock.current || evidenceUploading || evidenceError || photos.length < 2 || photos.length > 5 || !notes) {
+      notify('warn', 'Cần mô tả hư hỏng và từ 2 đến 5 ảnh bằng chứng đã tải thành công trước khi lập hồ sơ.');
+      return;
+    }
     resolvingRef.current = true;
+    setDegradedSubmitting(true);
+    const source = selectedItem;
+    const showResolved = (resolved) => {
+      resolvedDegradedReturns.current.add(source.id);
+      setSelectedItem({ ...source, ...resolved, id: source.id, productId: source.productId, sku: source.sku, status: 'RESOLVED', degraded: true });
+      setIsDegradedModalOpen(false);
+      setDegradedCaseState('DA_GUI');
+      setViewMode('DEGRADED_CASE');
+    };
+    let resolving = false;
     try {
-      const combinedPhotos = Array.from(new Set([
-        ...(evidenceImageUrls || []),
-        ...(caseData.photos || []),
-      ]));
-      const notes = caseData.notes || degradedNotes || 'Hàng trả về có dấu hiệu xuống cấp';
-
-      // 1. Kiểm hàng trả về
-      await returnService.inspect(selectedItem.id, {
-        evidenceImageUrls: combinedPhotos,
+      await returnService.inspect(source.id, {
+        evidenceImageUrls: photos,
         matchesOriginal: true,
         degraded: true,
         counterfeitSuspected: false,
         conditionNote: notes,
       });
-
-      // 2. Mở ca bồi thường hàng xuống cấp
-      try {
-        await returnService.createDegradedCase({
-          productId: selectedItem.sku || selectedItem.productId,
-          notes,
-          photos: combinedPhotos,
-        });
-      } catch (err) {
-        console.warn('createDegradedCase warning/duplicate:', err);
-      }
-
-      // 3. Hoàn tiền người mua và đổi luồng sang bồi thường
-      await returnService.resolveValid(selectedItem.id, 'RELIST', {
+      resolving = true;
+      const resolved = await returnService.resolveValid(source.id, undefined, {
         resolutionNote: 'Hàng xuống cấp, chuyển sang quy trình bồi thường (KG-16)',
       });
-
-      setIsDegradedModalOpen(false);
-      setDegradedCaseState('DA_GUI');
-      setViewMode('DEGRADED_CASE');
+      showResolved(resolved);
       await fetchReturns();
-      notify('success', 'Đã lập hồ sơ hàng xuống cấp thành công. Đã gửi 2 phương án bồi thường cho người ký gửi.');
-    } catch (err) {
-      notify('error', 'Có lỗi khi lập hồ sơ hàng xuống cấp: ' + (err.message || ''));
+      notify('success', 'Đã chốt trả hàng và mở ca bồi thường. Member có 30 ngày chọn phương án, được nhắc mỗi 7 ngày.');
+    } catch (error) {
+      // A lost response can follow a committed refund. Re-read before allowing any retry.
+      if (resolving) {
+        try {
+          const detail = await returnService.detail(source.id);
+          if (detail.degraded && (detail.rawStatus === 'VALID' || detail.status === 'RESOLVED')) {
+            showResolved(detail);
+            await fetchReturns();
+            return;
+          }
+        } catch { /* Surface the original failure; never auto-repeat the mutation. */ }
+      }
+      notify('error', 'Có lỗi khi lập hồ sơ hàng xuống cấp: ' + (error.message || ''));
     } finally {
       resolvingRef.current = false;
+      setDegradedSubmitting(false);
     }
   };
 
@@ -537,8 +532,7 @@ export function useReturnProcessing() {
     setIsDegradedModalOpen,
     degradedNotes,
     setDegradedNotes,
-    degradedConditionRate,
-    setDegradedConditionRate,
+    degradedSubmitting,
     degradedCaseState,
     setDegradedCaseState,
     handleOpenDegradedCase,
@@ -608,12 +602,11 @@ export function useReturnProcessing() {
         ...evidenceProps,
         evidenceReady,
         isOpen: isDegradedModalOpen,
-        onClose: () => setIsDegradedModalOpen(false),
+        onClose: () => { if (!resolvingRef.current) setIsDegradedModalOpen(false); },
         selectedItem,
         degradedNotes,
         setDegradedNotes,
-        degradedConditionRate,
-        setDegradedConditionRate,
+        degradedSubmitting,
         handleCreateDegradedCase,
       },
       DegradedCaseViewTH07: {

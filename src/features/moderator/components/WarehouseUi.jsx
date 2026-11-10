@@ -49,6 +49,7 @@ const statusLabels = {
   WAITING_CONFIRMATION: 'Chờ Member xác nhận',
   STOCKED: 'Đã nhập kho',
   ON_SALE: 'Đang bán',
+  WAREHOUSE: 'Lưu kho, tạm ngừng bán',
   RESERVED: 'Đang giữ hàng',
   SOLD: 'Đã bán',
   WITHDRAWN: 'Đã rút hàng',

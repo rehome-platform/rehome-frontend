@@ -1,4 +1,6 @@
-import React, { useCallback, useState } from 'react';
+import DegradedCaseDetails, { DegradedCaseSummary } from '../components/DegradedCaseDetails.jsx';
+import { latestDegradedCase, DEGRADED_DECISION_POLICY } from '../models/degradedCaseModel.js';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
@@ -33,7 +35,16 @@ export default function InventoryDetailPage() {
   const [degradedPhotos, setDegradedPhotos] = useState([]);
   const [degradedUploadPending, setDegradedUploadPending] = useState(false);
   const [isSubmittingDegraded, setIsSubmittingDegraded] = useState(false);
-  const [degradedSubmitted, setDegradedSubmitted] = useState(false);
+  const [submittedCase, setSubmittedCase] = useState(null);
+  const [caseDetailsOpen, setCaseDetailsOpen] = useState(false);
+  const degradedLock = useRef(false);
+  useEffect(() => {
+    setSubmittedCase(null);
+    setCaseDetailsOpen(false);
+    setDegradedModalOpen(false);
+    setDegradedNotes('');
+    setDegradedPhotos([]);
+  }, [sku]);
 
   const onPhotos = useCallback((urls, pending) => {
     setPhotos(urls);
@@ -46,6 +57,12 @@ export default function InventoryDetailPage() {
   }, []);
 
   const data = product.data;
+  const existingCase = useResource(async options => {
+    const cases = await inventoryService.degradedCases({}, options);
+    return latestDegradedCase(cases, data.id);
+  }, [data?.id, data?.status], { enabled: Boolean(data?.id && data.status !== 'ON_SALE') });
+  const activeCase = existingCase.data || submittedCase;
+
   const movementList = listItems(movements.data);
 
   const handleCopySku = () => {
@@ -55,14 +72,10 @@ export default function InventoryDetailPage() {
     setTimeout(() => setCopyFeedback(false), 2000);
   };
 
-  // Bảng tính mức đền bù theo kỳ ký gửi hiện tại (TK-02)
-  const currentTerm = data?.currentTerm || 1;
-  const commissionRate = currentTerm === 3 ? 0.20 : currentTerm === 2 ? 0.15 : 0.10;
-  const sellingPrice = data?.agreedPrice || data?.currentPrice || 0;
-  const compensation100 = Math.max(0, Math.round(sellingPrice * (1 - commissionRate)));
-  const compensation50 = Math.round(compensation100 * 0.5);
+  const sellingPrice = data?.currentPrice ?? data?.agreedPrice;
 
   const handleSendDegradedProposal = async () => {
+    if (degradedLock.current || degradedUploadPending || data?.status !== 'ON_SALE' || submittedCase || !data?.id) return;
     if (!degradedNotes.trim()) {
       alert('Vui lòng nhập mô tả chi tiết hư hỏng hoặc nguyên nhân xuống cấp.');
       return;
@@ -71,19 +84,21 @@ export default function InventoryDetailPage() {
       alert('Vui lòng tải lên ít nhất 1 ảnh hiện trạng hư hỏng.');
       return;
     }
+    degradedLock.current = true;
     setIsSubmittingDegraded(true);
     try {
-      await returnService.createDegradedCase({
-        productId: data?.id || data?.sku || sku,
+      const created = await returnService.createDegradedCase({
+        productId: data.id,
         notes: degradedNotes.trim(),
         photos: degradedPhotos,
       });
       setDegradedModalOpen(false);
-      setDegradedSubmitted(true);
+      setSubmittedCase(created);
       product.refresh();
     } catch (err) {
       alert(err.message || 'Lỗi khi gửi đề xuất hàng xuống cấp.');
     } finally {
+      degradedLock.current = false;
       setIsSubmittingDegraded(false);
     }
   };
@@ -173,13 +188,13 @@ export default function InventoryDetailPage() {
               </div>
 
               <div className="flex items-center gap-3">
-                <Button
+                {data.status === 'ON_SALE' && !submittedCase && <Button
                   onClick={() => setDegradedModalOpen(true)}
                   variant="outline"
                   className="border-red-600 text-red-600 hover:bg-red-50 font-bold py-2 px-4 shadow-sm"
                 >
                   Hàng xuống cấp
-                </Button>
+                </Button>}
                 <Button
                   onClick={() => setPrint(true)}
                   className="bg-[#006B2C] text-white hover:bg-[#005221] font-bold py-2 px-4 shadow-sm"
@@ -238,47 +253,17 @@ export default function InventoryDetailPage() {
             )}
           </div>
 
-          {/* BANNER HÀNG XUỐNG CẤP (TK-02) */}
-          {(degradedSubmitted || data.status === 'PLATFORM_OWNED' || data.degradedCaseStatus) && (
-            <div className={`rounded-2xl border p-5 shadow-sm flex flex-wrap items-center justify-between gap-4 ${
-              data.status === 'PLATFORM_OWNED' ? 'border-purple-300 bg-purple-50' : 'border-amber-300 bg-amber-50'
-            }`}>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className={`text-[10px] font-bold tracking-wider px-2 py-0.5 text-white rounded ${
-                    data.status === 'PLATFORM_OWNED' ? 'bg-purple-800' : 'bg-amber-800'
-                  }`}>
-                    {data.status === 'PLATFORM_OWNED' ? 'TÀI SẢN NỀN TẢNG (PLATFORM_OWNED)' : 'ĐÃ GỬI ĐỀ XUẤT HÀNG XUỐNG CẤP'}
-                  </span>
-                  <h3 className={`text-sm font-bold ${
-                    data.status === 'PLATFORM_OWNED' ? 'text-purple-900' : 'text-amber-900'
-                  }`}>
-                    {data.status === 'PLATFORM_OWNED'
-                      ? 'Món hàng đã thuộc quyền sở hữu của ReHome (Đã đền 100%)'
-                      : 'Đã gửi, chờ người ký gửi chọn'}
-                  </h3>
-                </div>
-                <p className={`text-xs ${
-                  data.status === 'PLATFORM_OWNED' ? 'text-purple-800' : 'text-amber-800'
-                }`}>
-                  {data.status === 'PLATFORM_OWNED'
-                    ? 'Member đã nhận 100% tiền bồi thường. Sản phẩm đang chờ Moderator quyết định thanh lý hoặc tiêu hủy.'
-                    : 'Biên bản đã được gửi cho Member. Member có 7 ngày để lựa chọn phương án trên app (quá hạn tự động chọn nhận đền bù 100%).'}
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => navigate('/moderator/inventory?status=DEGRADED')}
-                className={`text-xs font-bold ${
-                  data.status === 'PLATFORM_OWNED'
-                    ? 'border-purple-800 text-purple-900'
-                    : 'border-amber-800 text-amber-900'
-                }`}
-              >
-                Xem tại tab Hàng xuống cấp →
-              </Button>
+          {data.status === 'WAREHOUSE' && (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">
+              Sản phẩm đang lưu kho, tạm ngừng bán trong khi chờ xử lý. {DEGRADED_DECISION_POLICY}
             </div>
           )}
+          <ResourceState resource={existingCase} />
+          {activeCase && <div className="rounded-2xl border border-neutral bg-surface p-5 space-y-4">
+            <DegradedCaseSummary item={activeCase} onNavigateToCounter={() => navigate('/moderator/counter')} />
+            <Button variant="outline" onClick={() => setCaseDetailsOpen(true)}>Xem biên bản hàng xuống cấp</Button>
+          </div>}
+
 
           {/* BANNER XỬ LÝ CUỐI KỲ (L-02 · TK-02) */}
           {(data.decision === 'RE_CONSIGN' || data.allowedActions?.includes('RE_CONSIGN') || data.reConsignStatus === 'PROPOSAL_SENT' || data.status === 'WAITING_END_OF_TERM') && (
@@ -405,6 +390,10 @@ export default function InventoryDetailPage() {
       <BarcodePrintModal isOpen={print} onClose={() => setPrint(false)} item={data} />
 
       {/* Modal Lập biên bản hàng xuống cấp tại kho (TK-02) */}
+      {caseDetailsOpen && activeCase && <Modal isOpen onClose={() => setCaseDetailsOpen(false)} title="Biên bản hàng xuống cấp">
+        <DegradedCaseDetails caseId={activeCase.id} onNavigateToCounter={() => navigate('/moderator/counter')} />
+      </Modal>}
+
       {degradedModalOpen && (
         <Modal
           isOpen={degradedModalOpen}
@@ -428,35 +417,15 @@ export default function InventoryDetailPage() {
               <div className="flex justify-between">
                 <span className="text-[#5f5f5f]">Kỳ ký gửi hiện tại:</span>
                 <span className="font-semibold text-[#191C19]">
-                  Kỳ {currentTerm} (Khấu trừ hoa hồng {commissionRate * 100}%)
+                  {data?.currentTerm ? `Kỳ ${data.currentTerm}` : 'Chưa có thông tin kỳ'}
                 </span>
               </div>
             </div>
 
-            {/* Bảng tính tự động mức đền bù */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 rounded-xl border border-[#006B2C] bg-[#E8F5E9]/60 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-[#006B2C]">
-                  Phương án 1 · Đền 100%
-                </span>
-                <p className="text-base font-extrabold text-[#006B2C]">
-                  {money(compensation100)}
-                </p>
-                <p className="text-[10px] text-[#5f5f5f] leading-tight">
-                  = Giá bán − {commissionRate * 100}% hoa hồng kỳ {currentTerm}. Hàng chuyển thành tài sản nền tảng.
-                </p>
-              </div>
-              <div className="p-3 rounded-xl border border-[#D97706] bg-[#FFFBEB] space-y-1">
-                <span className="text-[10px] uppercase font-bold text-[#D97706]">
-                  Phương án 2 · Đền 50% + Nhận lại
-                </span>
-                <p className="text-base font-extrabold text-[#D97706]">
-                  {money(compensation50)}
-                </p>
-                <p className="text-[10px] text-[#5f5f5f] leading-tight">
-                  = 50% mức đền đề xuất. Member nhận tiền và đến quầy nhận lại hàng.
-                </p>
-              </div>
+            <div className="rounded-xl border border-neutral p-4 space-y-2">
+              <p>Mức đền đủ = giá đang bán trừ hoa hồng kỳ hiện tại; sản phẩm trở thành tài sản nền tảng khi Member chọn nhận đền đủ.</p>
+              <p>Nếu nhận lại hàng, mức đền áp dụng theo tỷ lệ trên biên nhận. Backend xác định và lưu mức đền khi mở ca.</p>
+              <p>{DEGRADED_DECISION_POLICY}</p>
             </div>
 
             {/* Mô tả hư hỏng */}

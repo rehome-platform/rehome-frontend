@@ -1,3 +1,5 @@
+import DegradedCaseDetails from '../DegradedCaseDetails.jsx';
+import { DEGRADED_DECISION_POLICY } from '../../models/degradedCaseModel.js';
 import { ReturnQueueRow } from './ReturnQueueRow.jsx';
 import React from "react";
 import { Button, Modal } from "../../../../components/common/index.js";
@@ -399,8 +401,7 @@ export function DegradedCaseModal({
   selectedItem,
   degradedNotes,
   setDegradedNotes,
-  degradedConditionRate,
-  setDegradedConditionRate,
+  degradedSubmitting = false,
   handleCreateDegradedCase,
   evidenceImageUrls = [],
   uploadEvidence,
@@ -408,25 +409,13 @@ export function DegradedCaseModal({
   evidenceUploading = false,
   evidenceError = '',
 }) {
-  const [localPhotos, setLocalPhotos] = React.useState([]);
-  const [photoInput, setPhotoInput] = React.useState('');
-  const [isEditingCompensation, setIsEditingCompensation] = React.useState(false);
-  const [customCompensation, setCustomCompensation] = React.useState('');
   const fileInputRef = React.useRef(null);
-
   if (!selectedItem) return null;
-
-  // Tính mức đền bù theo kỳ ký gửi hiện tại
-  const currentTerm = selectedItem.currentTerm || 2;
-  const commissionPercent = currentTerm === 3 ? 20 : currentTerm === 2 ? 15 : 10;
-  const commissionRate = commissionPercent / 100;
-  const sellingPrice = selectedItem.amount || selectedItem.itemPrice || selectedItem.priceAtOrder || 520000;
-  const calculated100 = Math.max(0, Math.round(sellingPrice * (1 - commissionRate)));
-
-  const fullCompensation = customCompensation !== '' && !isNaN(Number(customCompensation))
-    ? Number(customCompensation)
-    : (selectedItem.compensationAmount || calculated100);
-  const halfCompensation = Math.round(fullCompensation * 0.5);
+  const fullCompensation = selectedItem.compensationAmount;
+  const halfCompensation = selectedItem.halfCompensationAmount ?? (
+    fullCompensation != null && selectedItem.degradedCompensationRate != null
+      ? Number(fullCompensation) * Number(selectedItem.degradedCompensationRate) : null);
+  const showAmount = value => value == null ? 'Backend sẽ xác định khi mở ca' : formatCurrencyVND(value);
 
   const stockPhotos = selectedItem.stockInPhotos?.length
     ? selectedItem.stockInPhotos
@@ -434,18 +423,8 @@ export function DegradedCaseModal({
       ? selectedItem.initialConsignmentPhotoUrls
       : (selectedItem.productPhotos || []));
 
-  const allDamagedPhotos = Array.from(new Set([...evidenceImageUrls, ...localPhotos]));
-
-  const addPhoto = () => {
-    if (photoInput.trim() && allDamagedPhotos.length < 5) {
-      setLocalPhotos((prev) => [...prev, photoInput.trim()]);
-      setPhotoInput('');
-    }
-  };
-
-  const removePhoto = (idx) => {
-    setLocalPhotos((prev) => prev.filter((_, i) => i !== idx));
-  };
+  const allDamagedPhotos = evidenceImageUrls;
+  const removePhoto = idx => removeEvidence?.(idx);
 
   const handleFileUpload = (e) => {
     const files = Array.from(e.target.files || []);
@@ -486,7 +465,7 @@ export function DegradedCaseModal({
           <div className="flex justify-between">
             <span className="text-[#5f5f5f]">Kỳ ký gửi đang dở:</span>
             <span className="font-semibold text-[#191C19]">
-              Kỳ {currentTerm} · Hoa hồng khấu trừ {commissionPercent}%
+              {selectedItem.currentTerm ? `Kỳ ${selectedItem.currentTerm}` : 'Theo biên nhận và đơn hàng'}
             </span>
           </div>
         </div>
@@ -526,7 +505,7 @@ export function DegradedCaseModal({
                     <img src={url} alt="Ảnh hư hỏng" className="w-full h-full object-cover" />
                     <button
                       type="button"
-                      onClick={() => removePhoto(i)}
+                      disabled={degradedSubmitting || evidenceUploading} onClick={() => removePhoto(i)}
                       className="absolute top-0.5 right-0.5 bg-black/70 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]"
                     >
                       ×
@@ -551,24 +530,13 @@ export function DegradedCaseModal({
                       size="sm"
                       variant="outline"
                       onClick={() => fileInputRef.current?.click()}
-                      disabled={evidenceUploading}
+                      disabled={evidenceUploading || degradedSubmitting}
                       className="text-[10px] py-1 px-2 border-neutral"
                     >
                       {evidenceUploading ? 'Đang tải…' : '📁 Tải ảnh từ máy'}
                     </Button>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="text"
-                      placeholder="Hoặc dán URL ảnh…"
-                      value={photoInput}
-                      onChange={(e) => setPhotoInput(e.target.value)}
-                      className="flex-1 p-1 border border-neutral rounded-lg text-[10px] bg-white"
-                    />
-                    <Button type="button" size="sm" variant="outline" onClick={addPhoto} className="text-[10px] py-1 px-2">
-                      +
-                    </Button>
-                  </div>
+
                 </div>
               )}
             </div>
@@ -592,75 +560,38 @@ export function DegradedCaseModal({
 
         {/* Bảng tính mức đền */}
         <div className="border border-neutral rounded-xl p-3.5 space-y-2.5 bg-[#fafafa]">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase font-bold text-[#6b6b6b]">2. Bảng tính mức đền cho người ký gửi</span>
-            <button
-              type="button"
-              onClick={() => setIsEditingCompensation(!isEditingCompensation)}
-              className="text-[11px] text-[#006B2C] font-semibold hover:underline"
-            >
-              {isEditingCompensation ? 'Đóng chỉnh sửa' : '✏️ Sửa mức đền'}
-            </button>
-          </div>
-
-          <div className="space-y-1 text-xs">
-            <div className="flex justify-between text-[#5f5f5f]">
-              <span>Giá bán niêm yết:</span>
-              <span className="font-semibold text-[#191C19]">{formatCurrencyVND(sellingPrice)}</span>
-            </div>
-            <div className="flex justify-between text-[#5f5f5f]">
-              <span>Hoa hồng kỳ {currentTerm} ({commissionPercent}%):</span>
-              <span className="text-red-600">− {formatCurrencyVND(Math.round(sellingPrice * commissionRate))}</span>
-            </div>
-          </div>
-
-          {isEditingCompensation && (
-            <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-300 space-y-1">
-              <label className="block text-[11px] font-bold text-amber-900">
-                Nhập mức đền đề xuất tùy chỉnh (VNĐ):
-              </label>
-              <input
-                type="number"
-                value={customCompensation}
-                onChange={(e) => setCustomCompensation(e.target.value)}
-                placeholder={String(calculated100)}
-                className="w-full p-1.5 border border-amber-400 rounded text-xs bg-white font-bold text-[#191C19]"
-              />
-              <p className="text-[10px] text-amber-800">
-                Lưu ý: Chỉ chỉnh sửa mức đền khi có thỏa thuận hoặc trường hợp đặc biệt.
-              </p>
-            </div>
-          )}
+          <span className="text-[10px] uppercase font-bold text-[#6b6b6b]">2. Mức đền cho người ký gửi</span>
+          <p>Mức đền được backend tính từ giá và hoa hồng của đơn hàng, lưu tại thời điểm mở ca.</p>
 
           {/* 2 Lựa chọn Member sẽ thấy */}
           <div className="grid grid-cols-2 gap-3 pt-1">
             <div className="p-3 rounded-xl border border-[#006B2C] bg-[#E8F5E9]/60 space-y-1">
               <span className="text-[10px] uppercase font-bold text-[#006B2C]">Phương án 1 · Đền 100%</span>
-              <p className="text-base font-extrabold text-[#006B2C]">{formatCurrencyVND(fullCompensation)}</p>
+              <p className="text-base font-extrabold text-[#006B2C]">{showAmount(fullCompensation)}</p>
               <p className="text-[10px] text-[#5f5f5f] leading-tight">
                 Không lấy lại đồ. Hàng thành tài sản nền tảng (PLATFORM_OWNED).
               </p>
             </div>
             <div className="p-3 rounded-xl border border-[#D97706] bg-[#FFFBEB] space-y-1">
-              <span className="text-[10px] uppercase font-bold text-[#D97706]">Phương án 2 · Đền 50% + Nhận lại</span>
-              <p className="text-base font-extrabold text-[#D97706]">{formatCurrencyVND(halfCompensation)}</p>
+              <span className="text-[10px] uppercase font-bold text-[#D97706]">Phương án 2 · Đền một phần + Nhận lại</span>
+              <p className="text-base font-extrabold text-[#D97706]">{showAmount(halfCompensation)}</p>
               <p className="text-[10px] text-[#5f5f5f] leading-tight">
-                Member nhận 50% tiền đền và có 30 ngày đến quầy tiếp nhận lấy đồ.
+                Member nhận tiền đền theo tỷ lệ trên biên nhận và đến quầy tiếp nhận lấy đồ.
               </p>
             </div>
           </div>
           <p className="text-[10px] text-[#717971]">
-            Hạn chọn 7 ngày. Quá hạn tự động mặc định chọn nhận tiền đền 100%.
+            {DEGRADED_DECISION_POLICY}
           </p>
         </div>
 
         <div className="flex justify-end gap-2 pt-2 border-t border-neutral">
-          <Button variant="outline" size="sm" className="rounded-xl border-neutral" onClick={onClose}>
+          <Button variant="outline" size="sm" className="rounded-xl border-neutral" disabled={degradedSubmitting} onClick={onClose}>
             Hủy
           </Button>
           <Button
             size="sm"
-            disabled={!degradedNotes?.trim() || allDamagedPhotos.length < 1}
+            disabled={degradedSubmitting || evidenceUploading || Boolean(evidenceError) || !degradedNotes?.trim() || allDamagedPhotos.length < 2 || allDamagedPhotos.length > 5}
             className="bg-[#2b2b2b] text-white hover:bg-black font-bold rounded-xl px-4 py-2"
             onClick={() => handleCreateDegradedCase({
               notes: degradedNotes,
@@ -677,299 +608,22 @@ export function DegradedCaseModal({
   );
 }
 
-/**
- * TH-07: Màn hình kết luận hàng xuống cấp hiển thị đầy đủ 3 trạng thái của Wireframe:
- * 1. TH-07-ChoKetLuan (CHỜ KẾT LUẬN)
- * 2. TH-07-DaGui (ĐÃ GỬI, CHỜ NGƯỜI KÝ GỬI)
- * 3. TH-07-DaChon (ĐÃ CHỌN PHƯƠNG ÁN)
- */
-export function DegradedCaseViewTH07({
-  selectedItem,
-  degradedCaseState = 'CHO_KET_LUAN',
-  onBackToQueue,
-  onSendTwoOptions,
-  onNavigateToCounter,
-}) {
+/** TH-07 reads the actual pending, decided or unclaimed case after return resolution. */
+export function DegradedCaseViewTH07({ selectedItem, onBackToQueue, onNavigateToCounter }) {
   if (!selectedItem) return null;
-
-  const currentTerm = selectedItem.currentTerm || 2;
-  const commissionPercent = currentTerm === 3 ? 20 : currentTerm === 2 ? 15 : 10;
-  const commissionRate = commissionPercent / 100;
-  const sellingPrice = selectedItem.amount || selectedItem.itemPrice || selectedItem.priceAtOrder || 520000;
-  const fullCompensation = selectedItem.compensationAmount || Math.max(0, Math.round(sellingPrice * (1 - commissionRate)));
-  const halfCompensation = selectedItem.paidAmount || selectedItem.halfCompensationAmount || Math.round(fullCompensation * 0.5);
-
-  const stockPhotos = selectedItem.stockInPhotos?.length
-    ? selectedItem.stockInPhotos
-    : (selectedItem.initialConsignmentPhotoUrls?.length
-      ? selectedItem.initialConsignmentPhotoUrls
-      : (selectedItem.productPhotos || []));
-
-  const damagedPhotos = selectedItem.photos?.length
-    ? selectedItem.photos
-    : (selectedItem.buyerPhotos || []);
-
-  const decision = selectedItem.decision || selectedItem.degradedDecision || (
-    selectedItem.decisionStatus === 'FULL_COMPENSATION' ? 'FULL_COMPENSATION' :
-    selectedItem.decisionStatus === 'PARTIAL_WITH_ITEM_BACK' ? 'PARTIAL_WITH_ITEM_BACK' :
-    'FULL_COMPENSATION'
-  );
-
   return (
-    <div className="space-y-4 font-sans text-xs">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral pb-3 bg-surface p-4 rounded-2xl shadow-sm">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onBackToQueue}
-            className="w-8 h-8 flex items-center justify-center rounded-xl border border-neutral text-sm text-text hover:bg-background transition-colors"
-            title="Quay lại hàng đợi"
-          >
-            ←
-          </button>
-          <div>
-            <span className="text-xs text-textSecondary">Yêu cầu trả hàng · </span>
-            <span className="text-sm font-bold text-text">
-              {selectedItem.code || selectedItem.returnCode || 'YC-00091'} · hàng xuống cấp
-            </span>
-          </div>
-        </div>
-
-        <div>
-          {degradedCaseState === 'CHO_KET_LUAN' && (
-            <span className="px-3 py-1 border border-neutral rounded-full text-xs font-semibold bg-white text-text">
-              CHỜ KẾT LUẬN
-            </span>
-          )}
-          {degradedCaseState === 'DA_GUI' && (
-            <span className="px-3 py-1 bg-[#2b2b2b] text-white text-xs font-bold rounded-full">
-              ĐÃ GỬI, CHỜ NGƯỜI KÝ GỬI
-            </span>
-          )}
-          {degradedCaseState === 'DA_CHON' && (
-            <span className="px-3 py-1 bg-[#006B2C] text-white text-xs font-bold rounded-full">
-              ĐÃ CHỌN PHƯƠNG ÁN
-            </span>
-          )}
-        </div>
+    <div className="space-y-4 rounded-2xl border border-neutral bg-surface p-5">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-base font-bold">Biên bản hàng xuống cấp · {selectedItem.code || selectedItem.id}</h2>
+        <Button variant="outline" onClick={onBackToQueue}>Về hàng đợi trả hàng</Button>
       </div>
-
-      {/* Main 2-column layout matching Wireframes */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Cột trái (7 cols): Đối chiếu ảnh & Nguyên nhân */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="rounded-2xl border border-neutral bg-surface p-5 space-y-4 shadow-sm">
-            <div className="space-y-1">
-              <h2 className="text-base font-bold text-[#191C19]">
-                {selectedItem.itemName || selectedItem.productName} · {selectedItem.sku || selectedItem.productId || 'RH-M4T19B'}
-              </h2>
-              <p className="text-xs text-[#5f5f5f]">
-                {selectedItem.code || 'YC-00091'} · hàng về bị hư hỏng, phát hiện ở bước đối chiếu kiểm tra
-              </p>
-            </div>
-
-            {/* 2 Cột ảnh: Xuất kho vs Hàng về hư hỏng */}
-            <div className="grid grid-cols-2 gap-4 pt-2">
-              <div className="space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#6b6b6b]">
-                  Ảnh lúc xuất kho
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {stockPhotos.length > 0 ? (
-                    stockPhotos.map((url, i) => (
-                      <div key={i} className="w-24 h-28 rounded-xl border border-neutral overflow-hidden bg-[#fafafa]">
-                        <img src={url} alt="Ảnh xuất kho" className="w-full h-full object-cover" />
-                      </div>
-                    ))
-                  ) : (
-                    <div className="w-24 h-28 rounded-xl border border-dashed border-neutral flex items-center justify-center text-[10px] text-[#717971] p-2 text-center">
-                      Ảnh gốc lúc nhập kho
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-red-600">
-                  Ảnh hàng về · hư hỏng
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {damagedPhotos.length > 0 ? (
-                    damagedPhotos.map((url, i) => (
-                      <div key={i} className="w-24 h-28 rounded-xl border border-red-300 overflow-hidden bg-red-50/30">
-                        <img src={url} alt="Ảnh hư hỏng" className="w-full h-full object-cover" />
-                      </div>
-                    ))
-                  ) : (
-                    <div className="w-24 h-28 rounded-xl border border-dashed border-red-300 flex items-center justify-center text-[10px] text-red-600 p-2 text-center">
-                      Chưa có ảnh hư hỏng
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Box Nguyên nhân */}
-            <div className="border border-neutral rounded-xl p-3.5 bg-background space-y-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#6b6b6b]">
-                Nguyên nhân
-              </span>
-              <p className="text-xs text-[#3a3a3a] leading-relaxed">
-                {selectedItem.degradedReason || selectedItem.conditionNote || 'Thùng móp nặng trên đường vận chuyển trả về — khoá kéo gãy, vết rách ở thân sau. Lỗi khâu vận chuyển do kho sắp xếp, không phải lỗi người mua hay người ký gửi.'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Cột phải (5 cols): Nội dung theo từng trạng thái */}
-        <div className="lg:col-span-5 space-y-4">
-          {/* TRẠNG THÁI 1: CHỜ KẾT LUẬN (TH-07-ChoKetLuan) */}
-          {degradedCaseState === 'CHO_KET_LUAN' && (
-            <div className="rounded-2xl border border-neutral bg-surface p-5 space-y-4 shadow-sm">
-              <div className="space-y-1">
-                <span className="text-[10px] uppercase font-bold text-[#6b6b6b]">Mô tả hư hỏng</span>
-                <div className="p-3 rounded-xl border border-neutral bg-background text-[#3a3a3a] leading-relaxed">
-                  {selectedItem.conditionNote || 'Khoá kéo gãy, vết rách khoảng 4cm ở thân sau do va đập trong quá trình vận chuyển trả về kho.'}
-                </div>
-              </div>
-
-              <div className="border border-neutral rounded-xl p-3.5 space-y-2 bg-[#fafafa]">
-                <span className="text-[10px] uppercase font-bold text-[#6b6b6b]">Mức đền</span>
-                <div className="flex justify-between text-[#5f5f5f]">
-                  <span>Giá bán hiện tại:</span>
-                  <span className="font-semibold text-[#191C19]">{formatCurrencyVND(sellingPrice)}</span>
-                </div>
-                <div className="flex justify-between text-[#5f5f5f]">
-                  <span>Hoa hồng kỳ hiện tại (kỳ {currentTerm}):</span>
-                  <span>− {commissionPercent}%</span>
-                </div>
-                <div className="flex justify-between font-bold text-sm text-[#006B2C] pt-2 border-t border-neutral">
-                  <span>Nếu nhận tiền đền 100%:</span>
-                  <span>{formatCurrencyVND(fullCompensation)}</span>
-                </div>
-                <div className="flex justify-between font-semibold text-xs text-[#D97706]">
-                  <span>Nếu nhận lại hàng + đền 50%:</span>
-                  <span>{formatCurrencyVND(halfCompensation)}</span>
-                </div>
-                <p className="text-[10px] text-[#717971] pt-1">
-                  Mức đền = giá bán trừ hoa hồng kỳ hiện tại. Kho chịu khoản này, không trừ vào tiền người ký gửi.
-                </p>
-              </div>
-
-              <Button
-                type="button"
-                className="w-full bg-[#2b2b2b] text-white hover:bg-black font-bold py-3 text-xs"
-                onClick={onSendTwoOptions}
-              >
-                Gửi 2 phương án cho người ký gửi
-              </Button>
-            </div>
-          )}
-
-          {/* TRẠNG THÁI 2: ĐÃ GỬI (TH-07-DaGui) */}
-          {degradedCaseState === 'DA_GUI' && (
-            <div className="rounded-2xl border border-neutral bg-surface p-5 space-y-4 shadow-sm">
-              <div className="p-4 rounded-xl border-2 border-[#2b2b2b] bg-[#f4f4f4] space-y-1.5">
-                <span className="text-[10px] uppercase font-bold text-[#6b6b6b]">Đã gửi 2 phương án</span>
-                <p className="text-xs text-[#3a3a3a] leading-relaxed">
-                  Người ký gửi đang xem màn chọn phương án (KG-16) trên app. Hạn chọn <strong className="font-bold">7 ngày</strong>, quá hạn hệ thống tự chọn phương án nhận tiền đền 100%.
-                </p>
-              </div>
-
-              <div className="border border-neutral rounded-xl p-3.5 space-y-2.5 bg-[#fafafa]">
-                <span className="text-[10px] uppercase font-bold text-[#6b6b6b]">Mức đền đã gửi</span>
-                <div className="flex justify-between text-xs">
-                  <span className="text-[#3a3a3a]">Nhận tiền đền 100%:</span>
-                  <span className="font-bold text-[#006B2C]">{formatCurrencyVND(fullCompensation)}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-[#3a3a3a]">Nhận lại hàng + đền 50%:</span>
-                  <span className="font-bold text-[#D97706]">{formatCurrencyVND(halfCompensation)}</span>
-                </div>
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full border-neutral text-xs py-2.5 font-semibold"
-                onClick={onBackToQueue}
-              >
-                Về hàng đợi trả hàng
-              </Button>
-            </div>
-          )}
-
-          {/* TRẠNG THÁI 3: ĐÃ CHỌN (TH-07-DaChon) */}
-          {degradedCaseState === 'DA_CHON' && (
-            <div className="rounded-2xl border border-neutral bg-surface p-5 space-y-4 shadow-sm">
-              <div className="p-4 rounded-xl border-2 border-[#2b2b2b] bg-[#f4f4f4] space-y-2">
-                <span className="text-[10px] uppercase font-bold text-[#6b6b6b]">Người ký gửi đã chọn</span>
-                <div className="flex gap-2.5 items-start">
-                  <span className="w-5 h-5 rounded-full bg-[#006B2C] text-white flex items-center justify-center text-xs font-bold shrink-0">
-                    ✓
-                  </span>
-                  <div>
-                    <p className="font-bold text-xs text-[#191C19]">
-                      {decision === 'PARTIAL_WITH_ITEM_BACK'
-                        ? `Nhận lại hàng kèm đền 50% — ${formatCurrencyVND(halfCompensation)}`
-                        : `Nhận tiền đền 100% — ${formatCurrencyVND(fullCompensation)}`}
-                    </p>
-                    <p className="text-[10px] text-[#717971] mt-0.5">
-                      {selectedItem.decidedAt
-                        ? `Chọn lúc ${new Date(selectedItem.decidedAt).toLocaleString('vi-VN')}`
-                        : 'Đã hoàn tất lựa chọn trên ứng dụng'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border border-neutral rounded-xl p-3.5 space-y-2 bg-[#fafafa]">
-                <span className="text-[10px] uppercase font-bold text-[#6b6b6b]">Việc cần làm tiếp</span>
-                {decision === 'PARTIAL_WITH_ITEM_BACK' ? (
-                  <div className="text-xs text-[#3a3a3a] leading-relaxed space-y-2">
-                    <p>
-                      • Cộng <strong className="font-bold text-[#006B2C]">{formatCurrencyVND(halfCompensation)}</strong> vào ví người ký gửi — <strong>đã xử lý tự động</strong>.
-                    </p>
-                    <p>
-                      • Chuyển món hàng sang khu vực <strong>Quầy tiếp nhận (BG-01)</strong>. Khi Member đến quầy, Moderator tra cứu Member và bấm <strong>Bàn giao</strong> để xuất kho.
-                    </p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full text-xs font-bold text-[#006B2C] border-[#006B2C] hover:bg-[#E8F5E9] mt-2 py-2"
-                      onClick={onNavigateToCounter}
-                    >
-                      Mở Quầy tiếp nhận (BG-01) →
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-xs text-[#3a3a3a] leading-relaxed space-y-1.5">
-                    <p>
-                      • Cộng <strong className="font-bold text-[#006B2C]">{formatCurrencyVND(fullCompensation)}</strong> vào ví người ký gửi — <strong>đã xử lý tự động</strong>.
-                    </p>
-                    <p>
-                      • Món hàng chuyển trạng thái <strong className="font-bold text-purple-900">Tài sản nền tảng (PLATFORM_OWNED)</strong>, không đăng bán lại, không trả cho người ký gửi.
-                    </p>
-                    <p>
-                      • Lần hư hỏng này <strong>không tính vào lịch sử</strong> ký gửi của họ.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full border-neutral text-xs py-2.5 font-semibold"
-                onClick={onBackToQueue}
-              >
-                Về hàng đợi trả hàng
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
+      <DegradedCaseDetails
+        returnId={selectedItem.id}
+        productId={selectedItem.productId}
+        resolvedAt={selectedItem.resolvedAt}
+        stockPhotos={selectedItem.stockInPhotos || selectedItem.initialConsignmentPhotoUrls || []}
+        onNavigateToCounter={onNavigateToCounter}
+      />
     </div>
   );
 }

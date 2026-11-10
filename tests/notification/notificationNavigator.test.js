@@ -2,6 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { resolveNotificationUrl } from '../../src/utils/notificationNavigator.js';
 
 describe('notificationNavigator', () => {
+  it('opens degraded case IDs as case details instead of return request IDs', () => {
+    expect(resolveNotificationUrl({ targetType: 'DEGRADED_ITEM_CASE', targetId: 'case/1' })).toBe('/moderator/inventory?status=DEGRADED&caseId=case%2F1');
+    expect(resolveNotificationUrl({ targetType: 'DEGRADED_ITEM_CASE' })).toBe('/moderator/inventory?status=DEGRADED');
+  });
   it('resolves routes based on targetType and targetId (default/moderator role)', () => {
     expect(resolveNotificationUrl({ targetType: 'CONSIGNMENT', targetId: '123' })).toBe('/moderator/consignments/123');
     expect(resolveNotificationUrl({ targetType: 'CONSIGNMENT_FORM', targetId: 'form-1' })).toBe('/moderator/consignments/form-1');

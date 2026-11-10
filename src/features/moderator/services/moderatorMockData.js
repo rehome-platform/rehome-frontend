@@ -1,3 +1,4 @@
+import { fixtureRequest } from './fixtureTransport.js';
 /**
  * Dịch vụ mock data tập trung cho các module Bảng Điều Khiển Kho (Moderator Dashboard)
  * Chuẩn hóa 100% theo các wireframe thực tế:
@@ -260,17 +261,20 @@ export const returnService = {
 
   async resolveValid(retId, outcome) {
     await delay();
-    returnRequestsData = returnRequestsData.map((r) =>
-      r.id === retId
-        ? {
-            ...r,
-            status: 'RESOLVED',
-            outcome,
-            carrierStatus: `Đã hoàn ${r.amount + r.shippingFee}đ vào ví người mua`,
-          }
-        : r
-    );
-    return returnRequestsData.find((r) => r.id === retId);
+    const item = returnRequestsData.find(row => row.id === retId);
+    if (!item) throw new Error('Không tìm thấy yêu cầu trả hàng.');
+    if (item.status === 'RESOLVED') throw new Error('Yêu cầu đã được chốt.');
+    const resolvedAt = new Date().toISOString();
+    if (item.degraded) {
+      await fixtureRequest('degradedCaseCreateFromReturn', { data: {
+        productId: item.productId || item.sku, productName: item.itemName,
+        photos: item.evidenceImageUrls, notes: item.conditionNote, reason: item.reason,
+        compensationAmount: item.compensationAmount, degradedCompensationRate: item.degradedCompensationRate,
+      } });
+    }
+    Object.assign(item, { status: 'RESOLVED', rawStatus: 'VALID', resolvedAt, outcome,
+      carrierStatus: `Đã hoàn ${item.amount + item.shippingFee}đ vào ví người mua` });
+    return { ...item };
   },
 
   async resolveInvalid(retId, reason) {
@@ -291,7 +295,8 @@ export const returnService = {
 
   async detail(retId) {
     await delay();
-    return returnRequestsData.find((r) => r.id === retId);
+    const item = returnRequestsData.find((r) => r.id === retId);
+    return item ? { ...item, productId: item.productId || item.sku } : null;
   },
 };
 
@@ -364,29 +369,8 @@ returnService.markLost = async function(retId, note) {
   return returnRequestsData.find((r) => r.id === retId);
 };
 
-returnService.createDegradedCase = async function(payload) {
-  await delay();
-  return {
-    id: `dic-${Date.now()}`,
-    productId: payload?.productId || 'RH-M4T19B',
-    returnRequestId: payload?.returnRequestId,
-    compensationAmount: payload?.compensationAmount || 442000,
-    status: 'PENDING_DECISION',
-    createdAt: new Date().toISOString(),
-  };
-};
-
-returnService.getDegradedCase = async function(id) {
-  await delay();
-  return {
-    id,
-    productId: 'RH-M4T19B',
-    productName: 'Áo khoác bomber Adidas',
-    compensationAmount: 442000,
-    status: 'PENDING_DECISION',
-    createdAt: new Date().toISOString(),
-  };
-};
+returnService.createDegradedCase = payload => fixtureRequest('degradedCaseCreate', { data: payload });
+returnService.getDegradedCase = id => fixtureRequest('degradedCaseRead', { ids: { id } });
 
 // ==========================================
 // 2. ORG VERIFICATION (TC-01..06)

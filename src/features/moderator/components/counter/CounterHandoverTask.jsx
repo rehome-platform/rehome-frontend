@@ -37,11 +37,11 @@ const STYLES = {
     border: 'border-[#006B2C]/40',
     header: 'bg-[#E8F5E9] border-[#C8E6C9]',
     color: 'text-[#006B2C]',
-    title: 'Hàng xuống cấp (Member chọn nhận lại + đền 50%)',
+    title: 'Hàng xuống cấp (Member chọn nhận lại + đền một phần)',
     deadlineLabel: 'Thời hạn đến nhận:',
     groupTitle: '5. Khách đến nhận lại hàng xuống cấp',
     badge: 'bg-[#E8F5E9] text-[#006B2C]',
-    badgeLabel: 'Đền 50% & nhận lại',
+    badgeLabel: 'Đền một phần & nhận lại',
   },
 };
 
@@ -70,7 +70,7 @@ export function CounterHandoverTask({ item, context, setConfirmHandover, activeR
   const style = STYLES[context] || STYLES.ITEM_WITHDRAWAL;
   const withdrawal = context === 'ITEM_WITHDRAWAL';
   const degraded = context === 'DEGRADED_ITEM_PICKUP';
-  const deadlineValue = item.pickupDeadline || item.deadline || item.handoverDeadline;
+  const deadlineValue = degraded ? item.pickupDeadline : (item.pickupDeadline || item.deadline || item.handoverDeadline);
 
   const isMatched = Boolean(
     activeRefId &&
@@ -95,9 +95,9 @@ export function CounterHandoverTask({ item, context, setConfirmHandover, activeR
             </span>
           )}
         </div>
-        <span className="text-[11px] text-[#717971]">
+        {(!degraded || deadlineValue) && <span className="text-[11px] text-[#717971]">
           {style.deadlineLabel} {deadlineValue ? date(deadlineValue) : 'Chưa có thông tin thời hạn'}
-        </span>
+        </span>}
       </div>
       <div className="p-4 flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -130,9 +130,9 @@ export function CounterHandoverTask({ item, context, setConfirmHandover, activeR
             {degraded && (
               <>
                 {' '}
-                · Tiền đền 50%:{' '}
+                · Tiền đền:{' '}
                 <span className="font-bold text-[#006B2C]">
-                  {money(item.paidAmount || item.compensationAmount || 0)}
+                  {money(item.paidAmount ?? item.compensationAmount)}
                 </span>{' '}
                 (đã vào ví Member)
               </>
