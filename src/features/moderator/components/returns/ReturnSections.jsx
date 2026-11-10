@@ -63,38 +63,330 @@ export function ReturnCompareDialog({ isCompareModalOpen, setIsCompareModalOpen,
   );
 }
 
-export function ReturnOutcomeDialog({ isOutcomeModalOpen, setIsOutcomeModalOpen, handleConfirmOutcome }) {
+export function ReturnOutcomeDialog({
+  isOutcomeModalOpen,
+  setIsOutcomeModalOpen,
+  handleConfirmOutcome,
+  selectedItem,
+}) {
+  const [selectedOutcome, setSelectedOutcome] = React.useState('RELIST');
+  const [discardReason, setDiscardReason] = React.useState('');
+
+  React.useEffect(() => {
+    if (isOutcomeModalOpen) {
+      setSelectedOutcome('RELIST');
+      setDiscardReason('');
+    }
+  }, [isOutcomeModalOpen]);
+
+  const price = selectedItem?.consignPrice || selectedItem?.amount || selectedItem?.itemPrice || 420000;
+  const commissionRate = 15;
+  const currentTerm = selectedItem?.term || 2;
+  const daysInTerm = selectedItem?.daysInTerm || 46;
+  const totalDaysInTerm = 60;
+  const shelfLocation = selectedItem?.shelfLocation || selectedItem?.warehouseLocation || 'B1-22';
+  const consignorCode = selectedItem?.consignorCode || selectedItem?.senderCode || selectedItem?.sellerName || 'MB-004821';
+  const itemSku = selectedItem?.sku || selectedItem?.productCode || 'RH-C2M08P';
+  const itemName = selectedItem?.itemName || selectedItem?.productName || 'Quần jeans ống rộng · Levi\'s · 29';
+  const itemPhoto =
+    selectedItem?.stockInPhotos?.[0] ||
+    selectedItem?.productImage ||
+    selectedItem?.photos?.[0] ||
+    'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400';
+
+  const onConfirm = () => {
+    if (selectedOutcome === 'DISCARD' && !discardReason.trim()) {
+      alert('Vui lòng nhập lý do tiêu huỷ món hàng.');
+      return;
+    }
+    handleConfirmOutcome(selectedOutcome, { discardReason });
+  };
+
   return (
     <Modal
       isOpen={isOutcomeModalOpen}
       onClose={() => setIsOutcomeModalOpen(false)}
       title="Chọn phương án xử lý món hàng (TH-04)"
+      size="xl"
     >
-      <div className="space-y-4 text-xs font-sans">
-        <p className="text-textSecondary">
-          Đã xác nhận trả hàng hợp lệ. Vui lòng chọn hướng xử lý tiếp theo cho món đồ này tại kho:
-        </p>
-        <div className="grid grid-cols-1 gap-3">
-          <button
-            type="button"
-            onClick={() => handleConfirmOutcome('RELIST')}
-            className="p-3.5 border-2 border-primary rounded-xl text-left bg-surface hover:bg-success-light/30 transition-colors shadow-sm"
-          >
-            <div className="font-bold text-primary text-sm">Đăng bán lại (Relist)</div>
-            <div className="text-[11px] text-textSecondary mt-1">
-              Món hàng vẫn đạt tiêu chuẩn chất lượng. Hệ thống sẽ giữ nguyên SKU và mở bán lại trên ứng dụng.
+      <div className="space-y-5 text-xs font-sans">
+        {/* Top Header Badge */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral pb-3">
+          <div>
+            <div className="text-sm font-bold text-[#191C19]">
+              {selectedItem?.code || 'YC-00084'} · Quyết định xử lý món hàng
             </div>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleConfirmOutcome('RETURN_TO_SELLER')}
-            className="p-3.5 border border-neutral rounded-xl text-left bg-surface hover:bg-background transition-colors"
-          >
-            <div className="font-bold text-text text-sm">Hoàn trả cho người ký gửi</div>
-            <div className="text-[11px] text-textSecondary mt-1">
-              Món hàng bị lỗi hoặc không còn phù hợp để bán lại. Chuyển vào hàng đợi hoàn trả người ký gửi.
+            <p className="text-[11px] text-textSecondary mt-0.5">
+              Quyết định riêng với việc hoàn tiền. Đã hoàn tiền không có nghĩa là phải bỏ món.
+            </p>
+          </div>
+          <span className="text-[10px] font-extrabold px-3 py-1 bg-[#2b2b2b] text-white rounded tracking-wide uppercase self-start sm:self-auto">
+            ĐÃ HOÀN TIỀN NGƯỜI MUA
+          </span>
+        </div>
+
+        {/* 2-Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          {/* Cột trái (7 cols): 3 Lựa chọn phương án */}
+          <div className="lg:col-span-7 space-y-3">
+            <div className="font-bold text-sm text-[#191C19] flex items-center justify-between">
+              <span>Món hàng này xử lý thế nào</span>
+              <span className="text-[11px] font-semibold text-textSecondary">Bước 1 / 2</span>
             </div>
-          </button>
+
+            {/* Option 1: RELIST */}
+            <div
+              className={`p-3.5 rounded-xl border-2 transition-all ${
+                selectedOutcome === 'RELIST'
+                  ? 'border-[#2b2b2b] bg-[#fafafa] shadow-sm'
+                  : 'border-neutral bg-surface hover:bg-background'
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedOutcome('RELIST');
+                  handleConfirmOutcome('RELIST');
+                }}
+                className="w-full text-left"
+              >
+                <div className="flex items-start gap-2.5">
+                  <span
+                    className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                      selectedOutcome === 'RELIST' ? 'border-[#2b2b2b]' : 'border-[#8a8a8a]'
+                    }`}
+                  >
+                    {selectedOutcome === 'RELIST' && (
+                      <span className="w-2 h-2 rounded-full bg-[#2b2b2b]" />
+                    )}
+                  </span>
+                  <div className="flex-1">
+                    <div className="font-bold text-sm text-primary">Đăng bán lại (Relist)</div>
+                    <p className="text-[11px] text-textSecondary mt-0.5 leading-relaxed">
+                      Món còn tốt, đủ điều kiện lên sàn. Quay về trạng thái ký gửi của chủ cũ.
+                    </p>
+                  </div>
+                </div>
+              </button>
+              <div className="mt-2.5 ml-6 p-2.5 bg-surface rounded-lg border border-neutral text-[11px] leading-relaxed text-[#4a4a4a]">
+                Kỳ và hoa hồng <strong className="font-bold text-[#191C19]">tiếp tục từ chỗ đang dở</strong> (kỳ {currentTerm}, ngày thứ {daysInTerm}), không tính lại từ đầu — nếu tính lại thì người ký gửi được lợi từ một giao dịch hỏng. Giữ nguyên SKU và tem cũ, không in lại.
+              </div>
+            </div>
+
+            {/* Option 2: RETURN_TO_SELLER */}
+            <div
+              className={`p-3.5 rounded-xl border-2 transition-all ${
+                selectedOutcome === 'RETURN_TO_SELLER'
+                  ? 'border-[#2b2b2b] bg-[#fafafa] shadow-sm'
+                  : 'border-neutral bg-surface hover:bg-background'
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedOutcome('RETURN_TO_SELLER');
+                  handleConfirmOutcome('RETURN_TO_SELLER');
+                }}
+                className="w-full text-left"
+              >
+                <div className="flex items-start gap-2.5">
+                  <span
+                    className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                      selectedOutcome === 'RETURN_TO_SELLER' ? 'border-[#2b2b2b]' : 'border-[#8a8a8a]'
+                    }`}
+                  >
+                    {selectedOutcome === 'RETURN_TO_SELLER' && (
+                      <span className="w-2 h-2 rounded-full bg-[#2b2b2b]" />
+                    )}
+                  </span>
+                  <div className="flex-1">
+                    <div className="font-bold text-sm text-[#191C19]">Hoàn trả cho người ký gửi</div>
+                    <p className="text-[11px] text-textSecondary mt-0.5 leading-relaxed">
+                      Món không còn bán được nhưng vẫn là tài sản của họ.
+                    </p>
+                  </div>
+                </div>
+              </button>
+              <div className="mt-2.5 ml-6 p-2.5 bg-surface rounded-lg border border-neutral text-[11px] leading-relaxed text-[#4a4a4a]">
+                Member nhận thông báo và có <strong className="font-bold text-[#191C19]">30 ngày</strong> tới kho lấy, như hàng cuối kỳ. Quá hạn thì thành hàng vô chủ theo quy định mục 11.
+              </div>
+            </div>
+
+            {/* Option 3: DISCARD */}
+            <div
+              className={`p-3.5 rounded-xl border-2 transition-all ${
+                selectedOutcome === 'DISCARD'
+                  ? 'border-[#2b2b2b] bg-[#fafafa] shadow-sm'
+                  : 'border-neutral bg-surface hover:bg-background'
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => setSelectedOutcome('DISCARD')}
+                className="w-full text-left"
+              >
+                <div className="flex items-start gap-2.5">
+                  <span
+                    className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                      selectedOutcome === 'DISCARD' ? 'border-[#2b2b2b]' : 'border-[#8a8a8a]'
+                    }`}
+                  >
+                    {selectedOutcome === 'DISCARD' && (
+                      <span className="w-2 h-2 rounded-full bg-[#2b2b2b]" />
+                    )}
+                  </span>
+                  <div className="flex-1">
+                    <div className="font-bold text-sm text-error">Tiêu huỷ</div>
+                    <p className="text-[11px] text-textSecondary mt-0.5 leading-relaxed">
+                      Hàng hỏng nặng, mất vệ sinh, hoặc xác định là hàng giả.
+                    </p>
+                  </div>
+                </div>
+              </button>
+              <div className="mt-2.5 ml-6 p-2.5 bg-surface rounded-lg border border-neutral text-[11px] leading-relaxed text-[#4a4a4a]">
+                Phải có <strong className="font-bold text-[#191C19]">lý do và ảnh</strong>, và Member được báo kèm ảnh đó. Ca hàng giả bắt buộc hai Moderator cùng kết luận trước khi tới bước này.
+              </div>
+              {selectedOutcome === 'DISCARD' && (
+                <div className="mt-3 ml-6 space-y-1.5 pt-2 border-t border-neutral">
+                  <label className="block text-[11px] font-bold text-error">
+                    Lý do tiêu huỷ (bắt buộc):
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={discardReason}
+                    onChange={(e) => setDiscardReason(e.target.value)}
+                    placeholder="Ghi rõ tình trạng hỏng hóc hoặc lý do bắt buộc tiêu huỷ..."
+                    className="w-full p-2 text-xs border border-neutral rounded-lg focus:outline-none focus:border-error bg-surface"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Cột phải (5 cols): Tóm tắt món đồ & Hệ quả theo Wireframe TH-04 */}
+          <div className="lg:col-span-5 space-y-3.5">
+            {/* Box 1: Thông tin món */}
+            <div className="border border-neutral rounded-xl overflow-hidden bg-surface shadow-sm">
+              <div className="p-3 flex items-center gap-3 border-b border-neutral">
+                <img
+                  src={itemPhoto}
+                  alt={itemName}
+                  className="w-12 h-14 object-cover rounded-lg border border-neutral shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-bold text-[#191C19]">{itemSku}</div>
+                  <div className="text-[11px] text-textSecondary truncate">{itemName}</div>
+                </div>
+              </div>
+              <div className="p-3 space-y-1.5 text-[11px]">
+                <div className="flex justify-between">
+                  <span className="text-textSecondary">Kết luận kiểm tra:</span>
+                  <span className="font-bold text-primary">Hợp lệ, còn tốt</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-textSecondary">Người ký gửi:</span>
+                  <span className="font-semibold text-[#191C19]">{consignorCode}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-textSecondary">Kỳ đang dở:</span>
+                  <span className="font-bold text-[#191C19]">
+                    Kỳ {currentTerm} · ngày {daysInTerm} / {totalDaysInTerm}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Box 2: Tùy biến theo Phương án được chọn */}
+            {selectedOutcome === 'RELIST' && (
+              <div className="border-2 border-[#2b2b2b] rounded-xl p-3.5 bg-[#FAFBF9] space-y-2">
+                <div className="text-[10px] uppercase font-bold text-textSecondary tracking-wider">
+                  NẾU ĐĂNG BÁN LẠI
+                </div>
+                <div className="space-y-1.5 text-[11px]">
+                  <div className="flex justify-between">
+                    <span className="text-textSecondary">Giá bán:</span>
+                    <span className="font-bold text-[#191C19]">{formatCurrencyVND(price)} · giữ nguyên</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-textSecondary">Hoa hồng:</span>
+                    <span className="font-bold text-[#191C19]">{commissionRate}% · kỳ {currentTerm}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-textSecondary">Còn lại của kỳ:</span>
+                    <span className="font-semibold text-[#191C19]">{totalDaysInTerm - daysInTerm} ngày</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-textSecondary">Vị trí kệ:</span>
+                    <span className="font-bold text-primary">{shelfLocation} · chỗ cũ</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedOutcome === 'RETURN_TO_SELLER' && (
+              <div className="border-2 border-[#2b2b2b] rounded-xl p-3.5 bg-[#FAFBF9] space-y-2">
+                <div className="text-[10px] uppercase font-bold text-textSecondary tracking-wider">
+                  NẾU HOÀN TRẢ NGƯỜI KÝ GỬI
+                </div>
+                <div className="space-y-1.5 text-[11px]">
+                  <div className="flex justify-between">
+                    <span className="text-textSecondary">Thời hạn lấy:</span>
+                    <span className="font-bold text-[#191C19]">30 ngày tại quầy BG-01</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-textSecondary">Phí lưu kho:</span>
+                    <span className="font-semibold text-primary">Miễn phí 30 ngày đầu</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-textSecondary">Trạng thái:</span>
+                    <span className="font-bold text-[#191C19]">Chờ khách đến lấy</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedOutcome === 'DISCARD' && (
+              <div className="border-2 border-error rounded-xl p-3.5 bg-error-light/20 space-y-2">
+                <div className="text-[10px] uppercase font-bold text-error tracking-wider">
+                  NẾU TIÊU HUỶ
+                </div>
+                <div className="space-y-1.5 text-[11px]">
+                  <div className="flex justify-between">
+                    <span className="text-textSecondary">Phân loại:</span>
+                    <span className="font-bold text-error">Hàng hỏng nặng / giả</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-textSecondary">Hồ sơ:</span>
+                    <span className="font-semibold text-[#191C19]">Lưu lý do vào ca</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Box 3: Ghi chú dashed */}
+            <div className="p-3 border border-dashed border-[#9a9a9a] rounded-xl text-[11px] leading-relaxed text-[#4a4a4a] bg-surface">
+              Member nhận thông báo món đã trở lại sàn kèm lý do. Họ thấy món bị trả một lần trong lịch sử, nhưng <strong className="font-bold text-[#191C19]">người mua khác không thấy</strong> — món bị trả vì tranh chấp mô tả không phải lỗi của món.
+            </div>
+          </div>
+        </div>
+
+        {/* Action Footer */}
+        <div className="pt-3 border-t border-neutral flex items-center justify-end gap-2.5">
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-xl border-neutral text-xs px-4 py-2"
+            onClick={() => setIsOutcomeModalOpen(false)}
+          >
+            Để sau
+          </Button>
+          <Button
+            type="button"
+            className="rounded-xl bg-[#2b2b2b] text-white hover:bg-black text-xs font-bold px-5 py-2 shadow-sm"
+            onClick={onConfirm}
+          >
+            Xác nhận xử lý
+          </Button>
         </div>
       </div>
     </Modal>
@@ -894,7 +1186,7 @@ export function ReturnInspectionChecklist({ checklist, setChecklist, selectedIte
         <label className="p-3.5 flex items-start gap-3 cursor-pointer hover:bg-background transition-colors">
           <input
             type="checkbox"
-            checked={checklist?.labelIntact}
+            checked={Boolean(checklist?.labelIntact)}
             onChange={(e) => setChecklist({ ...checklist, labelIntact: e.target.checked })}
             className="mt-0.5 rounded border-neutral text-primary focus:ring-primary"
           />

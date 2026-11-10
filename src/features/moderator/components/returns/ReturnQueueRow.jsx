@@ -55,6 +55,15 @@ export function ReturnQueueRow({
         )}
         {(r.status === 'RETURNING' || r.status === 'WAITING_BUYER_DISPATCH') && (
           <>
+            {r.status === 'RETURNING' && (
+              <button
+                type="button"
+                onClick={() => handleOpenInspect(r)}
+                className="text-[11px] font-bold px-3 py-1.5 rounded-xl border-2 border-primary text-primary hover:bg-primary hover:text-white transition-colors"
+              >
+                Kiểm tra hàng
+              </button>
+            )}
             <button
               type="button"
               onClick={() => handleOpenReview(r)}

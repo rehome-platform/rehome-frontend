@@ -38,6 +38,7 @@ export function useReturnProcessing() {
 
   // TH-03 Inspection states (F04: require explicit verification)
   const [checklist, setChecklist] = useState({
+    labelIntact: false,
     noNewDamage: false,
     noUsageSign: false,
     accessoriesComplete: false,
@@ -177,16 +178,23 @@ export function useReturnProcessing() {
     }
   }, [loading, returnRequests, searchParams]);
 
+  const isResolvedStatus = (status) =>
+    ['RESOLVED', 'VALID', 'INVALID', 'LOST', 'CANCELLED', 'REJECTED', 'COMPLETED'].includes(status);
+
   const tabCounts = {
     PENDING_APPROVAL: returnRequests.filter((r) => r.status === 'PENDING_APPROVAL').length,
     WAITING_BUYER_DISPATCH: returnRequests.filter((r) => r.status === 'WAITING_BUYER_DISPATCH').length,
     RETURNING: returnRequests.filter((r) => r.status === 'RETURNING').length,
     RECEIVED_INSPECT: returnRequests.filter((r) => r.status === 'RECEIVED_INSPECT').length,
-    RESOLVED: returnRequests.filter((r) => r.status === 'RESOLVED').length,
+    RESOLVED: returnRequests.filter((r) => isResolvedStatus(r.status)).length,
   };
 
   const filteredRequests = returnRequests.filter((r) => {
-    if (r.status !== activeTab) return false;
+    if (activeTab === 'RESOLVED') {
+      if (!isResolvedStatus(r.status)) return false;
+    } else {
+      if (r.status !== activeTab) return false;
+    }
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -224,6 +232,7 @@ export function useReturnProcessing() {
       return;
     }
     setChecklist({
+      labelIntact: false,
       noNewDamage: false,
       noUsageSign: false,
       accessoriesComplete: false,
@@ -310,23 +319,29 @@ export function useReturnProcessing() {
     }
   };
 
-  const handleConfirmOutcome = async (outcome) => {
+  const handleConfirmOutcome = async (outcome, extra = {}) => {
     if (!selectedItem || resolvingRef.current) return;
     resolvingRef.current = true;
     try {
-      const res = await returnService.resolveValid(selectedItem.id, outcome);
+      const res = Object.keys(extra || {}).length > 0
+        ? await returnService.resolveValid(selectedItem.id, outcome, extra)
+        : await returnService.resolveValid(selectedItem.id, outcome);
       await fetchReturns();
       setIsOutcomeModalOpen(false);
       setViewMode('QUEUE');
       setSelectedItem(null);
       const confirmedRefund = res?.refundAmount ?? res?.result?.refundAmount ?? selectedItem.refundAmount ?? selectedItem.amount ?? 0;
+      const outcomeLabel =
+        outcome === 'RELIST'
+          ? 'Đăng bán lại'
+          : outcome === 'DISCARD'
+          ? 'Tiêu huỷ (hàng hỏng/giả)'
+          : 'Trả người ký gửi';
       notify(
         'success',
         `Đã hoàn tất xử lý trả hàng! Hệ thống tự động hoàn ${formatCurrencyVND(
           confirmedRefund
-        )} vào ví người mua ReHome và chuyển hàng sang trạng thái: ${
-          outcome === 'RELIST' ? 'Đăng bán lại' : 'Trả người ký gửi'
-        }.`
+        )} vào ví người mua ReHome và chuyển hàng sang trạng thái: ${outcomeLabel}.`
       );
     } catch (err) {
       notify('error', 'Có lỗi xảy ra khi xác nhận phương án: ' + (err.message || ''));
@@ -576,6 +591,7 @@ export function useReturnProcessing() {
         isOutcomeModalOpen,
         setIsOutcomeModalOpen,
         handleConfirmOutcome,
+        selectedItem,
       },
       ReturnCompareDialog: {
         isCompareModalOpen,
