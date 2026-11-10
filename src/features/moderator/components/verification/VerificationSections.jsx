@@ -1,5 +1,6 @@
 import React from "react";
 import { Button, Badge, Modal } from "../../../../components/common/index.js";
+import { useToast } from "../../../../context/ToastContext.jsx";
 
 export function VerificationRejectDialog({ isRejectModalOpen, setIsRejectModalOpen, rejectReason, setRejectReason, handleConfirmReject }) {
   return (
@@ -287,7 +288,7 @@ export function VerificationDocuments({ selectedOrg, setViewingDoc }) {
                     Xem ảnh
                   </button>
                 ) : (
-                  <span className="shrink-0 text-[10px] text-textSecondary px-2 py-1 bg-neutral-light rounded-lg">Không có tệp</span>
+                  <span className="shrink-0 text-[10px] text-textSecondary px-2.5 py-0.5 bg-neutral-light rounded-full">Không có tệp</span>
                 )}
               </div>
             );
@@ -325,7 +326,7 @@ export function VerificationDocuments({ selectedOrg, setViewingDoc }) {
                   Xem ảnh
                 </button>
               ) : (
-                <span className="shrink-0 text-[10px] font-semibold px-2 py-1 rounded-lg bg-error-light text-error">
+                <span className="shrink-0 text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-error-light text-error">
                   Thiếu tệp
                 </span>
               )}
@@ -357,7 +358,7 @@ export function VerificationDocuments({ selectedOrg, setViewingDoc }) {
                   Xem ảnh
                 </button>
               ) : (
-                <span className="shrink-0 text-[10px] font-semibold px-2 py-1 rounded-lg bg-error-light text-error">
+                <span className="shrink-0 text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-error-light text-error">
                   Thiếu tệp
                 </span>
               )}
@@ -370,6 +371,7 @@ export function VerificationDocuments({ selectedOrg, setViewingDoc }) {
 }
 
 export function VerificationLegalChanges({ legalChanges = [], handleApproveLegalChange, handleRejectLegalChange }) {
+  const toast = useToast();
   const [selectedChangeModal, setSelectedChangeModal] = React.useState(null);
 
   return (
@@ -529,8 +531,8 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
                 </div>
                 <button
                   type="button"
-                  onClick={() => alert('Mở xem tài liệu pháp lý đính kèm')}
-                  className="px-2.5 py-1 text-xs border border-primary text-primary font-bold rounded-lg hover:bg-primary hover:text-white transition-colors"
+                  onClick={() => toast.info('Mở xem tài liệu pháp lý đính kèm')}
+                  className="px-2.5 py-1 text-xs border border-primary text-primary font-bold rounded-xl hover:bg-primary hover:text-white transition-colors"
                 >
                   Xem tài liệu
                 </button>

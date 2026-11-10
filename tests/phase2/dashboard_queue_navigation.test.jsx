@@ -70,7 +70,7 @@ describe('Open dashboard tasks in the queue', () => {
     expect(query.get('type')).toBe(type);
     expect(query.get('queueId')).toBe('queue /1');
     const row = (await screen.findByText('Việc vừa mở')).closest('tr');
-    expect(within(row).getByRole('checkbox')).not.toBeChecked();
+    expect(within(row).queryByRole('checkbox')).toBeNull();
     expect(within(row).getByRole('button', { name: 'Nhả việc' })).toBeEnabled();
     await waitFor(() => expect(scroll).toHaveBeenCalled());
     expect(consignmentService.read).not.toHaveBeenCalled();

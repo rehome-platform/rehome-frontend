@@ -94,26 +94,6 @@ export default function ConsignmentListPage() {
       {lastConsignment && (
         <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl text-xs text-[#92400E] shadow-sm">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-bold text-[#D97706]">Đơn vừa mở gần đây:</span>
-            <span className="font-semibold text-[#191C19]">{lastConsignment.name}</span>
-            <span className="text-[#717971]">({lastConsignment.formId})</span>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FEA619] text-[#191C19]">
-              {lastConsignment.status}
-            </span>
-          </div>
-          <Link
-            to={`/moderator/consignments/${encodeURIComponent(lastConsignment.formId)}`}
-            className="font-bold text-[#006B2C] hover:underline flex items-center gap-1"
-          >
-            Tiếp tục kiểm định →
-          </Link>
-        </div>
-      )}
-
-      {/* THẺ GHIM ĐƠN VỪA THAO TÁC GẦN ĐÂY */}
-      {lastConsignment && (
-        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl text-xs text-[#92400E] shadow-sm">
-          <div className="flex flex-wrap items-center gap-2">
             <span className="font-bold text-[#D97706]">📌 Đơn vừa mở gần đây:</span>
             <span className="font-semibold text-[#191C19]">{lastConsignment.name}</span>
             <span className="text-[#717971]">({lastConsignment.formId})</span>
@@ -121,12 +101,23 @@ export default function ConsignmentListPage() {
               {lastConsignment.status}
             </span>
           </div>
-          <Link
-            to={`/moderator/consignments/${encodeURIComponent(lastConsignment.formId)}`}
-            className="font-bold text-[#006B2C] hover:underline flex items-center gap-1"
-          >
-            Tiếp tục kiểm định →
-          </Link>
+          <div className="flex items-center gap-3">
+            {lastConsignment.status && lastConsignment.status !== currentStatus && (
+              <button
+                type="button"
+                onClick={() => handleTabChange(lastConsignment.status)}
+                className="text-xs text-[#5B6776] underline hover:text-[#191C19]"
+              >
+                Mở tab {TABS.find((t) => t.key === lastConsignment.status)?.label || lastConsignment.status}
+              </button>
+            )}
+            <Link
+              to={`/moderator/consignments/${encodeURIComponent(lastConsignment.formId)}`}
+              className="font-bold text-[#006B2C] hover:underline flex items-center gap-1"
+            >
+              Tiếp tục kiểm định →
+            </Link>
+          </div>
         </div>
       )}
 
@@ -141,9 +132,9 @@ export default function ConsignmentListPage() {
               role="tab"
               aria-selected={isSelected}
               onClick={() => handleTabChange(tab.key)}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${isSelected
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${isSelected
                   ? 'border-[#006B2C] bg-[#006B2C] text-white shadow-sm'
-                  : 'border-[#a8a8a8] bg-white text-[#4a4a4a] hover:bg-[#F0F5EE]'
+                  : 'border-neutral bg-white text-textSecondary hover:bg-[#F6F9F4]'
                 }`}
             >
               {tab.label}
@@ -153,7 +144,7 @@ export default function ConsignmentListPage() {
       </div>
 
       {/* 2. KHUNG LƯU Ý HƯỚNG DẪN DUYỆT TRÊN ẢNH (KD-01) */}
-      <div className="p-3.5 rounded-xl border-[1.5px] border-[#2b2b2b] bg-[#f4f4f4] text-xs text-[#2b2b2b] leading-relaxed shadow-sm">
+      <div className="p-3.5 rounded-xl border border-neutral bg-[#F6F9F4] text-xs text-text leading-relaxed shadow-sm">
         <strong>Ở bước này bạn duyệt trên ảnh, chưa thấy hàng thật.</strong> Duyệt nghĩa là mời Member mang đồ đến kho trong 7 ngày, chưa phải cam kết nhận hàng. Kiểm định thật diễn ra tại quầy.
       </div>
 
@@ -161,11 +152,11 @@ export default function ConsignmentListPage() {
 
       {/* 3. BẢNG DANH SÁCH FORM KÝ GỬI (KD-01) */}
       {!!rawItems.length && (
-        <div className="rounded-2xl border border-[#8a8a8a] bg-white overflow-hidden shadow-sm">
+        <div className="rounded-2xl border border-neutral bg-surface overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[850px] text-left text-xs">
               <thead>
-                <tr className="bg-[#f4f4f4] border-b border-[#8a8a8a] text-[10px] uppercase font-bold tracking-wider text-[#5f5f5f]">
+                <tr className="bg-background border-b border-neutral text-[10px] uppercase font-bold tracking-wider text-textSecondary">
                   <th className="py-2.5 px-3.5 w-16">Ảnh</th>
                   <th className="py-2.5 px-3">Mã form</th>
                   <th className="py-2.5 px-3">Sản phẩm</th>
@@ -176,44 +167,44 @@ export default function ConsignmentListPage() {
                   <th className="py-2.5 px-3 text-right">Hành động</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#e0e0e0]">
+              <tbody className="divide-y divide-neutral">
                 {rawItems.map((form) => {
                   const formId = form.formId || form.id || form.refId;
                   const isMine = form.claimedBy === scope.userId;
                   const firstPhoto = form.photos?.[0]?.url || form.photos?.[0] || form.coverPhoto;
 
                   return (
-                    <tr key={formId} className="hover:bg-[#F9FAF9] transition-colors">
+                    <tr key={formId} className="hover:bg-[#F6F9F4] transition-colors">
                       <td className="py-3 px-3.5">
-                        <div className="w-13 h-13 w-[52px] h-[52px] rounded border border-[#c4c4c4] bg-[#fafafa] overflow-hidden flex items-center justify-center shrink-0">
+                        <div className="w-13 h-13 w-[52px] h-[52px] rounded-xl border border-neutral bg-[#F6F9F4] overflow-hidden flex items-center justify-center shrink-0">
                           {firstPhoto ? (
                             <img src={firstPhoto} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            <span className="text-[10px] text-[#8a8a8a]">RH</span>
+                            <span className="text-[10px] text-textSecondary">RH</span>
                           )}
                         </div>
                       </td>
-                      <td className="py-3 px-3 font-semibold text-[#191C19]">
+                      <td className="py-3 px-3 font-semibold text-text">
                         <div>{formId}</div>
                         {isMine && (
-                          <span className="inline-block mt-0.5 text-[9px] font-bold text-[#006B2C] bg-[#E8F5E9] px-1.5 py-0.5 rounded">
+                          <span className="inline-block mt-0.5 text-[9px] font-bold text-[#006B2C] bg-[#006B2C]/10 px-2 py-0.5 rounded-full">
                             Bạn đang nhận việc này
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-3 font-bold text-[#191C19]">
+                      <td className="py-3 px-3 font-bold text-text">
                         {form.name || form.productName || '—'}
                       </td>
-                      <td className="py-3 px-3 text-[#414942]">
+                      <td className="py-3 px-3 text-textSecondary">
                         {form.brand || form.brandName || '—'}
                       </td>
-                      <td className="py-3 px-3 text-[#414942]">
+                      <td className="py-3 px-3 text-textSecondary">
                         {form.member?.fullName || form.memberName || '—'}
                       </td>
-                      <td className="py-3 px-3 font-bold text-[#191C19]">
+                      <td className="py-3 px-3 font-bold text-text">
                         {money(form.desiredPrice ?? form.price)}
                       </td>
-                      <td className="py-3 px-3 text-[#5f5f5f]">
+                      <td className="py-3 px-3 text-textSecondary">
                         {form.createdAt ? new Date(form.createdAt).toLocaleDateString('vi-VN', {
                           day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
                         }) : '—'}
@@ -222,7 +213,7 @@ export default function ConsignmentListPage() {
                         <Link
                           to={`/moderator/consignments/${encodeURIComponent(formId)}`}
                           state={{ form }}
-                          className="inline-block font-semibold text-xs py-1.5 px-3 bg-[#006B2C] text-white hover:bg-[#005523] rounded-lg shadow-sm transition-colors"
+                          className="inline-block font-semibold text-xs py-1.5 px-3 bg-[#006B2C] text-white hover:bg-[#005523] rounded-xl shadow-sm transition-colors"
                         >
                           {RESUME_LABELS[form.resumeStep] || 'Mở duyệt'}
                         </Link>
@@ -239,11 +230,6 @@ export default function ConsignmentListPage() {
       {totalPages > 1 && (
         <Pager page={page} totalPages={totalPages} onChange={handlePageChange} />
       )}
-
-      {/* 4. GHI CHÚ CHÂN TRANG (KD-01) */}
-      <div className="p-3.5 rounded-xl border border-dashed border-[#9a9a9a] text-xs text-[#4a4a4a] leading-relaxed">
-        Member chỉ được giữ tối đa <strong>5 form chờ duyệt</strong> cùng lúc. Form đã duyệt mà quá 7 ngày không mang đồ đến sẽ tự hết hạn và nhả chỗ.
-      </div>
     </Page>
   );
 }

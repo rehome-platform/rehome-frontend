@@ -230,6 +230,7 @@ describe('ExistingOrganizationsSection - Existing Organizations Tab', () => {
     expect(screen.getByText('Hỗ trợ đồng bào vùng cao và cứu trợ bão lũ')).toBeInTheDocument();
     expect(screen.getByText('Trần Văn Hưng')).toBeInTheDocument();
     expect(screen.getByText('028 3822 6858')).toBeInTheDocument();
+    expect(screen.getByText('contact@hyvongxanh.org')).toBeInTheDocument();
     expect(screen.getAllByText('Trụ sở Quận 1').length).toBeGreaterThan(0);
 
     // Close button
@@ -237,5 +238,29 @@ describe('ExistingOrganizationsSection - Existing Organizations Tab', () => {
     await user.click(closeBtns[0]);
 
     expect(screen.queryByText('Chi tiết hồ sơ tổ chức hiện hữu')).not.toBeInTheDocument();
+  });
+
+  it('Issue 4: displays representative, phone and email from various backend DTO fields in modal', async () => {
+    const orgWithAltFields = [
+      {
+        id: 'ORG-ALT',
+        displayName: 'Tổ chức ABC',
+        legalName: 'Tổ chức từ thiện ABC',
+        representativeName: 'Nguyễn Văn Đại Diện',
+        contactPhone: '0912345678',
+        contactEmail: 'contact@abc.org',
+        orgType: 'Tổ chức phi chính phủ',
+      },
+    ];
+
+    const user = userEvent.setup();
+    render(<ExistingOrganizationsSection existingOrgs={orgWithAltFields} loading={false} />);
+
+    const viewButton = screen.getByRole('button', { name: /Xem hồ sơ/i });
+    await user.click(viewButton);
+
+    expect(screen.getByText('Nguyễn Văn Đại Diện')).toBeInTheDocument();
+    expect(screen.getByText('0912345678')).toBeInTheDocument();
+    expect(screen.getByText('contact@abc.org')).toBeInTheDocument();
   });
 });

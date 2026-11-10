@@ -10,6 +10,7 @@ import {
   ReturnQueueTable,
   ReturnQueueTabs,
   DegradedCaseModal,
+  DegradedCaseViewTH07,
 } from "../components/returns/ReturnSections.jsx";
 import SuspiciousCounterfeitModal from '../components/SuspiciousCounterfeitModal.jsx';
 import React from "react";
@@ -30,15 +31,15 @@ export default function ReturnProcessingPage() {
   const model = useReturnProcessing();
   return (
     <ModeratorLayout>
-      <div className="space-y-6 font-sans">
+      <div className="space-y-6">
         {/* VIEW 1: QUEUE (TH-01) */}
         {model.viewMode === 'QUEUE' && (
-          <div className="space-y-5">
+          <div className="space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-neutral pb-4">
               <div>
                 <div className="flex items-center space-x-2">
-                  <h1 className="text-xl font-bold font-heading text-text">
+                  <h1 className="text-2xl font-bold font-heading text-text">
                     Yêu cầu trả hàng
                   </h1>
                 </div>
@@ -51,16 +52,34 @@ export default function ReturnProcessingPage() {
               </div>
             </div>
 
+            {/* Search filter */}
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1 max-w-md">
+                <input
+                  type="text"
+                  value={model.searchQuery}
+                  onChange={(e) => model.setSearchQuery(e.target.value)}
+                  placeholder="Tìm theo mã yêu cầu, mã đơn, SKU hoặc người mua..."
+                  className="w-full text-xs py-2 px-3 pl-8 rounded-xl border border-neutral bg-surface text-text placeholder:text-textSecondary focus:outline-none focus:border-primary"
+                />
+                <span className="absolute left-2.5 top-2.5 text-textSecondary text-xs">🔍</span>
+                {model.searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => model.setSearchQuery('')}
+                    className="absolute right-2.5 top-2 text-textSecondary hover:text-text text-xs"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* Tabs */}
             <ReturnQueueTabs {...model.sections.ReturnQueueTabs} />
 
             {/* Bảng TH-01 */}
             <ReturnQueueTable {...model.sections.ReturnQueueTable} />
-
-            {/* Note box TH-01 */}
-            <div className="p-3.5 border border-dashed border-neutral rounded-2xl text-xs leading-relaxed text-textSecondary bg-background">
-              Cột <strong className="font-semibold text-text">Đã chờ</strong> chỉ đếm ở hai tab đầu — những bước phụ thuộc người mua hoặc đơn vị vận chuyển thì kho không kiểm soát được thời gian, đếm ở đó chỉ gây áp lực sai chỗ.
-            </div>
           </div>
         )}
 
@@ -141,6 +160,11 @@ export default function ReturnProcessingPage() {
               <ReturnInspectionVerdict {...model.sections.ReturnInspectionVerdict} />
             </div>
           </div>
+        )}
+
+        {/* VIEW 4: KẾT LUẬN HÀNG XUỐNG CẤP (TH-07) */}
+        {model.viewMode === 'DEGRADED_CASE' && model.selectedItem && (
+          <DegradedCaseViewTH07 {...model.sections.DegradedCaseViewTH07} />
         )}
 
         {/* MODAL: Từ chối yêu cầu trả (TH-02) */}

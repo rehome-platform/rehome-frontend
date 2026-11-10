@@ -28,7 +28,7 @@ export const DEFAULT_SYSTEM_CONFIGS = {
 
   // 3. Ví và rút tiền
   walletAndPayout: {
-    minWithdrawalAmount: 10000, // Số tiền rút tối thiểu (VNĐ)
+    minWithdrawalAmount: 50000, // Số tiền rút tối thiểu (VNĐ)
     maxWithdrawalsPerDay: 3, // Số lần rút tối đa mỗi ngày
   },
 
@@ -48,3 +48,22 @@ export const DEFAULT_SYSTEM_CONFIGS = {
     legalDocsRetentionDays: 30, // Số ngày giữ ảnh giấy tờ CCCD sau khi duyệt (ngày)
   },
 };
+
+// Only these UI fields have corresponding keys in SystemConfigCatalog.
+// Ratios are displayed as percentages but stored as fractions by the API.
+export const SYSTEM_CONFIG_FIELDS = [
+  { key: 'term_length_days', group: 'consignment', field: 'termDays' },
+  { key: 'max_renewals', group: 'consignment', field: 'maxRenewals' },
+  { key: 'free_withdrawal_window_days', group: 'consignment', field: 'freeWithdrawalDays' },
+  { key: 'commission_rate_term1', group: 'pricingAndCommission', field: 'commissionTerm1', percent: true },
+  { key: 'commission_rate_term2', group: 'pricingAndCommission', field: 'commissionTerm2', percent: true },
+  { key: 'commission_rate_term3', group: 'pricingAndCommission', field: 'commissionTerm3', percent: true },
+  { key: 'floor_price_ratio', group: 'pricingAndCommission', field: 'floorPricePercent', percent: true },
+  { key: 'withdrawal_fee', group: 'pricingAndCommission', field: 'withdrawalFee' },
+  { key: 'degraded_compensation_rate', group: 'pricingAndCommission', field: 'degradedCompensationRate', percent: true },
+  { key: 'min_payout_amount', group: 'walletAndPayout', field: 'minWithdrawalAmount' },
+  { key: 'max_payout_requests_per_day', group: 'walletAndPayout', field: 'maxWithdrawalsPerDay' },
+  { key: 'max_concurrent_campaigns', group: 'operationsAndCommunity', field: 'maxConcurrentCampaignsPerOrg' },
+  { key: 'legal_image_retention_days', group: 'operationsAndCommunity', field: 'legalDocsRetentionDays' },
+  { key: 'overdue_task_hours', group: 'operationsAndCommunity', field: 'taskAutoReleaseHours' },
+];

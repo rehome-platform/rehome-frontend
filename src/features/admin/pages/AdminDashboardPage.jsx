@@ -4,6 +4,7 @@ import { formatCurrencyVND } from '../../../utils/formatters.js';
 import { Button, Badge } from '../../../components/common/index.js';
 import adminApi from '../services/adminApi.js';
 import AdminOverviewView from '../components/AdminOverviewView.jsx';
+import { useToast } from '../../../context/ToastContext.jsx';
 
 /**
  * Trang Dashboard Điều Hành & Quỹ Nền Tảng ReHome (Admin)
@@ -15,6 +16,7 @@ import AdminOverviewView from '../components/AdminOverviewView.jsx';
  * - Đã loại bỏ dòng thông tin Admin tĩnh theo yêu cầu
  */
 export default function AdminDashboardPage() {
+  const toast = useToast();
   const navigate = useNavigate();
 
   // Tab: 'fund' (Dashboard & Quỹ) | 'revenue_report' (Báo cáo doanh thu) | 'activities' (Tăng trưởng)
@@ -129,7 +131,7 @@ export default function AdminDashboardPage() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Lỗi xuất báo cáo Excel:', err);
-      alert('Không thể kết nối API xuất báo cáo Excel. Vui lòng kiểm tra lại quyền Admin hoặc kết nối mạng.');
+      toast.error('Không thể kết nối API xuất báo cáo Excel. Vui lòng kiểm tra lại quyền Admin hoặc kết nối mạng.');
     } finally {
       setExporting(false);
     }

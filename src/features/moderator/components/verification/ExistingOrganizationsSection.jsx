@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Modal, Button } from '../../../../components/common/index.js';
+import { orgVerificationService } from '../../services/orgVerificationApi.js';
 
 export function ExistingOrganizationsSection({
   loading,
@@ -9,6 +10,21 @@ export function ExistingOrganizationsSection({
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [selectedOrg, setSelectedOrg] = useState(null);
+
+  const handleOpenOrgDetail = async (org) => {
+    setSelectedOrg(org);
+    if (!org?.id) return;
+    try {
+      if (typeof orgVerificationService?.getOrgPublicDetail === 'function') {
+        const detail = await orgVerificationService.getOrgPublicDetail(org.id);
+        if (detail) {
+          setSelectedOrg((prev) => (prev?.id === org.id ? { ...prev, ...detail } : prev));
+        }
+      }
+    } catch {
+      // Giữ nguyên dữ liệu org ban đầu nếu lỗi mạng
+    }
+  };
 
   // Danh sách loại hình tổ chức duy nhất để đưa vào dropdown lọc
   const orgTypes = useMemo(() => {
@@ -196,7 +212,7 @@ export function ExistingOrganizationsSection({
                       {/* Cột 2: Loại hình & MST */}
                       <td className="py-3 px-3">
                         <div className="space-y-0.5">
-                          <span className="inline-block px-2 py-0.5 rounded-lg bg-primary/10 text-primary text-[11px] font-semibold">
+                          <span className="inline-block px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold">
                             {orgType}
                           </span>
                           <div className="text-[11px] font-mono text-textSecondary">
@@ -259,7 +275,7 @@ export function ExistingOrganizationsSection({
                       <td className="py-3 px-3 text-right">
                         <button
                           type="button"
-                          onClick={() => setSelectedOrg(org)}
+                          onClick={() => handleOpenOrgDetail(org)}
                           className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-surface hover:bg-background border border-neutral text-text transition-colors shadow-sm inline-flex items-center gap-1"
                         >
                           <span className="material-symbols-outlined text-sm text-primary">visibility</span>
@@ -364,19 +380,31 @@ export function ExistingOrganizationsSection({
                   <div className="flex justify-between">
                     <span className="text-textSecondary">Người đại diện:</span>
                     <span className="font-semibold text-text">
-                      {selectedOrg.representative || '—'}
+                      {selectedOrg.representative ||
+                        selectedOrg.representativeName ||
+                        selectedOrg.representative?.fullName ||
+                        '—'}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-textSecondary">Hotline / SĐT:</span>
                     <span className="font-mono text-text">
-                      {selectedOrg.phone || '—'}
+                      {selectedOrg.phone ||
+                        selectedOrg.contactPhone ||
+                        selectedOrg.hotline ||
+                        selectedOrg.representative?.phone ||
+                        selectedOrg.accountPhone ||
+                        '—'}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-textSecondary">Email:</span>
                     <span className="text-text font-medium truncate max-w-[180px]">
-                      {selectedOrg.email || '—'}
+                      {selectedOrg.email ||
+                        selectedOrg.contactEmail ||
+                        selectedOrg.representative?.email ||
+                        selectedOrg.accountEmail ||
+                        '—'}
                     </span>
                   </div>
                 </div>

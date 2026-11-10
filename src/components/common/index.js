@@ -5,3 +5,5 @@ export { default as Badge } from './Badge.jsx';
 export { default as Dropdown } from './Dropdown.jsx';
 export { default as Table } from './Table.jsx';
 export { default as Logo } from './Logo.jsx';
+export { default as ToastContainer } from './ToastContainer.jsx';
+export { default as ToastItem } from './ToastItem.jsx';

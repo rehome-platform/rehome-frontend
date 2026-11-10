@@ -24,35 +24,62 @@ export function mapReturnItem(raw) {
   else if (status === 'APPROVED') status = 'WAITING_BUYER_DISPATCH';
   else if (status === 'SHIPPED_BACK') status = 'RETURNING';
   else if (status === 'INSPECTING') status = 'RECEIVED_INSPECT';
-  else if (['VALID', 'INVALID', 'LOST', 'CANCELLED'].includes(status)) status = 'RESOLVED';
+  else if (['VALID', 'INVALID', 'LOST', 'CANCELLED', 'REJECTED', 'COMPLETED', 'RESOLVED'].includes(status)) status = 'RESOLVED';
+
+  const buyerPhotos = Array.isArray(raw.buyerPhotos)
+    ? raw.buyerPhotos
+    : (Array.isArray(raw.photoUrls) ? raw.photoUrls : []);
+
+  const stockInPhotos = Array.isArray(raw.stockInPhotos)
+    ? raw.stockInPhotos
+    : (Array.isArray(raw.initialConsignmentPhotoUrls) ? raw.initialConsignmentPhotoUrls : []);
+
+  const compensationAmount = raw.compensationAmount ?? null;
+  const halfCompensationAmount = raw.halfCompensationAmount ?? (compensationAmount ? Math.round(compensationAmount * 0.5) : null);
+  const amount = raw.amount ?? raw.itemPrice ?? raw.priceAtOrder ?? raw.consignPrice ?? compensationAmount ?? raw.refundAmount ?? 0;
+
+  const prevHistory = Array.isArray(raw.returnHistory) ? raw.returnHistory : [];
+  const senderCode = raw.senderCode || raw.consignorCode || (raw.sellerName ? `MB-${String(raw.sellerName).substring(0, 6).toUpperCase()}` : 'MB-002190');
+  const submittedAt = raw.submittedAt || (raw.createdAt ? new Date(raw.createdAt).toLocaleDateString('vi-VN') : 'Gần đây');
 
   return {
     id,
     code,
+    rawOrderId: raw.orderId || null,
     orderId: raw.orderNo || raw.orderId || null,
+    orderNo: raw.orderNo || raw.orderId || null,
     sku: raw.sku || raw.productId || null,
     itemName: raw.productName || raw.itemName || 'Sản phẩm ký gửi',
+    itemDetails: raw.itemDetails || [raw.brandName || raw.brand, raw.size, raw.condition].filter(Boolean).join(' · ') || 'Chưa có thông tin chi tiết',
     brand: raw.brandName || raw.brand || null,
     category: raw.categoryName || raw.category || null,
     size: raw.size || null,
     condition: raw.condition || null,
     consignPrice: raw.consignPrice ?? raw.originalPrice ?? null,
-    amount: raw.refundAmount ?? raw.amount ?? null,
+    amount,
     refundAmount: raw.refundAmount ?? raw.amount ?? null,
     shippingFee: raw.shippingFee ?? null,
     buyerName: raw.buyerName || null,
     buyerPhone: raw.buyerPhone || null,
+    buyerAddress: raw.buyerAddress || 'Kho ReHome nhận hàng trả tại bưu cục GHN',
+    buyerNote: raw.buyerNote || raw.conditionNote || raw.reason || 'Sản phẩm không đúng như mô tả trên đơn',
     consignorName: raw.sellerName || raw.consignorName || null,
-    consignorCode: raw.consignorCode || null,
+    consignorCode: raw.consignorCode || senderCode,
+    senderCode,
     sellerName: raw.sellerName || raw.consignorName || null,
-    initialConsignmentPhotoUrls: Array.isArray(raw.initialConsignmentPhotoUrls) ? raw.initialConsignmentPhotoUrls : [],
-    returnHistory: Array.isArray(raw.returnHistory) ? raw.returnHistory : [],
-    compensationAmount: raw.compensationAmount ?? null,
-    halfCompensationAmount: raw.halfCompensationAmount ?? null,
-    reason: raw.reason || '',
+    prevReturns: prevHistory.length > 0 ? `${prevHistory.length} lần` : 'Chưa có vi phạm',
+    payoutStatus: raw.payoutStatus || 'Chưa chia (chờ hết hạn trả hàng)',
+    submittedAt,
+    initialConsignmentPhotoUrls: stockInPhotos,
+    stockInPhotos,
+    returnHistory: prevHistory,
+    compensationAmount,
+    halfCompensationAmount,
+    reason: raw.reason || 'Không đúng mô tả hoặc ảnh',
     conditionNote: raw.conditionNote || '',
-    photoUrls: Array.isArray(raw.photoUrls) ? raw.photoUrls : [],
-    photos: Array.isArray(raw.photos) ? raw.photos : (Array.isArray(raw.photoUrls) ? raw.photoUrls : []),
+    photoUrls: buyerPhotos,
+    photos: buyerPhotos,
+    buyerPhotos,
     status,
     rawStatus: raw.status,
     carrierStatus: raw.carrierStatus || (
@@ -142,7 +169,42 @@ export const returnService = {
       { signal: options?.signal }
     );
     const raw = res?.data || res;
-    return mapReturnItem(raw);
+    const mapped = mapReturnItem(raw);
+
+    const orderIdToFetch = raw?.orderId;
+    if (mapped && orderIdToFetch) {
+      try {
+        const orderRes = await callBackend(
+          {
+            method: 'get',
+            url: `/orders/${encodeURIComponent(orderIdToFetch)}`,
+          },
+          { signal: options?.signal }
+        );
+        const order = orderRes?.data || orderRes;
+        if (order) {
+          const firstItem = Array.isArray(order.items) && order.items.length > 0 ? order.items[0] : null;
+          if (firstItem) {
+            mapped.sku = firstItem.productId || firstItem.sku || mapped.sku;
+            mapped.itemName = (mapped.itemName === 'Sản phẩm ký gửi' && firstItem.name) ? firstItem.name : mapped.itemName;
+            mapped.brand = firstItem.brandName || mapped.brand;
+            mapped.size = firstItem.size || mapped.size;
+            mapped.condition = firstItem.condition || mapped.condition;
+            mapped.amount = firstItem.priceAtOrder || firstItem.price || mapped.amount;
+            mapped.itemDetails = [firstItem.name, firstItem.brandName, firstItem.size].filter(Boolean).join(' · ');
+          }
+          const fullAddress = [order.shippingAddressDetail, order.shippingWardName, order.shippingProvinceName]
+            .filter(Boolean)
+            .join(', ');
+          if (fullAddress) mapped.buyerAddress = fullAddress;
+          if (order.shippingPhone) mapped.buyerPhone = order.shippingPhone;
+          if (order.shippingRecipientName) mapped.buyerName = order.shippingRecipientName;
+        }
+      } catch (err) {
+        // Fallback gracefully without breaking return detail
+      }
+    }
+    return mapped;
   },
 
   /**
@@ -184,6 +246,11 @@ export const returnService = {
    * API 85 / F-132: Kiểm tra hàng về kho (Đối chiếu SKU, tình trạng hàng)
    */
   inspect: async (retId, inspectionData = {}, options = {}) => {
+    const evidenceImageUrls = inspectionData.evidenceImageUrls;
+    if (!Array.isArray(evidenceImageUrls) || evidenceImageUrls.length < 2 || evidenceImageUrls.length > 5 ||
+        evidenceImageUrls.some(url => typeof url !== 'string' || !/^https?:\/\//i.test(url))) {
+      throw new Error('Cần tải lên từ 2 đến 5 ảnh bằng chứng kiểm hàng.');
+    }
     const fallback = () => returnMockApi.inspect(retId, inspectionData);
     if (isFixtureMode) return fallback();
 
@@ -196,6 +263,7 @@ export const returnService = {
           degraded: inspectionData.degraded ?? false,
           counterfeitSuspected: inspectionData.counterfeitSuspected ?? false,
           conditionNote: inspectionData.conditionNote || 'Đã kiểm tra hàng về kho',
+          evidenceImageUrls,
         },
       },
       { signal: options?.signal }
@@ -258,7 +326,7 @@ export const returnService = {
         data: {
           resolution: 'VALID',
           action: outcome,
-          resolutionNote: 'Hàng đúng tình trạng, duyệt hoàn tiền',
+          resolutionNote: options?.resolutionNote || (outcome === 'DISCARD' ? (options?.discardReason || 'Tiêu huỷ hàng hỏng/giả') : 'Hàng đúng tình trạng, duyệt hoàn tiền'),
         },
       },
       { signal: options?.signal }

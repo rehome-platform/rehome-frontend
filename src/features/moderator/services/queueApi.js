@@ -41,12 +41,16 @@ export const queueService = {
       queueId: item.queueId ?? item.id,
       id: item.id ?? item.queueId,
       refId: item.refId ?? item.id,
+      // RETURN refId points to the return request; claim/release uses queueId.
+      ...(item.type === 'RETURN' ? { returnId: item.returnId ?? item.refId } : {}),
       formId: item.formId ?? item.refId ?? item.id,
       orderId: item.orderId ?? item.refId,
       type: item.type,
       claimedBy: item.claimedBy,
       claimedAt: item.claimedAt,
       createdAt: item.createdAt,
+      name: item.targetName ?? item.name ?? item.productName ?? item.orderNo ?? item.orgName,
+      memberName: item.subjectSubtitle ?? item.memberName ?? item.recipientName,
       status: item.status || (item.claimedBy ? 'PROCESSING' : 'PENDING'),
     });
 

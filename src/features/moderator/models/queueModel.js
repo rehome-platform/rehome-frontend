@@ -5,6 +5,8 @@ export const QUEUE_TYPE_LABELS = {
   FORM_REVIEW: 'Duyệt form ký gửi',
   INSPECTION: 'Kiểm định tại quầy',
   PACKING: 'Đóng gói đơn hàng',
+  WITHDRAWAL: 'Rút hàng',
+  ITEM_WITHDRAWAL: 'Rút hàng',
   RETURN: 'Yêu cầu trả hàng',
   ORG_VERIFICATION: 'Xác minh tổ chức',
   LEGAL_CHANGE: 'Đổi pháp lý tổ chức',
@@ -16,6 +18,16 @@ export function taskTypeLabel(item, typeParam) {
   return QUEUE_TYPE_LABELS[type] || 'Công việc kho';
 }
 
+export function formatElapsedHours(value) {
+  if (value == null || !Number.isFinite(Number(value))) return '—';
+  const hours = Math.max(0, Math.floor(Number(value)));
+  if (hours < 1) return '< 1 giờ';
+  if (hours < 24) return `${hours} giờ`;
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+  return `${days} ngày${remainingHours ? ` ${remainingHours} giờ` : ''}`;
+}
+
 export function formatWaitTime(waitMinutes) {
   const mins = Math.max(0, Number(waitMinutes) || 0);
   if (mins < 10) return '< 10p';
@@ -24,6 +36,7 @@ export function formatWaitTime(waitMinutes) {
     return `${floored10}p`;
   }
   const hours = Math.floor(mins / 60);
+  if (hours >= 24) return formatElapsedHours(hours);
   const remMinutes = mins % 60;
   const flooredRem = Math.floor(remMinutes / 10) * 10;
   if (flooredRem === 0) {

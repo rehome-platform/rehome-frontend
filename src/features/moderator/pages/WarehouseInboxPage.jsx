@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { warehouseInboxService } from '../services/warehouseInboxApi.js';
+import { useToast } from '../../../context/ToastContext.jsx';
+import { useConversationTopic } from '../../../hooks/useWebSocket.js';
 
 /**
  * Trang Hộp Thư Điểm Kí Gửi ReHome
@@ -11,15 +13,32 @@ import { warehouseInboxService } from '../services/warehouseInboxApi.js';
  * - MC-02: Phòng chat với Member — 3 cột (danh sách | hội thoại chat | thông tin member & SKU liên quan)
  */
 export default function WarehouseInboxPage() {
+  const toast = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
+
   const [conversations, setConversations] = useState([]);
-  const [activeTab, setActiveTab] = useState('UNANSWERED'); // 'UNANSWERED' | 'ALL' | 'DONE'
+  const [activeTab, setActiveTab] = useState('ALL'); // Mặc định mở tab 'Tất cả' ('ALL' | 'DONE' | 'UNANSWERED')
   const [selectedConv, setSelectedConv] = useState(null);
+
+  // Tin nhắn của hội thoại đang chọn
+  const [messages, setMessages] = useState([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [messagesError, setMessagesError] = useState(null);
+
+  // Form gửi tin nhắn & ảnh
   const [inputText, setInputText] = useState('');
+  const [pendingImages, setPendingImages] = useState([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [sending, setSending] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const fileInputRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
+  // Tải danh sách hội thoại
   const fetchConversations = async () => {
     try {
       setLoading(true);
@@ -27,10 +46,16 @@ export default function WarehouseInboxPage() {
       const res = await warehouseInboxService.getConversations();
       const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
       setConversations(list);
+
       // Giữ hội thoại đang chọn hoặc nếu chưa chọn thì chọn hội thoại đầu tiên
-      if (!selectedConv && list.length > 0) {
-        setSelectedConv(list[0]);
-      }
+      setSelectedConv((prev) => {
+        if (!prev && list.length > 0) return list[0];
+        if (prev) {
+          const found = list.find((c) => String(c.id) === String(prev.id));
+          return found || prev;
+        }
+        return null;
+      });
     } catch (err) {
       console.error('Failed to load conversations:', err);
       setError('Không thể kết nối đến máy chủ hộp thư (Lỗi 500 hoặc mất kết nối). Vui lòng thử lại sau.');
@@ -44,6 +69,100 @@ export default function WarehouseInboxPage() {
     fetchConversations();
   }, []);
 
+  // Tải danh sách tin nhắn của hội thoại được chọn (API 112)
+  const fetchMessages = useCallback(async (convId, initialMessages = []) => {
+    if (!convId) return;
+    try {
+      setMessagesLoading(true);
+      setMessagesError(null);
+
+      let fetchedList = [];
+      if (typeof warehouseInboxService.getMessages === 'function') {
+        const res = await warehouseInboxService.getMessages(convId, { page: 0, size: 50 });
+        fetchedList = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+      } else {
+        fetchedList = initialMessages;
+      }
+
+      // Gộp initialMessages (nếu có từ mock/chuyển tab) với tin nhắn tải từ API
+      const combined = [...initialMessages, ...fetchedList];
+      const dedupeMap = new Map();
+      combined.forEach((m) => {
+        const key = m?.id ? String(m.id) : `${m?.sender}-${m?.text || m?.content}-${m?.createdAt || m?.time}`;
+        if (!dedupeMap.has(key)) dedupeMap.set(key, m);
+      });
+      const uniqueMessages = Array.from(dedupeMap.values());
+
+      // Sắp xếp theo thứ tự thời gian tăng dần: tin cũ ở trên, tin mới ở dưới
+      uniqueMessages.sort((a, b) => {
+        const timeA = new Date(a.createdAt || a.sentAt || 0).getTime();
+        const timeB = new Date(b.createdAt || b.sentAt || 0).getTime();
+        return timeA - timeB;
+      });
+
+      setMessages(uniqueMessages);
+    } catch (err) {
+      console.error('Failed to fetch messages for conversation:', convId, err);
+      setMessagesError('Không thể tải lịch sử tin nhắn. Vui lòng thử lại.');
+      if (initialMessages && initialMessages.length > 0) {
+        setMessages(initialMessages);
+      }
+    } finally {
+      setMessagesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedConv?.id) {
+      fetchMessages(selectedConv.id, selectedConv.messages || []);
+    } else {
+      setMessages([]);
+    }
+  }, [selectedConv?.id, fetchMessages]);
+
+  // Tự động cuộn xuống tin nhắn mới nhất
+  useEffect(() => {
+    if (typeof messagesEndRef.current?.scrollIntoView === 'function') {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  // Lắng nghe tin nhắn mới qua WebSocket real-time (STOMP topic /topic/conversations.{id})
+  const handleWebSocketMessage = useCallback(
+    (payload) => {
+      if (!payload || !payload.id) return;
+
+      // Khử trùng: nếu tin nhắn đã có trong danh sách (được gửi trực tiếp từ client trước đó) thì bỏ qua
+      setMessages((prev) => {
+        if (prev.some((m) => String(m.id) === String(payload.id))) {
+          return prev;
+        }
+        return [...prev, payload];
+      });
+
+      // Cập nhật tin nhắn cuối cùng trên danh sách hội thoại
+      const previewText = payload.content || (payload.imageUrls?.length ? '[Hình ảnh]' : '—');
+      setConversations((prev) =>
+        (prev || []).map((c) => {
+          if (String(c.id) === String(selectedConv?.id)) {
+            return {
+              ...c,
+              lastMessage: {
+                content: previewText,
+                createdAt: payload.createdAt || new Date().toISOString(),
+                senderId: payload.senderId,
+              },
+            };
+          }
+          return c;
+        })
+      );
+    },
+    [selectedConv?.id]
+  );
+
+  useConversationTopic(selectedConv?.id, handleWebSocketMessage);
+
   const filteredConversations = (conversations || []).filter((c) => {
     if (activeTab === 'UNANSWERED') return c?.status === 'UNANSWERED';
     if (activeTab === 'DONE') return c?.status === 'DONE';
@@ -52,41 +171,112 @@ export default function WarehouseInboxPage() {
 
   const unansweredCount = (conversations || []).filter((c) => c?.status === 'UNANSWERED').length;
 
+  // Chọn ảnh để đính kèm
+  const handleImageSelect = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    // Reset file input value
+    e.target.value = '';
+
+    setUploadingImage(true);
+    try {
+      const uploadedUrls = [];
+      for (const file of files) {
+        const res = await warehouseInboxService.uploadImage(file);
+        const url = res?.url || res?.fileUrl || (typeof res === 'string' ? res : '');
+        if (url) {
+          uploadedUrls.push(url);
+        }
+      }
+      if (uploadedUrls.length > 0) {
+        setPendingImages((prev) => [...prev, ...uploadedUrls]);
+        toast.success(`Đã đính kèm ${uploadedUrls.length} ảnh.`);
+      }
+    } catch (err) {
+      console.error('Failed to upload image:', err);
+      toast.error('Không thể tải ảnh lên. Vui lòng thử lại.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const removePendingImage = (indexToRemove) => {
+    setPendingImages((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  // Gửi tin nhắn trả lời (API 113)
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!inputText.trim() || !selectedConv) return;
-    const msg = inputText.trim();
+    const text = inputText.trim();
+    if ((!text && pendingImages.length === 0) || !selectedConv || sending || uploadingImage) return;
+
+    setSending(true);
+    const imagesToSend = [...pendingImages];
     setInputText('');
+    setPendingImages([]);
 
     try {
-      const updated = await warehouseInboxService.sendMessage(
+      const payload = {
+        content: text,
+        imageUrls: imagesToSend,
+      };
+
+      const res = await warehouseInboxService.sendMessage(
         selectedConv.id,
-        msg,
+        payload,
         user?.name || user?.fullName || 'Nguyễn Văn A'
       );
-      if (updated) {
-        setSelectedConv((prev) => ({
-          ...prev,
-          ...updated,
-          messages: [
-            ...(prev?.messages || []),
-            ...(updated?.messages || [
-              {
-                id: Date.now().toString(),
+
+      if (res) {
+        // Chuẩn hóa định dạng tin nhắn vừa gửi
+        const msgItem =
+          res.content !== undefined || res.text !== undefined
+            ? { ...res, isMine: true }
+            : {
+                id: res.id || Date.now().toString(),
                 sender: 'moderator',
                 senderName: user?.name || 'Nhân viên ReHome',
-                text: msg,
+                content: text,
+                text,
+                imageUrls: imagesToSend,
+                isMine: true,
+                createdAt: new Date().toISOString(),
                 time: 'Vừa xong',
-              },
-            ]),
-          ],
-        }));
+              };
+
+        // Cập nhật ngay tin nhắn lên khung chat (và khử trùng nếu id trùng)
+        setMessages((prev) => {
+          if (prev.some((m) => String(m.id) === String(msgItem.id))) {
+            return prev;
+          }
+          return [...prev, msgItem];
+        });
+
+        // Cập nhật xem trước tin nhắn trong danh sách hội thoại
+        const previewText = text || (imagesToSend.length ? '[Hình ảnh]' : '—');
         setConversations((prev) =>
-          (prev || []).map((c) => (c.id === updated.id ? { ...c, ...updated } : c))
+          (prev || []).map((c) => {
+            if (String(c.id) === String(selectedConv.id)) {
+              return {
+                ...c,
+                lastMessage: {
+                  content: previewText,
+                  createdAt: msgItem.createdAt || new Date().toISOString(),
+                  senderId: user?.id,
+                },
+                messages: [...(c.messages || []), msgItem],
+              };
+            }
+            return c;
+          })
         );
       }
     } catch (err) {
-      alert('Có lỗi xảy ra khi gửi tin nhắn.');
+      console.error('Failed to send message:', err);
+      toast.error('Có lỗi xảy ra khi gửi tin nhắn.');
+    } finally {
+      setSending(false);
     }
   };
 
@@ -94,23 +284,34 @@ export default function WarehouseInboxPage() {
     if (!selectedConv) return;
     try {
       const updated = await warehouseInboxService.markAsDone(selectedConv.id);
-      setSelectedConv(updated);
+      setSelectedConv((prev) => ({ ...prev, ...updated, status: 'DONE' }));
       setConversations((prev) =>
-        (prev || []).map((c) => (c.id === updated.id ? updated : c))
+        (prev || []).map((c) => (String(c.id) === String(selectedConv.id) ? { ...c, ...updated, status: 'DONE' } : c))
       );
-      alert(`Đã đánh dấu hoàn tất hội thoại với Member ${selectedConv?.memberName || 'Member'}!`);
+      toast.success(`Đã đánh dấu hoàn tất hội thoại với Member ${selectedConv?.memberName || selectedConv?.counterpart?.displayName || 'Member'}!`);
     } catch (err) {
-      alert('Có lỗi xảy ra khi cập nhật trạng thái.');
+      console.error('Failed to mark conversation as done:', err);
+      toast.error('Có lỗi xảy ra khi cập nhật trạng thái.');
     }
+  };
+
+  // Chuẩn hóa hiển thị số lượng thống kê của Member (0 món, 0 đơn thay vì null / —)
+  const formatCountDisplay = (val, unit) => {
+    if (val === undefined || val === null || val === '') return `0 ${unit}`;
+    if (typeof val === 'number') return `${val} ${unit}`;
+    if (typeof val === 'string') {
+      return isNaN(Number(val)) ? val : `${val} ${unit}`;
+    }
+    return `0 ${unit}`;
   };
 
   return (
     <ModeratorLayout>
-      <div className="space-y-4">
+      <div className="space-y-6">
         {/* Header MC-01 / MC-02 */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral pb-4">
           <div>
-            <h1 className="text-xl font-bold font-heading text-text">
+            <h1 className="text-2xl font-bold font-heading text-text">
               Hộp thư điểm kí gửi
             </h1>
           </div>
@@ -123,19 +324,8 @@ export default function WarehouseInboxPage() {
         <div className="bg-surface border border-neutral rounded-2xl shadow-sm flex flex-col lg:flex-row min-h-[640px] overflow-hidden">
           {/* CỘT 1 (360px): DANH SÁCH HỘI THOẠI */}
           <div className="w-full lg:w-[360px] border-r border-neutral flex flex-col shrink-0">
-            {/* Tabs */}
+            {/* Tabs: Thứ tự Tất cả -> Đã xong -> Chưa trả lời */}
             <div className="flex border-b border-neutral text-xs font-semibold bg-background">
-              <button
-                type="button"
-                onClick={() => setActiveTab('UNANSWERED')}
-                className={`py-2.5 px-3.5 transition-all ${
-                  activeTab === 'UNANSWERED'
-                    ? 'border-b-2 border-primary text-primary font-bold bg-surface'
-                    : 'text-textSecondary hover:text-text'
-                }`}
-              >
-                Chưa trả lời · {unansweredCount}
-              </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('ALL')}
@@ -157,6 +347,17 @@ export default function WarehouseInboxPage() {
                 }`}
               >
                 Đã xong
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('UNANSWERED')}
+                className={`py-2.5 px-3.5 transition-all ${
+                  activeTab === 'UNANSWERED'
+                    ? 'border-b-2 border-primary text-primary font-bold bg-surface'
+                    : 'text-textSecondary hover:text-text'
+                }`}
+              >
+                Chưa trả lời · {unansweredCount}
               </button>
             </div>
 
@@ -274,17 +475,40 @@ export default function WarehouseInboxPage() {
 
               {/* Lịch sử tin nhắn */}
               <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-background">
-                {((selectedConv?.messages) || []).length === 0 ? (
+                {messagesLoading && (
+                  <div className="text-center text-textSecondary text-xs py-8">
+                    Đang tải tin nhắn...
+                  </div>
+                )}
+                {messagesError && (
+                  <div className="p-4 text-center text-xs text-error space-y-2">
+                    <div>{messagesError}</div>
+                    <button
+                      type="button"
+                      onClick={() => fetchMessages(selectedConv.id, selectedConv.messages || [])}
+                      className="px-3 py-1 text-xs border border-error rounded-xl hover:bg-error-light cursor-pointer"
+                    >
+                      Tải lại tin nhắn
+                    </button>
+                  </div>
+                )}
+                {!messagesLoading && !messagesError && messages.length === 0 && (
                   <div className="text-center text-textSecondary text-xs py-12">
                     Chưa có tin nhắn nào trong hội thoại này.
                   </div>
-                ) : (
-                  (selectedConv?.messages || []).map((m, idx) => {
+                )}
+                {!messagesLoading &&
+                  messages.map((m, idx) => {
                     const isMod =
+                      Boolean(m?.isMine) ||
                       m?.sender === 'moderator' ||
                       m?.senderRole === 'MODERATOR' ||
-                      m?.isStaff;
-                    const msgText = m?.text || m?.content || '';
+                      Boolean(m?.isStaff) ||
+                      (user?.id && m?.senderId && String(m.senderId) === String(user.id)) ||
+                      (selectedConv?.counterpart?.id && m?.senderId && String(m.senderId) !== String(selectedConv.counterpart.id));
+
+                    const msgText = m?.content || m?.text || '';
+                    const msgImages = Array.isArray(m?.imageUrls) ? m.imageUrls : [];
                     const msgTime =
                       m?.time ||
                       (m?.createdAt
@@ -307,37 +531,86 @@ export default function WarehouseInboxPage() {
                         className={`flex flex-col ${isMod ? 'items-end' : 'items-start'}`}
                       >
                         <div
-                          className={`max-w-[70%] p-3 rounded-xl text-xs leading-relaxed ${
+                          className={`max-w-[70%] p-3 rounded-xl text-xs leading-relaxed space-y-2 ${
                             isMod
                               ? 'bg-primary text-white border border-primary shadow-sm'
                               : 'bg-surface text-text border border-neutral shadow-sm'
                           }`}
                         >
-                          {msgText}
+                          {msgText && <div>{msgText}</div>}
+                          {msgImages.length > 0 && (
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              {msgImages.map((imgUrl, imgIdx) => (
+                                <a
+                                  key={imgIdx}
+                                  href={imgUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block overflow-hidden rounded-lg border border-white/20 hover:opacity-90 transition-opacity"
+                                >
+                                  <img
+                                    src={imgUrl}
+                                    alt={`Ảnh đính kèm ${imgIdx + 1}`}
+                                    className="w-28 h-28 object-cover rounded-lg bg-black/10"
+                                  />
+                                </a>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         <div className="text-[9px] text-textSecondary mt-1 px-1">
                           {isMod ? `${senderTitle} · ${msgTime}` : msgTime}
                         </div>
                       </div>
                     );
-                  })
-                )}
-                <div className="text-center text-[10px] text-textSecondary pt-3">
-                  Member chỉ thấy "Nhân viên ReHome"; tên từng Moderator chỉ hiện ở phía điểm kí gửi
-                </div>
+                  })}
+                <div ref={messagesEndRef} />
               </div>
+
+              {/* Strip preview ảnh đang chuẩn bị gửi */}
+              {pendingImages.length > 0 && (
+                <div className="flex items-center gap-2 p-2.5 px-3 border-t border-neutral bg-background flex-wrap shrink-0">
+                  {pendingImages.map((img, i) => (
+                    <div key={i} className="relative group w-14 h-14 rounded-lg overflow-hidden border border-neutral bg-surface">
+                      <img src={img} alt="Ảnh đính kèm" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removePendingImage(i)}
+                        className="absolute top-0 right-0 bg-black/70 text-white rounded-bl p-1 text-[10px] hover:bg-black transition-colors"
+                        title="Xóa ảnh"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                  {uploadingImage && (
+                    <div className="w-14 h-14 rounded-lg border border-dashed border-neutral flex items-center justify-center text-[10px] text-textSecondary animate-pulse">
+                      Đang tải...
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Khung nhập tin nhắn */}
               <form
                 onSubmit={handleSendMessage}
                 className="border-t border-neutral p-3 flex gap-2.5 items-center bg-surface shrink-0"
               >
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
                 <button
                   type="button"
-                  onClick={() => alert('Đã mở cửa sổ chọn ảnh đính kèm')}
-                  className="text-xs font-semibold px-3 py-2 border border-neutral rounded-xl bg-surface hover:bg-background text-text cursor-pointer"
+                  disabled={uploadingImage}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-xs font-semibold px-3 py-2 border border-neutral rounded-xl bg-surface hover:bg-background text-text cursor-pointer disabled:opacity-50 transition-colors"
                 >
-                  Ảnh
+                  {uploadingImage ? 'Đang tải…' : 'Ảnh'}
                 </button>
                 <input
                   type="text"
@@ -348,10 +621,10 @@ export default function WarehouseInboxPage() {
                 />
                 <button
                   type="submit"
-                  disabled={!inputText.trim()}
+                  disabled={(!inputText.trim() && pendingImages.length === 0) || sending || uploadingImage}
                   className="text-xs font-bold px-5 py-2.5 bg-primary text-white rounded-xl hover:bg-primary-hover shadow-sm disabled:opacity-50 transition-colors cursor-pointer"
                 >
-                  Gửi
+                  {sending ? 'Đang gửi…' : 'Gửi'}
                 </button>
               </form>
             </div>
@@ -383,19 +656,36 @@ export default function WarehouseInboxPage() {
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-textSecondary">Số điện thoại</span>
-                    <span className="font-bold text-text">{selectedConv?.phone || '—'}</span>
+                    <span className="font-bold text-text">
+                      {selectedConv?.phone || selectedConv?.counterpart?.phone || '—'}
+                    </span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-textSecondary">Hàng ký gửi</span>
-                    <span className="font-bold text-primary">{selectedConv?.consignCount ?? '—'}</span>
+                    <span className="text-textSecondary">Form ký gửi đang hoạt động</span>
+                    <span className="font-bold text-primary">
+                      {formatCountDisplay(
+                        selectedConv?.consignCount ?? selectedConv?.counterpart?.consignCount,
+                        'form'
+                      )}
+                    </span>
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-textSecondary">Đơn đang giao</span>
-                    <span className="font-bold text-text">{selectedConv?.shippingCount ?? '—'}</span>
+                    <span className="font-bold text-text">
+                      {formatCountDisplay(
+                        selectedConv?.shippingCount ?? selectedConv?.counterpart?.shippingCount,
+                        'đơn'
+                      )}
+                    </span>
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-textSecondary">Yêu cầu trả hàng</span>
-                    <span className="font-bold text-error">{selectedConv?.returnCount ?? '—'}</span>
+                    <span className="font-bold text-error">
+                      {formatCountDisplay(
+                        selectedConv?.returnCount ?? selectedConv?.counterpart?.returnCount,
+                        'yêu cầu'
+                      )}
+                    </span>
                   </div>
                 </div>
               </div>

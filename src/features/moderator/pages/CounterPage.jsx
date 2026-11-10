@@ -100,6 +100,7 @@ export default function CounterPage() {
                         items={model.taskGroups.pendingWithdrawals}
                         context="ITEM_WITHDRAWAL"
                         setConfirmHandover={model.setConfirmHandover}
+                        activeRefId={model.activeRefId}
                       />
                     )}
 
@@ -109,6 +110,7 @@ export default function CounterPage() {
                         items={model.taskGroups.pendingEndOfTerm}
                         context="END_OF_TERM_TAKE_BACK"
                         setConfirmHandover={model.setConfirmHandover}
+                        activeRefId={model.activeRefId}
                       />
                     )}
 
@@ -118,6 +120,17 @@ export default function CounterPage() {
                         items={model.taskGroups.pendingInvalidReturns}
                         context="INVALID_RETURN_PICKUP"
                         setConfirmHandover={model.setConfirmHandover}
+                        activeRefId={model.activeRefId}
+                      />
+                    )}
+
+                    {/* 5. Nhận lại hàng xuống cấp (F-036 / API 95 PARTIAL_WITH_ITEM_BACK) */}
+                    {model.taskGroups.pendingDegradedItems?.length > 0 && (
+                      <CounterHandoverTasks
+                        items={model.taskGroups.pendingDegradedItems}
+                        context="DEGRADED_ITEM_PICKUP"
+                        setConfirmHandover={model.setConfirmHandover}
+                        activeRefId={model.activeRefId}
                       />
                     )}
                   </div>

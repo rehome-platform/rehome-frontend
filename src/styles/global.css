@@ -42,6 +42,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Eliminate default browser blue; standardize on ReHome primary green */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: #006B2C;
+}
+
 /* BUG-P1-002: keep Login's custom visibility toggle as the only reveal control. */
 #password-input::-ms-reveal,
 #password-input::-ms-clear {

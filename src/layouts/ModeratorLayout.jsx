@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { NotificationBell } from '../components/notification/index.js';
 
 /**
  * Layout chuyên biệt dành cho Nhân viên Điểm kí gửi / Kiểm duyệt viên (Moderator)
@@ -55,12 +56,12 @@ export default function ModeratorLayout({ children, apiColors = false }) {
   };
 
   return (
-    <div className={`${apiColors ? 'moderator-api-colors ' : ''}min-h-screen flex bg-[#F8FAF8] text-[#191C19] font-sans antialiased`}>
+    <div className={`${apiColors ? 'moderator-api-colors ' : ''}min-h-screen flex bg-background text-text font-sans antialiased`}>
       {/* Sidebar Desktop */}
       {isMobileMenuOpen && <button aria-label="Đóng menu" className="fixed inset-0 z-20 bg-black/40 lg:hidden" onClick={() => setIsMobileMenuOpen(false)} />}
-      <aside className={`${isMobileMenuOpen ? 'flex' : 'hidden'} lg:flex w-72 bg-white border-r border-[#E2E8E0] flex-col fixed inset-y-0 z-30 shadow-sm`}>
+      <aside className={`${isMobileMenuOpen ? 'flex' : 'hidden'} lg:flex w-72 bg-surface border-r border-neutral flex-col fixed inset-y-0 z-30 shadow-sm`}>
         {/* Brand Header */}
-        <div className="h-16 flex items-center justify-between px-6 border-b border-[#E2E8E0] bg-white">
+        <div className="h-16 flex items-center justify-between px-6 border-b border-neutral bg-surface">
           <Link to="/moderator" className="flex items-center space-x-2.5">
             <div className="w-9 h-9 rounded-xl bg-[#006B2C] text-white flex items-center justify-center font-bold font-heading text-lg shadow-sm">
               R
@@ -69,7 +70,7 @@ export default function ModeratorLayout({ children, apiColors = false }) {
               <span className="text-base font-extrabold font-heading text-[#006B2C] tracking-tight block leading-tight">
                 ReHome
               </span>
-              <span className="text-[10px] font-medium uppercase tracking-wider text-[#717971] block leading-tight">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-textSecondary block leading-tight">
                 Bảng điều khiển điểm kí gửi
               </span>
             </div>
@@ -87,10 +88,10 @@ export default function ModeratorLayout({ children, apiColors = false }) {
               className={`flex items-center ${item.subItem ? 'pl-7 pr-3 py-2 text-[11px]' : 'px-3.5 py-2.5 text-xs'} rounded-xl font-semibold transition-all duration-150 ${
                 item.active
                   ? 'bg-[#006B2C] text-white shadow-sm'
-                  : 'text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
+                  : 'text-text hover:bg-[#F6F9F4] hover:text-[#006B2C]'
               }`}
             >
-              <span aria-hidden="true" className={`material-symbols-outlined ${item.subItem ? 'text-[18px] mr-2.5' : 'text-[20px] mr-3'} ${item.active ? 'text-white' : 'text-[#717971]'}`}>
+              <span aria-hidden="true" className={`material-symbols-outlined ${item.subItem ? 'text-[18px] mr-2.5' : 'text-[20px] mr-3'} ${item.active ? 'text-white' : 'text-textSecondary'}`}>
                 {item.icon}
               </span>
               <span>{item.label}</span>
@@ -99,20 +100,20 @@ export default function ModeratorLayout({ children, apiColors = false }) {
         </nav>
 
         {/* Chân sidebar: Cài đặt · Đăng xuất (theo wireframe) */}
-        <div className="px-4 py-3.5 border-t border-[#E2E8E0] bg-[#FAFCF9] flex items-center gap-2 text-[11px] text-[#5B6776]">
+        <div className="px-4 py-3.5 border-t border-neutral bg-[#F6F9F4] flex items-center gap-2 text-[11px] text-textSecondary">
           <Link to="/profile" className="hover:text-[#006B2C] hover:underline">Cài đặt</Link>
           <span aria-hidden="true">·</span>
-          <button type="button" onClick={logout} className="hover:text-[#BA1A1A] hover:underline">Đăng xuất</button>
+          <button type="button" onClick={logout} className="hover:text-error hover:underline">Đăng xuất</button>
         </div>
       </aside>
 
       {/* Main Content Area */}
       <div className="lg:pl-72 flex-1 flex flex-col min-w-0">
-        <header className="h-16 bg-white border-b border-[#E2E8E0] px-6 sm:px-8 flex items-center justify-between sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+        <header className="h-16 bg-surface border-b border-neutral px-6 sm:px-8 flex items-center justify-between sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
           <div className="flex items-center space-x-3 min-w-0">
-            <button className="lg:hidden p-2 rounded-xl border border-neutral" aria-label="Mở menu" aria-expanded={isMobileMenuOpen} onClick={() => setIsMobileMenuOpen(value => !value)}>☰</button>
-            <span className="text-sm font-semibold text-[#191C19] truncate">{warehouseName}</span>
-            <span className="hidden sm:inline text-[11px] text-[#5B6776] truncate">{currentLabel}</span>
+            <button className="lg:hidden p-2 rounded-xl border border-neutral hover:bg-[#F6F9F4]" aria-label="Mở menu" aria-expanded={isMobileMenuOpen} onClick={() => setIsMobileMenuOpen(value => !value)}>☰</button>
+            <span className="text-sm font-semibold text-text truncate">{warehouseName}</span>
+            <span className="hidden sm:inline text-[11px] text-textSecondary truncate">{currentLabel}</span>
           </div>
 
           <div className="flex items-center space-x-3">
@@ -123,9 +124,10 @@ export default function ModeratorLayout({ children, apiColors = false }) {
                 onChange={(event) => setSkuQuery(event.target.value)}
                 aria-label="Tìm SKU tại điểm kí gửi"
                 placeholder="Tìm SKU tại điểm kí gửi…"
-                className="w-60 rounded-lg border border-[#E2E8E0] px-3 py-1.5 text-[11px] focus:border-[#006B2C] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/20"
+                className="w-60 rounded-xl border border-neutral px-3 py-1.5 text-xs text-text placeholder:text-textSecondary focus:border-[#006B2C] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/20"
               />
             </form>
+            <NotificationBell userRole={user?.role} />
             <Link to="/profile" className="flex items-center space-x-2.5 hover:opacity-85 transition-opacity">
               <div className="w-[30px] h-[30px] rounded-full bg-[#006B2C]/10 text-[#006B2C] font-bold flex items-center justify-center text-xs border border-[#006B2C]/20 shrink-0 overflow-hidden">
                 {user?.avatarUrl || user?.avatar ? (
@@ -135,15 +137,17 @@ export default function ModeratorLayout({ children, apiColors = false }) {
                 )}
               </div>
               <div className="hidden sm:block leading-tight">
-                <p className="text-[11px] font-semibold text-[#191C19]">{user?.fullName || user?.name || 'Nhân viên Điểm kí gửi'}</p>
-                <p className="text-[10px] text-[#717971]">{user?.memberCode || user?.email || 'Moderator ReHome'}</p>
+                <p className="text-[11px] font-semibold text-text">{user?.fullName || user?.name || 'Nhân viên Điểm kí gửi'}</p>
+                <p className="text-[10px] text-textSecondary">{user?.memberCode || user?.email || 'Moderator ReHome'}</p>
               </div>
             </Link>
           </div>
         </header>
 
         <main className="flex-1 p-6 sm:p-8 overflow-y-auto">
-          {children}
+          <div className="w-full max-w-7xl mx-auto space-y-6">
+            {children}
+          </div>
         </main>
       </div>
     </div>

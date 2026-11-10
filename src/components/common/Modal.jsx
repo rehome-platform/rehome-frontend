@@ -1,4 +1,8 @@
 import React, { useEffect, useId, useRef } from 'react';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
+
+gsap.registerPlugin(useGSAP);
 
 export default function Modal({
   isOpen,
@@ -13,6 +17,20 @@ export default function Modal({
   const titleId = useId();
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
+
+  useGSAP(
+    () => {
+      if (isOpen && panel.current && process.env.NODE_ENV !== 'test') {
+        gsap.from(panel.current, {
+          scale: 0.95,
+          opacity: 0,
+          duration: 0.25,
+          ease: 'power2.out',
+        });
+      }
+    },
+    { dependencies: [isOpen], scope: panel }
+  );
 
   const sizeMap = {
     sm: 'max-w-md',

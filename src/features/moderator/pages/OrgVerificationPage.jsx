@@ -228,12 +228,12 @@ export default function OrgVerificationPage() {
       <div className="space-y-6">
         {/* VIEW 1: QUEUE LIST (TC-01 & TC-05) */}
         {model.viewMode === 'LIST' && (
-          <div className="space-y-5">
+          <div className="space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-neutral pb-4">
               <div>
                 <div className="flex items-center space-x-2">
-                  <h1 className="text-xl font-bold font-heading text-text">
+                  <h1 className="text-2xl font-bold font-heading text-text">
                     Hồ sơ tổ chức chờ xác minh
                   </h1>
                 </div>

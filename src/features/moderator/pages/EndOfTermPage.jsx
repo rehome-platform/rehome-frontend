@@ -64,9 +64,9 @@ function EndTermDetail({ sku, onClose, onChanged }) {
 
           {/* Trường hợp sản phẩm đã chuyển giao từ thiện */}
           {model.isDonated && (
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-800 text-sm">
+            <div className="rounded-xl border border-neutral bg-background p-4 text-text text-sm">
               <p className="font-semibold">Sản phẩm đã được chuyển giao từ thiện (DONATED)</p>
-              <p className="mt-1 text-xs text-blue-700">
+              <p className="mt-1 text-xs text-textSecondary">
                 Sản phẩm này đã hoàn tất thủ tục bàn giao tổ chức đối tác và ghi nhận vào Audit Log. Không còn thao tác khả dụng.
               </p>
             </div>
@@ -86,7 +86,14 @@ function EndTermDetail({ sku, onClose, onChanged }) {
                   <p className="text-textSecondary">
                     Yêu cầu kiểm tra danh tính Member trước khi bàn giao sản phẩm:
                   </p>
-                  <Link className="text-primary font-medium underline inline-block mt-1" to="/moderator/counter">
+                  <Link
+                    className="text-primary font-medium underline inline-block mt-1"
+                    to={
+                      model.data.member?.memberCode
+                        ? `/moderator/counter?memberCode=${encodeURIComponent(model.data.member.memberCode)}&refId=${encodeURIComponent(sku)}`
+                        : '/moderator/counter'
+                    }
+                  >
                     Chuyển sang Quầy tiếp nhận để xác nhận CCCD/SĐT
                   </Link>
                 </div>
@@ -173,11 +180,11 @@ export default function EndOfTermPage() {
       }
     >
       {/* Banner hướng dẫn nghiệp vụ */}
-      <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4 space-y-2">
-        <h3 className="font-semibold text-blue-900 text-sm flex items-center gap-2">
+      <div className="rounded-2xl border border-neutral bg-surface p-4 space-y-2 shadow-sm">
+        <h3 className="font-semibold text-text text-sm flex items-center gap-2">
           <span>💡</span> Hướng dẫn quy trình xử lý cuối kỳ & vô thừa nhận
         </h3>
-        <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
+        <ul className="text-xs text-textSecondary space-y-1 list-disc list-inside">
           <li>
             <span className="font-medium">Chuyển giao từ thiện (API 36):</span> Dành cho sản phẩm vô thừa nhận (<span className="font-mono">UNCLAIMED</span>) quá hạn 30 ngày. Moderator nhập tên tổ chức từ thiện để đổi trạng thái sang <span className="font-semibold">DONATED</span>.
           </li>

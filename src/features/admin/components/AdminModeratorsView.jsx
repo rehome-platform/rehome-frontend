@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import adminApi from '../services/adminApi';
+import { useToast } from '../../../context/ToastContext.jsx';
 
 /**
  * View Quản lý Nhân sự Moderator ReHome
@@ -10,6 +11,7 @@ import adminApi from '../services/adminApi';
  * - PATCH /api/admin/accounts/{id}/ban & unban: Khóa/Mở khóa tài khoản Moderator
  */
 export default function AdminModeratorsView({ onLogAction }) {
+  const toast = useToast();
   const [moderators, setModerators] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -81,6 +83,7 @@ export default function AdminModeratorsView({ onLogAction }) {
 
   const showNotification = (msg) => {
     setActionSuccessMsg(msg);
+    toast.success(msg);
     setTimeout(() => setActionSuccessMsg(''), 4000);
   };
 
@@ -176,7 +179,7 @@ export default function AdminModeratorsView({ onLogAction }) {
 
       await loadModerators();
     } catch (err) {
-      alert(err.response?.data?.message || err.message || `Lỗi khi ${actionLabel} tài khoản`);
+      toast.error(err.response?.data?.message || err.message || `Lỗi khi ${actionLabel} tài khoản`);
     }
   };
 
@@ -205,7 +208,7 @@ export default function AdminModeratorsView({ onLogAction }) {
 
       await loadModerators();
     } catch (err) {
-      alert(err.response?.data?.message || err.message || 'Không thể điều chuyển kho cho Moderator');
+      toast.error(err.response?.data?.message || err.message || 'Không thể điều chuyển kho cho Moderator');
     } finally {
       setIsSubmitting(false);
     }

@@ -17,13 +17,18 @@ const moderatorId = (value) => encodeURIComponent(value);
  * Tạo URL hợp lệ cho SockJS client.
  * SockJS yêu cầu bắt buộc giao thức http: hoặc https:. Tuyệt đối không dùng ws: hoặc wss:.
  */
-export function getSockJsUrl(baseUrl = API_BASE_URL) {
+export function getSockJsUrl(baseUrl = API_BASE_URL, endpoint = "/ws") {
   if (!baseUrl) return "";
   const httpUrl = String(baseUrl)
     .replace(/^ws:\/\//i, "http://")
     .replace(/^wss:\/\//i, "https://");
   const cleanBase = httpUrl.replace(/\/+$/, "");
-  return `${cleanBase}/ws`;
+  const cleanEndpoint = String(endpoint).startsWith("/") ? endpoint : `/${endpoint}`;
+  return `${cleanBase}${cleanEndpoint}`;
+}
+
+export function getWsSockJsUrl(baseUrl = API_BASE_URL) {
+  return getSockJsUrl(baseUrl, "/ws-sockjs");
 }
 
 export const WS_BASE_URL = getSockJsUrl(API_BASE_URL);
@@ -146,6 +151,7 @@ export const API_ENDPOINTS = {
     // Hộp thư hỗ trợ kho
     WAREHOUSE_INBOX: "/conversations",
     WAREHOUSE_INBOX_DETAIL: (id) => `/conversations/${moderatorId(id)}`,
+    WAREHOUSE_INBOX_MESSAGES: (id) => `/conversations/${moderatorId(id)}/messages`,
     SEND_INBOX_MESSAGE: (id) => `/conversations/${moderatorId(id)}/messages`,
     MARK_INBOX_DONE: (id) => `/conversations/${moderatorId(id)}/done`,
   },
@@ -171,8 +177,8 @@ export const API_ENDPOINTS = {
     ASSIGN_WAREHOUSE: (id) => `/api/admin/moderators/${id}/warehouse`,
 
     WAREHOUSES: "/api/admin/warehouses",
-    CREATE_WAREHOUSE: "/api/admin/warehouses",
-    UPDATE_WAREHOUSE: (id) => `/api/admin/warehouses/${id}`,
+    CREATE_WAREHOUSE: "/warehouses",
+    UPDATE_WAREHOUSE: (id) => `/warehouses/${encodeURIComponent(id)}`,
     HIDE_WAREHOUSE: (id) => `/api/admin/warehouses/${id}/hide`,
 
     CONFIGS: "/api/admin/config",
@@ -189,6 +195,8 @@ export const API_ENDPOINTS = {
   NOTIFICATIONS: {
     LIST: "/notifications",
     MARK_READ: (id) => `/notifications/${id}/read`,
+    UNREAD_COUNT: "/notifications/unread-count",
+    MARK_ALL_READ: "/notifications/read-all",
   },
 
   // 5. Thanh toán MoMo - trang hiển thị kết quả sau khi được redirect về
@@ -199,5 +207,11 @@ export const API_ENDPOINTS = {
   // 6. Thanh toán VNPay - trang hiển thị kết quả sau khi được redirect về
   VNPAY: {
     RETURN_INFO: "/api/vnpay/return-info",
+  },
+
+  // 7. Đơn vị hành chính GHN 2 cấp (Tỉnh/Thành -> Phường/Xã)
+  ADDRESS_UNITS: {
+    PROVINCES: "/address-units/provinces",
+    WARDS: "/address-units/wards",
   },
 };

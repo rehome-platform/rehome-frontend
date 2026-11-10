@@ -12,6 +12,7 @@ function taskGroups(data) {
     data?.pendingWithdrawals || [],
     data?.pendingEndOfTerm || [],
     data?.pendingInvalidReturns || [],
+    data?.pendingDegradedItems || [],
   ];
 }
 
@@ -41,21 +42,24 @@ function normalizeReferencedTask(task) {
 }
 
 export function normalizeMemberTasks(data) {
-  const [forms, withdrawals, endOfTerm, invalidReturns = []] = taskGroups(data);
+  const [forms, withdrawals, endOfTerm, invalidReturns = [], degradedItems = []] = taskGroups(data);
   const pendingForms = Array.isArray(data) ? data.map(normalizeLegacyForm) : forms.map(normalizeTaskForm);
   const pendingWithdrawals = withdrawals.map(normalizeReferencedTask);
   const pendingEndOfTerm = endOfTerm.map(normalizeReferencedTask);
   const pendingInvalidReturns = invalidReturns.map(normalizeReferencedTask);
+  const pendingDegradedItems = degradedItems.map(normalizeReferencedTask);
   return {
     pendingForms,
     pendingWithdrawals,
     pendingEndOfTerm,
     pendingInvalidReturns,
+    pendingDegradedItems,
     totalCount:
       pendingForms.length +
       pendingWithdrawals.length +
       pendingEndOfTerm.length +
-      pendingInvalidReturns.length,
+      pendingInvalidReturns.length +
+      pendingDegradedItems.length,
   };
 }
 

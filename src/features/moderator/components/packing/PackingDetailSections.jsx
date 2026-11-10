@@ -3,8 +3,10 @@ import Button from "../../../../components/common/Button.jsx";
 import { safeDocumentUrl } from "../../models/warehouseModel.js";
 import { canPack, canShip } from "../../models/packingModel.js";
 import { operationReady } from "../../config/packingContract.js";
+import { useToast } from "../../../../context/ToastContext.jsx";
 
 export function PackingIncidentDialog({ setIncidentOpen, setIncidentNote, incidentNote }) {
+  const toast = useToast();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl space-y-4">
@@ -22,7 +24,7 @@ export function PackingIncidentDialog({ setIncidentOpen, setIncidentNote, incide
           className="space-y-4 text-xs"
           onSubmit={(e) => {
             e.preventDefault();
-            alert('Đã ghi nhận báo cáo sự cố đóng gói. Quản lý kho sẽ kiểm tra.');
+            toast.success('Đã ghi nhận báo cáo sự cố đóng gói. Quản lý kho sẽ kiểm tra.');
             setIncidentOpen(false);
             setIncidentNote('');
           }}
@@ -165,6 +167,7 @@ export function PackingRecipientPanel({ order, scanLogs }) {
 }
 
 export function PackingShipmentPanel({ order, onOpenPrintModal }) {
+  const toast = useToast();
   return (
     <div className="rounded-2xl border-2 border-[#006B2C] bg-white p-5 space-y-4 shadow-sm animate-in fade-in duration-200">
       <div>
@@ -226,7 +229,7 @@ export function PackingShipmentPanel({ order, onOpenPrintModal }) {
         <Button
           variant="outline"
           className="text-xs font-bold py-2 border-[#2b2b2b] text-[#006B2C] hover:bg-[#F0F5EE]"
-          onClick={() => alert('Đã xác nhận bàn giao hàng cho shipper GHN!')}
+          onClick={() => toast.success('Đã xác nhận bàn giao hàng cho shipper GHN!')}
         >
           ✓ Đã bàn giao cho GHN
         </Button>
@@ -345,7 +348,7 @@ export function PackingScanPanel({
                 type="number"
                 value={packageWeight ?? 820}
                 onChange={(e) => setPackageWeight && setPackageWeight(Number(e.target.value))}
-                className="w-full rounded-lg border border-gray-300 p-2 text-xs font-mono font-bold"
+                className="w-full rounded-xl border border-neutral p-2 text-xs font-mono font-bold"
               />
               <span className="text-[10px] text-gray-500">Gợi ý: 800g (2 món, theo danh mục)</span>
             </div>
@@ -357,7 +360,7 @@ export function PackingScanPanel({
                 type="text"
                 value={packageDimensions ?? '30 x 22 x 10'}
                 onChange={(e) => setPackageDimensions && setPackageDimensions(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 p-2 text-xs font-mono"
+                className="w-full rounded-xl border border-neutral p-2 text-xs font-mono"
               />
             </div>
           </div>
@@ -369,7 +372,7 @@ export function PackingScanPanel({
               type="text"
               value={shipperNote ?? 'Giao giờ hành chính, gọi trước khi tới.'}
               onChange={(e) => setShipperNote && setShipperNote(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 p-2 text-xs"
+              className="w-full rounded-xl border border-neutral p-2 text-xs"
             />
           </div>
         </div>
@@ -379,7 +382,7 @@ export function PackingScanPanel({
         <Button
           disabled={!operationReady('shipment') || resource.busy || resource.loading || uncertain || !canShip(order, scope, now)}
           onClick={() => create()}
-          className="py-3 px-6 bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs"
+          className="py-3 px-6 bg-[#006B2C] text-white hover:bg-[#005523] rounded-xl font-bold text-xs"
         >
           Tạo vận đơn GHN
         </Button>

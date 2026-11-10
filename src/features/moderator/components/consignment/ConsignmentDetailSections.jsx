@@ -393,7 +393,7 @@ export function ConsignmentSummary({ form }) {
         </div>
         <div className="px-4 py-2.5 flex justify-between">
           <span className="text-[#5f5f5f] w-32">Thương hiệu</span>
-          <span className="font-semibold text-[#191C19] flex-1 text-right">{form.brand || 'Uniqlo'}</span>
+          <span className="font-semibold text-[#191C19] flex-1 text-right">{form.brand || '—'}</span>
         </div>
         <div className="px-4 py-2.5 flex justify-between">
           <span className="text-[#5f5f5f] w-32">Kích cỡ</span>

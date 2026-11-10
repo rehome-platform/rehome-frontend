@@ -1,11 +1,25 @@
 import React, { useRef, useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { counterService } from "../services/warehouseApi.js";
 import { usePhase2, useResource } from "./warehouseHooks.jsx";
 import { listItems, lookupParams, normalizeMemberTasks, Phase2Error } from "../models/warehouseModel.js";
+import { useRecentServed } from './useRecentServed.jsx';
+
+export function detectLookupKind(value) {
+  const trimmed = String(value || '').trim();
+  // Nếu toàn chữ số bắt đầu bằng 0 thì coi là phone, ngược lại memberCode
+  return /^0\d+$/.test(trimmed) ? 'phone' : 'memberCode';
+}
 
 export function useCounter() {
-  const { identity, setIdentity } = usePhase2();
+  const { identity, setIdentity, scope } = usePhase2();
+  const [searchParams] = useSearchParams();
+  const urlMemberCode = searchParams.get('memberCode')?.trim();
+  const urlPhone = searchParams.get('phone')?.trim();
+  const urlAccountId = searchParams.get('accountId')?.trim();
+  const urlRefId = searchParams.get('refId')?.trim();
+
   const [kind, setKind] = useState('memberCode');
   const [query, setQuery] = useState('');
   const [submitted, setSubmitted] = useState(null);
@@ -14,13 +28,25 @@ export function useCounter() {
   const [confirmHandover, setConfirmHandover] = useState(null);
   const [handoverLoading, setHandoverLoading] = useState(false);
   const [handoverFeedback, setHandoverFeedback] = useState(null);
-  const [recentServed, setRecentServed] = useState([]);
+  const { recentServed, rememberServed } = useRecentServed(scope);
   const lookupRequestRef = useRef(null);
   const selectionVersionRef = useRef(0);
 
   const memberCodeInputRef = useRef(null);
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
+
+  useEffect(() => {
+    const lookupVal = urlMemberCode || urlPhone || urlAccountId;
+    if (lookupVal && !selectedRef.current && !submitted) {
+      const detectedKind = urlPhone ? 'phone' : detectLookupKind(lookupVal);
+      setKind(detectedKind);
+      setQuery(lookupVal);
+      const request = { params: lookupParams(detectedKind, lookupVal), reopen: true };
+      lookupRequestRef.current = request;
+      setSubmitted(request);
+    }
+  }, [urlMemberCode, urlPhone, urlAccountId]);
 
   useEffect(() => {
     if (!selected) {
@@ -31,7 +57,13 @@ export function useCounter() {
   const results = useResource(async (options) => {
     const members = await counterService.lookup(submitted.params, options);
     if (submitted.reopen && !options.signal.aborted && lookupRequestRef.current === submitted) {
-      const member = listItems(members).find((item) => item.memberCode === submitted.params.memberCode && item.memberId);
+      const items = listItems(members);
+      const member = items.find((item) => {
+        if (submitted.params.memberCode && item.memberCode === submitted.params.memberCode) return true;
+        if (submitted.params.phone && item.phone === submitted.params.phone) return true;
+        if (submitted.params.accountId && (item.memberId === submitted.params.accountId || item.id === submitted.params.accountId)) return true;
+        return false;
+      }) || (items.length === 1 ? items[0] : null);
       if (!member) throw new Phase2Error('Không tìm thấy Member phù hợp với thông tin đã nhập.', 404);
       choose(member);
     }
@@ -74,9 +106,12 @@ export function useCounter() {
   };
 
   const handleFormSubmit = (event) => {
-    event.preventDefault();
-    if (query.trim()) {
-      executeLookup(kind, query.trim());
+    event?.preventDefault?.();
+    const trimmed = query.trim();
+    if (trimmed) {
+      const detectedKind = detectLookupKind(trimmed);
+      setKind(detectedKind);
+      executeLookup(detectedKind, trimmed);
     }
   };
 
@@ -89,19 +124,6 @@ export function useCounter() {
     setConfirmHandover(null);
     setHandoverFeedback(null);
     results.clearActionError();
-  };
-
-  const rememberServed = (member, taskNote = 'Vừa phục vụ tại quầy') => {
-    setRecentServed((prev) => [
-      {
-        name: member.fullName || member.name,
-        memberCode: member.memberCode,
-        memberId: member.memberId,
-        phone: member.phone || '',
-        taskNote,
-      },
-      ...prev.filter((item) => item.memberCode !== member.memberCode).slice(0, 4),
-    ]);
   };
 
   const confirmIdentity = () => {
@@ -130,7 +152,7 @@ export function useCounter() {
         type: 'success',
         message: `Đã bàn giao thành công. Đã hoàn tất bàn giao "${item.productName || item.productId}" cho khách hàng!`,
       });
-      rememberServed(selected, `Bàn giao hàng · ${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`);
+      rememberServed(selected, `Bàn giao hàng · ${new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })}`);
       setConfirmHandover(null);
       tasks.refresh();
     } catch (err) {
@@ -180,7 +202,8 @@ export function useCounter() {
     confirmHandover,
     handoverLoading,
     executeHandover,
-      sections: {
+      activeRefId: urlRefId,
+    sections: {
       CounterLookupForm: { handleFormSubmit, kind, setKind, memberCodeInputRef, query, setQuery, setScanner },
       CounterIdentityPanel: { selected, results, confirmed, confirmIdentity, reset },
       CounterMemberResults: { submitted, results, resultList, selected, choose },

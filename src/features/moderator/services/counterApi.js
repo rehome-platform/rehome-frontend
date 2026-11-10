@@ -33,6 +33,11 @@ export const counterService = {
       name: item.fullName || item.name || '',
       avatarUrl: item.avatarUrl || '',
       phone: item.phone || params?.phone || '',
+      email: item.email || '',
+      joinedAt: item.joinedAt || null,
+      lastWarehouseVisit: item.lastWarehouseVisit || null,
+      violationSummary: item.violationSummary || null,
+      activeConsignments: item.activeConsignments || [],
       isMock: false,
     }));
   },

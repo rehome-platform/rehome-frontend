@@ -6,9 +6,12 @@ import { useSearchParams } from "react-router-dom";
 import { queueService } from "../services/warehouseApi.js";
 import { usePhase2, useResource } from "./warehouseHooks.jsx";
 import { listItems } from "../models/warehouseModel.js";
+import { useToast } from "../../../context/ToastContext.jsx";
 
 export function useConsignmentQueue() {
-  const { scope } = usePhase2();
+  const toast = useToast();
+  const phase2 = usePhase2();
+  const scope = phase2?.scope || 'warehouse';
   const [search, setSearch] = useSearchParams();
 
   const typeParam = search.get('type') || 'ALL';
@@ -21,7 +24,6 @@ export function useConsignmentQueue() {
   // Modal nhận việc & nhả việc (HQ-02-NhanViec & HQ-02-NhaViec)
   const [claimTarget, setClaimTarget] = useState(null);
   const [releaseTarget, setReleaseTarget] = useState(null);
-  const [selectedIds, setSelectedIds] = useState([]);
   const [feedback, setFeedback] = useState(null);
 
   // Gọi API lấy dữ liệu hàng đợi
@@ -34,7 +36,9 @@ export function useConsignmentQueue() {
   // Tự động bắt lỗi mutation (409 xung đột nhận việc, 403 không có quyền nhả việc)
   useEffect(() => {
     if (resource.actionError) {
-      setFeedback({ type: 'error', message: queueActionError(resource.actionError) });
+      const msg = queueActionError(resource.actionError);
+      setFeedback({ type: 'error', message: msg });
+      toast.error(msg);
       resource.clearActionError();
     }
   }, [resource.actionError]);
@@ -65,20 +69,6 @@ export function useConsignmentQueue() {
     changeFilter('overdue', overdueOnly ? '' : '1');
   };
 
-  const toggleSelectAll = (e) => {
-    if (e.target.checked) {
-      setSelectedIds(filteredItems.map((i) => i.queueId));
-    } else {
-      setSelectedIds([]);
-    }
-  };
-
-  const toggleSelectRow = (queueId) => {
-    setSelectedIds((prev) =>
-      prev.includes(queueId) ? prev.filter((id) => id !== queueId) : [...prev, queueId],
-    );
-  };
-
   const mutateTask = (item, release) => {
     setFeedback(null);
     const action = release ? queueService.release : queueService.claim;
@@ -89,12 +79,17 @@ export function useConsignmentQueue() {
         } else {
           setClaimTarget(null);
         }
+        const isWithdrawal = item.type === 'WITHDRAWAL' || item.type === 'ITEM_WITHDRAWAL';
+        const msg = release
+          ? `Đã nhả việc "${item.typeLabel}" (${item.formId || item.orderId || item.queueId}) về hàng đợi thành công.`
+          : isWithdrawal
+            ? `Đã nhận việc "${item.typeLabel}" (${item.formId || item.orderId || item.refId || item.queueId}) thành công! Bạn có thể mở Quầy tiếp nhận (BG-01) để bàn giao cho khách khi khách đến quầy.`
+            : `Đã nhận việc "${item.typeLabel}" (${item.formId || item.orderId || item.queueId}) thành công! Bạn có thể chuyển sang tab "Kiểm định & nhập kho" để mở duyệt.`;
         setFeedback({
           type: 'success',
-          message: release
-            ? `Đã nhả việc "${item.typeLabel}" (${item.formId || item.orderId || item.queueId}) về hàng đợi thành công.`
-            : `Đã nhận việc "${item.typeLabel}" (${item.formId || item.orderId || item.queueId}) thành công! Bạn có thể chuyển sang tab "Kiểm định & nhập kho" để mở duyệt.`,
+          message: msg,
         });
+        toast.success(msg);
       },
     });
   };
@@ -114,10 +109,7 @@ export function useConsignmentQueue() {
     filteredItems,
     rawItems,
     feedback,
-    selectedIds,
-    toggleSelectAll,
     scope,
-    toggleSelectRow,
     handleClaim,
     claimTarget,
     setClaimTarget,

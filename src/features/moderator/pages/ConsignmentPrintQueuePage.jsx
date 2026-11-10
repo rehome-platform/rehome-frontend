@@ -77,7 +77,7 @@ export default function ConsignmentPrintQueuePage() {
   return (
     <Page title="Hàng đợi in tem" subtitle="Món nhập kho xong tự vào đây. Tải PDF để in gom cả lô."
       actions={<Button variant="outline" disabled={busy} onClick={resource.refresh}>Tải lại</Button>}>
-      <ResourceState resource={resource} empty={!items.length} />
+      <ResourceState resource={resource} />
       {feedback && <p role={feedback.error ? 'alert' : 'status'} className={`rounded-xl border p-4 text-sm ${feedback.error ? 'bg-red-50 text-red-800' : 'bg-green-50 text-green-800'}`}>{feedback.message}</p>}
       <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
         <Card title="Danh sách chờ in tem">
@@ -93,7 +93,11 @@ export default function ConsignmentPrintQueuePage() {
                     : [...new Set([...previous, ...filtered.map(item => item.sku)])])} /></th>
                 <th>SKU</th><th>Sản phẩm</th><th>Danh mục</th><th>Nhập kho lúc</th><th>Người nhập</th>
               </tr></thead>
-              <tbody>{filtered.map(item => <tr key={item.sku} ref={item.sku === focusedSku ? focusRef : null}
+              <tbody>
+                {!resource.loading && !resource.error && !filtered.length && <tr>
+                  <td colSpan={6} className="p-5 text-center text-textSecondary">{items.length ? 'Không có tem phù hợp.' : 'Chưa có dữ liệu phù hợp.'}</td>
+                </tr>}
+                {filtered.map(item => <tr key={item.sku} ref={item.sku === focusedSku ? focusRef : null}
                 className={`border-b border-neutral ${item.sku === focusedSku ? 'bg-green-50 ring-1 ring-inset ring-primary' : ''}`}>
                 <td className="p-2"><input type="checkbox" aria-label={`Chọn ${item.sku}`} checked={chosen.includes(item.sku)} disabled={busy || pendingMark.length > 0}
                   onChange={() => setSelected(previous => previous.includes(item.sku) ? previous.filter(sku => sku !== item.sku) : [...previous, item.sku])} /></td>
@@ -103,7 +107,6 @@ export default function ConsignmentPrintQueuePage() {
               </tr>)}</tbody>
             </table>
           </div>
-          {!!items.length && !filtered.length && <p>Không có tem phù hợp.</p>}
           <p className="text-xs text-textSecondary">Món đã tải tem sẽ rời hàng đợi. Bạn có thể in lại tại Tồn kho.</p>
         </Card>
         <div className="space-y-4">

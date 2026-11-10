@@ -12,14 +12,17 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
 
   const [skuInput, setSkuInput] = useState('');
   const [isIdentityConfirmed, setIsIdentityConfirmed] = useState(false);
+  const [isFeeCollected, setIsFeeCollected] = useState(false);
 
+  const requiresFeeConfirmation = Boolean(context === 'ITEM_WITHDRAWAL' && item.feeCharged > 0 && !item.feePaid);
   const isSkuMatched = Boolean(targetSku && skuInput.trim().toUpperCase() === targetSku.toUpperCase());
-  const canHandover = Boolean(isSkuMatched && isIdentityConfirmed);
+  const canHandover = Boolean(isSkuMatched && isIdentityConfirmed && (!requiresFeeConfirmation || isFeeCollected));
 
   const reasonLabels = {
     ITEM_WITHDRAWAL: 'Member rút hàng',
     END_OF_TERM_TAKE_BACK: 'Nhận lại cuối kỳ',
     INVALID_RETURN_PICKUP: 'Người mua nhận hàng trả',
+    DEGRADED_ITEM_PICKUP: 'Hàng xuống cấp (Đền 50% & nhận lại)',
   };
 
   return (
@@ -53,6 +56,31 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
             <span className="text-[#5B6776]">Sản phẩm:</span>
             <span className="font-bold text-[#006B2C]">{item.productName || item.name || item.productId}</span>
           </div>
+          {context === 'DEGRADED_ITEM_PICKUP' && (
+            <div className="flex justify-between">
+              <span className="text-[#5B6776]">Tiền đền bù 50%:</span>
+              <span className="font-bold text-[#006B2C]">{money(item.paidAmount || item.compensationAmount || 0)} (đã cộng vào ví)</span>
+            </div>
+          )}
+          {context === 'ITEM_WITHDRAWAL' && (
+            <div className="flex justify-between items-center pt-1 border-t border-dashed border-neutral">
+              <span className="text-[#5B6776]">Phí rút hàng:</span>
+              <span>
+                {item.feeCharged ? (
+                  <>
+                    <strong className="text-[#191C19] mr-1.5">{money(item.feeCharged)}</strong>
+                    {item.feePaid ? (
+                      <span className="font-bold text-[#006B2C]">(Đã thanh toán)</span>
+                    ) : (
+                      <span className="font-bold text-[#BA1A1A]">(Chưa thanh toán)</span>
+                    )}
+                  </>
+                ) : (
+                  <strong className="text-[#006B2C]">Miễn phí</strong>
+                )}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Bước 2: Đối chiếu mã SKU */}
@@ -120,6 +148,27 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
           </p>
         </div>
 
+        {/* Cảnh báo & xác nhận thu phí nếu chưa thanh toán online */}
+        {requiresFeeConfirmation && (
+          <div className="rounded-xl border-2 border-[#BA1A1A] bg-[#FFEBEE]/30 p-3.5 space-y-2 text-xs">
+            <label className="flex items-start gap-2.5 cursor-pointer font-bold text-[#BA1A1A]">
+              <input
+                type="checkbox"
+                checked={isFeeCollected}
+                onChange={(e) => setIsFeeCollected(e.target.checked)}
+                aria-label="Xác nhận đã thu phí rút hàng"
+                className="mt-0.5 h-4 w-4 rounded border-[#BA1A1A] text-[#BA1A1A] focus:ring-[#BA1A1A]"
+              />
+              <span className="leading-snug">
+                Đã thu phí rút {money(item.feeCharged)} trực tiếp tại quầy từ Member
+              </span>
+            </label>
+            <p className="text-[11px] text-[#BA1A1A] pl-6.5">
+              Đơn hàng chưa thanh toán phí rút online. Moderator cần thu tiền trước khi hoàn tất bàn giao hiện vật.
+            </p>
+          </div>
+        )}
+
         {/* Footer actions */}
         <div className="flex items-center justify-between pt-2 border-t border-neutral">
           <span className="text-[11px] text-[#5B6776]">
@@ -145,7 +194,7 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
               }`}
               onClick={() => executeHandover(confirmHandover.item, confirmHandover.context)}
             >
-              Xác nhận đã bàn giao
+              {context === 'ITEM_WITHDRAWAL' ? 'Xác nhận bàn giao' : 'Xác nhận đã bàn giao'}
             </Button>
           </div>
         </div>
@@ -155,22 +204,21 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
 }
 
 export function CounterWorkflowGuide({ recentServed, reopen, loading }) {
+  if (!recentServed || !recentServed.length) return null;
+
   return (
-    <div className="rounded-2xl border border-[#8a8a8a] bg-white overflow-hidden shadow-sm">
-      <div className="bg-[#f4f4f4] border-b border-[#8a8a8a] px-4 py-3 text-xs font-bold text-[#191C19]">
+    <div className="rounded-2xl border border-neutral bg-surface overflow-hidden shadow-sm">
+      <div className="bg-background border-b border-neutral px-4 py-3 text-xs font-bold text-text">
         Đã phục vụ gần đây
       </div>
-      <div className="divide-y divide-[#E2E8E0]">
-        {!recentServed.length && (
-          <p className="p-3.5 text-xs text-[#717971]">Chưa có Member được phục vụ trong phiên này</p>
-        )}
+      <div className="divide-y divide-neutral">
         {recentServed.map((item) => (
           <div key={item.memberCode} className="p-3.5 flex items-center justify-between text-xs">
             <div>
-              <p className="font-semibold text-[#191C19]">
+              <p className="font-semibold text-text">
                 {item.name} · {item.memberCode}
               </p>
-              <p className="text-[11px] text-[#717971]">{item.taskNote}</p>
+              <p className="text-[11px] text-textSecondary">{item.taskNote}</p>
             </div>
             <button
               type="button"
@@ -359,7 +407,11 @@ export function CounterIdentityPanel({ selected, results, confirmed, confirmIden
         <div>
           <p className="text-[10px] text-[#717971] uppercase font-bold">Lịch sử</p>
           <p className="font-medium text-[#191C19] mt-0.5">
-            {selected.violationSummary || 'Chưa có vi phạm'}
+            {typeof selected.violationSummary === 'object' && selected.violationSummary !== null
+              ? (selected.violationSummary.totalViolations > 0
+                  ? `${selected.violationSummary.totalViolations} lần vi phạm`
+                  : 'Chưa có vi phạm')
+              : (selected.violationSummary || 'Chưa có vi phạm')}
           </p>
         </div>
       </div>
@@ -370,23 +422,20 @@ export function CounterIdentityPanel({ selected, results, confirmed, confirmIden
         </h3>
         {selected.activeConsignments && selected.activeConsignments.length > 0 ? (
           <div className="flex flex-wrap gap-2">
-            {selected.activeConsignments.map((tag, i) => (
-              <span key={i} className="px-2.5 py-1 rounded border border-[#a8a8a8] bg-white text-xs text-[#414942]">
-                {tag}
-              </span>
-            ))}
+            {selected.activeConsignments.map((tag, i) => {
+              const name = typeof tag === 'object' && tag !== null
+                ? (tag.productName || tag.formNo || 'Món ký gửi')
+                : tag;
+              return (
+                <span key={i} className="px-2.5 py-1 rounded border border-[#a8a8a8] bg-white text-xs text-[#414942]">
+                  {name}
+                </span>
+              );
+            })}
           </div>
         ) : (
           <p className="text-xs text-[#717971]">Không có món hàng nào đang ký gửi tại kho này.</p>
         )}
-      </div>
-    
-      <div className="rounded-xl border border-dashed border-[#9a9a9a] bg-[#f4f5f4] p-4 text-xs text-[#414942] leading-relaxed">
-        <p className="font-bold text-[#191C19] mb-1">Trước khi bàn giao hàng</p>
-        <p>
-          Hỏi khách email hoặc tên món đang gửi để chắc đúng người. Mã Member và số điện thoại người khác cũng có thể biết.
-          Nếu chỉ nhận hàng ký gửi thì không cần — khách đang đưa đồ cho mình, không lấy gì đi.
-        </p>
       </div>
     
       <div className="flex gap-4">
@@ -417,40 +466,40 @@ export function CounterLookupForm({ handleFormSubmit, kind, setKind, memberCodeI
           Mã Member nằm ở mục Cá nhân trong ứng dụng. Khách không mở được app thì dùng số điện thoại đã đăng ký.
         </p>
       </div>
-    
+
       <form onSubmit={handleFormSubmit} className="space-y-4">
-        <div className="flex items-center gap-2">
-          <label htmlFor="lookup-kind-select" className="text-xs font-semibold text-[#5B6776]">
-            Tra cứu bằng
-          </label>
-          <select
-            id="lookup-kind-select"
-            className="rounded-lg border border-[#c4c4c4] bg-[#f9faf9] px-2.5 py-1 text-xs font-medium text-[#191C19]"
-            value={kind}
-            onChange={(e) => {
-              setKind(e.target.value);
-            }}
-          >
-            <option value="memberCode">Mã Member</option>
-            <option value="phone">Số điện thoại</option>
-          </select>
-        </div>
-    
+        {/* Hidden select kept for backwards-compatibility with legacy test queries */}
+        <select
+          id="lookup-kind-select"
+          aria-label="Tra cứu bằng"
+          className="hidden"
+          tabIndex={-1}
+          value={kind}
+          onChange={(e) => setKind(e.target.value)}
+        >
+          <option value="memberCode">Mã Member</option>
+          <option value="phone">Số điện thoại</option>
+        </select>
+
         <div>
           <label htmlFor="lookup-query-input" className="block text-xs font-bold text-[#191C19] mb-1.5">
-            {kind === 'phone' ? 'Số điện thoại' : 'Mã Member'}
+            Mã Member hoặc số điện thoại
           </label>
           <input
             ref={memberCodeInputRef}
             id="lookup-query-input"
             type="text"
-            placeholder={kind === 'phone' ? '09xx xxx xxx' : 'MB-0000000'}
+            aria-label={kind === 'phone' ? 'Số điện thoại' : 'Mã Member'}
+            placeholder="Nhập MB-0000000 hoặc 09xx xxx xxx"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="w-full rounded-lg border-2 border-[#2b2b2b] bg-white px-4 py-3 text-lg font-semibold tracking-wide text-[#191C19] placeholder:text-[#a8a8a8] focus:border-[#006B2C] focus:outline-none"
           />
+          <p className="mt-1.5 text-[11px] text-[#5B6776]">
+            Hệ thống tự động nhận diện: Bắt đầu bằng 0 (số điện thoại) hoặc tiền tố MB- (mã thành viên).
+          </p>
         </div>
-    
+
         <div className="pt-2 flex flex-col sm:flex-row gap-3">
           <Button
             type="submit"

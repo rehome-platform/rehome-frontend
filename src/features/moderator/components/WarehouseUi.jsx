@@ -14,7 +14,7 @@ export const date = (value) => (value ? new Date(value).toLocaleString('vi-VN') 
 export function Page({ title, subtitle, children, actions, apiColors = true }) {
   return (
     <ModeratorLayout apiColors={apiColors && !isFixtureMode}>
-      <div className="mx-auto max-w-6xl space-y-6">
+      <div className="space-y-6">
         {isFixtureMode && (
           <div role="status" className="rounded-xl border border-secondary bg-amber-50 p-3 text-sm">
             Chế độ dữ liệu thử · không gọi backend, không xác nhận tích hợp thành công. Tải lại
@@ -23,7 +23,7 @@ export function Page({ title, subtitle, children, actions, apiColors = true }) {
         )}
         <header className="flex flex-wrap justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-text">{title}</h1>
+            <h1 className="text-2xl font-bold font-heading text-text">{title}</h1>
             <p className="mt-2 text-sm text-textSecondary">{subtitle}</p>
           </div>
           <div className="flex gap-2 items-start">{actions}</div>
@@ -58,6 +58,7 @@ const statusLabels = {
   DONATED: 'Đã chuyển giao',
   RETURNED: 'Đã bàn giao',
   RETURNED_ONSITE: 'Đã trả tại chỗ',
+  PLATFORM_OWNED: 'Tài sản nền tảng',
 };
 export function Status({ children }) {
   return (

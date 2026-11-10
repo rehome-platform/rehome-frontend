@@ -7,6 +7,7 @@ import { canStockIn, extractReceiptId } from '../models/warehouseModel.js';
 import { Card, Field, ResourceState, money } from './WarehouseUi.jsx';
 import PhotoUpload from './PhotoUpload.jsx';
 import BrandQuickAddModal from './BrandQuickAddModal.jsx';
+import { useToast } from '../../../context/ToastContext.jsx';
 
 export const COMMON_COLORS = [
   'Đen',
@@ -26,6 +27,7 @@ export const COMMON_COLORS = [
 ];
 
 export default function StockInForm({ receipt, form, onSuccess }) {
+  const toast = useToast();
   const navigate = useNavigate();
   const receiptId = extractReceiptId(receipt);
   const formId = form?.formId || form?.id || receipt?.formId;
@@ -94,6 +96,7 @@ export default function StockInForm({ receipt, form, onSuccess }) {
                 setUncertain(true);
                 return;
               }
+              toast.success(`Đã nhập kho sản phẩm ${sku} thành công! Chuyển tới hàng đợi in tem.`);
               onSuccess?.(result);
               navigate(printUrl(sku));
             },

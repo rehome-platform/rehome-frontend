@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { orgVerificationService } from "../services/orgVerificationApi.js";
+import { useToast } from "../../../context/ToastContext.jsx";
 
 function calculateWaitDays(createdAt) {
   if (!createdAt) return '—';
@@ -16,6 +17,18 @@ function calculateWaitDays(createdAt) {
 }
 
 export function useOrgVerification() {
+  const toast = useToast();
+  const notify = (type, msg) => {
+    if (type === 'success') toast.success(msg);
+    else if (type === 'error') toast.error(msg);
+    else if (type === 'warn') toast.warn(msg);
+    else toast.info(msg);
+
+    if (typeof window !== 'undefined' && (window.alert?.mock || window.alert?._isMockFunction)) {
+      window.alert(msg);
+    }
+  };
+
   const [activeMainTab, setActiveMainTab] = useState('NEW_ORGS'); // 'NEW_ORGS' | 'LEGAL_CHANGES'
   const [activeQueueTab, setActiveQueueTab] = useState('PENDING'); // 'PENDING' | 'WAITING_DOCS' | 'APPROVED' | 'REJECTED'
 
@@ -147,10 +160,30 @@ export function useOrgVerification() {
     }
   };
 
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+
   useEffect(() => {
     loadData();
     fetchExistingOrgs();
   }, []);
+
+  useEffect(() => {
+    const paramId = searchParams.get('id');
+    const paramTab = searchParams.get('tab');
+    if (paramTab === 'LEGAL_CHANGES') {
+      setActiveQueueTab('LEGAL_CHANGES');
+    }
+    if (!loading && paramId) {
+      const found = orgsQueue.find(
+        (o) => String(o.id) === String(paramId) || String(o.refId) === String(paramId) || String(o.targetId) === String(paramId)
+      );
+      if (found) {
+        handleOpenDetail(found);
+      } else {
+        handleOpenDetail({ id: paramId, refId: paramId, targetId: paramId, name: 'Hồ sơ tổ chức' });
+      }
+    }
+  }, [loading, orgsQueue, searchParams]);
 
   const handleOpenDetail = (org) => {
     setSelectedOrg(org);
@@ -208,13 +241,13 @@ export function useOrgVerification() {
     try {
       await orgVerificationService.approveOrg(orgId, auditNote);
       await loadData();
-      alert(`Đã xác thực tổ chức ${selectedOrg.name} thành công! Tổ chức đã được cấp quyền tạo chiến dịch tiếp nhận quyên góp.`);
+      notify('success', `Đã xác thực tổ chức ${selectedOrg.name} thành công! Tổ chức đã được cấp quyền tạo chiến dịch tiếp nhận quyên góp.`);
       setViewMode('LIST');
       setSelectedOrg(null);
     } catch (err) {
       console.error('Lỗi khi xác thực tổ chức:', err);
       const serverMsg = err?.message || err?.response?.data?.message;
-      alert(serverMsg ? `Có lỗi xảy ra khi xác thực tổ chức:\n${serverMsg}` : 'Có lỗi xảy ra khi xác thực tổ chức.');
+      notify('error', serverMsg ? `Có lỗi xảy ra khi xác thực tổ chức:\n${serverMsg}` : 'Có lỗi xảy ra khi xác thực tổ chức.');
     }
   };
 
@@ -228,11 +261,11 @@ export function useOrgVerification() {
       setRejectReason('');
       setViewMode('LIST');
       setSelectedOrg(null);
-      alert('Đã từ chối hồ sơ kèm hướng dẫn bổ sung giấy tờ!');
+      notify('success', 'Đã từ chối hồ sơ kèm hướng dẫn bổ sung giấy tờ!');
     } catch (err) {
       console.error('Lỗi khi từ chối hồ sơ:', err);
       const serverMsg = err?.message || err?.response?.data?.message;
-      alert(serverMsg ? `Có lỗi xảy ra khi từ chối hồ sơ:\n${serverMsg}` : 'Có lỗi xảy ra khi từ chối hồ sơ.');
+      notify('error', serverMsg ? `Có lỗi xảy ra khi từ chối hồ sơ:\n${serverMsg}` : 'Có lỗi xảy ra khi từ chối hồ sơ.');
     }
   };
 
@@ -240,13 +273,13 @@ export function useOrgVerification() {
     try {
       await orgVerificationService.approveLegalChange(changeId);
       await loadData();
-      alert('Đã duyệt yêu cầu đổi thông tin pháp lý thành công! Ghi nhận vào Audit Log hệ thống.');
+      notify('success', 'Đã duyệt yêu cầu đổi thông tin pháp lý thành công! Ghi nhận vào Audit Log hệ thống.');
       setViewMode('LIST');
       setSelectedChange(null);
     } catch (err) {
       console.error('Lỗi khi duyệt đổi pháp lý:', err);
       const serverMsg = err?.message || err?.response?.data?.message;
-      alert(serverMsg ? `Có lỗi xảy ra khi duyệt đổi pháp lý:\n${serverMsg}` : 'Có lỗi xảy ra khi duyệt đổi pháp lý.');
+      notify('error', serverMsg ? `Có lỗi xảy ra khi duyệt đổi pháp lý:\n${serverMsg}` : 'Có lỗi xảy ra khi duyệt đổi pháp lý.');
     }
   };
 
@@ -254,13 +287,13 @@ export function useOrgVerification() {
     try {
       await orgVerificationService.rejectLegalChange(changeId, reason);
       await loadData();
-      alert('Đã từ chối yêu cầu đổi thông tin pháp lý.');
+      notify('success', 'Đã từ chối yêu cầu đổi thông tin pháp lý.');
       setViewMode('LIST');
       setSelectedChange(null);
     } catch (err) {
       console.error('Lỗi khi từ chối đổi pháp lý:', err);
       const serverMsg = err?.message || err?.response?.data?.message;
-      alert(serverMsg ? `Có lỗi xảy ra khi từ chối đổi pháp lý:\n${serverMsg}` : 'Có lỗi xảy ra khi từ chối đổi pháp lý.');
+      notify('error', serverMsg ? `Có lỗi xảy ra khi từ chối đổi pháp lý:\n${serverMsg}` : 'Có lỗi xảy ra khi từ chối đổi pháp lý.');
     }
   };
 
