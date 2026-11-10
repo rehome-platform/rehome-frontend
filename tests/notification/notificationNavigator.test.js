@@ -13,6 +13,8 @@ describe('notificationNavigator', () => {
     expect(resolveNotificationUrl({ targetType: 'VERIFICATION', targetId: 'v1' })).toBe('/moderator/verifications');
     expect(resolveNotificationUrl({ targetType: 'VIOLATION', targetId: 'rep1' })).toBe('/moderator/reports');
     expect(resolveNotificationUrl({ targetType: 'REPORT', targetId: 'r1' })).toBe('/moderator/reports');
+    expect(resolveNotificationUrl({ targetType: 'VIOLATION_REPORT', targetId: 'rep-99' })).toBe('/moderator/reports?id=rep-99');
+    expect(resolveNotificationUrl({ targetType: 'VIOLATION_REPORT' })).toBe('/moderator/reports');
     expect(resolveNotificationUrl({ targetType: 'INVENTORY', targetId: 'SKU123' })).toBe('/moderator/inventory/SKU123');
     expect(resolveNotificationUrl({ targetType: 'PRODUCT' })).toBe('/moderator/inventory');
     expect(resolveNotificationUrl({ targetType: 'INBOX', targetId: 'conv1' })).toBe('/moderator/inbox');
@@ -33,8 +35,8 @@ describe('notificationNavigator', () => {
     expect(resolveNotificationUrl({ targetType: 'MEMBER', targetId: 'm1' }, 'admin')).toBe('/admin/users');
     expect(resolveNotificationUrl({ targetType: 'ORGANIZATION', targetId: 'org1' }, 'admin')).toBe('/admin/users');
     expect(resolveNotificationUrl({ targetType: 'WAREHOUSE', targetId: 'wh1' }, 'admin')).toBe('/admin/warehouses');
-    expect(resolveNotificationUrl({ targetType: 'VIOLATION', targetId: 'rep1' }, 'admin')).toBe('/admin/violation-words');
-    expect(resolveNotificationUrl({ targetType: 'REPORT', targetId: 'r1' }, 'admin')).toBe('/admin/violation-words');
+    expect(resolveNotificationUrl({ targetType: 'VIOLATION', targetId: 'rep1' }, 'admin')).toBe('/admin/users');
+    expect(resolveNotificationUrl({ targetType: 'REPORT', targetId: 'r1' }, 'admin')).toBe('/admin/users');
     expect(resolveNotificationUrl({ targetType: 'AUDIT', targetId: 'log1' }, 'admin')).toBe('/admin/audit-logs');
     expect(resolveNotificationUrl({}, 'admin')).toBe('/admin');
   });

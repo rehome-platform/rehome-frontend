@@ -39,8 +39,8 @@ import {
   AdminDashboardPage,
   AdminAccountsPage,
   AdminModeratorsPage,
+  AdminBanProposalsPage,
   AdminWarehousesPage,
-  AdminViolationWordsPage,
   ConfigPage,
   AdminAuditLogsPage,
 } from '../features/admin/pages/index.js';
@@ -222,8 +222,8 @@ export default function AppRouter() {
         <Route index element={<AdminDashboardPage />} />
         <Route path="users" element={<AdminAccountsPage />} />
         <Route path="moderators" element={<AdminModeratorsPage />} />
+        <Route path="ban-proposals" element={<AdminBanProposalsPage />} />
         <Route path="warehouses" element={<AdminWarehousesPage />} />
-        <Route path="violation-words" element={<AdminViolationWordsPage />} />
         <Route path="configs" element={<ConfigPage />} />
         <Route path="audit-logs" element={<AdminAuditLogsPage />} />
         <Route path="system" element={<Navigate to="/admin/users" replace />} />

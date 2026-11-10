@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 import { Button, Badge } from '../../../components/common/index.js';
@@ -98,6 +98,8 @@ export default function ViolationReportsPage() {
 
   // Danh sách báo cáo đã gom nhóm (VP-01)
   const [reports, setReports] = useState([]);
+  const [snapshotsById, setSnapshotsById] = useState({});
+  const detailsCacheRef = useRef({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -126,7 +128,32 @@ export default function ViolationReportsPage() {
         status: statusFilter,
         type: typeFilter,
       });
-      setReports(res?.data || []);
+      const list = res?.data || [];
+      setReports(list);
+
+      // Làm giàu thông tin hiển thị (tên tổ chức & nội dung tóm tắt) cho các dòng trong hàng đợi VP-01
+      if (list.length > 0 && typeof violationReportService.getDetail === 'function') {
+        Promise.allSettled(
+          list.slice(0, 20).map(async (item) => {
+            if (!item?.id) return null;
+            const detail = await violationReportService.getDetail(item.id);
+            if (detail) {
+              detailsCacheRef.current[item.id] = detail;
+            }
+            return detail?.targetSnapshot ? { id: item.id, snapshot: detail.targetSnapshot } : null;
+          })
+        ).then((results) => {
+          const nextMap = {};
+          results.forEach((r) => {
+            if (r.status === 'fulfilled' && r.value?.id && r.value?.snapshot) {
+              nextMap[r.value.id] = r.value.snapshot;
+            }
+          });
+          if (Object.keys(nextMap).length > 0) {
+            setSnapshotsById((prev) => ({ ...prev, ...nextMap }));
+          }
+        });
+      }
     } catch (err) {
       console.error('Lỗi tải danh sách báo cáo vi phạm:', err);
       setError('Không thể tải danh sách báo cáo vi phạm từ máy chủ.');
@@ -144,7 +171,11 @@ export default function ViolationReportsPage() {
     if (!reportId) return;
     try {
       setDetailLoading(true);
-      const detail = await violationReportService.getDetail(reportId);
+      const fetched = await violationReportService.getDetail(reportId);
+      const detail = fetched || detailsCacheRef.current[reportId] || null;
+      if (fetched) {
+        detailsCacheRef.current[reportId] = fetched;
+      }
       setSelectedReport(detail);
 
       // Cài đặt action mặc định theo loại đối tượng
@@ -382,13 +413,27 @@ export default function ViolationReportsPage() {
                               </span>
                             </td>
 
-                            {/* Mã đối tượng */}
-                            <td className="py-3.5 px-3.5 font-mono text-text">
-                              <span className="font-semibold" title={rep.targetId}>
+                            {/* Mã đối tượng & Thông tin tóm tắt */}
+                            <td className="py-3.5 px-3.5 text-text">
+                              {snapshotsById[rep.id]?.organizationDisplayName && (
+                                <span className="block font-bold text-text text-xs mb-0.5">
+                                  {snapshotsById[rep.id].organizationDisplayName}
+                                </span>
+                              )}
+                              {(snapshotsById[rep.id]?.postContent ||
+                                snapshotsById[rep.id]?.campaignTitle ||
+                                snapshotsById[rep.id]?.organizationLegalName) && (
+                                <span className="block text-[11px] text-textSecondary max-w-xs truncate mb-0.5">
+                                  {snapshotsById[rep.id].postContent ||
+                                    snapshotsById[rep.id].campaignTitle ||
+                                    snapshotsById[rep.id].organizationLegalName}
+                                </span>
+                              )}
+                              <span className="font-mono font-semibold text-[11px]" title={rep.targetId}>
                                 #{String(rep.targetId).substring(0, 8).toUpperCase()}...
                               </span>
-                              <span className="block text-[10px] text-textSecondary font-sans">
-                                {rep.targetType}
+                              <span className="ml-1.5 text-[10px] text-textSecondary font-sans">
+                                ({rep.targetType})
                               </span>
                             </td>
 

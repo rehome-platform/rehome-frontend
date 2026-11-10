@@ -46,8 +46,8 @@ export function resolveNotificationUrl(notification, userRole) {
 
       case 'VIOLATION':
       case 'REPORT':
-      case 'VIOLATION_WORD':
-        return '/admin/violation-words';
+      case 'VIOLATION_REPORT':
+        return '/admin/users';
 
       case 'AUDIT':
       case 'AUDIT_LOG':
@@ -96,6 +96,9 @@ export function resolveNotificationUrl(notification, userRole) {
     case 'VIOLATION':
     case 'REPORT':
       return '/moderator/reports';
+
+    case 'VIOLATION_REPORT':
+      return id ? `/moderator/reports?id=${encodeURIComponent(id)}` : '/moderator/reports';
 
     case 'INVENTORY':
     case 'PRODUCT':

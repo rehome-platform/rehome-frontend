@@ -50,16 +50,16 @@ export default function AdminSidebar({
       icon: 'badge',
     },
     {
+      id: 'ban-proposals',
+      path: '/admin/ban-proposals',
+      label: 'Đề xuất khóa tài khoản',
+      icon: 'gavel',
+    },
+    {
       id: 'warehouses',
       path: '/admin/warehouses',
       label: 'Quản lý điểm kí gửi',
       icon: 'warehouse',
-    },
-    {
-      id: 'violation-words',
-      path: '/admin/violation-words',
-      label: 'Thư viện từ vựng vi phạm',
-      icon: 'spellcheck',
     },
     {
       id: 'configs',

@@ -165,5 +165,24 @@ describe('ViolationReportsPage UI & Design Tokens', () => {
       expect(screen.getByText('2 nhóm')).toBeInTheDocument();
     });
   });
+
+  it('enriches VP-01 queue rows with targetSnapshot organization name and content preview from getDetail', async () => {
+    vi.mocked(violationReportService.list).mockResolvedValueOnce({
+      data: [mockReports[0]],
+      total: 1,
+    });
+    vi.mocked(violationReportService.getDetail).mockResolvedValueOnce(mockDetail);
+
+    render(
+      <MemoryRouter>
+        <ViolationReportsPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Mái ấm Tình Thương Q7')).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Bài viết quảng cáo đánh bạc trái phép/i)).toBeInTheDocument();
+  });
 });
 

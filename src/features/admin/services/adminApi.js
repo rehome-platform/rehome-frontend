@@ -115,10 +115,14 @@ export const adminApi = {
   },
 
   // 5. Nhật ký kiểm soát (Audit Log)
-  async getAuditLogs({ actorAccountId, actionType, targetType, targetId, from, to, page = 0, size = 20 } = {}) {
+  async getAuditLogs({ actorAccountId, search, actionType, actionTypes, targetType, targetId, from, to, page = 0, size = 20 } = {}) {
     const params = { page, size };
     if (actorAccountId) params.actorAccountId = actorAccountId;
+    if (search && search.trim()) params.search = search.trim();
     if (actionType && actionType !== 'ALL') params.actionType = actionType;
+    if (actionTypes) {
+      params.actionTypes = Array.isArray(actionTypes) ? actionTypes.join(',') : actionTypes;
+    }
     if (targetType && targetType !== 'ALL') params.targetType = targetType;
     if (targetId && targetId.trim()) params.targetId = targetId.trim();
     if (from) params.from = from;
@@ -144,83 +148,62 @@ export const adminApi = {
     return unwrap(res);
   },
 
-  // 7. Thư viện Từ vựng Vi phạm (Local Persistence Adapter - Quản trị từ khóa vi phạm trực tiếp)
-  async getViolationWords() {
-    try {
-      const raw = localStorage.getItem('rehome_admin_violation_words');
-      if (raw) return JSON.parse(raw);
-    } catch {}
-
-    const defaultWords = [
-      {
-        id: 'VW-001',
-        word: 'hàng giả',
-        category: 'FRAUD',
-        categoryLabel: 'Gian lận & Hàng giả',
-        severity: 'BLOCKED',
-        action: 'Chặn tự động',
-        isActive: true,
-        reason: 'Cấm kinh doanh hàng nhái, hàng vi phạm sở hữu trí tuệ',
-        updatedAt: '2026-10-15T09:30:00Z',
-      },
-      {
-        id: 'VW-002',
-        word: 'lừa đảo',
-        category: 'PROFANITY',
-        categoryLabel: 'Lừa đảo & Chiếm đoạt',
-        severity: 'BLOCKED',
-        action: 'Chặn tự động',
-        isActive: true,
-        reason: 'Từ ngữ liên quan hành vi lừa đảo',
-        updatedAt: '2026-10-18T14:20:00Z',
-      },
-      {
-        id: 'VW-003',
-        word: 'chuyển khoản ngoài',
-        category: 'FRAUD',
-        categoryLabel: 'Giao dịch ngoài sàn',
-        severity: 'WARNING',
-        action: 'Cảnh báo & Đưa vào hàng đợi',
-        isActive: true,
-        reason: 'Hành vi né phí nền tảng và tiềm ẩn rủi ro cho người mua',
-        updatedAt: '2026-10-20T11:00:00Z',
-      },
-      {
-        id: 'VW-004',
-        word: 'tục tĩu',
-        category: 'INAPPROPRIATE',
-        categoryLabel: 'Ngôn từ không phù hợp',
-        severity: 'BLOCKED',
-        action: 'Chặn tự động',
-        isActive: true,
-        reason: 'Vi phạm chuẩn mực văn hóa ứng xử cộng đồng ReHome',
-        updatedAt: '2026-10-25T16:45:00Z',
-      },
-      {
-        id: 'VW-005',
-        word: 'vũ khí',
-        category: 'ILLEGAL',
-        categoryLabel: 'Hàng cấm pháp luật',
-        severity: 'BLOCKED',
-        action: 'Chặn & Khóa tài khoản',
-        isActive: true,
-        reason: 'Hàng hóa cấm lưu hành theo luật định',
-        updatedAt: '2026-11-01T08:15:00Z',
-      },
-    ];
-
-    try {
-      localStorage.setItem('rehome_admin_violation_words', JSON.stringify(defaultWords));
-    } catch {}
-
-    return defaultWords;
+  // 7. Tiếp nhận & Xử lý Đề xuất khóa tài khoản từ Moderator (PROPOSE_BAN)
+  async getBanProposals({ page = 0, size = 50 } = {}) {
+    return adminApi.getAuditLogs({
+      actionType: 'VIOLATION_RESOLVE_PROPOSE_BAN',
+      page,
+      size,
+    });
   },
 
-  async saveViolationWords(words) {
+  async getOrganizationViolationAuditLogs(targetId) {
+    if (!targetId) return [];
+    const res = await adminApi.getAuditLogs({
+      targetId: String(targetId),
+      actionTypes: [
+        'VIOLATION_RESOLVE_REMOVE_POST',
+        'VIOLATION_RESOLVE_HIDE_CAMPAIGN',
+        'VIOLATION_RESOLVE_WARN_ORG',
+        'VIOLATION_RESOLVE_PROPOSE_BAN',
+      ],
+      page: 0,
+      size: 50,
+    });
+    return Array.isArray(res) ? res : res?.content || [];
+  },
+
+  async getViolationReportDetail(reportId) {
+    if (!reportId) return null;
     try {
-      localStorage.setItem('rehome_admin_violation_words', JSON.stringify(words));
-    } catch {}
-    return words;
+      const res = await baseApi.get(API_ENDPOINTS.MODERATOR.VIOLATION_REPORT_DETAIL(reportId));
+      return unwrap(res);
+    } catch {
+      return null;
+    }
+  },
+
+  getDismissedProposals() {
+    try {
+      const raw = localStorage.getItem('rehome_admin_dismissed_ban_proposals');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  dismissBanProposal(proposalId) {
+    try {
+      const current = adminApi.getDismissedProposals();
+      if (!current.includes(String(proposalId))) {
+        const updated = [...current, String(proposalId)];
+        localStorage.setItem('rehome_admin_dismissed_ban_proposals', JSON.stringify(updated));
+        return updated;
+      }
+      return current;
+    } catch {
+      return [];
+    }
   },
 };
 
