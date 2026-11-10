@@ -115,10 +115,14 @@ export const adminApi = {
   },
 
   // 5. Nhật ký kiểm soát (Audit Log)
-  async getAuditLogs({ actorAccountId, actionType, targetType, targetId, from, to, page = 0, size = 20 } = {}) {
+  async getAuditLogs({ actorAccountId, search, actionType, actionTypes, targetType, targetId, from, to, page = 0, size = 20 } = {}) {
     const params = { page, size };
     if (actorAccountId) params.actorAccountId = actorAccountId;
+    if (search && search.trim()) params.search = search.trim();
     if (actionType && actionType !== 'ALL') params.actionType = actionType;
+    if (actionTypes) {
+      params.actionTypes = Array.isArray(actionTypes) ? actionTypes.join(',') : actionTypes;
+    }
     if (targetType && targetType !== 'ALL') params.targetType = targetType;
     if (targetId && targetId.trim()) params.targetId = targetId.trim();
     if (from) params.from = from;
@@ -142,85 +146,6 @@ export const adminApi = {
   async updateConfig(key, value) {
     const res = await baseApi.put(API_ENDPOINTS.ADMIN.UPDATE_CONFIG(key), { value: String(value) });
     return unwrap(res);
-  },
-
-  // 7. Thư viện Từ vựng Vi phạm (Local Persistence Adapter - Quản trị từ khóa vi phạm trực tiếp)
-  async getViolationWords() {
-    try {
-      const raw = localStorage.getItem('rehome_admin_violation_words');
-      if (raw) return JSON.parse(raw);
-    } catch {}
-
-    const defaultWords = [
-      {
-        id: 'VW-001',
-        word: 'hàng giả',
-        category: 'FRAUD',
-        categoryLabel: 'Gian lận & Hàng giả',
-        severity: 'BLOCKED',
-        action: 'Chặn tự động',
-        isActive: true,
-        reason: 'Cấm kinh doanh hàng nhái, hàng vi phạm sở hữu trí tuệ',
-        updatedAt: '2026-10-15T09:30:00Z',
-      },
-      {
-        id: 'VW-002',
-        word: 'lừa đảo',
-        category: 'PROFANITY',
-        categoryLabel: 'Lừa đảo & Chiếm đoạt',
-        severity: 'BLOCKED',
-        action: 'Chặn tự động',
-        isActive: true,
-        reason: 'Từ ngữ liên quan hành vi lừa đảo',
-        updatedAt: '2026-10-18T14:20:00Z',
-      },
-      {
-        id: 'VW-003',
-        word: 'chuyển khoản ngoài',
-        category: 'FRAUD',
-        categoryLabel: 'Giao dịch ngoài sàn',
-        severity: 'WARNING',
-        action: 'Cảnh báo & Đưa vào hàng đợi',
-        isActive: true,
-        reason: 'Hành vi né phí nền tảng và tiềm ẩn rủi ro cho người mua',
-        updatedAt: '2026-10-20T11:00:00Z',
-      },
-      {
-        id: 'VW-004',
-        word: 'tục tĩu',
-        category: 'INAPPROPRIATE',
-        categoryLabel: 'Ngôn từ không phù hợp',
-        severity: 'BLOCKED',
-        action: 'Chặn tự động',
-        isActive: true,
-        reason: 'Vi phạm chuẩn mực văn hóa ứng xử cộng đồng ReHome',
-        updatedAt: '2026-10-25T16:45:00Z',
-      },
-      {
-        id: 'VW-005',
-        word: 'vũ khí',
-        category: 'ILLEGAL',
-        categoryLabel: 'Hàng cấm pháp luật',
-        severity: 'BLOCKED',
-        action: 'Chặn & Khóa tài khoản',
-        isActive: true,
-        reason: 'Hàng hóa cấm lưu hành theo luật định',
-        updatedAt: '2026-11-01T08:15:00Z',
-      },
-    ];
-
-    try {
-      localStorage.setItem('rehome_admin_violation_words', JSON.stringify(defaultWords));
-    } catch {}
-
-    return defaultWords;
-  },
-
-  async saveViolationWords(words) {
-    try {
-      localStorage.setItem('rehome_admin_violation_words', JSON.stringify(words));
-    } catch {}
-    return words;
   },
 };
 

@@ -56,12 +56,6 @@ export default function AdminSidebar({
       icon: 'warehouse',
     },
     {
-      id: 'violation-words',
-      path: '/admin/violation-words',
-      label: 'Thư viện từ vựng vi phạm',
-      icon: 'spellcheck',
-    },
-    {
       id: 'configs',
       path: '/admin/configs',
       label: 'Cấu hình tham số hệ thống',
