@@ -299,7 +299,7 @@ export default function InventoryDetailPage() {
                   <h3 className="text-sm font-bold text-amber-900">Khách đã chọn nhận lại cuối kỳ (miễn phí)</h3>
                 </div>
                 <p className="text-xs text-amber-800">
-                  Khách đã chọn nhận lại hàng{data.takeBackDate ? ` ${date(data.takeBackDate)}` : ''} — còn {data.daysToTakeBack ?? 5} ngày đến quầy lấy. Quá 30 ngày không lấy sẽ thành hàng vô thừa nhận.
+                  Khách đã chọn nhận lại hàng{data.takeBackDate ? ` ${date(data.takeBackDate)}` : ''}{data.daysToTakeBack != null ? ` — còn ${data.daysToTakeBack} ngày đến quầy lấy` : ''}. Vui lòng nhận hàng trong thời hạn được thông báo.
                 </p>
               </div>
               <Link
