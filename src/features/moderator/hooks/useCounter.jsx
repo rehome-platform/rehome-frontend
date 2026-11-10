@@ -16,6 +16,8 @@ export function useCounter() {
   const { identity, setIdentity, scope } = usePhase2();
   const [searchParams] = useSearchParams();
   const urlMemberCode = searchParams.get('memberCode')?.trim();
+  const urlPhone = searchParams.get('phone')?.trim();
+  const urlAccountId = searchParams.get('accountId')?.trim();
   const urlRefId = searchParams.get('refId')?.trim();
 
   const [kind, setKind] = useState('memberCode');
@@ -35,14 +37,16 @@ export function useCounter() {
   selectedRef.current = selected;
 
   useEffect(() => {
-    if (urlMemberCode && !selectedRef.current && !submitted) {
-      setKind('memberCode');
-      setQuery(urlMemberCode);
-      const request = { params: lookupParams('memberCode', urlMemberCode), reopen: true };
+    const lookupVal = urlMemberCode || urlPhone || urlAccountId;
+    if (lookupVal && !selectedRef.current && !submitted) {
+      const detectedKind = urlPhone ? 'phone' : detectLookupKind(lookupVal);
+      setKind(detectedKind);
+      setQuery(lookupVal);
+      const request = { params: lookupParams(detectedKind, lookupVal), reopen: true };
       lookupRequestRef.current = request;
       setSubmitted(request);
     }
-  }, [urlMemberCode]);
+  }, [urlMemberCode, urlPhone, urlAccountId]);
 
   useEffect(() => {
     if (!selected) {
@@ -53,7 +57,13 @@ export function useCounter() {
   const results = useResource(async (options) => {
     const members = await counterService.lookup(submitted.params, options);
     if (submitted.reopen && !options.signal.aborted && lookupRequestRef.current === submitted) {
-      const member = listItems(members).find((item) => item.memberCode === submitted.params.memberCode && item.memberId);
+      const items = listItems(members);
+      const member = items.find((item) => {
+        if (submitted.params.memberCode && item.memberCode === submitted.params.memberCode) return true;
+        if (submitted.params.phone && item.phone === submitted.params.phone) return true;
+        if (submitted.params.accountId && (item.memberId === submitted.params.accountId || item.id === submitted.params.accountId)) return true;
+        return false;
+      }) || (items.length === 1 ? items[0] : null);
       if (!member) throw new Phase2Error('Không tìm thấy Member phù hợp với thông tin đã nhập.', 404);
       choose(member);
     }

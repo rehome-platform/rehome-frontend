@@ -58,6 +58,7 @@ const statusLabels = {
   DONATED: 'Đã chuyển giao',
   RETURNED: 'Đã bàn giao',
   RETURNED_ONSITE: 'Đã trả tại chỗ',
+  PLATFORM_OWNED: 'Tài sản nền tảng',
 };
 export function Status({ children }) {
   return (

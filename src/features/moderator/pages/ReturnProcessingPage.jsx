@@ -10,6 +10,7 @@ import {
   ReturnQueueTable,
   ReturnQueueTabs,
   DegradedCaseModal,
+  DegradedCaseViewTH07,
 } from "../components/returns/ReturnSections.jsx";
 import SuspiciousCounterfeitModal from '../components/SuspiciousCounterfeitModal.jsx';
 import React from "react";
@@ -48,6 +49,29 @@ export default function ReturnProcessingPage() {
               </div>
               <div className="text-xs text-textSecondary font-medium">
                 Hạn duyệt: 1 ngày làm việc kể từ khi nhận yêu cầu
+              </div>
+            </div>
+
+            {/* Search filter */}
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1 max-w-md">
+                <input
+                  type="text"
+                  value={model.searchQuery}
+                  onChange={(e) => model.setSearchQuery(e.target.value)}
+                  placeholder="Tìm theo mã yêu cầu, mã đơn, SKU hoặc người mua..."
+                  className="w-full text-xs py-2 px-3 pl-8 rounded-xl border border-neutral bg-surface text-text placeholder:text-textSecondary focus:outline-none focus:border-primary"
+                />
+                <span className="absolute left-2.5 top-2.5 text-textSecondary text-xs">🔍</span>
+                {model.searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => model.setSearchQuery('')}
+                    className="absolute right-2.5 top-2 text-textSecondary hover:text-text text-xs"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             </div>
 
@@ -136,6 +160,11 @@ export default function ReturnProcessingPage() {
               <ReturnInspectionVerdict {...model.sections.ReturnInspectionVerdict} />
             </div>
           </div>
+        )}
+
+        {/* VIEW 4: KẾT LUẬN HÀNG XUỐNG CẤP (TH-07) */}
+        {model.viewMode === 'DEGRADED_CASE' && model.selectedItem && (
+          <DegradedCaseViewTH07 {...model.sections.DegradedCaseViewTH07} />
         )}
 
         {/* MODAL: Từ chối yêu cầu trả (TH-02) */}

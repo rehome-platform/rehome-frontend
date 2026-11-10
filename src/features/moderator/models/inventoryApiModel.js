@@ -44,7 +44,7 @@ export function inventoryResult(result, params) {
 
 function inventoryActions(res) {
   const actions = Array.isArray(res?.allowedActions) ? [...res.allowedActions] : [];
-  if (res?.decision === 'RE_CONSIGN' || res?.reConsignStatus === 'PROPOSAL_SENT' || res?.status === 'WAITING_END_OF_TERM' || res?.status === 'WITHDRAWN') {
+  if (res?.decision === 'RE_CONSIGN' || res?.reConsignStatus === 'PROPOSAL_SENT' || res?.status === 'WAITING_END_OF_TERM') {
     if (!actions.includes('RE_CONSIGN')) actions.push('RE_CONSIGN');
   }
   if (!actions.includes('CHANGE_SHELF')) actions.push('CHANGE_SHELF');

@@ -25,13 +25,15 @@ export default function ReConsignNegotiationPage() {
   const [moderatorNote, setModeratorNote] = useState('');
   const [statusState, setStatusState] = useState('INIT'); // 'INIT' | 'PROPOSAL_SENT' | 'CONFIRMED'
   const [receiptId, setReceiptId] = useState(null);
+  const [decisionId, setDecisionId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [feedback, setFeedback] = useState('');
 
-  // Sync initial product data
+  // Sync initial product data & lookup UUID decisionId
   useEffect(() => {
+    let active = true;
     if (product) {
       if (product.reConsignStatus === 'PROPOSAL_SENT') {
         setStatusState('PROPOSAL_SENT');
@@ -43,7 +45,32 @@ export default function ReConsignNegotiationPage() {
         if (product.newReceiptId) setReceiptId(product.newReceiptId);
       }
     }
-  }, [product]);
+
+    const resolveDecisionId = async () => {
+      if (product?.decisionId) {
+        setDecisionId(product.decisionId);
+        return;
+      }
+      try {
+        const list = await endTermService.pendingPricing();
+        if (!active) return;
+        const found = (Array.isArray(list) ? list : []).find(
+          (d) =>
+            String(d.productId || '').toUpperCase() === String(sku || '').toUpperCase() ||
+            String(d.id || '').toUpperCase() === String(sku || '').toUpperCase()
+        );
+        if (found?.id) {
+          setDecisionId(found.id);
+        }
+      } catch (err) {
+        console.warn('pendingPricing lookup error:', err);
+      }
+    };
+    resolveDecisionId();
+    return () => {
+      active = false;
+    };
+  }, [product, sku]);
 
   // Calculations for reference
   const originalPrice = product?.agreedPrice || 850000;
@@ -63,7 +90,8 @@ export default function ReConsignNegotiationPage() {
 
     try {
       setIsSubmitting(true);
-      const res = await endTermService.proposeReConsignPrice(sku, {
+      const targetId = decisionId || product?.decisionId || sku;
+      const res = await endTermService.proposeReConsignPrice(targetId, {
         agreedPrice: priceNum,
         floorPrice: Math.round(priceNum * 0.5),
         conditionNote: product?.conditionNote,
@@ -93,7 +121,13 @@ export default function ReConsignNegotiationPage() {
       setFeedback('Member đã xác nhận giá mới thành công! Sản phẩm đã được chuyển sang Kỳ 1 và bắt đầu đăng bán lại.');
       productResource.refresh();
     } catch (err) {
-      setFeedback(err.message || 'Lỗi khi xác nhận biên nhận.');
+      if (err.status === 403 || err.code === 'FORBIDDEN') {
+        setStatusState('PROPOSAL_SENT');
+        setShowMemberModal(false);
+        setFeedback('Ghi chú vận hành: Thao tác xác nhận này thuộc quyền của Member trên App di động. Đề xuất giá mới đã được lưu và gửi tới Member thành công.');
+      } else {
+        setFeedback(err.message || 'Lỗi khi xác nhận biên nhận.');
+      }
     } finally {
       setIsSubmitting(false);
     }

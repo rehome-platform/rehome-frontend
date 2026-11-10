@@ -33,9 +33,19 @@ const STYLES = {
     badge: 'bg-[#FFEBEE] text-[#C62828]',
     badgeLabel: 'Người mua nhận hàng trả',
   },
+  DEGRADED_ITEM_PICKUP: {
+    border: 'border-[#006B2C]/40',
+    header: 'bg-[#E8F5E9] border-[#C8E6C9]',
+    color: 'text-[#006B2C]',
+    title: 'Hàng xuống cấp (Member chọn nhận lại + đền 50%)',
+    deadlineLabel: 'Thời hạn đến nhận:',
+    groupTitle: '5. Khách đến nhận lại hàng xuống cấp',
+    badge: 'bg-[#E8F5E9] text-[#006B2C]',
+    badgeLabel: 'Đền 50% & nhận lại',
+  },
 };
 
-export function CounterHandoverTasks({ items = [], context, setConfirmHandover }) {
+export function CounterHandoverTasks({ items = [], context, setConfirmHandover, activeRefId = '' }) {
   const style = STYLES[context] || STYLES.ITEM_WITHDRAWAL;
   return (
     <div className="space-y-3">
@@ -44,35 +54,96 @@ export function CounterHandoverTasks({ items = [], context, setConfirmHandover }
         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${style.badge}`}>{items.length}</span>
       </div>
       {items.map((item) => (
-        <CounterHandoverTask key={item.id || item.refId} item={item} context={context} setConfirmHandover={setConfirmHandover} />
+        <CounterHandoverTask
+          key={item.id || item.refId}
+          item={item}
+          context={context}
+          setConfirmHandover={setConfirmHandover}
+          activeRefId={activeRefId}
+        />
       ))}
     </div>
   );
 }
 
-export function CounterHandoverTask({ item, context, setConfirmHandover }) {
+export function CounterHandoverTask({ item, context, setConfirmHandover, activeRefId = '' }) {
   const style = STYLES[context] || STYLES.ITEM_WITHDRAWAL;
   const withdrawal = context === 'ITEM_WITHDRAWAL';
+  const degraded = context === 'DEGRADED_ITEM_PICKUP';
   const deadlineValue = item.pickupDeadline || item.deadline || item.handoverDeadline;
+
+  const isMatched = Boolean(
+    activeRefId &&
+      (String(item.id || '').toUpperCase() === String(activeRefId).toUpperCase() ||
+        String(item.refId || '').toUpperCase() === String(activeRefId).toUpperCase() ||
+        String(item.productId || '').toUpperCase() === String(activeRefId).toUpperCase() ||
+        String(item.sku || '').toUpperCase() === String(activeRefId).toUpperCase())
+  );
+
   return (
-    <div className={`rounded-2xl border-2 ${style.border} bg-white overflow-hidden shadow-sm`}>
+    <div
+      className={`rounded-2xl border-2 ${
+        isMatched ? 'ring-2 ring-[#006B2C] border-[#006B2C]' : style.border
+      } bg-white overflow-hidden shadow-sm transition-all`}
+    >
       <div className={`${style.header} border-b px-4 py-2.5 flex items-center justify-between`}>
-        <span className={`text-xs font-bold ${style.color}`}>{style.title}</span>
+        <div className="flex items-center gap-2">
+          <span className={`text-xs font-bold ${style.color}`}>{style.title}</span>
+          {isMatched && (
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#006B2C] text-white">
+              Khớp từ chi tiết sản phẩm
+            </span>
+          )}
+        </div>
         <span className="text-[11px] text-[#717971]">
-          {style.deadlineLabel} {deadlineValue ? date(deadlineValue) : '7 ngày'}
+          {style.deadlineLabel} {deadlineValue ? date(deadlineValue) : '30 ngày'}
         </span>
       </div>
       <div className="p-4 flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="font-bold text-sm text-[#191C19]">{item.productName || item.itemName || item.productId}</p>
           <p className="text-xs text-[#5B6776] mt-0.5">
-            Mã SP: <span className="font-mono font-bold text-[#191C19]">{item.productId || item.id}</span>{item.sku && <span className="font-mono font-bold text-[#191C19] ml-1"> · SKU: {item.sku}</span>}
-            {withdrawal && <> · Phí rút: {item.feeCharged ? money(item.feeCharged) : 'Miễn phí'}</>}
+            Mã SP: <span className="font-mono font-bold text-[#191C19]">{item.productId || item.id}</span>
+            {item.sku && <span className="font-mono font-bold text-[#191C19] ml-1"> · SKU: {item.sku}</span>}
+            {withdrawal && (
+              <>
+                {' '}
+                · Phí rút:{' '}
+                {item.feeCharged ? (
+                  <>
+                    <span className="font-bold text-[#191C19]">{money(item.feeCharged)}</span>
+                    {item.feePaid ? (
+                      <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C]">
+                        ✓ Đã đóng phí
+                      </span>
+                    ) : (
+                      <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#FFEBEE] text-[#BA1A1A]">
+                        ⚠ Chưa đóng phí
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="font-bold text-[#006B2C]">Miễn phí</span>
+                )}
+              </>
+            )}
+            {degraded && (
+              <>
+                {' '}
+                · Tiền đền 50%:{' '}
+                <span className="font-bold text-[#006B2C]">
+                  {money(item.paidAmount || item.compensationAmount || 0)}
+                </span>{' '}
+                (đã vào ví Member)
+              </>
+            )}
           </p>
         </div>
         <Button
           type="button"
-          className="bg-[#2b2b2b] text-white hover:bg-black text-xs font-bold py-2 px-3.5"
+          className={`${
+            isMatched ? 'bg-[#006B2C] hover:bg-[#005523]' : 'bg-[#2b2b2b] hover:bg-black'
+          } text-white text-xs font-bold py-2 px-3.5`}
           onClick={() => setConfirmHandover({ item, context })}
         >
           Bàn giao cho khách

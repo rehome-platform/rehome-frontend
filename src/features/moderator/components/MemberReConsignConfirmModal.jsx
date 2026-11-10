@@ -34,6 +34,11 @@ export default function MemberReConsignConfirmModal({
       maxWidth="max-w-lg"
     >
       <div className="space-y-4 text-[#2b2b2b] text-sm">
+        {/* Banner lưu ý quyền của Member */}
+        <div className="p-2.5 rounded-xl border border-amber-300 bg-amber-50 text-[11px] text-amber-900 leading-relaxed">
+          <strong>Ghi chú vận hành:</strong> Đây là giao diện màn hình Member thấy trên ứng dụng di động ReHome. Member sẽ trực tiếp bấm duyệt hoặc từ chối trên thiết bị của họ.
+        </div>
+
         {/* Header giả lập mobile app */}
         <div className="flex items-center justify-between pb-3 border-b border-[#e0e0e0]">
           <div>

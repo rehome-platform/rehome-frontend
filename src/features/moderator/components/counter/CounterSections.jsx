@@ -12,14 +12,17 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
 
   const [skuInput, setSkuInput] = useState('');
   const [isIdentityConfirmed, setIsIdentityConfirmed] = useState(false);
+  const [isFeeCollected, setIsFeeCollected] = useState(false);
 
+  const requiresFeeConfirmation = Boolean(context === 'ITEM_WITHDRAWAL' && item.feeCharged > 0 && !item.feePaid);
   const isSkuMatched = Boolean(targetSku && skuInput.trim().toUpperCase() === targetSku.toUpperCase());
-  const canHandover = Boolean(isSkuMatched && isIdentityConfirmed);
+  const canHandover = Boolean(isSkuMatched && isIdentityConfirmed && (!requiresFeeConfirmation || isFeeCollected));
 
   const reasonLabels = {
     ITEM_WITHDRAWAL: 'Member rút hàng',
     END_OF_TERM_TAKE_BACK: 'Nhận lại cuối kỳ',
     INVALID_RETURN_PICKUP: 'Người mua nhận hàng trả',
+    DEGRADED_ITEM_PICKUP: 'Hàng xuống cấp (Đền 50% & nhận lại)',
   };
 
   return (
@@ -53,6 +56,31 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
             <span className="text-[#5B6776]">Sản phẩm:</span>
             <span className="font-bold text-[#006B2C]">{item.productName || item.name || item.productId}</span>
           </div>
+          {context === 'DEGRADED_ITEM_PICKUP' && (
+            <div className="flex justify-between">
+              <span className="text-[#5B6776]">Tiền đền bù 50%:</span>
+              <span className="font-bold text-[#006B2C]">{money(item.paidAmount || item.compensationAmount || 0)} (đã cộng vào ví)</span>
+            </div>
+          )}
+          {context === 'ITEM_WITHDRAWAL' && (
+            <div className="flex justify-between items-center pt-1 border-t border-dashed border-neutral">
+              <span className="text-[#5B6776]">Phí rút hàng:</span>
+              <span>
+                {item.feeCharged ? (
+                  <>
+                    <strong className="text-[#191C19] mr-1.5">{money(item.feeCharged)}</strong>
+                    {item.feePaid ? (
+                      <span className="font-bold text-[#006B2C]">(Đã thanh toán)</span>
+                    ) : (
+                      <span className="font-bold text-[#BA1A1A]">(Chưa thanh toán)</span>
+                    )}
+                  </>
+                ) : (
+                  <strong className="text-[#006B2C]">Miễn phí</strong>
+                )}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Bước 2: Đối chiếu mã SKU */}
@@ -119,6 +147,27 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
             Chưa tích thì nút bàn giao vẫn khoá. Thao tác được ghi nhận vào audit log kèm tài khoản của bạn.
           </p>
         </div>
+
+        {/* Cảnh báo & xác nhận thu phí nếu chưa thanh toán online */}
+        {requiresFeeConfirmation && (
+          <div className="rounded-xl border-2 border-[#BA1A1A] bg-[#FFEBEE]/30 p-3.5 space-y-2 text-xs">
+            <label className="flex items-start gap-2.5 cursor-pointer font-bold text-[#BA1A1A]">
+              <input
+                type="checkbox"
+                checked={isFeeCollected}
+                onChange={(e) => setIsFeeCollected(e.target.checked)}
+                aria-label="Xác nhận đã thu phí rút hàng"
+                className="mt-0.5 h-4 w-4 rounded border-[#BA1A1A] text-[#BA1A1A] focus:ring-[#BA1A1A]"
+              />
+              <span className="leading-snug">
+                Đã thu phí rút {money(item.feeCharged)} trực tiếp tại quầy từ Member
+              </span>
+            </label>
+            <p className="text-[11px] text-[#BA1A1A] pl-6.5">
+              Đơn hàng chưa thanh toán phí rút online. Moderator cần thu tiền trước khi hoàn tất bàn giao hiện vật.
+            </p>
+          </div>
+        )}
 
         {/* Footer actions */}
         <div className="flex items-center justify-between pt-2 border-t border-neutral">

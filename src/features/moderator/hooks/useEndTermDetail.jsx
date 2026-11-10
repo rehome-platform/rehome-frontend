@@ -103,7 +103,7 @@ export function useEndTermDetail({ sku, onClose, onChanged }) {
     run,
       sections: {
       EndTermTransferPanel: { partner, setPartner, partnerValidation, resource, setConfirm },
-      EndTermReconsignPanel: { price, setPrice, resource, term, setTerm, enums, setConfirm },
+      EndTermReconsignPanel: { sku, price, setPrice, resource, term, setTerm, enums, setConfirm },
     },
   };
 }

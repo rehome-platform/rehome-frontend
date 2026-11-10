@@ -20,6 +20,18 @@ function resolveScope(options) {
 }
 
 export const endTermService = {
+  pendingPricing: async (options) => {
+    if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    if (isFixtureMode) {
+      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
+      return fixtureRequest('endTermPendingPricing', { ...options, scope: resolveScope(options) });
+    }
+    return callBackend({
+      method: 'get',
+      url: API_ENDPOINTS.MODERATOR.PENDING_PRICING,
+    }, { signal: options?.signal });
+  },
+
   list: async (params, options) => {
     if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     if (isFixtureMode) {

@@ -5,6 +5,7 @@ import Modal from "../../../../components/common/Modal.jsx";
 
 import { WORK_TYPES } from "../../pages/ConsignmentQueuePage.config.js";
 import { formatElapsedHours } from '../../models/queueModel.js';
+import { money, date } from "../WarehouseUi.jsx";
 
 export function QueueClaimDialog({ claimTarget, resource, setClaimTarget, handleClaim }) {
   return (
@@ -108,13 +109,15 @@ export function QueueReleaseDialog({ releaseTarget, resource, setReleaseTarget, 
   );
 }
 
-export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resource, handleClaim, setClaimTarget, linkTarget, setFeedback, setReleaseTarget }) {
+export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resource, handleClaim, setClaimTarget, linkTarget, setFeedback, setReleaseTarget, onCheckWithdrawal }) {
   const rowRef = React.useRef(null);
   React.useEffect(() => {
     if (isFocused && !resource.loading) {
       rowRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
     }
   }, [isFocused, resource.loading]);
+
+  const isWithdrawal = item.type === 'WITHDRAWAL' || item.type === 'ITEM_WITHDRAWAL';
 
   return (
     <tr
@@ -161,6 +164,16 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
       </td>
       <td className="py-3 px-3 text-right">
         <div className="flex items-center justify-end gap-2">
+          {isWithdrawal && onCheckWithdrawal && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs py-1.5 px-2.5 font-semibold text-[#006B2C] border-[#006B2C] hover:bg-[#E8F5E9]"
+              onClick={() => onCheckWithdrawal(item)}
+            >
+              Check đơn
+            </Button>
+          )}
           {!item.claimedBy && (
             <Button
               size="sm"
@@ -221,6 +234,8 @@ export function QueueFilters({ statusFilter, changeFilter, claimParam, toggleOve
       >
         <option value="">Mọi trạng thái</option>
         <option value="PENDING">Chờ duyệt (PENDING)</option>
+        <option value="PENDING_PICKUP">Chờ nhận tại quầy (PENDING_PICKUP)</option>
+        <option value="PROCESSING">Đang xử lý (PROCESSING)</option>
         <option value="APPROVED">Đã duyệt (APPROVED)</option>
         <option value="INSPECTING">Đang kiểm định (INSPECTING)</option>
       </select>
@@ -292,5 +307,91 @@ export function QueueTabs({ typeParam, changeFilter }) {
         );
       })}
     </div>
+  );
+}
+
+export function WithdrawalCheckModal({ target, onClose }) {
+  if (!target) return null;
+  const deadline = target.pickupDeadline || (target.createdAt ? new Date(new Date(target.createdAt).getTime() + 7 * 86400000).toISOString() : null);
+  const fee = target.feeCharged ?? target.withdrawalFee ?? 0;
+  const isPaid = Boolean(target.feePaid || target.feePaidAt);
+
+  return (
+    <Modal
+      isOpen={Boolean(target)}
+      onClose={onClose}
+      title="Kiểm tra yêu cầu rút hàng (HQ-01)"
+      size="md"
+    >
+      <div className="space-y-4 text-xs text-textSecondary">
+        <div className="p-3.5 rounded-xl border border-neutral bg-[#F6F9F4] space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="font-semibold text-textSecondary">Mã yêu cầu rút:</span>
+            <span className="font-mono font-bold text-text">{target.refId || target.id || target.queueId}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="font-semibold text-textSecondary">Sản phẩm cần rút:</span>
+            <span className="font-bold text-[#006B2C]">{target.targetName || target.productName || '—'}</span>
+          </div>
+          {target.sku && (
+            <div className="flex justify-between items-center">
+              <span className="font-semibold text-textSecondary">Mã SKU:</span>
+              <span className="font-mono font-bold text-text">{target.sku}</span>
+            </div>
+          )}
+          <div className="flex justify-between items-center">
+            <span className="font-semibold text-textSecondary">Người gửi yêu cầu:</span>
+            <span className="font-bold text-text">{target.subjectSubtitle || target.memberName || target.memberCode || 'Member'}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="font-semibold text-textSecondary">Thời hạn nhận hàng:</span>
+            <span className="font-semibold text-text">{deadline ? date(deadline) : '7 ngày kể từ ngày yêu cầu'}</span>
+          </div>
+          <div className="flex justify-between items-center pt-1.5 border-t border-dashed border-neutral">
+            <span className="font-semibold text-textSecondary">Phí rút hàng:</span>
+            <span>
+              {fee > 0 ? (
+                <>
+                  <strong className="text-text mr-1.5">{money(fee)}</strong>
+                  {isPaid ? (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C]">
+                      ✓ Đã thanh toán
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FFEBEE] text-[#BA1A1A]">
+                      ⚠ Chưa thanh toán
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C]">
+                  Miễn phí rút
+                </span>
+              )}
+            </span>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-neutral bg-white p-3 space-y-1 leading-relaxed">
+          <p className="font-bold text-text">Lưu ý nghiệp vụ trước khi ra Quầy:</p>
+          <p>• Moderator kiểm tra hiện vật trong kho theo mã SKU, chuẩn bị sẵn tại kệ chờ giao.</p>
+          <p>• Khi Member tới, vào <strong>Quầy tiếp nhận (BG-01)</strong> đối chiếu danh tính và quét mã SKU để bàn giao.</p>
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <Button variant="outline" className="flex-1 py-2 text-xs" onClick={onClose}>
+            Đóng
+          </Button>
+          <Link
+            to={`/moderator/counter?refId=${encodeURIComponent(target.refId || target.id || '')}&memberCode=${encodeURIComponent(target.memberCode || '')}`}
+            className="flex-1"
+          >
+            <Button variant="primary" className="w-full py-2 text-xs font-bold bg-[#006B2C] hover:bg-[#005523] text-white">
+              Đến Quầy bàn giao (BG-01)
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </Modal>
   );
 }

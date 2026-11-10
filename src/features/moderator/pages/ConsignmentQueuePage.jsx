@@ -1,6 +1,6 @@
 import { useConsignmentQueue } from '../hooks/useConsignmentQueue.jsx';
 
-import { QueueClaimDialog, QueueReleaseDialog, QueueTaskRow, QueueFilters, QueueTabs } from '../components/queue/QueueSections.jsx';
+import { QueueClaimDialog, QueueReleaseDialog, QueueTaskRow, QueueFilters, QueueTabs, WithdrawalCheckModal } from '../components/queue/QueueSections.jsx';
 import React from "react";
 
 import Button from '../../../components/common/Button.jsx';
@@ -43,6 +43,7 @@ function getQueueLinkTarget(item, typeParam) {
 
 export default function ConsignmentQueuePage() {
   const model = useConsignmentQueue();
+  const [withdrawalCheckTarget, setWithdrawalCheckTarget] = React.useState(null);
   return (
     <Page
       title="Hàng đợi công việc"
@@ -125,6 +126,7 @@ export default function ConsignmentQueuePage() {
                       linkTarget={linkTarget}
                       setFeedback={model.setFeedback}
                       setReleaseTarget={model.setReleaseTarget}
+                      onCheckWithdrawal={setWithdrawalCheckTarget}
                     />
                   );
                 })}
@@ -146,6 +148,7 @@ export default function ConsignmentQueuePage() {
       {/* 4. MODAL NHẬN VIỆC (HQ-02-NhanViec.dc.html) & MODAL NHẢ VIỆC (HQ-02-NhaViec.dc.html) */}
       <QueueClaimDialog {...model.sections.QueueClaimDialog} />
       <QueueReleaseDialog {...model.sections.QueueReleaseDialog} />
+      <WithdrawalCheckModal target={withdrawalCheckTarget} onClose={() => setWithdrawalCheckTarget(null)} />
     </Page>
   );
 }

@@ -6,6 +6,7 @@ export function ReturnQueueRow({
   handleOpenReview,
   handleOpenInspect,
   handleMarkLost,
+  handleOpenDegradedCaseView,
 }) {
   return (
     <tr
@@ -54,6 +55,15 @@ export function ReturnQueueRow({
         )}
         {(r.status === 'RETURNING' || r.status === 'WAITING_BUYER_DISPATCH') && (
           <>
+            {r.status === 'RETURNING' && (
+              <button
+                type="button"
+                onClick={() => handleOpenInspect(r)}
+                className="text-[11px] font-bold px-3 py-1.5 rounded-xl border-2 border-primary text-primary hover:bg-primary hover:text-white transition-colors"
+              >
+                Kiểm tra hàng
+              </button>
+            )}
             <button
               type="button"
               onClick={() => handleOpenReview(r)}
@@ -74,13 +84,25 @@ export function ReturnQueueRow({
           </>
         )}
         {r.status === 'RESOLVED' && (
-          <button
-            type="button"
-            onClick={() => handleOpenReview(r)}
-            className="text-[11px] px-2.5 py-1.5 rounded-xl border border-neutral text-textSecondary hover:bg-background transition-colors"
-          >
-            Chi tiết
-          </button>
+          <div className="flex items-center justify-end gap-1.5">
+            <button
+              type="button"
+              onClick={() => handleOpenReview(r)}
+              className="text-[11px] px-2.5 py-1.5 rounded-xl border border-neutral text-textSecondary hover:bg-background transition-colors"
+            >
+              Chi tiết
+            </button>
+            {(r.degraded || r.degradedCase) && (
+              <button
+                type="button"
+                onClick={() => (handleOpenDegradedCaseView ? handleOpenDegradedCaseView(r) : handleOpenReview(r))}
+                className="text-[11px] px-2.5 py-1.5 rounded-xl border border-amber-600 bg-amber-50 text-amber-800 font-bold hover:bg-amber-100 transition-colors"
+                title="Xem kết luận hàng xuống cấp (TH-07)"
+              >
+                TH-07
+              </button>
+            )}
+          </div>
         )}
       </td>
     </tr>

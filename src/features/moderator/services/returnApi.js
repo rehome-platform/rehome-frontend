@@ -24,7 +24,7 @@ export function mapReturnItem(raw) {
   else if (status === 'APPROVED') status = 'WAITING_BUYER_DISPATCH';
   else if (status === 'SHIPPED_BACK') status = 'RETURNING';
   else if (status === 'INSPECTING') status = 'RECEIVED_INSPECT';
-  else if (['VALID', 'INVALID', 'LOST', 'CANCELLED'].includes(status)) status = 'RESOLVED';
+  else if (['VALID', 'INVALID', 'LOST', 'CANCELLED', 'REJECTED', 'COMPLETED', 'RESOLVED'].includes(status)) status = 'RESOLVED';
 
   const buyerPhotos = Array.isArray(raw.buyerPhotos)
     ? raw.buyerPhotos
@@ -326,7 +326,7 @@ export const returnService = {
         data: {
           resolution: 'VALID',
           action: outcome,
-          resolutionNote: 'Hàng đúng tình trạng, duyệt hoàn tiền',
+          resolutionNote: options?.resolutionNote || (outcome === 'DISCARD' ? (options?.discardReason || 'Tiêu huỷ hàng hỏng/giả') : 'Hàng đúng tình trạng, duyệt hoàn tiền'),
         },
       },
       { signal: options?.signal }
