@@ -135,7 +135,7 @@ export function ConsignmentInspectionForm({ price, term, conditionNote, allCheck
             </div>
           </div>
           <p className="text-[10px] text-[#717971]">
-            Đọc bảng này cho khách nghe trước khi tạo biên nhận. Hết 90 ngày khách có 30 ngày để nhận lại hàng hoặc ký gửi lại.
+            Đọc bảng này cho khách nghe trước khi tạo biên nhận. Khi hết kỳ ký gửi cuối, khách chọn nhận lại hàng hoặc ký gửi lại trong thời hạn được thông báo.
           </p>
         </div>
       )}

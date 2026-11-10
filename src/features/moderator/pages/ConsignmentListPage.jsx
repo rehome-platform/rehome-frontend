@@ -145,7 +145,7 @@ export default function ConsignmentListPage() {
 
       {/* 2. KHUNG LƯU Ý HƯỚNG DẪN DUYỆT TRÊN ẢNH (KD-01) */}
       <div className="p-3.5 rounded-xl border border-neutral bg-[#F6F9F4] text-xs text-text leading-relaxed shadow-sm">
-        <strong>Ở bước này bạn duyệt trên ảnh, chưa thấy hàng thật.</strong> Duyệt nghĩa là mời Member mang đồ đến kho trong 7 ngày, chưa phải cam kết nhận hàng. Kiểm định thật diễn ra tại quầy.
+        <strong>Ở bước này bạn duyệt trên ảnh, chưa thấy hàng thật.</strong> Duyệt nghĩa là mời Member mang sản phẩm đến kho trong thời hạn được thông báo, chưa phải cam kết nhận hàng. Kiểm định thật diễn ra tại quầy.
       </div>
 
       <ResourceState resource={resource} empty={!rawItems.length} />
