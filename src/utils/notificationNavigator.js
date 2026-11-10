@@ -72,6 +72,19 @@ export function resolveNotificationUrl(notification, userRole) {
     case 'ORDER':
       return '/moderator/packing';
 
+    case 'WITHDRAWAL':
+    case 'ITEM_WITHDRAWAL':
+    case 'WITHDRAWAL_REQUEST':
+      return id ? `/moderator/counter?refId=${encodeURIComponent(id)}` : '/moderator/queue?type=WITHDRAWAL';
+
+    case 'DEGRADED_ITEM':
+    case 'DEGRADED_ITEM_CASE':
+      return id ? `/moderator/returns?view=DEGRADED_CASE&id=${encodeURIComponent(id)}` : '/moderator/inventory?tab=DEGRADED';
+
+    case 'END_OF_TERM':
+    case 'TERM_EXPIRY':
+      return id ? `/moderator/inventory/${encodeURIComponent(id)}/re-consign` : '/moderator/end-of-term';
+
     case 'RETURN':
     case 'RETURN_REQUEST':
       return '/moderator/returns';

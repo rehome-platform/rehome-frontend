@@ -13,6 +13,7 @@ const QUEUE_TYPES = [
   { type: 'FORM_REVIEW', label: 'Duyệt form ký gửi' },
   { type: 'INSPECTION', label: 'Kiểm định tại quầy' },
   { type: 'PACKING', label: 'Đóng gói đơn hàng' },
+  { type: 'WITHDRAWAL', label: 'Yêu cầu rút hàng', to: '/moderator/queue?type=WITHDRAWAL' },
 ];
 const STOCK_ROWS = [
   { status: 'ON_SALE', label: 'Đang bán' },
@@ -44,9 +45,10 @@ export default function WarehouseHomePage() {
   const review = useResource((o) => queueService.list({ type: 'FORM_REVIEW' }, o), []);
   const inspection = useResource((o) => queueService.list({ type: 'INSPECTION' }, o), []);
   const packing = useResource((o) => queueService.list({ type: 'PACKING' }, o), []);
+  const withdrawal = useResource((o) => queueService.list({ type: 'WITHDRAWAL' }, o), []);
   const onSale = useResource((o) => inventoryService.list({ status: 'ON_SALE' }, o), []);
   const unclaimed = useResource((o) => inventoryService.list({ status: 'UNCLAIMED' }, o), []);
-  const queues = [review, inspection, packing];
+  const queues = [review, inspection, packing, withdrawal];
   const stocks = [onSale, unclaimed];
 
   const conflictError = queues.find(
@@ -129,10 +131,11 @@ export default function WarehouseHomePage() {
       {loading && <p role="status">Đang tải dữ liệu…</p>}
       {firstError && <ResourceState resource={firstError} empty={false} />}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Stat label="Việc chờ xử lý" value={pending} />
         <Stat label={`Quá hạn ${OVERDUE_HOURS}h`} value={overdue} tone="alert" />
         <Stat label="Đơn chờ đóng gói" value={countOf(packing.data)} />
+        <Stat label="Chờ rút hàng" value={countOf(withdrawal.data)} />
         <Stat label="Tồn kho đang bán" value={countOf(onSale.data)} />
       </div>
 
@@ -159,6 +162,8 @@ export default function WarehouseHomePage() {
                     const mine = ownsClaim(task, scope.userId);
                     const link = task.kind === 'PACKING'
                       ? `/moderator/packing?orderId=${encodeURIComponent(task.orderId || task.refId || '')}`
+                      : task.kind === 'WITHDRAWAL'
+                      ? `/moderator/counter?refId=${encodeURIComponent(task.refId || task.id || '')}`
                       : `/moderator/queue?${new URLSearchParams({ type: task.kind, queueId: task.queueId })}`;
                     return (
                       <tr key={`${task.kind}-${task.queueId}`} className={`border-b border-neutral ${(task.hours ?? 0) >= OVERDUE_HOURS ? 'border-l-4 border-l-primary bg-amber-50/20' : 'hover:bg-[#FAFBF9]'}`}>

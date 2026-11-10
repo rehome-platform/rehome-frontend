@@ -105,7 +105,28 @@ export function CounterHandoverTask({ item, context, setConfirmHandover, activeR
           <p className="text-xs text-[#5B6776] mt-0.5">
             Mã SP: <span className="font-mono font-bold text-[#191C19]">{item.productId || item.id}</span>
             {item.sku && <span className="font-mono font-bold text-[#191C19] ml-1"> · SKU: {item.sku}</span>}
-            {withdrawal && <> · Phí rút: {item.feeCharged ? money(item.feeCharged) : 'Miễn phí'}</>}
+            {withdrawal && (
+              <>
+                {' '}
+                · Phí rút:{' '}
+                {item.feeCharged ? (
+                  <>
+                    <span className="font-bold text-[#191C19]">{money(item.feeCharged)}</span>
+                    {item.feePaid ? (
+                      <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C]">
+                        ✓ Đã đóng phí
+                      </span>
+                    ) : (
+                      <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#FFEBEE] text-[#BA1A1A]">
+                        ⚠ Chưa đóng phí
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="font-bold text-[#006B2C]">Miễn phí</span>
+                )}
+              </>
+            )}
             {degraded && (
               <>
                 {' '}
