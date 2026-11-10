@@ -77,7 +77,8 @@ export const inventoryService = {
 
   // TH-04..TH-07: Ca hàng xuống cấp thuộc kho của Moderator
   degradedCases: async (params = {}, options = {}) => {
-    const fallback = fixtureFallback('inventoryList', { params, ...options });
+    const fallback = fixtureFallback('degradedCaseList', { params, ...options });
+    if (isFixtureMode) return fallback();
     try {
       const res = await callBackend(
         {

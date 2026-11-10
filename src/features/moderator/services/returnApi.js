@@ -7,6 +7,9 @@ import { API_ENDPOINTS } from '../../../configs/api.config.js';
 import { isFixtureMode } from '../config/warehouseContract.js';
 import { callBackend } from './warehouseTransport.js';
 import { returnMockApi } from './moderatorMockData.js';
+import { inventoryService } from './inventoryApi.js';
+import { latestDegradedCase } from '../models/degradedCaseModel.js';
+import { Phase2Error } from '../models/warehouseModel.js';
 
 /**
  * Chuẩn hóa một bản ghi yêu cầu trả hàng từ Backend thành model hiển thị cho UI
@@ -35,7 +38,9 @@ export function mapReturnItem(raw) {
     : (Array.isArray(raw.initialConsignmentPhotoUrls) ? raw.initialConsignmentPhotoUrls : []);
 
   const compensationAmount = raw.compensationAmount ?? null;
-  const halfCompensationAmount = raw.halfCompensationAmount ?? (compensationAmount ? Math.round(compensationAmount * 0.5) : null);
+  const halfCompensationAmount = raw.halfCompensationAmount ?? (
+    compensationAmount != null && raw.degradedCompensationRate != null
+      ? Number(compensationAmount) * Number(raw.degradedCompensationRate) : null);
   const amount = raw.amount ?? raw.itemPrice ?? raw.priceAtOrder ?? raw.consignPrice ?? compensationAmount ?? raw.refundAmount ?? 0;
 
   const prevHistory = Array.isArray(raw.returnHistory) ? raw.returnHistory : [];
@@ -49,6 +54,9 @@ export function mapReturnItem(raw) {
     orderId: raw.orderNo || raw.orderId || null,
     orderNo: raw.orderNo || raw.orderId || null,
     sku: raw.sku || raw.productId || null,
+    productId: raw.productId || null,
+    resolvedAt: raw.resolvedAt || null,
+    createdAt: raw.createdAt || null,
     itemName: raw.productName || raw.itemName || 'Sản phẩm ký gửi',
     itemDetails: raw.itemDetails || [raw.brandName || raw.brand, raw.size, raw.condition].filter(Boolean).join(' · ') || 'Chưa có thông tin chi tiết',
     brand: raw.brandName || raw.brand || null,
@@ -186,11 +194,12 @@ export const returnService = {
           const firstItem = Array.isArray(order.items) && order.items.length > 0 ? order.items[0] : null;
           if (firstItem) {
             mapped.sku = firstItem.productId || firstItem.sku || mapped.sku;
+            mapped.productId = firstItem.productId || mapped.productId;
             mapped.itemName = (mapped.itemName === 'Sản phẩm ký gửi' && firstItem.name) ? firstItem.name : mapped.itemName;
             mapped.brand = firstItem.brandName || mapped.brand;
             mapped.size = firstItem.size || mapped.size;
             mapped.condition = firstItem.condition || mapped.condition;
-            mapped.amount = firstItem.priceAtOrder || firstItem.price || mapped.amount;
+            mapped.amount = firstItem.priceAtOrder ?? firstItem.price ?? mapped.amount;
             mapped.itemDetails = [firstItem.name, firstItem.brandName, firstItem.size].filter(Boolean).join(' · ');
           }
           const fullAddress = [order.shippingAddressDetail, order.shippingWardName, order.shippingProvinceName]
@@ -407,6 +416,14 @@ export const returnService = {
       { signal: options?.signal }
     );
     return res?.data || res;
+  },
+
+  findDegradedCase: async (productId, options = {}) => {
+    if (!productId) throw new Phase2Error('Chưa xác định được sản phẩm để tra cứu biên bản hàng xuống cấp. Vui lòng tải lại chi tiết yêu cầu trả hàng.', 404);
+    const cases = await inventoryService.degradedCases({}, options);
+    const item = latestDegradedCase(cases, productId, options.notBefore);
+    if (!item) throw new Phase2Error('Chưa tải được biên bản hàng xuống cấp. Vui lòng thử lại để tải biên bản; không cần chốt hoàn tiền lại.', 404);
+    return returnService.getDegradedCase(item.id, options);
   },
 };
 
