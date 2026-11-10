@@ -228,7 +228,7 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
             </svg>
           </div>
           <p className="text-[11px] text-[#717971] text-center mt-2">
-            Tổng cộng {stats.totalAccounts} tài khoản đã đăng ký trên hệ thống.
+            Tổng cộng {stats.totalAccounts} tài khoản thuộc ba nhóm Member, tổ chức và Moderator.
           </p>
         </div>
 
@@ -239,7 +239,7 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
               Tài khoản theo vai trò
             </h3>
             <p className="text-xs text-[#717971] mt-0.5">
-              Phân bổ dữ liệu tài khoản thực tế trong hệ thống
+              Phân bổ ba nhóm Member, tổ chức và Moderator
             </p>
           </div>
 
@@ -301,8 +301,8 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
                 <span className="text-lg font-black text-[#191C19] font-heading leading-tight">
                   {stats.totalAccounts}
                 </span>
-                <span className="text-[10px] text-[#717971] font-medium leading-none">
-                  tài khoản
+                <span className="text-[10px] text-[#717971] font-medium leading-tight max-w-24">
+                  Member, tổ chức và Moderator
                 </span>
               </div>
             </div>
@@ -336,7 +336,7 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
           </div>
 
           <div className="pt-3 border-t border-[#DDE5D9] text-[11px] text-[#717971] text-center">
-            Dữ liệu phân loại tài khoản đồng bộ từ máy chủ ReHome.
+            Tổng số gồm Member, tổ chức và Moderator, không bao gồm Admin.
           </div>
         </div>
       </div>
