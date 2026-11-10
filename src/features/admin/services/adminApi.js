@@ -147,6 +147,64 @@ export const adminApi = {
     const res = await baseApi.put(API_ENDPOINTS.ADMIN.UPDATE_CONFIG(key), { value: String(value) });
     return unwrap(res);
   },
+
+  // 7. Tiếp nhận & Xử lý Đề xuất khóa tài khoản từ Moderator (PROPOSE_BAN)
+  async getBanProposals({ page = 0, size = 50 } = {}) {
+    return adminApi.getAuditLogs({
+      actionType: 'VIOLATION_RESOLVE_PROPOSE_BAN',
+      page,
+      size,
+    });
+  },
+
+  async getOrganizationViolationAuditLogs(targetId) {
+    if (!targetId) return [];
+    const res = await adminApi.getAuditLogs({
+      targetId: String(targetId),
+      actionTypes: [
+        'VIOLATION_RESOLVE_REMOVE_POST',
+        'VIOLATION_RESOLVE_HIDE_CAMPAIGN',
+        'VIOLATION_RESOLVE_WARN_ORG',
+        'VIOLATION_RESOLVE_PROPOSE_BAN',
+      ],
+      page: 0,
+      size: 50,
+    });
+    return Array.isArray(res) ? res : res?.content || [];
+  },
+
+  async getViolationReportDetail(reportId) {
+    if (!reportId) return null;
+    try {
+      const res = await baseApi.get(API_ENDPOINTS.MODERATOR.VIOLATION_REPORT_DETAIL(reportId));
+      return unwrap(res);
+    } catch {
+      return null;
+    }
+  },
+
+  getDismissedProposals() {
+    try {
+      const raw = localStorage.getItem('rehome_admin_dismissed_ban_proposals');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  dismissBanProposal(proposalId) {
+    try {
+      const current = adminApi.getDismissedProposals();
+      if (!current.includes(String(proposalId))) {
+        const updated = [...current, String(proposalId)];
+        localStorage.setItem('rehome_admin_dismissed_ban_proposals', JSON.stringify(updated));
+        return updated;
+      }
+      return current;
+    } catch {
+      return [];
+    }
+  },
 };
 
 export default adminApi;
