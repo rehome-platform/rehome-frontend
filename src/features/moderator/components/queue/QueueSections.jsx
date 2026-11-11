@@ -4,7 +4,7 @@ import Button from "../../../../components/common/Button.jsx";
 import Modal from "../../../../components/common/Modal.jsx";
 
 import { WORK_TYPES } from "../../pages/ConsignmentQueuePage.config.js";
-import { formatElapsedHours } from '../../models/queueModel.js';
+import { formatElapsedHours, withdrawalCounterLink } from '../../models/queueModel.js';
 import { money, date } from "../WarehouseUi.jsx";
 
 export function QueueClaimDialog({ claimTarget, resource, setClaimTarget, handleClaim }) {
@@ -143,7 +143,14 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
         {isFocused && <span className="ml-2 inline-block rounded-full bg-primary px-2.5 py-0.5 text-[10px] text-white font-medium">Việc vừa mở</span>}
       </td>
       <td className="py-3 px-3 text-textSecondary">
-        {item.subjectSubtitle || item.fieldChanged || item.buyerName || item.memberName || item.sellerName || item.memberCode || '—'}
+        {isWithdrawal ? (
+          <>
+            <div>{item.subjectSubtitle || item.memberName || item.sellerName || '—'}</div>
+            {item.memberCode && (
+              <div className="mt-1 text-[11px]">Mã Member: <span className="font-mono">{item.memberCode}</span></div>
+            )}
+          </>
+        ) : (item.subjectSubtitle || item.fieldChanged || item.buyerName || item.memberName || item.sellerName || item.memberCode || '—')}
       </td>
       <td className="py-3 px-3 text-textSecondary">
         {item.formattedTime}
@@ -341,8 +348,14 @@ export function WithdrawalCheckModal({ target, onClose }) {
           )}
           <div className="flex justify-between items-center">
             <span className="font-semibold text-textSecondary">Người gửi yêu cầu:</span>
-            <span className="font-bold text-text">{target.subjectSubtitle || target.memberName || target.memberCode || 'Member'}</span>
+            <span className="font-bold text-text">{target.subjectSubtitle || target.memberName || '—'}</span>
           </div>
+          {target.memberCode && (
+            <div className="flex justify-between items-center">
+              <span className="font-semibold text-textSecondary">Mã Member:</span>
+              <span className="font-mono font-bold text-text">{target.memberCode}</span>
+            </div>
+          )}
           <div className="flex justify-between items-center">
             <span className="font-semibold text-textSecondary">Thời hạn nhận hàng:</span>
             <span className="font-semibold text-text">{deadline ? date(deadline) : '7 ngày kể từ ngày yêu cầu'}</span>
@@ -383,7 +396,7 @@ export function WithdrawalCheckModal({ target, onClose }) {
             Đóng
           </Button>
           <Link
-            to={`/moderator/counter?refId=${encodeURIComponent(target.refId || target.id || '')}&memberCode=${encodeURIComponent(target.memberCode || '')}`}
+            to={withdrawalCounterLink(target)}
             className="flex-1"
           >
             <Button variant="primary" className="w-full py-2 text-xs font-bold bg-[#006B2C] hover:bg-[#005523] text-white">
