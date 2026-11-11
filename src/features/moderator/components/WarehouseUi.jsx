@@ -11,6 +11,35 @@ export const money = (value) =>
     ? '—'
     : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 export const date = (value) => (value ? new Date(value).toLocaleString('vi-VN') : '—');
+export const formatCountdown = (value, now = Date.now()) => {
+  if (!value) return null;
+  const targetMs = new Date(value).getTime();
+  if (Number.isNaN(targetMs)) return null;
+  const diffMs = targetMs - now;
+  if (diffMs <= 0) return 'Đã quá hạn';
+  const totalMinutes = Math.floor(diffMs / 60000);
+  if (totalMinutes < 1) return 'còn dưới 1 phút';
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const minutes = totalMinutes % 60;
+  if (days >= 1) {
+    return hours > 0 ? `còn ${days} ngày ${hours} giờ` : `còn ${days} ngày`;
+  }
+  if (hours >= 1) {
+    return minutes > 0 ? `còn ${hours} giờ ${minutes} phút` : `còn ${hours} giờ`;
+  }
+  return `còn ${minutes} phút`;
+};
+export const formatDeadlineWithCountdown = (
+  value,
+  fallback = 'Chưa có thông tin thời hạn',
+  now = Date.now()
+) => {
+  if (!value) return fallback;
+  const formattedDate = date(value);
+  const countdown = formatCountdown(value, now);
+  return countdown ? `${formattedDate} (${countdown})` : formattedDate;
+};
 export function Page({ title, subtitle, children, actions, apiColors = true }) {
   return (
     <ModeratorLayout apiColors={apiColors && !isFixtureMode}>

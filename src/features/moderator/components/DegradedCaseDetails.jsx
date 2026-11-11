@@ -2,7 +2,7 @@ import React from 'react';
 import Button from '../../../components/common/Button.jsx';
 import { useResource } from '../hooks/warehouseHooks.jsx';
 import returnService from '../services/returnApi.js';
-import { ResourceState, Photos, date, money } from './WarehouseUi.jsx';
+import { ResourceState, Photos, date, formatDeadlineWithCountdown, money } from './WarehouseUi.jsx';
 import { DEGRADED_DECISION_POLICY, degradedCaseLabel, partialCompensation } from '../models/degradedCaseModel.js';
 
 const amount = value => value == null ? 'Chưa có mức đền' : money(value);
@@ -17,7 +17,7 @@ export function DegradedCaseSummary({ item, onNavigateToCounter }) {
         <p>{item.productName || 'Sản phẩm ký gửi'} · {item.productId}</p>
         <p>Mã biên bản: {item.id}</p>
         <p>Ngày lập: {date(item.receivedAt)}</p>
-        {item.decisionDeadline && <p>Hạn chọn phương án: {date(item.decisionDeadline)}</p>}
+        {item.decisionDeadline && <p>Hạn chọn phương án: {formatDeadlineWithCountdown(item.decisionDeadline)}</p>}
         {!decision && <p>{DEGRADED_DECISION_POLICY}</p>}
         {decision === 'UNCLAIMED' && <p>Hệ thống chuyển vô thừa nhận do quá hạn chọn phương án; không phát sinh bồi thường.</p>}
         {item.decidedAt && <p>{decision === 'UNCLAIMED' ? 'Thời điểm xử lý' : 'Member đã chọn lúc'}: {date(item.decidedAt)}</p>}
@@ -37,7 +37,7 @@ export function DegradedCaseSummary({ item, onNavigateToCounter }) {
       {decision === 'PARTIAL_WITH_ITEM_BACK' && (
         <div className="space-y-2">
           <p>Member đến Quầy tiếp nhận để nhận lại hàng, không mất phí rút.</p>
-          {item.pickupDeadline && <p>Hạn nhận hàng: {date(item.pickupDeadline)}</p>}
+          {item.pickupDeadline && <p>Hạn nhận hàng: {formatDeadlineWithCountdown(item.pickupDeadline)}</p>}
           {onNavigateToCounter && <Button variant="outline" onClick={onNavigateToCounter}>Mở Quầy tiếp nhận (BG-01) →</Button>}
         </div>
       )}

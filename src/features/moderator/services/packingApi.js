@@ -43,6 +43,10 @@ function normalizeOrderResult(result, orderId, scope) {
     claimedBy: result.claimedBy || scope?.userId,
     claimExpiresAt: result.claimExpiresAt || new Date(Date.now() + 15 * 60 * 1000).toISOString(),
     shipmentOutcome: result.shipmentOutcome || (result.ghnTrackingCode ? 'CREATED' : 'NOT_CREATED'),
+    paymentDeadline: result.paymentDeadline || null,
+    autoCompleteDeadline: result.autoCompleteDeadline || null,
+    returnDeadline: result.returnDeadline || null,
+    deliveredAt: result.deliveredAt || null,
   };
 }
 

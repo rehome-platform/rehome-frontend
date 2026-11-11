@@ -10,6 +10,7 @@ import { returnMockApi } from './moderatorMockData.js';
 import { inventoryService } from './inventoryApi.js';
 import { latestDegradedCase } from '../models/degradedCaseModel.js';
 import { Phase2Error } from '../models/warehouseModel.js';
+import { formatDeadlineWithCountdown } from '../components/WarehouseUi.jsx';
 
 /**
  * Chuẩn hóa một bản ghi yêu cầu trả hàng từ Backend thành model hiển thị cho UI
@@ -92,9 +93,18 @@ export function mapReturnItem(raw) {
     rawStatus: raw.status,
     carrierStatus: raw.carrierStatus || (
       status === 'PENDING_APPROVAL' ? 'Chờ duyệt · Còn 9 giờ' :
-      status === 'WAITING_BUYER_DISPATCH' ? 'Đã duyệt · Chờ người mua bàn giao GHN' :
+      status === 'WAITING_BUYER_DISPATCH' ? (
+        raw.handoverDeadline
+          ? `Đã duyệt · Hạn bàn giao GHN: ${formatDeadlineWithCountdown(raw.handoverDeadline)}`
+          : 'Đã duyệt · Chờ người mua bàn giao GHN'
+      ) :
       status === 'RETURNING' ? 'Đang chuyển về kho qua GHN' :
       status === 'RECEIVED_INSPECT' ? 'Hàng đã về kho · Chờ kiểm tra' :
+      raw.status === 'INVALID' ? (
+        raw.pickupDeadline
+          ? `Hàng không hợp lệ · Hạn nhận lại: ${formatDeadlineWithCountdown(raw.pickupDeadline)}`
+          : 'Hàng không hợp lệ · Chờ khách nhận lại'
+      ) :
       'Đã hoàn tất xử lý'
     ),
     counterfeitSuspected: Boolean(raw.counterfeitSuspected),
@@ -104,6 +114,10 @@ export function mapReturnItem(raw) {
     ghnReturnTrackingCode: raw.ghnReturnTrackingCode || '',
     handoverDeadline: raw.handoverDeadline || null,
     pickupDeadline: raw.pickupDeadline || null,
+    returnDeadline: raw.returnDeadline || null,
+    autoCompleteDeadline: raw.autoCompleteDeadline || null,
+    paymentDeadline: raw.paymentDeadline || null,
+    deliveredAt: raw.deliveredAt || null,
     outcome: raw.itemAction || raw.outcome || (raw.status === 'VALID' ? 'RELIST' : null),
     rejectReason: raw.rejectReason || null,
     firstModNote: raw.firstModNote || raw.conditionNote || '',
@@ -208,6 +222,10 @@ export const returnService = {
           if (fullAddress) mapped.buyerAddress = fullAddress;
           if (order.shippingPhone) mapped.buyerPhone = order.shippingPhone;
           if (order.shippingRecipientName) mapped.buyerName = order.shippingRecipientName;
+          if (order.returnDeadline) mapped.returnDeadline = order.returnDeadline;
+          if (order.autoCompleteDeadline) mapped.autoCompleteDeadline = order.autoCompleteDeadline;
+          if (order.paymentDeadline) mapped.paymentDeadline = order.paymentDeadline;
+          if (order.deliveredAt) mapped.deliveredAt = order.deliveredAt;
         }
       } catch (err) {
         // Fallback gracefully without breaking return detail

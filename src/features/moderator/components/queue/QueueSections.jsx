@@ -5,7 +5,7 @@ import Modal from "../../../../components/common/Modal.jsx";
 
 import { WORK_TYPES } from "../../pages/ConsignmentQueuePage.config.js";
 import { formatElapsedHours, withdrawalCounterLink } from '../../models/queueModel.js';
-import { money, date } from "../WarehouseUi.jsx";
+import { money, date, formatDeadlineWithCountdown } from "../WarehouseUi.jsx";
 
 export function QueueClaimDialog({ claimTarget, resource, setClaimTarget, handleClaim }) {
   return (
@@ -319,7 +319,7 @@ export function QueueTabs({ typeParam, changeFilter }) {
 
 export function WithdrawalCheckModal({ target, onClose }) {
   if (!target) return null;
-  const deadline = target.pickupDeadline || (target.createdAt ? new Date(new Date(target.createdAt).getTime() + 7 * 86400000).toISOString() : null);
+  const deadline = target.pickupDeadline || null;
   const fee = target.feeCharged ?? target.withdrawalFee ?? 0;
   const isPaid = Boolean(target.feePaid || target.feePaidAt);
 
@@ -358,7 +358,7 @@ export function WithdrawalCheckModal({ target, onClose }) {
           )}
           <div className="flex justify-between items-center">
             <span className="font-semibold text-textSecondary">Thời hạn nhận hàng:</span>
-            <span className="font-semibold text-text">{deadline ? date(deadline) : '7 ngày kể từ ngày yêu cầu'}</span>
+            <span className="font-semibold text-text">{formatDeadlineWithCountdown(deadline)}</span>
           </div>
           <div className="flex justify-between items-center pt-1.5 border-t border-dashed border-neutral">
             <span className="font-semibold text-textSecondary">Phí rút hàng:</span>

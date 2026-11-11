@@ -441,4 +441,60 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
       expect(window.alert).toHaveBeenCalled();
     });
   });
+
+  it('maps handoverDeadline, pickupDeadline, and order returnDeadline with countdowns without hardcoding 3 or 7 days', async () => {
+    const handoverFuture = new Date(Date.now() + 2 * 24 * 3600000).toISOString();
+    const pickupFuture = new Date(Date.now() + 5 * 24 * 3600000).toISOString();
+    const returnFuture = new Date(Date.now() + 3 * 24 * 3600000).toISOString();
+
+    server.use(
+      http.get(`${API_BASE_URL}/return-requests/:id/detail`, async ({ params }) => {
+        return HttpResponse.json({
+          result: {
+            id: params.id,
+            code: 'YC-DL01',
+            orderId: 'ORD-DL01',
+            status: 'APPROVED',
+            handoverDeadline: handoverFuture,
+            pickupDeadline: pickupFuture,
+          },
+          isSuccess: true,
+          statusCode: 200,
+        });
+      }),
+      http.get(`${API_BASE_URL}/return-requests/:id`, async ({ params }) => {
+        return HttpResponse.json({
+          result: {
+            id: params.id,
+            code: 'YC-DL01',
+            orderId: 'ORD-DL01',
+            status: 'APPROVED',
+            handoverDeadline: handoverFuture,
+            pickupDeadline: pickupFuture,
+          },
+          isSuccess: true,
+          statusCode: 200,
+        });
+      }),
+      http.get(`${API_BASE_URL}/orders/:id`, async ({ params }) => {
+        return HttpResponse.json({
+          result: {
+            id: params.id,
+            orderNo: 'ORD-DL01',
+            returnDeadline: returnFuture,
+            autoCompleteDeadline: returnFuture,
+            items: [{ productId: 'P-DL01', name: 'Đầm lụa' }],
+          },
+          isSuccess: true,
+          statusCode: 200,
+        });
+      })
+    );
+
+    const detail = await returnService.detail('RET-DL01');
+    expect(detail.handoverDeadline).toBe(handoverFuture);
+    expect(detail.pickupDeadline).toBe(pickupFuture);
+    expect(detail.returnDeadline).toBe(returnFuture);
+    expect(detail.carrierStatus).toMatch(/Hạn bàn giao GHN:.*còn/);
+  });
 });

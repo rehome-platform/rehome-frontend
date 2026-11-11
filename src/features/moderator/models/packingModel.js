@@ -178,6 +178,10 @@ function packingTotals(raw) {
     subtotal: raw.subtotal || 0,
     shippingFee: raw.shippingFee || 0,
     totalAmount: raw.totalAmount || 0,
+    paymentDeadline: raw.paymentDeadline || null,
+    autoCompleteDeadline: raw.autoCompleteDeadline || null,
+    returnDeadline: raw.returnDeadline || null,
+    deliveredAt: raw.deliveredAt || null,
   };
 }
 
