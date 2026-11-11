@@ -367,9 +367,7 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     });
   });
 
-  it('F-134/F-135: supports 2-Moderator counterfeit flagging & conclusion', async () => {
-    window.alert = vi.fn();
-
+  it('C.1 #4: hides unsupported counterfeit flagging UI in return inspection view', async () => {
     render(
       <MemoryRouter initialEntries={['/moderator/returns']}>
         <Routes>
@@ -387,35 +385,10 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     fireEvent.click(inspectBtns[0]);
 
     await waitFor(() => {
-      expect(screen.getByText(/⚠️ Báo nghi hàng giả/i)).toBeInTheDocument();
+      expect(screen.getByText(/kiểm tra hàng về kho/i)).toBeInTheDocument();
     });
 
-    // Upload evidence photos before flagging counterfeit
-    const fileInput = screen.getByLabelText(/Tải ảnh bằng chứng kiểm hàng/i);
-    const file1 = new File(['a'], 'ev1.jpg', { type: 'image/jpeg' });
-    const file2 = new File(['b'], 'ev2.jpg', { type: 'image/jpeg' });
-    fireEvent.change(fileInput, { target: { files: [file1, file2] } });
-
-    await waitFor(() => {
-      expect(screen.getByText(/2 \/ 5 ảnh đã tải lên/i)).toBeInTheDocument();
-    });
-
-    // Click counterfeit button
-    fireEvent.click(screen.getByText(/⚠️ Báo nghi hàng giả/i));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Thẩm Định Hàng Nghi Giả/i)).toBeInTheDocument();
-    });
-
-    // Fill note and submit
-    const noteInput = screen.getByPlaceholderText(/Ghi rõ chi tiết đối chiếu chất liệu vải/i);
-    fireEvent.change(noteInput, { target: { value: 'Chất liệu vải nhái thô cứng, chỉ thừa nhiều' } });
-
-    fireEvent.click(screen.getByText(/Lưu kết luận & Thực thi/i));
-
-    await waitFor(() => {
-      expect(window.alert).toHaveBeenCalled();
-    }, { timeout: 2000 });
+    expect(screen.queryByText(/Báo nghi hàng giả/i)).not.toBeInTheDocument();
   });
 
   it('TH-08: allows marking a returning parcel as lost with buyer refund', async () => {

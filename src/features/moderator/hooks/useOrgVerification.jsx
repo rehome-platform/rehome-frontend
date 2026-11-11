@@ -171,7 +171,7 @@ export function useOrgVerification() {
     const paramId = searchParams.get('id');
     const paramTab = searchParams.get('tab');
     if (paramTab === 'LEGAL_CHANGES') {
-      setActiveQueueTab('LEGAL_CHANGES');
+      setActiveMainTab('LEGAL_CHANGES');
     }
     if (!loading && paramId) {
       const found = orgsQueue.find(

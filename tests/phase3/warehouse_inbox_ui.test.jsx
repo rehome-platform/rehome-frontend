@@ -336,4 +336,34 @@ describe('WarehouseInboxPage Crash Resistance & Design Tokens', () => {
       expect(screen.getByText('0 yêu cầu')).toBeInTheDocument();
     });
   });
+
+  it('hides the unsupported Đánh dấu đã xong button in the chat header (C.1 #4)', async () => {
+    vi.mocked(warehouseInboxService.getConversations).mockResolvedValueOnce({
+      data: [
+        {
+          id: 'conv-hide-done',
+          memberName: 'Trần Văn X',
+          memberCode: 'MB-0055',
+          status: 'UNANSWERED',
+          lastMessage: 'Xin hỏi về đơn hàng',
+        },
+      ],
+      total: 1,
+    });
+    vi.mocked(warehouseInboxService.getMessages).mockResolvedValueOnce({
+      data: [],
+      total: 0,
+    });
+
+    render(
+      <MemoryRouter>
+        <WarehouseInboxPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('MB-0055')).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: /Đánh dấu đã xong/i })).not.toBeInTheDocument();
+  });
 });
