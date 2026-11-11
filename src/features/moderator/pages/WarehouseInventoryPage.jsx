@@ -13,6 +13,7 @@ import { Page, Status, Pager, ResourceState, money } from '../components/Warehou
 
 export const SUPPORTED_INVENTORY_STATUSES = [
   'ON_SALE',
+  'WAREHOUSE',
   'RESERVED',
   'SOLD',
   'WITHDRAWN',
@@ -73,6 +74,7 @@ export default function WarehouseInventoryPage() {
       return inventoryService.list({ page, sku, status }, options);
     },
     [page, sku, status],
+    { refreshInterval: 30000 },
   );
 
   const enums = useResource(
@@ -338,7 +340,7 @@ export default function WarehouseInventoryPage() {
                       const isActionNeeded =
                         item.status === 'WAITING_END_OF_TERM' ||
                         item.status === 'UNCLAIMED' ||
-                        item.decision;
+                        (item.status === 'WAREHOUSE' && (item.decisionId || item.pricingEligible));
 
                       return (
                         <tr
@@ -371,12 +373,14 @@ export default function WarehouseInventoryPage() {
                             ) : (
                               <Status>{item.status}</Status>
                             )}
-                            {item.decision === 'RE_CONSIGN' && (
+                            {item.pricingEligible && item.status === 'WAREHOUSE' && (
                               <span className="block text-[10px] text-[#006B2C] font-semibold mt-0.5">
                                 Member yêu cầu ký gửi lại
                               </span>
                             )}
-                            {item.decision === 'TAKE_BACK' && (
+                            {item.status === 'WAREHOUSE' && item.reConsignStatus === 'PROPOSAL_SENT' && <span className="block text-[10px] mt-0.5">Chờ Member xác nhận biên nhận mới</span>}
+                            {item.status === 'WAREHOUSE' && item.decisionId && !item.pricingEligible && item.reConsignStatus !== 'PROPOSAL_SENT' && <span className="block text-[10px] mt-0.5">Chờ Member chọn phương án cuối kỳ</span>}
+                            {item.decision === 'TAKE_BACK' && item.status === 'WITHDRAWN' && (
                               <span className="block text-[10px] text-amber-800 font-semibold mt-0.5">
                                 Khách yêu cầu nhận lại
                               </span>
@@ -390,12 +394,12 @@ export default function WarehouseInventoryPage() {
                           </td>
                           <td className="py-3.5 px-4 text-right">
                             <div className="flex items-center justify-end gap-2.5">
-                              {(item.decision === 'RE_CONSIGN' || item.status === 'WAITING_END_OF_TERM') && (
+                              {(item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT') && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(item.status) && (
                                 <Link
                                   to={`/moderator/inventory/${encodeURIComponent(item.sku)}/re-consign`}
                                   className="text-xs font-bold text-[#006B2C] hover:underline bg-[#E8F5E9] px-2 py-1 rounded border border-[#C8E6C9]"
                                 >
-                                  Đàm phán giá →
+                                  {item.reConsignStatus === 'PROPOSAL_SENT' ? 'Theo dõi xác nhận →' : 'Đàm phán giá →'}
                                 </Link>
                               )}
                               <Link

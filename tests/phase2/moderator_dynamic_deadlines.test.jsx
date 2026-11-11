@@ -82,7 +82,7 @@ describe('Moderator uses stored consignment deadlines', () => {
   ])('only shows remaining pickup days supplied by inventory (%s)', async (daysToTakeBack, expected) => {
     vi.spyOn(inventoryService, 'read').mockResolvedValue({
       id: 'product-1', sku: 'RH-1', name: 'Hàng cuối kỳ', decision: 'TAKE_BACK',
-      status: 'ON_SALE', daysToTakeBack,
+      status: 'WITHDRAWN', daysToTakeBack, degradedCaseId: null,
     });
     vi.spyOn(inventoryService, 'movements').mockResolvedValue([]);
     renderPage('/moderator/inventory/RH-1', '/moderator/inventory/:sku', <InventoryDetailPage />);

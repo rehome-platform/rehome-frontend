@@ -8,6 +8,8 @@ import BarcodePrintModal from '../components/BarcodePrintModal.jsx';
 import PhotoUpload from '../components/PhotoUpload.jsx';
 import { inventoryService } from '../services/warehouseApi.js';
 import returnService from '../services/returnApi.js';
+import { endTermService } from '../services/endTermApi.js';
+import { pricingForProduct } from '../services/endTermPricingApi.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
 import { listItems } from '../models/warehouseModel.js';
 import { Page, Card, Photos, Status, ResourceState, date, money } from '../components/WarehouseUi.jsx';
@@ -18,6 +20,7 @@ export default function InventoryDetailPage() {
 
   const product = useResource((options) => inventoryService.read(sku, options), [sku], {
     poll: true,
+    refreshInterval: 30000,
     done: (value) => !value?.photos?.some((photo) => photo.status === 'PROCESSING'),
   });
 
@@ -58,10 +61,20 @@ export default function InventoryDetailPage() {
 
   const data = product.data;
   const existingCase = useResource(async options => {
+    if (data.degradedCaseId) return returnService.getDegradedCase(data.degradedCaseId, options);
+    if (data.degradedCaseId === null) return null;
     const cases = await inventoryService.degradedCases({}, options);
     return latestDegradedCase(cases, data.id);
-  }, [data?.id, data?.status], { enabled: Boolean(data?.id && data.status !== 'ON_SALE') });
-  const activeCase = existingCase.data || submittedCase;
+  }, [data?.id, data?.status, data?.degradedCaseId], { enabled: Boolean(data?.id && data.status !== 'ON_SALE'), refreshInterval: 30000 });
+  const activeCase = data?.status === 'ON_SALE' || data?.degradedCaseId === null ? null
+    : data?.degradedCaseId
+      ? [existingCase.data, submittedCase].find(item => item?.id === data.degradedCaseId)
+      : existingCase.data || submittedCase;
+  const pricing = useResource(options => endTermService.pendingPricing(options), [sku], {
+    enabled: Boolean(data && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(data.status)), refreshInterval: 30000,
+  });
+  const pricingRequest = pricingForProduct(pricing.data || [], data?.id || sku);
+  const canNegotiate = Boolean(pricingRequest?.decisionId && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(data?.status));
 
   const movementList = listItems(movements.data);
 
@@ -255,7 +268,7 @@ export default function InventoryDetailPage() {
 
           {data.status === 'WAREHOUSE' && (
             <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">
-              Sản phẩm đang lưu kho, tạm ngừng bán trong khi chờ xử lý. {DEGRADED_DECISION_POLICY}
+              Sản phẩm đang lưu kho, tạm ngừng bán trong khi chờ xử lý. {activeCase && DEGRADED_DECISION_POLICY}
             </div>
           )}
           <ResourceState resource={existingCase} />
@@ -266,7 +279,9 @@ export default function InventoryDetailPage() {
 
 
           {/* BANNER XỬ LÝ CUỐI KỲ (L-02 · TK-02) */}
-          {(data.decision === 'RE_CONSIGN' || data.allowedActions?.includes('RE_CONSIGN') || data.reConsignStatus === 'PROPOSAL_SENT' || data.status === 'WAITING_END_OF_TERM') && (
+          <ResourceState resource={pricing} />
+          {data.status === 'WAREHOUSE' && data.decisionId && !canNegotiate && <p className="rounded-xl border border-neutral p-4 text-sm">Đã hết kỳ ký gửi. Đang chờ Member chọn nhận lại hoặc ký gửi lại qua app.</p>}
+          {canNegotiate && (
             <div className="rounded-2xl border border-neutral bg-[#F8FAF8] p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
@@ -289,7 +304,7 @@ export default function InventoryDetailPage() {
             </div>
           )}
 
-          {data.decision === 'TAKE_BACK' && (
+          {data.status === 'WITHDRAWN' && data.decision === 'TAKE_BACK' && (
             <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
