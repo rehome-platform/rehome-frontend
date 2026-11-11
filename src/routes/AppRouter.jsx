@@ -27,6 +27,7 @@ import {
   ReturnProcessingPage,
   OrgVerificationPage,
   ViolationReportsPage,
+  DonationsPage,
   CategoryBrandPage,
   WarehouseInboxPage,
   WarehouseHomePage,
@@ -174,6 +175,14 @@ export default function AppRouter() {
         element={
           <PrivateRoute roles={['moderator', 'staff']}>
             <ReturnProcessingPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/moderator/donations"
+        element={
+          <PrivateRoute roles={['moderator', 'staff']}>
+            <DonationsPage />
           </PrivateRoute>
         }
       />

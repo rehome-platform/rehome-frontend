@@ -110,7 +110,6 @@ export function resetFixtures() {
     receipts: [],
     identities: [],
     products: [],
-    movements: [],
     catalog: {
       categories: [
         { id: 'cat-1', name: 'Áo', slot: 'TOP', hidden: false },
@@ -337,31 +336,6 @@ export function resetFixtures() {
       productId: product.id || product.sku, decision: product.decision, newReceiptId: null,
       decidedAt: '2026-10-18T14:20:00Z' };
   });
-
-  // Initial movements for RH-M4T19B
-  db.movements.push(
-    {
-      sku: 'RH-M4T19B',
-      type: 'STOCK_IN',
-      label: 'Nhập kho · gán SKU · in tem',
-      shelfLocation: 'C2-11',
-      createdAt: '2026-07-15T09:00:00Z',
-    },
-    {
-      sku: 'RH-M4T19B',
-      type: 'TERM_CHANGED',
-      label: 'Hết kỳ 3 · chuyển sang Chờ xử lý cuối kỳ',
-      shelfLocation: 'C2-11',
-      createdAt: '2026-10-15T09:00:00Z',
-    },
-    {
-      sku: 'RH-M4T19B',
-      type: 'DECISION_MADE',
-      label: 'Member yêu cầu ký gửi lại với giá mới',
-      shelfLocation: 'C2-11',
-      createdAt: '2026-10-18T14:20:00Z',
-    }
-  );
 }
 resetFixtures();
 const fail = (message, status = 409) => {
@@ -455,6 +429,43 @@ export async function fixtureRequest(
     case 'formRead':
       result = formView(find(db.forms, 'formId', ids.formId, scope), scope);
       break;
+    case 'withdrawalApprove': {
+      const queue = db.queues.find(
+        (row) => (row.type === 'WITHDRAWAL' || row.type === 'ITEM_WITHDRAWAL') && row.refId === ids.id,
+      );
+      if (!queue) fail('Không tìm thấy yêu cầu rút hàng.', 404);
+      queue.status = 'PENDING_PICKUP';
+      const pickupDeadline = new Date(Date.now() + 7 * 86400000).toISOString();
+      queue.pickupDeadline = pickupDeadline;
+      result = {
+        id: ids.id,
+        productId: queue.sku || null,
+        feeCharged: queue.feeCharged ?? 0,
+        status: 'PENDING_PICKUP',
+        pickupDeadline,
+        feePaymentDeadline: null,
+        rejectReason: null,
+      };
+      break;
+    }
+    case 'withdrawalReject': {
+      if (!data?.reason?.trim()) fail('Cần lý do từ chối.', 422);
+      const index = db.queues.findIndex(
+        (row) => (row.type === 'WITHDRAWAL' || row.type === 'ITEM_WITHDRAWAL') && row.refId === ids.id,
+      );
+      if (index < 0) fail('Không tìm thấy yêu cầu rút hàng.', 404);
+      const [removed] = db.queues.splice(index, 1);
+      result = {
+        id: ids.id,
+        productId: removed?.sku || null,
+        feeCharged: removed?.feeCharged ?? 0,
+        status: 'REJECTED',
+        pickupDeadline: null,
+        feePaymentDeadline: null,
+        rejectReason: data.reason.trim(),
+      };
+      break;
+    }
     case 'formApprove':
     case 'formReject': {
       const form = find(db.forms, 'formId', ids.formId, scope);
@@ -599,12 +610,6 @@ export async function fixtureRequest(
       db.products.push(product);
       receipt.productSku = product.sku;
       form.status = 'STOCKED';
-      db.movements.push({
-        sku: product.sku,
-        type: 'STOCK_IN',
-        shelfLocation: product.shelfLocation,
-        createdAt: new Date().toISOString(),
-      });
       result = product;
       break;
     }
@@ -655,23 +660,6 @@ export async function fixtureRequest(
       result = { ...product, decisionId: decision?.id || null, degradedCaseId: degraded?.id || null };
       break;
     }
-    case 'shelfUpdate': {
-      const product = find(db.products, 'sku', ids.sku, scope);
-      if (!data.shelfLocation?.trim()) fail('Cần vị trí kệ.', 422);
-      product.shelfLocation = data.shelfLocation;
-      db.movements.push({
-        sku: product.sku,
-        type: 'SHELF_CHANGED',
-        shelfLocation: product.shelfLocation,
-        createdAt: new Date().toISOString(),
-      });
-      result = null;
-      break;
-    }
-    case 'stockMovements':
-      find(db.products, 'sku', ids.sku, scope);
-      result = db.movements.filter((row) => row.sku === ids.sku);
-      break;
     case 'skuLabel':
       find(db.products, 'sku', ids.sku, scope);
       result = { labelPdfUrl: null };
@@ -784,13 +772,6 @@ export async function fixtureRequest(
       product.proposedPrice = agreedPrice;
       product.moderatorNote = data.moderatorNote;
       product.reConsignStatus = 'PROPOSAL_SENT';
-      db.movements.push({
-        sku: product.sku,
-        type: 'PRICE_PROPOSED',
-        label: `Moderator đề xuất giá mới ${agreedPrice.toLocaleString('vi-VN')} đ`,
-        shelfLocation: product.shelfLocation,
-        createdAt: new Date().toISOString(),
-      });
       result = { decisionId: decision.id, newReceiptId: receiptId };
       break;
     }
@@ -811,13 +792,6 @@ export async function fixtureRequest(
       product.decisionId = null;
       product.allowedActions = ['CHANGE_SHELF'];
       product.reConsignStatus = 'CONFIRMED';
-      db.movements.push({
-        sku: product.sku,
-        type: 'RE_CONSIGNED',
-        label: `Member đồng ý giá mới · Bắt đầu Kỳ 1 · hoa hồng 10%`,
-        shelfLocation: product.shelfLocation,
-        createdAt: new Date().toISOString(),
-      });
       result = { success: true, receiptId: ids.receiptId, product };
       break;
     }
@@ -851,12 +825,6 @@ export async function fixtureRequest(
         fail('Không đủ điều kiện chuyển giao.');
       product.status = 'DONATED';
       product.allowedActions = [];
-      db.movements.push({
-        sku: product.sku,
-        type: 'DONATED',
-        partnerName: data.partnerName,
-        createdAt: new Date().toISOString(),
-      });
       result = null;
       break;
     }
@@ -880,6 +848,5 @@ export function confirmFixtureReceipt(receiptId) {
       decision: null,
       allowedActions: ['CHANGE_SHELF', 'ADD_PHOTOS'],
     });
-    db.movements.push({ sku: product.sku, type: 'RE_CONSIGNED', createdAt: receipt.confirmedAt });
   }
 }

@@ -803,14 +803,16 @@ describe('ConsignmentDetailPage component behaviors', () => {
   });
 
   describe('Task 6: WarehouseInventoryPage & InventoryDetailPage behaviors', () => {
-    it('WarehouseInventoryPage: renders inventory list and navigates to detail', async () => {
-      vi.spyOn(inventoryService, 'list').mockResolvedValue({
+    it('WarehouseInventoryPage: renders inventory list with term info and requests detail enrichment', async () => {
+      const listSpy = vi.spyOn(inventoryService, 'list').mockResolvedValue({
         items: [
           {
             sku: 'Q7-AK-000845',
             name: 'Áo khoác dạ Zara',
             agreedPrice: 850000,
             status: 'ON_SALE',
+            currentTerm: 2,
+            daysIntoTerm: 12,
           },
         ],
         totalPages: 1,
@@ -821,38 +823,30 @@ describe('ConsignmentDetailPage component behaviors', () => {
 
       expect(await screen.findByText('Q7-AK-000845')).toBeInTheDocument();
       expect(screen.getByText('Áo khoác dạ Zara')).toBeInTheDocument();
+      expect(screen.getByText('Kỳ 2 · ngày 12')).toBeInTheDocument();
+      expect(listSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 0 }),
+        expect.objectContaining({ enrichDetails: true }),
+      );
     });
 
-    it('InventoryDetailPage: renders details, movements timeline, and handles shelf relocation', async () => {
+    it('InventoryDetailPage: renders product details with configured commission rate and term length', async () => {
       vi.spyOn(inventoryService, 'read').mockResolvedValue({
         id: 'Q7-AK-000845',
         sku: 'Q7-AK-000845',
         name: 'Áo khoác dạ Zara',
-        shelfLocation: 'A1-02',
         agreedPrice: 850000,
         status: 'ON_SALE',
         brandName: 'Zara',
         size: 'L',
-        allowedActions: ['CHANGE_SHELF'],
+        currentTerm: 1,
+        daysIntoTerm: 4,
+        termLengthDays: 30,
+        commissionRateTerm1: 0.05,
+        commissionRateTerm2: 0.1,
+        commissionRateTerm3: 0.15,
       });
 
-      vi.spyOn(inventoryService, 'movements').mockResolvedValue([
-        {
-          id: 'log-1',
-          type: 'STOCK_IN',
-          label: 'Nhập kho ban đầu',
-          locationText: 'Kệ A1-02',
-          badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-          createdAt: '2026-10-26T15:00:00Z',
-        },
-      ]);
-
-      const shelfSpy = vi.spyOn(inventoryService, 'shelf').mockResolvedValue({
-        id: 'Q7-AK-000845',
-        shelfLocation: 'C1-05',
-      });
-
-      const user = userEvent.setup();
       render(
         <StrictMode>
           <MemoryRouter initialEntries={['/moderator/inventory/Q7-AK-000845']}>
@@ -867,17 +861,13 @@ describe('ConsignmentDetailPage component behaviors', () => {
 
       expect(await screen.findByRole('heading', { name: 'Áo khoác dạ Zara' })).toBeInTheDocument();
       expect(screen.getByText('SKU: Q7-AK-000845')).toBeInTheDocument();
-      expect(screen.getByText('Nhập kho ban đầu')).toBeInTheDocument();
-      expect(screen.getByText('Kệ A1-02')).toBeInTheDocument();
-
-// Shelf update omitted as per review
+      expect(screen.getByText('Kỳ 1 · ngày 4 / 30 · hoa hồng 5%')).toBeInTheDocument();
     });
 
     it('InventoryDetailPage: handles 403 PRODUCT_NOT_IN_YOUR_WAREHOUSE gracefully', async () => {
       vi.spyOn(inventoryService, 'read').mockRejectedValue(
         new Phase2Error('Forbidden', 403, 'PRODUCT_NOT_IN_YOUR_WAREHOUSE'),
       );
-      vi.spyOn(inventoryService, 'movements').mockResolvedValue([]);
 
       render(
         <StrictMode>

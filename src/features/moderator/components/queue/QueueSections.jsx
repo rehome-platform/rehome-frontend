@@ -5,7 +5,8 @@ import Modal from "../../../../components/common/Modal.jsx";
 
 import { WORK_TYPES } from "../../pages/ConsignmentQueuePage.config.js";
 import { formatElapsedHours, withdrawalCounterLink } from '../../models/queueModel.js';
-import { money, date, formatDeadlineWithCountdown } from "../WarehouseUi.jsx";
+import { inventoryService } from '../../services/inventoryApi.js';
+import { money, formatDeadlineWithCountdown } from "../WarehouseUi.jsx";
 
 export function QueueClaimDialog({ claimTarget, resource, setClaimTarget, handleClaim }) {
   return (
@@ -118,6 +119,8 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
   }, [isFocused, resource.loading]);
 
   const isWithdrawal = item.type === 'WITHDRAWAL' || item.type === 'ITEM_WITHDRAWAL';
+  const isPendingWithdrawalApproval = isWithdrawal && item.status === 'PENDING_APPROVAL';
+  const titleText = item.targetName || item.orgName || item.productName || item.orderNo || item.name || item.formId || item.orderId || item.queueId;
 
   return (
     <tr
@@ -128,17 +131,36 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
       } ${isFocused ? 'bg-[#EBF1E8] ring-2 ring-inset ring-primary' : ''}`}
     >
       <td className="py-3 px-4 font-semibold text-text">
-        {item.typeLabel}
+        <div>{item.typeLabel}</div>
+        {isPendingWithdrawalApproval && (
+          <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+            Chờ duyệt
+          </span>
+        )}
+        {isWithdrawal && item.status === 'PENDING_PICKUP' && (
+          <span className="mt-1 inline-block rounded-full bg-[#E8F5E9] px-2 py-0.5 text-[10px] font-bold text-[#006B2C]">
+            Chờ bàn giao
+          </span>
+        )}
       </td>
       <td className="py-3 px-3 font-medium text-text">
-        {isMine && linkTarget ? (
+        {isPendingWithdrawalApproval && isMine && onCheckWithdrawal ? (
+          <button
+            type="button"
+            onClick={() => onCheckWithdrawal(item)}
+            className="text-left text-[#006B2C] hover:underline font-bold cursor-pointer"
+          >
+            {titleText}
+          </button>
+        ) : isMine && linkTarget ? (
           <Link to={linkTarget} className="text-[#006B2C] hover:underline font-bold">
-            {item.targetName || item.orgName || item.productName || item.orderNo || item.name || item.formId || item.orderId || item.queueId}
+            {titleText}
           </Link>
         ) : (
-          <span>
-            {item.targetName || item.orgName || item.productName || item.orderNo || item.name || item.formId || item.orderId || item.queueId}
-          </span>
+          <span>{titleText}</span>
+        )}
+        {(isWithdrawal || item.type === 'DONATION_PICKUP') && item.sku && (
+          <div className="mt-0.5 text-[11px] font-mono text-textSecondary">SKU: {item.sku}</div>
         )}
         {isFocused && <span className="ml-2 inline-block rounded-full bg-primary px-2.5 py-0.5 text-[10px] text-white font-medium">Việc vừa mở</span>}
       </td>
@@ -193,7 +215,15 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
           )}
           {isMine && (
             <>
-              {linkTarget && (
+              {isPendingWithdrawalApproval && onCheckWithdrawal ? (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => onCheckWithdrawal(item)}
+                >
+                  Duyệt yêu cầu
+                </Button>
+              ) : linkTarget && (
                 <Link
                   to={linkTarget}
                   className="text-xs py-1.5 px-3 bg-[#006B2C] text-white hover:bg-[#005523] hover:text-white font-semibold rounded-xl inline-flex items-center gap-1 shadow-sm transition-colors"
@@ -241,6 +271,7 @@ export function QueueFilters({ statusFilter, changeFilter, claimParam, toggleOve
       >
         <option value="">Mọi trạng thái</option>
         <option value="PENDING">Chờ duyệt (PENDING)</option>
+        <option value="PENDING_APPROVAL">Chờ duyệt rút hàng (PENDING_APPROVAL)</option>
         <option value="PENDING_PICKUP">Chờ nhận tại quầy (PENDING_PICKUP)</option>
         <option value="PROCESSING">Đang xử lý (PROCESSING)</option>
         <option value="APPROVED">Đã duyệt (APPROVED)</option>
@@ -317,94 +348,236 @@ export function QueueTabs({ typeParam, changeFilter }) {
   );
 }
 
-export function WithdrawalCheckModal({ target, onClose }) {
-  if (!target) return null;
+function firstPhotoUrl(photos) {
+  if (!Array.isArray(photos) || !photos.length) return null;
+  const first = photos[0];
+  return typeof first === 'string' ? first : first?.url || first?.imageUrl || null;
+}
+
+function WithdrawalModalContent({ target, busy, onApprove, onReject, onClose }) {
+  const [rejectMode, setRejectMode] = React.useState(false);
+  const [rejectReason, setRejectReason] = React.useState('');
+  const [reasonError, setReasonError] = React.useState('');
+  const [detail, setDetail] = React.useState(null);
+
+  const sku = target.sku || target.productId || detail?.sku || detail?.id || null;
+  const existingImage = target.productImageUrl || target.imageUrl || target.photoUrl || firstPhotoUrl(target.photos);
+
+  React.useEffect(() => {
+    if (!target.sku || existingImage) return undefined;
+    const controller = new AbortController();
+    inventoryService.read(target.sku, { signal: controller.signal })
+      .then((res) => setDetail(res))
+      .catch(() => {});
+    return () => controller.abort();
+  }, [target.sku, existingImage]);
+
+  const productImage = existingImage || firstPhotoUrl(detail?.photos);
+  const productName = target.targetName || target.productName || detail?.name || '—';
+  const isPendingApproval = target.status === 'PENDING_APPROVAL';
   const deadline = target.pickupDeadline || null;
   const fee = target.feeCharged ?? target.withdrawalFee ?? 0;
   const isPaid = Boolean(target.feePaid || target.feePaidAt);
 
+  const handleSubmitReject = () => {
+    const trimmed = rejectReason.trim();
+    if (!trimmed) {
+      setReasonError('Vui lòng nhập lý do từ chối yêu cầu rút hàng.');
+      return;
+    }
+    setReasonError('');
+    onReject?.(target, trimmed);
+  };
+
   return (
-    <Modal
-      isOpen={Boolean(target)}
-      onClose={onClose}
-      title="Kiểm tra yêu cầu rút hàng (HQ-01)"
-      size="md"
-    >
-      <div className="space-y-4 text-xs text-textSecondary">
-        <div className="p-3.5 rounded-xl border border-neutral bg-[#F6F9F4] space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="font-semibold text-textSecondary">Mã yêu cầu rút:</span>
-            <span className="font-mono font-bold text-text">{target.refId || target.id || target.queueId}</span>
+    <div className="space-y-4 text-xs text-textSecondary">
+      <div className="flex items-center gap-3.5 p-3.5 rounded-xl border border-neutral bg-white">
+        {productImage ? (
+          <img
+            src={productImage}
+            alt={productName}
+            className="w-16 h-16 rounded-xl object-cover border border-neutral flex-shrink-0"
+          />
+        ) : (
+          <div className="w-16 h-16 rounded-xl border border-dashed border-neutral bg-[#F6F9F4] flex items-center justify-center text-[10px] text-textSecondary text-center px-1 flex-shrink-0">
+            Không có ảnh
           </div>
+        )}
+        <div className="min-w-0 flex-1 space-y-1">
+          <p className="font-bold text-sm text-[#006B2C] truncate">{productName}</p>
+          <p className="text-xs text-textSecondary">
+            Mã SKU: <span className="font-mono font-bold text-text">{sku || '—'}</span>
+          </p>
+        </div>
+      </div>
+
+      <div className="p-3.5 rounded-xl border border-neutral bg-[#F6F9F4] space-y-2">
+        <div className="flex justify-between items-center">
+          <span className="font-semibold text-textSecondary">Mã yêu cầu rút:</span>
+          <span className="font-mono font-bold text-text">{target.refId || target.id || target.queueId}</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="font-semibold text-textSecondary">Người gửi yêu cầu:</span>
+          <span className="font-bold text-text">{target.subjectSubtitle || target.memberName || '—'}</span>
+        </div>
+        {target.memberCode && (
           <div className="flex justify-between items-center">
-            <span className="font-semibold text-textSecondary">Sản phẩm cần rút:</span>
-            <span className="font-bold text-[#006B2C]">{target.targetName || target.productName || '—'}</span>
+            <span className="font-semibold text-textSecondary">Mã Member:</span>
+            <span className="font-mono font-bold text-text">{target.memberCode}</span>
           </div>
-          {target.sku && (
-            <div className="flex justify-between items-center">
-              <span className="font-semibold text-textSecondary">Mã SKU:</span>
-              <span className="font-mono font-bold text-text">{target.sku}</span>
-            </div>
-          )}
-          <div className="flex justify-between items-center">
-            <span className="font-semibold text-textSecondary">Người gửi yêu cầu:</span>
-            <span className="font-bold text-text">{target.subjectSubtitle || target.memberName || '—'}</span>
-          </div>
-          {target.memberCode && (
-            <div className="flex justify-between items-center">
-              <span className="font-semibold text-textSecondary">Mã Member:</span>
-              <span className="font-mono font-bold text-text">{target.memberCode}</span>
-            </div>
-          )}
+        )}
+        {!isPendingApproval && (
           <div className="flex justify-between items-center">
             <span className="font-semibold text-textSecondary">Thời hạn nhận hàng:</span>
             <span className="font-semibold text-text">{formatDeadlineWithCountdown(deadline)}</span>
           </div>
-          <div className="flex justify-between items-center pt-1.5 border-t border-dashed border-neutral">
-            <span className="font-semibold text-textSecondary">Phí rút hàng:</span>
-            <span>
-              {fee > 0 ? (
-                <>
-                  <strong className="text-text mr-1.5">{money(fee)}</strong>
-                  {isPaid ? (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C]">
-                      ✓ Đã thanh toán
-                    </span>
-                  ) : (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FFEBEE] text-[#BA1A1A]">
-                      ⚠ Chưa thanh toán
-                    </span>
-                  )}
-                </>
-              ) : (
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C]">
-                  Miễn phí rút
-                </span>
-              )}
-            </span>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-neutral bg-white p-3 space-y-1 leading-relaxed">
-          <p className="font-bold text-text">Lưu ý nghiệp vụ trước khi ra Quầy:</p>
-          <p>• Moderator kiểm tra hiện vật trong kho theo mã SKU, chuẩn bị sẵn tại kệ chờ giao.</p>
-          <p>• Khi Member tới, vào <strong>Quầy tiếp nhận (BG-01)</strong> đối chiếu danh tính và quét mã SKU để bàn giao.</p>
-        </div>
-
-        <div className="flex gap-3 pt-2">
-          <Button variant="outline" className="flex-1 py-2 text-xs" onClick={onClose}>
-            Đóng
-          </Button>
-          <Link
-            to={withdrawalCounterLink(target)}
-            className="flex-1"
-          >
-            <Button variant="primary" className="w-full py-2 text-xs font-bold bg-[#006B2C] hover:bg-[#005523] text-white">
-              Đến Quầy bàn giao (BG-01)
-            </Button>
-          </Link>
+        )}
+        <div className="flex justify-between items-center pt-1.5 border-t border-dashed border-neutral">
+          <span className="font-semibold text-textSecondary">Phí rút hàng:</span>
+          <span>
+            {fee > 0 ? (
+              <>
+                <strong className="text-text mr-1.5">{money(fee)}</strong>
+                {isPaid ? (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C]">
+                    ✓ Đã thanh toán
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FFEBEE] text-[#BA1A1A]">
+                    ⚠ Chưa thanh toán
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C]">
+                Miễn phí rút
+              </span>
+            )}
+          </span>
         </div>
       </div>
+
+      {isPendingApproval ? (
+        <div className="space-y-3">
+          {!rejectMode ? (
+            <div className="flex gap-3 pt-1">
+              <Button variant="outline" className="py-2 px-4 text-xs" disabled={busy} onClick={onClose}>
+                Đóng
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 py-2 text-xs font-bold border-red-600 text-red-600 hover:bg-red-50"
+                disabled={busy}
+                onClick={() => {
+                  setRejectMode(true);
+                  setReasonError('');
+                }}
+              >
+                Từ chối
+              </Button>
+              <Button
+                variant="primary"
+                className="flex-1 py-2 text-xs font-bold bg-[#006B2C] hover:bg-[#005523] text-white"
+                loading={busy}
+                disabled={busy}
+                onClick={() => onApprove?.(target)}
+              >
+                Duyệt
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2.5 rounded-xl border border-red-200 bg-red-50/50 p-3">
+              <label htmlFor="withdrawal-reject-reason" className="block font-bold text-text">
+                Lý do từ chối <span className="text-red-600">*</span>
+              </label>
+              <textarea
+                id="withdrawal-reject-reason"
+                rows={3}
+                value={rejectReason}
+                disabled={busy}
+                onChange={(e) => {
+                  setRejectReason(e.target.value);
+                  if (reasonError) setReasonError('');
+                }}
+                placeholder="Nhập lý do từ chối yêu cầu rút hàng..."
+                className="w-full rounded-xl border border-neutral bg-white p-2.5 text-xs text-text focus:border-red-600 focus:outline-none"
+              />
+              {reasonError && (
+                <p role="alert" className="text-[11px] font-semibold text-red-600">
+                  {reasonError}
+                </p>
+              )}
+              <div className="flex gap-2 justify-end pt-1">
+                <Button
+                  variant="outline"
+                  className="py-1.5 px-3 text-xs"
+                  disabled={busy}
+                  onClick={() => {
+                    setRejectMode(false);
+                    setReasonError('');
+                  }}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  variant="primary"
+                  className="py-1.5 px-4 text-xs font-bold bg-red-600 hover:bg-red-700 text-white"
+                  loading={busy}
+                  disabled={busy}
+                  onClick={handleSubmitReject}
+                >
+                  Xác nhận từ chối
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="rounded-xl border border-neutral bg-white p-3 space-y-1 leading-relaxed">
+            <p className="font-bold text-text">Lưu ý nghiệp vụ trước khi ra Quầy:</p>
+            <p>• Moderator kiểm tra hiện vật trong kho theo mã SKU, chuẩn bị sẵn tại kệ chờ giao.</p>
+            <p>• Khi Member tới, vào <strong>Quầy tiếp nhận (BG-01)</strong> đối chiếu danh tính và quét mã SKU để bàn giao.</p>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" className="flex-1 py-2 text-xs" onClick={onClose}>
+              Đóng
+            </Button>
+            <Link
+              to={withdrawalCounterLink(target)}
+              className="flex-1"
+            >
+              <Button variant="primary" className="w-full py-2 text-xs font-bold bg-[#006B2C] hover:bg-[#005523] text-white">
+                Đến Quầy bàn giao (BG-01)
+              </Button>
+            </Link>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export function WithdrawalCheckModal({ target, busy, onApprove, onReject, onClose }) {
+  if (!target) return null;
+  return (
+    <Modal
+      isOpen={Boolean(target)}
+      onClose={() => {
+        if (!busy) onClose?.();
+      }}
+      title={target.status === 'PENDING_APPROVAL' ? 'Duyệt yêu cầu rút hàng' : 'Kiểm tra yêu cầu rút hàng (HQ-01)'}
+      size="md"
+    >
+      <WithdrawalModalContent
+        key={target.refId || target.id || target.queueId}
+        target={target}
+        busy={busy}
+        onApprove={onApprove}
+        onReject={onReject}
+        onClose={onClose}
+      />
     </Modal>
   );
 }

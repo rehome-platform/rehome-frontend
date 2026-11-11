@@ -67,4 +67,13 @@ describe('notificationNavigator', () => {
     expect(resolveNotificationUrl({ targetType: 'INVENTORY' })).toBe('/moderator/inventory');
     expect(resolveNotificationUrl({ targetType: 'PRODUCT', targetId: 'SKU999' })).toBe('/moderator/inventory/SKU999');
   });
+
+  it('resolves donation, campaign, and legal change notifications for moderators', () => {
+    expect(resolveNotificationUrl({ targetType: 'DONATION', targetId: 'don-1' })).toBe('/moderator/donations?donationId=don-1');
+    expect(resolveNotificationUrl({ targetType: 'DONATION_RECORDED' })).toBe('/moderator/donations');
+    expect(resolveNotificationUrl({ targetType: 'DONATION_PICKUP', targetId: 'don-2' })).toBe('/moderator/donations?donationId=don-2');
+    expect(resolveNotificationUrl({ targetType: 'CAMPAIGN', targetId: 'camp-1' })).toBe('/moderator/donations?campaignId=camp-1');
+    expect(resolveNotificationUrl({ targetType: 'LEGAL_CHANGE', targetId: 'lc-1' })).toBe('/moderator/verifications?tab=LEGAL_CHANGES&id=lc-1');
+    expect(resolveNotificationUrl({ targetType: 'LEGAL_CHANGE' })).toBe('/moderator/verifications?tab=LEGAL_CHANGES');
+  });
 });

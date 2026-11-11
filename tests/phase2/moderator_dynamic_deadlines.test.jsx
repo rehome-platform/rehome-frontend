@@ -2,8 +2,10 @@ import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { Phase2Provider } from '../../src/features/moderator/hooks/warehouseHooks.jsx';
+import { Phase2Provider, usePhase2 } from '../../src/features/moderator/hooks/warehouseHooks.jsx';
 import { consignmentService, inventoryService, queueService } from '../../src/features/moderator/services/warehouseApi.js';
+import { normalizeConsignmentForm } from '../../src/features/moderator/models/consignmentModel.js';
+import { saveEffectiveConsignmentConfig } from '../../src/configs/systemParams.config.js';
 import ConsignmentDetailPage from '../../src/features/moderator/pages/ConsignmentDetailPage.jsx';
 import InventoryDetailPage from '../../src/features/moderator/pages/InventoryDetailPage.jsx';
 import { CounterHandoverTask } from '../../src/features/moderator/components/counter/CounterHandoverTask.jsx';
@@ -87,7 +89,6 @@ describe('Moderator uses stored consignment deadlines', () => {
       id: 'product-1', sku: 'RH-1', name: 'Hàng cuối kỳ', decision: 'TAKE_BACK',
       status: 'WITHDRAWN', daysToTakeBack, degradedCaseId: null,
     });
-    vi.spyOn(inventoryService, 'movements').mockResolvedValue([]);
     renderPage('/moderator/inventory/RH-1', '/moderator/inventory/:sku', <InventoryDetailPage />);
 
     const notice = await screen.findByText(/Khách đã chọn nhận lại hàng/);
@@ -154,5 +155,106 @@ describe('Moderator uses stored consignment deadlines', () => {
     );
     expect(screen.getByText(/Hạn chọn phương án:.*còn/)).toBeInTheDocument();
     expect(screen.getByText(/Hạn nhận hàng:.*còn/)).toBeInTheDocument();
+  });
+
+  it('ConsignmentDetailPage reflects backend consignmentConfig termLengthDays (e.g. 20 days) in term schedule and options', async () => {
+    localStorage.clear();
+    const inspectingForm = normalizeConsignmentForm({
+      id: 'form-zara',
+      productName: 'Áo khoác Zara',
+      status: 'INSPECTING',
+      claimedBy: 'mod-a',
+      member: { id: 'member-1', fullName: 'Nguyễn An', memberCode: 'MB-001' },
+      consignmentConfig: {
+        termLengthDays: 20,
+        maxRenewals: 2,
+        freeWithdrawalWindowDays: 7,
+        floorPriceRatio: 0.5,
+        commissionRateTerm1: 0.1,
+        commissionRateTerm2: 0.15,
+        commissionRateTerm3: 0.2,
+      },
+    });
+    vi.spyOn(consignmentService, 'read').mockResolvedValue(inspectingForm);
+
+    function IdentitySetter() {
+      const { setIdentity } = usePhase2();
+      React.useEffect(() => {
+        setIdentity({ memberId: 'member-1', memberCode: 'MB-001', identityToken: 'token-1' });
+      }, [setIdentity]);
+      return null;
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/moderator/consignments/form-zara']}>
+        <Phase2Provider>
+          <IdentitySetter />
+          <Routes>
+            <Route path="/moderator/consignments/:formId" element={<ConsignmentDetailPage />} />
+          </Routes>
+        </Phase2Provider>
+      </MemoryRouter>,
+    );
+
+    const priceInput = await screen.findByLabelText(/Giá chốt thỏa thuận/i);
+    fireEvent.change(priceInput, { target: { value: '500000' } });
+
+    expect(screen.getByText('Ngày 0 – 20')).toBeInTheDocument();
+    expect(screen.getByText('Ngày 21 – 40')).toBeInTheDocument();
+    expect(screen.getByText('Ngày 41 – 60')).toBeInTheDocument();
+    expect(screen.queryByText('Ngày 0 – 30')).not.toBeInTheDocument();
+    expect(screen.getByText(/Mặc định mỗi kỳ 20 ngày, tối đa 2 lần gia hạn \(tổng 3 kỳ · 60 ngày\)\./)).toBeInTheDocument();
+
+    const termSelect = screen.getByLabelText(/Độ dài kỳ ký gửi/i);
+    expect(termSelect).toHaveTextContent('20 ngày / kỳ (tối đa 2 lần gia hạn)');
+  });
+
+  it('ConsignmentDetailPage falls back to synced Admin consignment config when backend detail omits consignmentConfig', async () => {
+    localStorage.clear();
+    saveEffectiveConsignmentConfig({
+      consignment: { termDays: 20, maxRenewals: 2, freeWithdrawalDays: 7 },
+      pricingAndCommission: {
+        floorPricePercent: 50,
+        commissionTerm1: 10,
+        commissionTerm2: 15,
+        commissionTerm3: 20,
+      },
+    });
+
+    const inspectingForm = normalizeConsignmentForm({
+      id: 'form-zara-2',
+      productName: 'Áo khoác Zara',
+      status: 'INSPECTING',
+      claimedBy: 'mod-a',
+      member: { id: 'member-1', fullName: 'Nguyễn An', memberCode: 'MB-001' },
+    });
+    vi.spyOn(consignmentService, 'read').mockResolvedValue(inspectingForm);
+
+    function IdentitySetter() {
+      const { setIdentity } = usePhase2();
+      React.useEffect(() => {
+        setIdentity({ memberId: 'member-1', memberCode: 'MB-001', identityToken: 'token-1' });
+      }, [setIdentity]);
+      return null;
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/moderator/consignments/form-zara-2']}>
+        <Phase2Provider>
+          <IdentitySetter />
+          <Routes>
+            <Route path="/moderator/consignments/:formId" element={<ConsignmentDetailPage />} />
+          </Routes>
+        </Phase2Provider>
+      </MemoryRouter>,
+    );
+
+    const priceInput = await screen.findByLabelText(/Giá chốt thỏa thuận/i);
+    fireEvent.change(priceInput, { target: { value: '500000' } });
+
+    expect(screen.getByText('Ngày 0 – 20')).toBeInTheDocument();
+    expect(screen.getByText('Ngày 21 – 40')).toBeInTheDocument();
+    expect(screen.getByText('Ngày 41 – 60')).toBeInTheDocument();
+    localStorage.clear();
   });
 });

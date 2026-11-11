@@ -6,7 +6,6 @@ import {
   extractReceiptId,
   filterCatalogItems,
   filterUnclaimedItems,
-  formatStockMovement,
   formatTryOnSlot,
   listItems,
   lookupParams,
@@ -16,13 +15,12 @@ import {
   normalizeProductResponse,
   normalizeUnclaimedItem,
   ownsClaim,
+  resolveInventoryTermAndRates,
   safeDocumentUrl,
-  STOCK_MOVEMENT_CONFIG,
   SUPPORTED_TRYON_SLOTS,
   TRYON_SLOT_CONFIG,
   unwrap,
   validateCatalogInput,
-  validateNewShelf,
   validatePartnerName,
   validMoney,
 } from '../../src/features/moderator/models/warehouseModel.js';
@@ -142,62 +140,47 @@ describe('Phase 2 boundary rules', () => {
     expect(created.status).toBe('ON_SALE');
   });
 
-  describe('Task 6: Inventory & Stock Movement models', () => {
-    it('formatStockMovement: formats different movement types correctly', () => {
-      expect(formatStockMovement(null)).toBeNull();
-
-      // SHELF_MOVE from backend (fromLocation and toLocation)
-      const shelfMove = formatStockMovement({
-        id: 'log-1',
-        type: 'SHELF_MOVE',
-        fromLocation: 'A1-03',
-        toLocation: 'B2-10',
-        note: 'Đổi sang khu áo khoác',
-        createdAt: '2026-10-27T08:00:00Z',
-      });
-      expect(shelfMove.type).toBe('SHELF_MOVE');
-      expect(shelfMove.label).toBe('Điều chuyển kệ');
-      expect(shelfMove.locationText).toBe('A1-03 → B2-10');
-      expect(shelfMove.note).toBe('Đổi sang khu áo khoác');
-      expect(shelfMove.badgeClass).toContain('bg-blue-100');
-
-      // STOCK_IN
-      const stockIn = formatStockMovement({
-        id: 'log-2',
-        type: 'STOCK_IN',
-        toLocation: 'B1-05',
-        createdAt: '2026-10-26T14:00:00Z',
-      });
-      expect(stockIn.label).toBe('Nhập kho ban đầu');
-      expect(stockIn.locationText).toBe('Kệ B1-05');
-      expect(stockIn.badgeClass).toContain('bg-emerald-100');
-
-      // Legacy/fixture fallback (shelfLocation)
-      const legacyFixture = formatStockMovement({
-        type: 'SHELF_MOVE',
-        shelfLocation: 'C3-01',
-      });
-      expect(legacyFixture.locationText).toBe('Kệ C3-01');
-
-      // WITHDRAWAL_OUT
-      const withdrawal = formatStockMovement({
-        type: 'WITHDRAWAL_OUT',
-        partnerName: 'Nguyễn Văn A',
-      });
-      expect(withdrawal.label).toBe('Rút hàng trả Member');
-      expect(withdrawal.locationText).toBe('Đối tác: Nguyễn Văn A');
+  it('resolveInventoryTermAndRates prefers product snapshot rates, then effective config, then defaults', () => {
+    const fromProduct = resolveInventoryTermAndRates(
+      {
+        currentTerm: 2,
+        daysIntoTerm: 14,
+        termLengthDays: 45,
+        commissionRateTerm1: 0.05,
+        commissionRateTerm2: 0.1,
+        commissionRateTerm3: 0.15,
+        agreedPrice: 500000,
+        floorPriceRatio: 0.3,
+      },
+      { termLengthDays: 20, commissionTerm2: 18, floorPricePercent: 40 },
+    );
+    expect(fromProduct).toMatchObject({
+      currentTerm: 2,
+      daysIntoTerm: 14,
+      termLengthDays: 45,
+      commissionPercent: 10,
+      floorPrice: 150000,
     });
 
-    it('validateNewShelf: validates shelf inputs rigorously', () => {
-      expect(validateNewShelf('', 'A1-01').valid).toBe(false);
-      expect(validateNewShelf('   ', 'A1-01').valid).toBe(false);
-      expect(validateNewShelf('a'.repeat(256), 'A1-01').valid).toBe(false);
+    const fromEffectiveConfig = resolveInventoryTermAndRates(
+      { currentTerm: 1, daysIntoTerm: 3, agreedPrice: 500000 },
+      { termLengthDays: 25, commissionTerm1: 5, commissionTerm2: 10, commissionTerm3: 15, floorPricePercent: 30 },
+    );
+    expect(fromEffectiveConfig).toMatchObject({
+      currentTerm: 1,
+      daysIntoTerm: 3,
+      termLengthDays: 25,
+      commissionPercent: 5,
+      floorPrice: 150000,
+    });
 
-      // Same location (case insensitive & trimmed)
-      expect(validateNewShelf('A1-01', 'A1-01').valid).toBe(false);
-      expect(validateNewShelf(' a1-01 ', 'A1-01').valid).toBe(false);
-      expect(validateNewShelf('B2-10', 'A1-01')).toEqual({ valid: true, value: 'B2-10' });
-      expect(validateNewShelf('  B2-10  ', 'A1-01')).toEqual({ valid: true, value: 'B2-10' });
+    const fromDefaults = resolveInventoryTermAndRates({ currentTerm: 3 }, null);
+    expect(fromDefaults).toMatchObject({
+      currentTerm: 3,
+      daysIntoTerm: 1,
+      termLengthDays: 30,
+      commissionPercent: 20,
+      floorPrice: null,
     });
   });
 

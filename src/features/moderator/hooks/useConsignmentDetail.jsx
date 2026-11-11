@@ -1,6 +1,7 @@
 import {
   CHECKLIST_ITEMS,
   DEFAULT_TERM_OPTIONS,
+  DEFAULT_MAX_RENEWALS,
   DEFAULT_RETURN_REASONS,
 } from "../pages/ConsignmentDetailPage.config.js";
 
@@ -11,6 +12,10 @@ import { consignmentService } from "../services/warehouseApi.js";
 import { phase2Contract, isFixtureMode } from "../config/warehouseContract.js";
 import { usePhase2, useResource } from "./warehouseHooks.jsx";
 import { ownsClaim, normalizeConsignmentForm } from "../models/warehouseModel.js";
+import {
+  DEFAULT_SYSTEM_CONFIGS,
+  readEffectiveConsignmentConfig,
+} from "../../../configs/systemParams.config.js";
 
 export function useConsignmentDetail() {
   const { formId } = useParams();
@@ -78,8 +83,84 @@ export function useConsignmentDetail() {
     [],
   );
   const options = optionsResource.data || phase2Contract.options;
-  const termOptions =
-    options?.termLengthDays && options.termLengthDays.length > 0
+  const cachedSystemConfig = React.useMemo(() => readEffectiveConsignmentConfig(), [form]);
+  const formConsignmentConfig = form?.consignmentConfig || null;
+
+  const consignmentConfig = React.useMemo(() => {
+    const normalizePct = (val, fallback) => {
+      if (val == null || val === '') return fallback;
+      const num = Number(val);
+      if (!Number.isFinite(num)) return fallback;
+      return num <= 1 ? Number((num * 100).toPrecision(15)) : num;
+    };
+    const configuredTermDays =
+      formConsignmentConfig?.termLengthDays ??
+      form?.termLengthDays ??
+      form?.receipt?.termLengthDays ??
+      cachedSystemConfig?.termLengthDays ??
+      options?.termLengthDays?.[0] ??
+      DEFAULT_TERM_OPTIONS[0];
+    const maxRenewals =
+      formConsignmentConfig?.maxRenewals ??
+      form?.maxRenewals ??
+      form?.receipt?.maxRenewals ??
+      cachedSystemConfig?.maxRenewals ??
+      options?.maxRenewals ??
+      DEFAULT_MAX_RENEWALS;
+    const freeWithdrawalWindowDays =
+      formConsignmentConfig?.freeWithdrawalWindowDays ??
+      form?.freeWithdrawalWindowDays ??
+      cachedSystemConfig?.freeWithdrawalWindowDays ??
+      DEFAULT_SYSTEM_CONFIGS.consignment.freeWithdrawalDays;
+    const floorPricePercent = normalizePct(
+      formConsignmentConfig?.floorPricePercent ??
+        formConsignmentConfig?.floorPriceRatio ??
+        form?.floorPriceRatio ??
+        cachedSystemConfig?.floorPricePercent,
+      DEFAULT_SYSTEM_CONFIGS.pricingAndCommission.floorPricePercent,
+    );
+    const commissionTerm1 = normalizePct(
+      formConsignmentConfig?.commissionTerm1 ??
+        formConsignmentConfig?.commissionRateTerm1 ??
+        form?.commissionRateTerm1 ??
+        cachedSystemConfig?.commissionTerm1,
+      DEFAULT_SYSTEM_CONFIGS.pricingAndCommission.commissionTerm1,
+    );
+    const commissionTerm2 = normalizePct(
+      formConsignmentConfig?.commissionTerm2 ??
+        formConsignmentConfig?.commissionRateTerm2 ??
+        form?.commissionRateTerm2 ??
+        cachedSystemConfig?.commissionTerm2,
+      DEFAULT_SYSTEM_CONFIGS.pricingAndCommission.commissionTerm2,
+    );
+    const commissionTerm3 = normalizePct(
+      formConsignmentConfig?.commissionTerm3 ??
+        formConsignmentConfig?.commissionRateTerm3 ??
+        form?.commissionRateTerm3 ??
+        cachedSystemConfig?.commissionTerm3,
+      DEFAULT_SYSTEM_CONFIGS.pricingAndCommission.commissionTerm3,
+    );
+
+    return {
+      termLengthDays: Number(configuredTermDays) || DEFAULT_TERM_OPTIONS[0],
+      maxRenewals: Number.isFinite(Number(maxRenewals)) ? Number(maxRenewals) : DEFAULT_MAX_RENEWALS,
+      freeWithdrawalWindowDays: Number(freeWithdrawalWindowDays) || 7,
+      floorPricePercent,
+      commissionTerm1,
+      commissionTerm2,
+      commissionTerm3,
+    };
+  }, [formConsignmentConfig, form, cachedSystemConfig, options]);
+
+  const hasDynamicTermDays =
+    formConsignmentConfig?.termLengthDays != null ||
+    form?.termLengthDays != null ||
+    form?.receipt?.termLengthDays != null ||
+    cachedSystemConfig?.termLengthDays != null;
+
+  const termOptions = hasDynamicTermDays
+    ? [consignmentConfig.termLengthDays]
+    : options?.termLengthDays && options.termLengthDays.length > 0
       ? options.termLengthDays
       : DEFAULT_TERM_OPTIONS;
   const returnReasons =
@@ -160,6 +241,7 @@ export function useConsignmentDetail() {
     setPrice,
     setTerm,
     termOptions,
+    consignmentConfig,
     returnReason,
     returnNote,
     setReturnReason,
@@ -171,7 +253,7 @@ export function useConsignmentDetail() {
       ConsignmentPhotoViewer: { photos, activePhotoIdx, photoUrl, setActivePhotoIdx },
       ConsignmentReviewPanel: { decision, setDecision, setRejectReason, rejectReason, errors, resource, formId, setFeedback },
       ConsignmentStartPanel: { resource, formId, proof, setFeedback },
-      ConsignmentInspectionPanel: { allChecked, checkedCount, checklist, toggleCheck, price, term, conditionNote, resource, formId, proof, setFeedback, setReceiptId: receiptCreated, setCondition, errors, setPrice, setTerm, termOptions },
+      ConsignmentInspectionPanel: { allChecked, checkedCount, checklist, toggleCheck, price, term, conditionNote, resource, formId, proof, setFeedback, setReceiptId: receiptCreated, setCondition, errors, setPrice, setTerm, termOptions, consignmentConfig },
       ConsignmentReturnPanel: { resource, formId, proof, returnReason, returnNote, setFeedback, setReturnReason, returnReasons, setReturnNote, errors },
     },
   };

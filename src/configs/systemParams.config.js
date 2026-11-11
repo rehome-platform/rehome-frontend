@@ -76,3 +76,51 @@ export const SYSTEM_CONFIG_FIELDS = [
   { key: 'legal_image_retention_days', group: 'operationsAndCommunity', field: 'legalDocsRetentionDays' },
   { key: 'overdue_task_hours', group: 'operationsAndCommunity', field: 'taskAutoReleaseHours' },
 ];
+
+const EFFECTIVE_CONSIGNMENT_CONFIG_KEY = 'rehome_effective_consignment_config';
+
+export function saveEffectiveConsignmentConfig(configs) {
+  if (!configs?.consignment && !configs?.pricingAndCommission) return;
+  try {
+    const payload = {
+      termLengthDays: Number(configs.consignment?.termDays) || DEFAULT_SYSTEM_CONFIGS.consignment.termDays,
+      maxRenewals:
+        configs.consignment?.maxRenewals != null && configs.consignment?.maxRenewals !== ''
+          ? Number(configs.consignment.maxRenewals)
+          : DEFAULT_SYSTEM_CONFIGS.consignment.maxRenewals,
+      freeWithdrawalWindowDays:
+        configs.consignment?.freeWithdrawalDays != null && configs.consignment?.freeWithdrawalDays !== ''
+          ? Number(configs.consignment.freeWithdrawalDays)
+          : DEFAULT_SYSTEM_CONFIGS.consignment.freeWithdrawalDays,
+      floorPricePercent:
+        configs.pricingAndCommission?.floorPricePercent != null && configs.pricingAndCommission?.floorPricePercent !== ''
+          ? Number(configs.pricingAndCommission.floorPricePercent)
+          : DEFAULT_SYSTEM_CONFIGS.pricingAndCommission.floorPricePercent,
+      commissionTerm1:
+        configs.pricingAndCommission?.commissionTerm1 != null && configs.pricingAndCommission?.commissionTerm1 !== ''
+          ? Number(configs.pricingAndCommission.commissionTerm1)
+          : DEFAULT_SYSTEM_CONFIGS.pricingAndCommission.commissionTerm1,
+      commissionTerm2:
+        configs.pricingAndCommission?.commissionTerm2 != null && configs.pricingAndCommission?.commissionTerm2 !== ''
+          ? Number(configs.pricingAndCommission.commissionTerm2)
+          : DEFAULT_SYSTEM_CONFIGS.pricingAndCommission.commissionTerm2,
+      commissionTerm3:
+        configs.pricingAndCommission?.commissionTerm3 != null && configs.pricingAndCommission?.commissionTerm3 !== ''
+          ? Number(configs.pricingAndCommission.commissionTerm3)
+          : DEFAULT_SYSTEM_CONFIGS.pricingAndCommission.commissionTerm3,
+    };
+    localStorage.setItem(EFFECTIVE_CONSIGNMENT_CONFIG_KEY, JSON.stringify(payload));
+  } catch {
+    // Ignore storage errors in restricted environments
+  }
+}
+
+export function readEffectiveConsignmentConfig() {
+  try {
+    const raw = localStorage.getItem(EFFECTIVE_CONSIGNMENT_CONFIG_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+

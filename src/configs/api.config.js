@@ -67,6 +67,10 @@ export const API_ENDPOINTS = {
     // API 25, 26, 27: Quầy tiếp nhận & Tra cứu Member
     COUNTER_LOOKUP: "/counter/lookup",
     MY_WAREHOUSES: "/warehouses/moderator",
+    WAREHOUSE_CAMPAIGNS: (warehouseId) => `/warehouses/${moderatorId(warehouseId)}/campaigns`,
+    PUBLIC_CAMPAIGNS: "/campaigns",
+    WAREHOUSE_DONATIONS: (warehouseId) => `/warehouses/${moderatorId(warehouseId)}/donations`,
+    HANDOVER_DONATIONS: (warehouseId) => `/warehouses/${moderatorId(warehouseId)}/donations/handover`,
     COUNTER_CONFIRM_IDENTITY: (accountId) => `/counter/members/${moderatorId(accountId)}/confirm-identity`,
     COUNTER_TASKS: (accountId) => `/counter/members/${moderatorId(accountId)}/tasks`,
     COUNTER_HANDOVER: "/counter/handover",
@@ -75,6 +79,8 @@ export const API_ENDPOINTS = {
     QUEUES: "/queues",
     CLAIM_QUEUE: (id) => `/queues/${moderatorId(id)}/claim`,
     RELEASE_QUEUE: (id) => `/queues/${moderatorId(id)}/release`,
+    APPROVE_WITHDRAWAL: (id) => `/item-withdrawal-requests/${moderatorId(id)}/approve`,
+    REJECT_WITHDRAWAL: (id) => `/item-withdrawal-requests/${moderatorId(id)}/reject`,
 
     // API 31, 32, 33, 34, 35: Quy trình duyệt form & kiểm định ký gửi
     APPROVE_FORM: (id) => `/consignment-forms/${moderatorId(id)}/approve`,
@@ -94,8 +100,6 @@ export const API_ENDPOINTS = {
     PRODUCT_DETAIL: (id) => `/products/detail/${moderatorId(id)}`,
     INVENTORY: "/inventory",
     PRODUCT_BY_SKU: (sku) => `/products/${moderatorId(sku)}`,
-    UPDATE_SHELF_LOCATION: (id) => `/products/${moderatorId(id)}/shelf-location`,
-    STOCK_MOVEMENTS: (id) => `/products/${moderatorId(id)}/stock-movements`,
 
     // API 44, 45, 46, 47, 48: Danh mục & Thương hiệu
     CATEGORIES: "/categories",

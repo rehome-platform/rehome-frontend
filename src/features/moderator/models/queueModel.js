@@ -7,6 +7,7 @@ export const QUEUE_TYPE_LABELS = {
   PACKING: 'Đóng gói đơn hàng',
   WITHDRAWAL: 'Rút hàng',
   ITEM_WITHDRAWAL: 'Rút hàng',
+  DONATION_PICKUP: 'Lấy món quyên góp',
   RETURN: 'Yêu cầu trả hàng',
   ORG_VERIFICATION: 'Xác minh tổ chức',
   LEGAL_CHANGE: 'Đổi pháp lý tổ chức',

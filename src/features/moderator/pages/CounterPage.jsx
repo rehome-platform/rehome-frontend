@@ -155,6 +155,22 @@ export default function CounterPage() {
                   </Link>
                 </div>
 
+                <div className="rounded-2xl border border-[#8a8a8a] bg-white p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-[#191C19]">Ghi nhận quyên góp tại quầy</p>
+                    <p className="text-[11px] text-[#5B6776] mt-0.5">
+                      Tiếp nhận đồ quyên góp của {model.selected.fullName || model.selected.name || 'Member'} cho chiến dịch đang mở tại kho
+                    </p>
+                  </div>
+                  <Link
+                    to={`/moderator/donations?donorName=${encodeURIComponent(model.selected.fullName || model.selected.name || '')}`}
+                  >
+                    <Button variant="outline" className="text-xs">
+                      Ghi nhận quyên góp
+                    </Button>
+                  </Link>
+                </div>
+
                 <div className="rounded-xl border border-dashed border-[#9a9a9a] p-3.5 text-xs text-[#5B6776] leading-relaxed">
                   Khách có thể làm nhiều việc trong một lượt đến. Xong việc nào thì việc đó biến khỏi danh sách, không phải tra cứu lại từ đầu.
                 </div>

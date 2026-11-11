@@ -93,6 +93,24 @@ export function resolveNotificationUrl(notification, userRole) {
     case 'VERIFICATION':
       return '/moderator/verifications';
 
+    case 'LEGAL_CHANGE':
+      return id
+        ? `/moderator/verifications?tab=LEGAL_CHANGES&id=${encodeURIComponent(id)}`
+        : '/moderator/verifications?tab=LEGAL_CHANGES';
+
+    case 'DONATION':
+    case 'DONATION_RECORDED':
+    case 'DONATION_HANDOVER':
+    case 'DONATION_PICKUP':
+      return id
+        ? `/moderator/donations?donationId=${encodeURIComponent(id)}`
+        : '/moderator/donations';
+
+    case 'CAMPAIGN':
+      return id
+        ? `/moderator/donations?campaignId=${encodeURIComponent(id)}`
+        : '/moderator/donations';
+
     case 'VIOLATION':
     case 'REPORT':
       return '/moderator/reports';

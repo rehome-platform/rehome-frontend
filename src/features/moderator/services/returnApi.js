@@ -45,7 +45,8 @@ export function mapReturnItem(raw) {
   const amount = raw.amount ?? raw.itemPrice ?? raw.priceAtOrder ?? raw.consignPrice ?? compensationAmount ?? raw.refundAmount ?? 0;
 
   const prevHistory = Array.isArray(raw.returnHistory) ? raw.returnHistory : [];
-  const senderCode = raw.senderCode || raw.consignorCode || (raw.sellerName ? `MB-${String(raw.sellerName).substring(0, 6).toUpperCase()}` : 'MB-002190');
+  const sellerCode = raw.sellerCode || raw.senderCode || raw.consignorCode || null;
+  const senderCode = sellerCode || (raw.sellerName ? `MB-${String(raw.sellerName).substring(0, 6).toUpperCase()}` : null);
   const submittedAt = raw.submittedAt || (raw.createdAt ? new Date(raw.createdAt).toLocaleDateString('vi-VN') : 'Gần đây');
 
   return {
@@ -73,9 +74,15 @@ export function mapReturnItem(raw) {
     buyerAddress: raw.buyerAddress || 'Kho ReHome nhận hàng trả tại bưu cục GHN',
     buyerNote: raw.buyerNote || raw.conditionNote || raw.reason || 'Sản phẩm không đúng như mô tả trên đơn',
     consignorName: raw.sellerName || raw.consignorName || null,
-    consignorCode: raw.consignorCode || senderCode,
+    consignorCode: sellerCode || raw.consignorCode || senderCode,
+    sellerCode,
     senderCode,
     sellerName: raw.sellerName || raw.consignorName || null,
+    currentTerm: raw.currentTerm ?? raw.term ?? null,
+    daysIntoTerm: raw.daysIntoTerm ?? raw.daysInTerm ?? null,
+    termLengthDays: raw.termLengthDays ?? null,
+    commissionRate: raw.commissionRate ?? null,
+    degradedCompensationRate: raw.degradedCompensationRate ?? null,
     prevReturns: prevHistory.length > 0 ? `${prevHistory.length} lần` : 'Chưa có vi phạm',
     payoutStatus: raw.payoutStatus || 'Chưa chia (chờ hết hạn trả hàng)',
     submittedAt,
@@ -118,7 +125,7 @@ export function mapReturnItem(raw) {
     autoCompleteDeadline: raw.autoCompleteDeadline || null,
     paymentDeadline: raw.paymentDeadline || null,
     deliveredAt: raw.deliveredAt || null,
-    outcome: raw.itemAction || raw.outcome || (raw.status === 'VALID' ? 'RELIST' : null),
+    outcome: raw.itemAction || raw.outcome || null,
     rejectReason: raw.rejectReason || null,
     firstModNote: raw.firstModNote || raw.conditionNote || '',
   };
@@ -374,7 +381,6 @@ export const returnService = {
         url: API_ENDPOINTS.MODERATOR.RESOLVE_RETURN(retId),
         data: {
           resolution: 'INVALID',
-          action: 'DISCARD',
           resolutionNote: reason,
         },
       },

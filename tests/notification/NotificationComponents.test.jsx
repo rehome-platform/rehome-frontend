@@ -1,5 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import gsap from 'gsap';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
@@ -368,6 +369,28 @@ describe('Notification UI Components', () => {
       const closeBtn = screen.getByRole('button', { name: /đóng/i });
       await userEvent.click(closeBtn);
       expect(onDismiss).toHaveBeenCalledWith('toast-1');
+    });
+
+    it('dismisses via gsap onComplete in production mode without relying on Node process', async () => {
+      vi.stubEnv('MODE', 'production');
+      const gsapSpy = vi.spyOn(gsap, 'to').mockImplementation((_, vars) => {
+        vars?.onComplete?.();
+        return {};
+      });
+      const onDismiss = vi.fn();
+      try {
+        renderWithProviders(
+          <NotificationToastItem toast={sampleToast} onDismiss={onDismiss} />
+        );
+
+        const closeBtn = screen.getByRole('button', { name: /đóng/i });
+        fireEvent.click(closeBtn);
+        expect(gsapSpy).toHaveBeenCalled();
+        expect(onDismiss).toHaveBeenCalledWith('toast-1');
+      } finally {
+        gsapSpy.mockRestore();
+        vi.unstubAllEnvs();
+      }
     });
 
     it('clicking toast body marks as read, navigates via resolveNotificationUrl, and dismisses', async () => {

@@ -16,7 +16,15 @@ function getQueueLinkTarget(item, typeParam) {
     return `/moderator/packing?orderId=${encodeURIComponent(item.orderId || refId)}`;
   }
   if (type === 'WITHDRAWAL' || type === 'ITEM_WITHDRAWAL') {
+    if (item?.status === 'PENDING_APPROVAL') return null;
     return withdrawalCounterLink(item);
+  }
+  if (type === 'DONATION_PICKUP') {
+    const params = new URLSearchParams();
+    if (refId) params.set('donationId', refId);
+    if (item.campaignId) params.set('campaignId', item.campaignId);
+    const query = params.toString();
+    return query ? `/moderator/donations?${query}` : '/moderator/donations';
   }
   if (type === 'FORM_REVIEW' || type === 'INSPECTION') {
     return `/moderator/consignments/${encodeURIComponent(item.formId || refId)}`;
@@ -39,7 +47,6 @@ function getQueueLinkTarget(item, typeParam) {
 
 export default function ConsignmentQueuePage() {
   const model = useConsignmentQueue();
-  const [withdrawalCheckTarget, setWithdrawalCheckTarget] = React.useState(null);
   return (
     <Page
       title="Hàng đợi công việc"
@@ -122,7 +129,7 @@ export default function ConsignmentQueuePage() {
                       linkTarget={linkTarget}
                       setFeedback={model.setFeedback}
                       setReleaseTarget={model.setReleaseTarget}
-                      onCheckWithdrawal={setWithdrawalCheckTarget}
+                      onCheckWithdrawal={model.setWithdrawalCheckTarget}
                     />
                   );
                 })}
@@ -144,7 +151,13 @@ export default function ConsignmentQueuePage() {
       {/* 4. MODAL NHẬN VIỆC (HQ-02-NhanViec.dc.html) & MODAL NHẢ VIỆC (HQ-02-NhaViec.dc.html) */}
       <QueueClaimDialog {...model.sections.QueueClaimDialog} />
       <QueueReleaseDialog {...model.sections.QueueReleaseDialog} />
-      <WithdrawalCheckModal target={withdrawalCheckTarget} onClose={() => setWithdrawalCheckTarget(null)} />
+      <WithdrawalCheckModal
+        target={model.withdrawalCheckTarget}
+        busy={model.resource?.busy}
+        onApprove={model.handleApproveWithdrawal}
+        onReject={model.handleRejectWithdrawal}
+        onClose={() => model.setWithdrawalCheckTarget(null)}
+      />
     </Page>
   );
 }

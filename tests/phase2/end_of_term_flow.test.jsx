@@ -36,7 +36,6 @@ describe('Luồng Hết hạn 3 kỳ (TK-02 & BG-01)', () => {
       },
       currentPrice: 350000,
     });
-    vi.spyOn(inventoryService, 'movements').mockResolvedValue([]);
 
     render(
       <StrictMode>
@@ -74,7 +73,6 @@ describe('Luồng Hết hạn 3 kỳ (TK-02 & BG-01)', () => {
       currentPrice: 850000,
     });
     endTermService.pendingPricing.mockResolvedValue([{ decisionId: 'decision-302', productId: 'PROD-302' }]);
-    vi.spyOn(inventoryService, 'movements').mockResolvedValue([]);
 
     render(
       <StrictMode>

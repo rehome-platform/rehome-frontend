@@ -7,6 +7,7 @@ import { inventoryService } from '../services/inventoryApi.js';
 import { endTermService } from '../services/endTermApi.js';
 import { pricingForProduct } from '../services/endTermPricingApi.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
+import { resolveInventoryTermAndRates } from '../models/warehouseModel.js';
 import { readProposals, rememberProposal, forgetProposal, proposalForProduct } from '../services/reconsignProposalStore.js';
 import { Page, Card, ResourceState, Status, money } from '../components/WarehouseUi.jsx';
 
@@ -61,8 +62,9 @@ function Negotiation({ sku }) {
       return;
     }
     await resource.mutate(async options => {
+      const { floorPricePercent } = resolveInventoryTermAndRates(product);
       const result = await endTermService.proposeReConsignPrice(request.decisionId, {
-      agreedPrice: price, floorPrice: Math.round(price * 0.5),
+      agreedPrice: price, floorPrice: Math.round(price * (floorPricePercent / 100)),
       conditionNote: product.conditionNote, moderatorNote: moderatorNote.trim() || undefined,
       }, options);
       rememberProposal({ productId: product.id || sku, decisionId: request.decisionId,
