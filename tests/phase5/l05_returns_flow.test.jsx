@@ -355,8 +355,12 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
       expect(screen.getByText(/Chọn phương án xử lý món hàng \(TH-04\)/i)).toBeInTheDocument();
     });
 
-    // Choose "Đăng bán lại (Relist)"
+    // Click "Đăng bán lại (Relist)" should only select, not auto-submit
     fireEvent.click(screen.getByText(/Đăng bán lại \(Relist\)/i));
+    expect(window.alert).not.toHaveBeenCalled();
+
+    // Confirm explicitly
+    fireEvent.click(screen.getByRole('button', { name: 'Xác nhận xử lý' }));
 
     await waitFor(() => {
       expect(window.alert).toHaveBeenCalled();

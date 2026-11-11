@@ -72,37 +72,40 @@ export function ReturnOutcomeDialog({
   handleConfirmOutcome,
   selectedItem,
 }) {
-  const [selectedOutcome, setSelectedOutcome] = React.useState('RELIST');
+  const [selectedOutcome, setSelectedOutcome] = React.useState(null);
   const [discardReason, setDiscardReason] = React.useState('');
 
   React.useEffect(() => {
     if (isOutcomeModalOpen) {
-      setSelectedOutcome('RELIST');
+      setSelectedOutcome(null);
       setDiscardReason('');
     }
   }, [isOutcomeModalOpen]);
 
-  const price = selectedItem?.consignPrice || selectedItem?.amount || selectedItem?.itemPrice || 420000;
-  const commissionRate = 15;
-  const currentTerm = selectedItem?.term || 2;
-  const daysInTerm = selectedItem?.daysInTerm || 46;
-  const totalDaysInTerm = 60;
-  const shelfLocation = selectedItem?.shelfLocation || selectedItem?.warehouseLocation || 'B1-22';
-  const consignorCode = selectedItem?.consignorCode || selectedItem?.senderCode || selectedItem?.sellerName || 'MB-004821';
-  const itemSku = selectedItem?.sku || selectedItem?.productCode || 'RH-C2M08P';
-  const itemName = selectedItem?.itemName || selectedItem?.productName || 'Quần jeans ống rộng · Levi\'s · 29';
+  const price = selectedItem?.consignPrice ?? selectedItem?.amount ?? selectedItem?.itemPrice ?? null;
+  const rawCommission = selectedItem?.commissionRate;
+  const commissionRate = rawCommission != null
+    ? (Number(rawCommission) <= 1 ? Number((Number(rawCommission) * 100).toPrecision(15)) : Number(rawCommission))
+    : null;
+  const currentTerm = selectedItem?.currentTerm ?? selectedItem?.term ?? null;
+  const daysInTerm = selectedItem?.daysIntoTerm ?? selectedItem?.daysInTerm ?? null;
+  const totalDaysInTerm = selectedItem?.termLengthDays ?? null;
+  const consignorCode = selectedItem?.sellerCode || selectedItem?.consignorCode || selectedItem?.senderCode || selectedItem?.sellerName || '—';
+  const itemSku = selectedItem?.sku || selectedItem?.productId || selectedItem?.productCode || '—';
+  const itemName = selectedItem?.itemName || selectedItem?.productName || 'Sản phẩm ký gửi';
   const itemPhoto =
     selectedItem?.stockInPhotos?.[0] ||
     selectedItem?.productImage ||
     selectedItem?.photos?.[0] ||
-    'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400';
+    null;
 
   const onConfirm = () => {
+    if (!selectedOutcome) return;
     if (selectedOutcome === 'DISCARD' && !discardReason.trim()) {
       alert('Vui lòng nhập lý do tiêu huỷ món hàng.');
       return;
     }
-    handleConfirmOutcome(selectedOutcome, { discardReason });
+    handleConfirmOutcome(selectedOutcome, selectedOutcome === 'DISCARD' ? { discardReason: discardReason.trim() } : undefined);
   };
 
   return (
@@ -147,10 +150,7 @@ export function ReturnOutcomeDialog({
             >
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedOutcome('RELIST');
-                  handleConfirmOutcome('RELIST');
-                }}
+                onClick={() => setSelectedOutcome('RELIST')}
                 className="w-full text-left"
               >
                 <div className="flex items-start gap-2.5">
@@ -172,7 +172,8 @@ export function ReturnOutcomeDialog({
                 </div>
               </button>
               <div className="mt-2.5 ml-6 p-2.5 bg-surface rounded-lg border border-neutral text-[11px] leading-relaxed text-[#4a4a4a]">
-                Kỳ và hoa hồng <strong className="font-bold text-[#191C19]">tiếp tục từ chỗ đang dở</strong> (kỳ {currentTerm}, ngày thứ {daysInTerm}), không tính lại từ đầu — nếu tính lại thì người ký gửi được lợi từ một giao dịch hỏng. Giữ nguyên SKU và tem cũ, không in lại.
+                Kỳ và hoa hồng <strong className="font-bold text-[#191C19]">tiếp tục từ chỗ đang dở</strong>
+                {currentTerm != null ? ` (kỳ ${currentTerm}${daysInTerm != null ? `, ngày thứ ${daysInTerm}` : ''})` : ''}, không tính lại từ đầu — nếu tính lại thì người ký gửi được lợi từ một giao dịch hỏng. Giữ nguyên SKU và tem cũ, không in lại.
               </div>
             </div>
 
@@ -186,10 +187,7 @@ export function ReturnOutcomeDialog({
             >
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedOutcome('RETURN_TO_SELLER');
-                  handleConfirmOutcome('RETURN_TO_SELLER');
-                }}
+                onClick={() => setSelectedOutcome('RETURN_TO_SELLER')}
                 className="w-full text-left"
               >
                 <div className="flex items-start gap-2.5">
@@ -271,11 +269,17 @@ export function ReturnOutcomeDialog({
             {/* Box 1: Thông tin món */}
             <div className="border border-neutral rounded-xl overflow-hidden bg-surface shadow-sm">
               <div className="p-3 flex items-center gap-3 border-b border-neutral">
-                <img
-                  src={itemPhoto}
-                  alt={itemName}
-                  className="w-12 h-14 object-cover rounded-lg border border-neutral shrink-0"
-                />
+                {itemPhoto ? (
+                  <img
+                    src={itemPhoto}
+                    alt={itemName}
+                    className="w-12 h-14 object-cover rounded-lg border border-neutral shrink-0"
+                  />
+                ) : (
+                  <div className="w-12 h-14 rounded-lg border border-dashed border-neutral bg-background flex items-center justify-center text-[9px] text-textSecondary shrink-0">
+                    Ảnh
+                  </div>
+                )}
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-bold text-[#191C19]">{itemSku}</div>
                   <div className="text-[11px] text-textSecondary truncate">{itemName}</div>
@@ -293,13 +297,21 @@ export function ReturnOutcomeDialog({
                 <div className="flex justify-between">
                   <span className="text-textSecondary">Kỳ đang dở:</span>
                   <span className="font-bold text-[#191C19]">
-                    Kỳ {currentTerm} · ngày {daysInTerm} / {totalDaysInTerm}
+                    {currentTerm != null
+                      ? `Kỳ ${currentTerm}${daysInTerm != null ? ` · ngày ${daysInTerm}${totalDaysInTerm != null ? ` / ${totalDaysInTerm}` : ''}` : ''}`
+                      : '—'}
                   </span>
                 </div>
               </div>
             </div>
 
             {/* Box 2: Tùy biến theo Phương án được chọn */}
+            {!selectedOutcome && (
+              <div className="border border-dashed border-neutral rounded-xl p-3.5 bg-[#FAFBF9] text-[11px] text-textSecondary">
+                Vui lòng chọn 1 trong 3 phương án xử lý bên trái, sau đó bấm <strong>Xác nhận xử lý</strong>.
+              </div>
+            )}
+
             {selectedOutcome === 'RELIST' && (
               <div className="border-2 border-[#2b2b2b] rounded-xl p-3.5 bg-[#FAFBF9] space-y-2">
                 <div className="text-[10px] uppercase font-bold text-textSecondary tracking-wider">
@@ -308,19 +320,19 @@ export function ReturnOutcomeDialog({
                 <div className="space-y-1.5 text-[11px]">
                   <div className="flex justify-between">
                     <span className="text-textSecondary">Giá bán:</span>
-                    <span className="font-bold text-[#191C19]">{formatCurrencyVND(price)} · giữ nguyên</span>
+                    <span className="font-bold text-[#191C19]">{price != null ? `${formatCurrencyVND(price)} · giữ nguyên` : '—'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-textSecondary">Hoa hồng:</span>
-                    <span className="font-bold text-[#191C19]">{commissionRate}% · kỳ {currentTerm}</span>
+                    <span className="font-bold text-[#191C19]">
+                      {commissionRate != null ? `${commissionRate}%` : '—'}{currentTerm != null ? ` · kỳ ${currentTerm}` : ''}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-textSecondary">Còn lại của kỳ:</span>
-                    <span className="font-semibold text-[#191C19]">{totalDaysInTerm - daysInTerm} ngày</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-textSecondary">Vị trí kệ:</span>
-                    <span className="font-bold text-primary">{shelfLocation} · chỗ cũ</span>
+                    <span className="font-semibold text-[#191C19]">
+                      {totalDaysInTerm != null && daysInTerm != null ? `${Math.max(0, totalDaysInTerm - daysInTerm)} ngày` : '—'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -385,7 +397,8 @@ export function ReturnOutcomeDialog({
           </Button>
           <Button
             type="button"
-            className="rounded-xl bg-[#2b2b2b] text-white hover:bg-black text-xs font-bold px-5 py-2 shadow-sm"
+            disabled={!selectedOutcome || (selectedOutcome === 'DISCARD' && !discardReason.trim())}
+            className="rounded-xl bg-[#2b2b2b] text-white hover:bg-black text-xs font-bold px-5 py-2 shadow-sm disabled:opacity-50"
             onClick={onConfirm}
           >
             Xác nhận xử lý
