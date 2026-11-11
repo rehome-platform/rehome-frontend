@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { formatCurrencyVND, formatDateTime } from '../../../utils/formatters.js';
 import adminApi from '../services/adminApi.js';
+import { validateDateRange } from '../utils/adminDateUtils.js';
 
 const PAGE_SIZE = 20;
 
@@ -32,6 +33,10 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {} })
 
   const loadItems = useCallback(
     async (targetPage, targetTerm) => {
+      if (validateDateRange(from, to)) {
+        setLoading(false);
+        return;
+      }
       const reqId = ++reqSeqRef.current;
       try {
         setLoading(true);
@@ -233,7 +238,7 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {} })
                       </td>
                       <td className="py-3 px-4 text-right whitespace-nowrap">
                         <p className="font-bold text-[#006B2C]">
-                          {formatCurrencyVND(item.commissionAmount)}
+                          {item.commissionAmount != null ? formatCurrencyVND(item.commissionAmount) : '—'}
                         </p>
                         <p className="text-[11px] text-[#717971]">
                           ({formatRatePercent(item.commissionRate)})
@@ -277,3 +282,4 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {} })
     </div>
   );
 }
+

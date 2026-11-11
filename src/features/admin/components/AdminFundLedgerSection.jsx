@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Badge } from '../../../components/common/index.js';
 import { formatCurrencyVND, formatDateTime } from '../../../utils/formatters.js';
 import adminApi from '../services/adminApi.js';
+import { validateDateRange } from '../utils/adminDateUtils.js';
 
 const TRANSACTION_TYPE_OPTIONS = [
   { value: 'ALL', label: 'Tất cả loại bút toán' },
@@ -83,6 +84,10 @@ export default function AdminFundLedgerSection({ from, to }) {
   }, [from, to]);
 
   const loadLedger = useCallback(async (targetPage = page, targetType = typeFilter) => {
+    if (validateDateRange(from, to)) {
+      setLedgerLoading(false);
+      return;
+    }
     const reqId = ++ledgerSeqRef.current;
     try {
       setLedgerLoading(true);
@@ -394,3 +399,4 @@ export default function AdminFundLedgerSection({ from, to }) {
     </div>
   );
 }
+

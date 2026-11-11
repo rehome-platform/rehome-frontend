@@ -242,11 +242,16 @@ describe('Admin dashboard API semantics', () => {
 
     const fromInput = screen.getByLabelText('Từ ngày');
     const toInput = screen.getByLabelText('Đến ngày');
+    const ledgerCallsBeforeInvalid = adminApi.getFundLedger.mock.calls.length;
     fireEvent.change(fromInput, { target: { value: '2026-11-15' } });
     fireEvent.change(toInput, { target: { value: '2026-11-10' } });
 
     expect(await screen.findByText(/Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc/)).toBeInTheDocument();
     expect(adminApi.getDashboard).toHaveBeenCalledTimes(1);
+    expect(adminApi.getFundLedger).toHaveBeenCalledTimes(ledgerCallsBeforeInvalid);
+
+    fireEvent.click(screen.getByRole('button', { name: /Báo cáo doanh thu theo kỳ/ }));
+    expect(adminApi.getRevenueItems).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: /Xuất báo cáo Excel/ }));
     expect(adminApi.exportDashboard).not.toHaveBeenCalled();

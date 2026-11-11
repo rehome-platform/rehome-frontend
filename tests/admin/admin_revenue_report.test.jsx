@@ -45,7 +45,7 @@ describe('AdminRevenueReportView', () => {
         price: 500000,
         termApplied: null,
         commissionRate: 0.1,
-        commissionAmount: 50000,
+        commissionAmount: null,
         completedAt: '2026-11-09T08:00:00Z',
       },
     ],
@@ -70,8 +70,8 @@ describe('AdminRevenueReportView', () => {
     expect(within(firstRow).getByText('PRD-001')).toBeInTheDocument();
     expect(within(firstRow).getByText('ORD-101')).toBeInTheDocument();
     expect(within(firstRow).getByText('(15%)')).toBeInTheDocument();
-    expect(screen.getByText('Đèn bàn cổ điển')).toBeInTheDocument();
-    expect(screen.getByText('—')).toBeInTheDocument();
+    const secondRow = screen.getByText('Đèn bàn cổ điển').closest('tr');
+    expect(within(secondRow).getAllByText('—')).toHaveLength(2);
 
     expect(adminApi.getRevenueItems).toHaveBeenCalledWith({
       from: '2026-11-01',
