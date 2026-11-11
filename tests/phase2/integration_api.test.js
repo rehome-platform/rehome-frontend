@@ -295,15 +295,15 @@ describe('real API mode never substitutes warehouse fixtures', () => {
     });
   });
 
-  it('loads end-of-term products from inventory with the supported unclaimed status', async () => {
+  it('loads the composite end-of-term queue using supported statuses', async () => {
+    server.use(http.get(`${API_BASE_URL}/end-of-term-decisions/pending-pricing`, () => HttpResponse.json([])));
     server.use(http.get(`${API_BASE_URL}/inventory`, ({ request }) => {
       const params = new URL(request.url).searchParams;
-      expect(params.get('status')).toBe('UNCLAIMED');
-      expect(params.get('page')).toBe('1');
-      return HttpResponse.json({ result: { content: [{ id: 'sku-a', name: 'Áo', status: 'UNCLAIMED' }], totalElements: 21, totalPages: 2 } });
+      expect(['WAREHOUSE', 'WITHDRAWN', 'UNCLAIMED']).toContain(params.get('status'));
+      return HttpResponse.json({ result: { content: params.get('status') === 'UNCLAIMED' ? [{ id: 'sku-a', name: 'Áo', status: 'UNCLAIMED' }] : [], totalPages: 1 } });
     }));
-    await expect(endTermService.list({ page: 1 })).resolves.toMatchObject({
-      items: [{ sku: 'sku-a', status: 'UNCLAIMED' }], totalElements: 21,
+    await expect(endTermService.list({ page: 0 })).resolves.toMatchObject({
+      items: [{ sku: 'sku-a', status: 'UNCLAIMED' }], totalElements: 1,
     });
   });
 

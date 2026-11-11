@@ -6,6 +6,7 @@ import { Phase2Error } from "../models/warehouseModel.js";
 import { callBackend } from './warehouseTransport.js';
 import { inventoryService } from './inventoryApi.js';
 import { getUser } from '../../../services/baseApi.js';
+import { pendingPricing, pricingForProduct } from './endTermPricingApi.js';
 
 function resolveScope(options) {
   if (options?.scope?.userId && options?.scope?.warehouseId) {
@@ -20,17 +21,7 @@ function resolveScope(options) {
 }
 
 export const endTermService = {
-  pendingPricing: async (options) => {
-    if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-    if (isFixtureMode) {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      return fixtureRequest('endTermPendingPricing', { ...options, scope: resolveScope(options) });
-    }
-    return callBackend({
-      method: 'get',
-      url: API_ENDPOINTS.MODERATOR.PENDING_PRICING,
-    }, { signal: options?.signal });
-  },
+  pendingPricing,
 
   list: async (params, options) => {
     if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
@@ -38,7 +29,7 @@ export const endTermService = {
       const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
       return fixtureRequest('endTermList', { ...options, scope: resolveScope(options), params });
     }
-    return inventoryService.list({ ...params, status: 'UNCLAIMED' }, options);
+    return inventoryService.list({ ...params, status: 'WAITING_END_OF_TERM' }, options);
   },
 
   read: async (sku, options) => {
@@ -48,12 +39,15 @@ export const endTermService = {
       return fixtureRequest('endTermRead', { ...options, scope: resolveScope(options), ids: { sku } });
     }
     const item = await inventoryService.read(sku, options);
+    const request = item.status === 'WAREHOUSE'
+      ? pricingForProduct(await pendingPricing(options), item.id || sku) : null;
     const isUnclaimed = item?.status === 'UNCLAIMED';
     return {
       ...item,
+      ...(request ? { decisionId: request.decisionId, pricingEligible: true } : {}),
       allowedActions: item?.allowedActions?.length
-        ? item.allowedActions
-        : (isUnclaimed ? ['TRANSFER'] : []),
+        ? (request ? [...item.allowedActions, 'RE_CONSIGN'] : item.allowedActions)
+        : (request ? ['RE_CONSIGN'] : isUnclaimed ? ['TRANSFER'] : []),
     };
   },
 
@@ -91,6 +85,7 @@ export const endTermService = {
   // KD-11: Moderator đề xuất giá và điều khoản ký gửi lại
   proposeReConsignPrice: async (decisionIdOrSku, data, options) => {
     if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    if (!decisionIdOrSku) throw new Phase2Error('Thiếu mã quyết định ký gửi lại. Vui lòng tải lại.', 422);
     if (isFixtureMode) {
       const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
       return fixtureRequest('endTermReconsignTerms', {

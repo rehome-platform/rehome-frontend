@@ -19,6 +19,7 @@ function inventoryItem(item) {
   const sku = item.id || item.sku;
   return {
     ...item, sku, id: sku,
+    allowedActions: inventoryActions(item),
     name: item.name || '',
     shelfLocation: item.shelfLocation || 'Chưa gán',
     status: item.status || 'ON_SALE',
@@ -43,12 +44,14 @@ export function inventoryResult(result, params) {
 }
 
 function inventoryActions(res) {
-  const actions = Array.isArray(res?.allowedActions) ? [...res.allowedActions] : [];
-  if (res?.decision === 'RE_CONSIGN' || res?.reConsignStatus === 'PROPOSAL_SENT' || res?.status === 'WAITING_END_OF_TERM') {
+  const actions = (Array.isArray(res?.allowedActions) ? res.allowedActions : [])
+    .filter(action => !['RE_CONSIGN', 'TRANSFER', 'HANDOVER'].includes(action));
+  if (['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(res?.status) && res?.pricingEligible) {
     if (!actions.includes('RE_CONSIGN')) actions.push('RE_CONSIGN');
   }
   if (!actions.includes('CHANGE_SHELF')) actions.push('CHANGE_SHELF');
   if (res?.status === 'UNCLAIMED' && !actions.includes('TRANSFER')) actions.push('TRANSFER');
+  if (res?.status === 'WITHDRAWN' && res?.decision === 'TAKE_BACK') actions.push('HANDOVER');
   return actions;
 }
 

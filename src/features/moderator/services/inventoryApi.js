@@ -1,3 +1,5 @@
+import { pendingPricing, pricingForProduct } from './endTermPricingApi.js';
+import { readProposals, proposalForProduct } from './reconsignProposalStore.js';
 import { skuLabelError } from './skuLabelError.js';
 import { fixtureFallback } from './fixtureTransport.js';
 import { inventoryQuery, inventoryResult, inventoryDetail, productPayload, createdProduct, uploadedPhoto } from '../models/inventoryApiModel.js';
@@ -17,43 +19,30 @@ export const inventoryService = {
       if (params?.status === 'WAITING_END_OF_TERM') {
         if (isFixtureMode && fallback) return fallback();
 
-        const queryWithdrawn = inventoryQuery({ ...params, status: 'WITHDRAWN' });
-        const queryUnclaimed = inventoryQuery({ ...params, status: 'UNCLAIMED' });
-
-        const [resWithdrawn, resUnclaimed] = await Promise.all([
-          callBackend(
-            {
-              method: 'get',
-              url: API_ENDPOINTS.MODERATOR.INVENTORY,
-              params: queryWithdrawn,
-            },
-            { fallback, signal: options?.signal }
-          ),
-          callBackend(
-            {
-              method: 'get',
-              url: API_ENDPOINTS.MODERATOR.INVENTORY,
-              params: queryUnclaimed,
-            },
-            { fallback, signal: options?.signal }
-          ),
+        // This UI queue is not a backend ProductStatus. Filter before pagination.
+        const [stored, withdrawn, unclaimed, pricing] = await Promise.all([
+          allInventory('WAREHOUSE', options), allInventory('WITHDRAWN', options),
+          allInventory('UNCLAIMED', options), pendingPricing(options),
         ]);
-
-        const itemsWithdrawn = resWithdrawn?.content || resWithdrawn?.items || (Array.isArray(resWithdrawn) ? resWithdrawn : []);
-        const itemsUnclaimed = resUnclaimed?.content || resUnclaimed?.items || (Array.isArray(resUnclaimed) ? resUnclaimed : []);
-        const combined = [...itemsWithdrawn, ...itemsUnclaimed];
-        const totalElements = (resWithdrawn?.totalElements ?? itemsWithdrawn.length) + (resUnclaimed?.totalElements ?? itemsUnclaimed.length);
-
-        return enrichInventoryResult(inventoryResult(
-          {
-            ...resWithdrawn,
-            content: combined,
-            items: combined,
-            totalElements,
-            totalPages: Math.ceil(totalElements / (params?.size ?? 20)),
-          },
-          params
-        ), options);
+        const storedDetails = await enrichListRows(stored, () => true, async item => ({
+          ...item, ...await inventoryService.read(item.id || item.sku, options),
+        }), options);
+        const proposals = readProposals(options);
+        const rows = [...storedDetails, ...withdrawn, ...unclaimed].map(item => {
+          const request = item.status === 'WAREHOUSE' && pricingForProduct(pricing, item.id || item.sku);
+          const proposal = item.status === 'WAREHOUSE' && proposalForProduct(proposals, item, request);
+          return inventoryDetail({ ...item,
+            ...(proposal ? { reConsignStatus: 'PROPOSAL_SENT', newReceiptId: proposal.receiptId } : {}),
+            ...(request ? { decisionId: request.decisionId, decision: 'RE_CONSIGN', pricingEligible: true,
+              name: item.name || request.productName, currentPrice: request.currentPrice,
+              previousAgreedPrice: request.previousAgreedPrice } : {}),
+          }, item.id || item.sku);
+        }).filter(item => ['WITHDRAWN', 'UNCLAIMED'].includes(item.status) || (item.status === 'WAREHOUSE' && (item.decisionId || item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT')));
+        const filtered = inventoryResult(rows, params).items;
+        const size = params?.size ?? 20;
+        const page = params?.page ?? 0;
+        const items = filtered.slice(page * size, (page + 1) * size);
+        return { items, content: items, totalElements: filtered.length, totalPages: Math.ceil(filtered.length / size) };
       }
 
       // Backend ProductStatus enum does not support WAITING_END_OF_TERM
@@ -68,7 +57,26 @@ export const inventoryService = {
         { fallback, signal: options?.signal }
       );
 
-      return enrichInventoryResult(inventoryResult(result, params), options);
+      let normalized = inventoryResult(result, params);
+      if (normalized.items.some(item => item.status === 'WAREHOUSE')) {
+        const [details, pricing] = await Promise.all([
+          enrichListRows(normalized.items,
+            item => item.status === 'WAREHOUSE' && item.decisionId === undefined,
+            async item => ({ ...item, ...await inventoryService.read(item.sku, options) }), options),
+          pendingPricing(options),
+        ]);
+        const items = details.map(item => {
+          const request = item.status === 'WAREHOUSE' && pricingForProduct(pricing, item.sku);
+          const proposal = item.status === 'WAREHOUSE' && proposalForProduct(readProposals(options), item, request);
+          return inventoryDetail({ ...item,
+            ...(proposal ? { reConsignStatus: 'PROPOSAL_SENT', newReceiptId: proposal.receiptId } : {}), ...(request ? {
+            decisionId: request.decisionId, pricingEligible: true, decision: 'RE_CONSIGN',
+            previousAgreedPrice: request.previousAgreedPrice,
+          } : {}) }, item.sku);
+        });
+        normalized = { ...normalized, items, content: items };
+      }
+      return enrichInventoryResult(normalized, options);
     } catch (err) {
       if (isFixtureMode && fallback) return fallback();
       throw err;
@@ -267,4 +275,19 @@ async function enrichInventoryResult(result, options) {
 function movementResult(res) {
   const raw = Array.isArray(res) ? res : [];
   return raw.map(formatStockMovement).filter(Boolean);
+}
+
+async function allInventory(status, options) {
+  const rows = [];
+  let page = 0, totalPages = 1;
+  while (page < totalPages) {
+    if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    const result = await callBackend({ method: 'get', url: API_ENDPOINTS.MODERATOR.INVENTORY,
+      params: { status, page, size: 50 },
+    }, { signal: options?.signal });
+    rows.push(...(result?.content || result?.items || (Array.isArray(result) ? result : [])));
+    totalPages = result?.totalPages ?? 1;
+    page++;
+  }
+  return rows;
 }

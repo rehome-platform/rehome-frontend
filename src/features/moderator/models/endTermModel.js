@@ -30,7 +30,7 @@ export function normalizeUnclaimedItem(item) {
     name: item.name || 'Sản phẩm chưa đặt tên',
     shelfLocation: item.shelfLocation || 'Chưa gán vị trí',
     status,
-    decision: item.decision || 'UNCLAIMED',
+    decision: item.decision || (status === 'UNCLAIMED' ? 'UNCLAIMED' : null),
     deadline: item.deadline || null,
     allowedActions: item.allowedActions || (status === 'UNCLAIMED' ? ['TRANSFER'] : []),
   };
