@@ -6,9 +6,33 @@ import { consignmentService } from "../../services/warehouseApi.js";
 import { validMoney } from "../../models/warehouseModel.js";
 import { Field, money } from "../WarehouseUi.jsx";
 
-export function ConsignmentInspectionForm({ price, term, conditionNote, allChecked, resource, formId, proof, setFeedback, setReceiptId, setCondition, errors, setPrice, setTerm, termOptions }) {
+export function ConsignmentInspectionForm({ price, term, conditionNote, allChecked, resource, formId, proof, setFeedback, setReceiptId, setCondition, errors, setPrice, setTerm, termOptions, consignmentConfig }) {
   const numericPrice = Number(price) || 0;
-  const floorPrice = numericPrice > 0 ? Math.round(numericPrice * 0.5) : 0;
+  const floorPricePercent =
+    consignmentConfig?.floorPricePercent != null ? Number(consignmentConfig.floorPricePercent) : 50;
+  const floorPrice = numericPrice > 0 ? Math.round(numericPrice * (floorPricePercent / 100)) : 0;
+  const effectiveTermDays =
+    Number(term) || Number(consignmentConfig?.termLengthDays) || Number(termOptions?.[0]) || 30;
+  const maxRenewals =
+    consignmentConfig?.maxRenewals != null && Number.isFinite(Number(consignmentConfig.maxRenewals))
+      ? Number(consignmentConfig.maxRenewals)
+      : 2;
+  const totalTerms = Math.max(1, maxRenewals + 1);
+  const commissionTerm1 =
+    consignmentConfig?.commissionTerm1 != null ? Number(consignmentConfig.commissionTerm1) : 10;
+  const commissionTerm2 =
+    consignmentConfig?.commissionTerm2 != null ? Number(consignmentConfig.commissionTerm2) : 15;
+  const commissionTerm3 =
+    consignmentConfig?.commissionTerm3 != null ? Number(consignmentConfig.commissionTerm3) : 20;
+  const termRows = Array.from({ length: totalTerms }, (_, idx) => {
+    const termNo = idx + 1;
+    const startDay = idx === 0 ? 0 : idx * effectiveTermDays + 1;
+    const endDay = (idx + 1) * effectiveTermDays;
+    const ratePercent =
+      termNo === 1 ? commissionTerm1 : termNo === 2 ? commissionTerm2 : commissionTerm3;
+    const memberAmount = Math.round(numericPrice * (1 - ratePercent / 100));
+    return { termNo, startDay, endDay, ratePercent, memberAmount };
+  });
 
   return (
     <form
@@ -92,9 +116,9 @@ export function ConsignmentInspectionForm({ price, term, conditionNote, allCheck
             onChange={(e) => setTerm(e.target.value)}
           >
             <option value="">Chọn độ dài mỗi kỳ</option>
-            {(termOptions || [30]).map((days) => (
+            {(termOptions || [effectiveTermDays]).map((days) => (
               <option key={days} value={days}>
-                {days} ngày / kỳ (tối đa 2 lần gia hạn)
+                {days} ngày / kỳ (tối đa {maxRenewals} lần gia hạn)
               </option>
             ))}
           </select>
@@ -104,13 +128,13 @@ export function ConsignmentInspectionForm({ price, term, conditionNote, allCheck
       {numericPrice > 0 && (
         <div className="p-3 bg-[#f8faf8] border border-[#8a8a8a] rounded space-y-3 text-xs">
           <div className="flex justify-between items-center border-b border-[#e0e0e0] pb-2">
-            <span className="text-[#5f5f5f]">Giá sàn tự tính · 50% giá chốt:</span>
+            <span className="text-[#5f5f5f]">Giá sàn tự tính · {floorPricePercent}% giá chốt:</span>
             <span className="font-bold text-[#191C19] text-sm">{money(floorPrice)}</span>
           </div>
 
           <div>
             <div className="font-bold text-[11px] text-[#5f5f5f] uppercase tracking-wider mb-1.5">
-              Kỳ ký gửi và hoa hồng (3 kỳ)
+              Kỳ ký gửi và hoa hồng ({totalTerms} kỳ)
             </div>
             <div className="grid grid-cols-4 gap-1 text-[11px] bg-white p-2 rounded border border-[#e0e0e0]">
               <span className="font-semibold text-[#5f5f5f]">Kỳ</span>
@@ -118,20 +142,14 @@ export function ConsignmentInspectionForm({ price, term, conditionNote, allCheck
               <span className="font-semibold text-[#5f5f5f]">Hoa hồng</span>
               <span className="font-semibold text-right text-[#5f5f5f]">Member nhận</span>
 
-              <span>Kỳ 1</span>
-              <span>Ngày 0 – 30</span>
-              <span className="font-bold text-[#006B2C]">10%</span>
-              <span className="text-right font-bold">{money(Math.round(numericPrice * 0.9))}</span>
-
-              <span>Kỳ 2</span>
-              <span>Ngày 31 – 60</span>
-              <span className="font-bold text-[#006B2C]">15%</span>
-              <span className="text-right font-bold">{money(Math.round(numericPrice * 0.85))}</span>
-
-              <span>Kỳ 3</span>
-              <span>Ngày 61 – 90</span>
-              <span className="font-bold text-[#006B2C]">20%</span>
-              <span className="text-right font-bold">{money(Math.round(numericPrice * 0.8))}</span>
+              {termRows.map((row) => (
+                <React.Fragment key={row.termNo}>
+                  <span>Kỳ {row.termNo}</span>
+                  <span>Ngày {row.startDay} – {row.endDay}</span>
+                  <span className="font-bold text-[#006B2C]">{row.ratePercent}%</span>
+                  <span className="text-right font-bold">{money(row.memberAmount)}</span>
+                </React.Fragment>
+              ))}
             </div>
           </div>
           <p className="text-[10px] text-[#717971]">
@@ -141,7 +159,7 @@ export function ConsignmentInspectionForm({ price, term, conditionNote, allCheck
       )}
 
       <p className="text-[11px] text-[#5B6776]">
-        Mặc định mỗi kỳ {Number(term) || termOptions?.[0] || 30} ngày, tối đa 2 lần gia hạn (tổng 3 kỳ · {(Number(term) || termOptions?.[0] || 30) * 3} ngày).
+        Mặc định mỗi kỳ {effectiveTermDays} ngày, tối đa {maxRenewals} lần gia hạn (tổng {totalTerms} kỳ · {effectiveTermDays * totalTerms} ngày).
       </p>
     
       <Button

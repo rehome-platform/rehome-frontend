@@ -37,6 +37,56 @@ function formIdentity(data) {
   };
 }
 
+function normalizeRatePercent(value) {
+  if (value == null || value === '') return null;
+  const num = Number(value);
+  if (!Number.isFinite(num)) return null;
+  return num <= 1 ? Number((num * 100).toPrecision(15)) : num;
+}
+
+function normalizeConsignmentConfig(data) {
+  const cfg = data?.consignmentConfig || {};
+  const receipt = data?.receipt || {};
+  const termLengthDays = cfg.termLengthDays ?? data?.termLengthDays ?? receipt.termLengthDays ?? null;
+  const maxRenewals = cfg.maxRenewals ?? data?.maxRenewals ?? receipt.maxRenewals ?? null;
+  const freeWithdrawalWindowDays =
+    cfg.freeWithdrawalWindowDays ?? data?.freeWithdrawalWindowDays ?? receipt.freeWithdrawalWindowDays ?? null;
+  const floorPricePercent = normalizeRatePercent(
+    cfg.floorPriceRatio ?? data?.floorPriceRatio ?? cfg.floorPricePercent ?? data?.floorPricePercent,
+  );
+  const commissionTerm1 = normalizeRatePercent(
+    cfg.commissionRateTerm1 ?? data?.commissionRateTerm1 ?? receipt.commissionRateTerm1 ?? cfg.commissionTerm1,
+  );
+  const commissionTerm2 = normalizeRatePercent(
+    cfg.commissionRateTerm2 ?? data?.commissionRateTerm2 ?? receipt.commissionRateTerm2 ?? cfg.commissionTerm2,
+  );
+  const commissionTerm3 = normalizeRatePercent(
+    cfg.commissionRateTerm3 ?? data?.commissionRateTerm3 ?? receipt.commissionRateTerm3 ?? cfg.commissionTerm3,
+  );
+
+  if (
+    termLengthDays == null &&
+    maxRenewals == null &&
+    freeWithdrawalWindowDays == null &&
+    floorPricePercent == null &&
+    commissionTerm1 == null &&
+    commissionTerm2 == null &&
+    commissionTerm3 == null
+  ) {
+    return null;
+  }
+
+  return {
+    ...(termLengthDays != null ? { termLengthDays: Number(termLengthDays) } : {}),
+    ...(maxRenewals != null ? { maxRenewals: Number(maxRenewals) } : {}),
+    ...(freeWithdrawalWindowDays != null ? { freeWithdrawalWindowDays: Number(freeWithdrawalWindowDays) } : {}),
+    ...(floorPricePercent != null ? { floorPricePercent } : {}),
+    ...(commissionTerm1 != null ? { commissionTerm1 } : {}),
+    ...(commissionTerm2 != null ? { commissionTerm2 } : {}),
+    ...(commissionTerm3 != null ? { commissionTerm3 } : {}),
+  };
+}
+
 function formTerms(data) {
   return {
     desiredPrice: Number(data.desiredPrice || 0),
@@ -52,6 +102,7 @@ function formTerms(data) {
     condition: data.condition || data.itemCondition || '',
     memberId: data.memberId || data.member?.id || data.member?.accountId || data.member?.memberId || null,
     member: data.member || null,
+    consignmentConfig: normalizeConsignmentConfig(data),
   };
 }
 
