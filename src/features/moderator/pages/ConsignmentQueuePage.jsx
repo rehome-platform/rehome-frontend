@@ -18,6 +18,13 @@ function getQueueLinkTarget(item, typeParam) {
   if (type === 'WITHDRAWAL' || type === 'ITEM_WITHDRAWAL') {
     return withdrawalCounterLink(item);
   }
+  if (type === 'DONATION_PICKUP') {
+    const params = new URLSearchParams();
+    if (refId) params.set('donationId', refId);
+    if (item.campaignId) params.set('campaignId', item.campaignId);
+    const query = params.toString();
+    return query ? `/moderator/donations?${query}` : '/moderator/donations';
+  }
   if (type === 'FORM_REVIEW' || type === 'INSPECTION') {
     return `/moderator/consignments/${encodeURIComponent(item.formId || refId)}`;
   }

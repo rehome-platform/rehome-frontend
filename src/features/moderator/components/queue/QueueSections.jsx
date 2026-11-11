@@ -140,6 +140,9 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
             {item.targetName || item.orgName || item.productName || item.orderNo || item.name || item.formId || item.orderId || item.queueId}
           </span>
         )}
+        {item.type === 'DONATION_PICKUP' && item.sku && (
+          <div className="mt-0.5 text-[11px] font-mono text-textSecondary">SKU: {item.sku}</div>
+        )}
         {isFocused && <span className="ml-2 inline-block rounded-full bg-primary px-2.5 py-0.5 text-[10px] text-white font-medium">Việc vừa mở</span>}
       </td>
       <td className="py-3 px-3 text-textSecondary">

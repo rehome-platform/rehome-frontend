@@ -11,3 +11,4 @@ export { returnService } from './returnApi.js';
 export { orgVerificationService } from './orgVerificationApi.js';
 export { violationReportService } from './violationReportApi.js';
 export { warehouseInboxService } from './warehouseInboxApi.js';
+export { donationService } from './donationApi.js';
