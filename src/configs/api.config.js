@@ -79,6 +79,8 @@ export const API_ENDPOINTS = {
     QUEUES: "/queues",
     CLAIM_QUEUE: (id) => `/queues/${moderatorId(id)}/claim`,
     RELEASE_QUEUE: (id) => `/queues/${moderatorId(id)}/release`,
+    APPROVE_WITHDRAWAL: (id) => `/item-withdrawal-requests/${moderatorId(id)}/approve`,
+    REJECT_WITHDRAWAL: (id) => `/item-withdrawal-requests/${moderatorId(id)}/reject`,
 
     // API 31, 32, 33, 34, 35: Quy trình duyệt form & kiểm định ký gửi
     APPROVE_FORM: (id) => `/consignment-forms/${moderatorId(id)}/approve`,

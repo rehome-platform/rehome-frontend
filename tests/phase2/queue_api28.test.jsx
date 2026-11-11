@@ -137,4 +137,71 @@ describe('API 28 queue contract', () => {
     expect(await screen.findByText('Nguyễn An')).toBeInTheDocument();
     expect(lookupCount).toBe(1);
   });
+
+  it('shows item photo, name, SKU, Member and Duyệt/Từ chối for PENDING_APPROVAL withdrawal, then transitions to handover after approve', async () => {
+    let status = 'PENDING_APPROVAL';
+    let approveCalled = false;
+    server.use(
+      http.get(queuesUrl, () => ok([{
+        ...withdrawal,
+        status,
+        sku: 'WH-Q7-AK2-000018',
+        productImageUrl: 'https://img.test/ao-len.jpg',
+      }])),
+      http.post(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.APPROVE_WITHDRAWAL('withdrawal-1')}`, () => {
+        approveCalled = true;
+        status = 'PENDING_PICKUP';
+        return ok({ id: 'withdrawal-1', status: 'PENDING_PICKUP', pickupDeadline: '2026-11-18T00:00:00Z', feeCharged: 0 });
+      }),
+    );
+
+    renderPage(<ConsignmentQueuePage />);
+    const row = (await screen.findByText('Áo len')).closest('tr');
+    expect(within(row).getByText('Chờ duyệt')).toBeInTheDocument();
+    expect(within(row).queryByRole('link', { name: 'Mở việc' })).not.toBeInTheDocument();
+
+    fireEvent.click(within(row).getByRole('button', { name: 'Duyệt yêu cầu' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('img', { name: 'Áo len' })).toHaveAttribute('src', 'https://img.test/ao-len.jpg');
+    expect(within(dialog).getByText('WH-Q7-AK2-000018')).toBeInTheDocument();
+    expect(within(dialog).getByText('Nguyễn An')).toBeInTheDocument();
+    expect(within(dialog).getByText('MB-001')).toBeInTheDocument();
+    expect(within(dialog).queryByRole('link', { name: /Đến Quầy bàn giao/ })).not.toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Duyệt' }));
+    await waitFor(() => expect(approveCalled).toBe(true));
+    expect(await within(dialog).findByRole('link', { name: /Đến Quầy bàn giao/ })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Mở việc' })).toHaveAttribute('href', expect.stringContaining('/moderator/counter')));
+  });
+
+  it('requires a reason when rejecting a PENDING_APPROVAL withdrawal and posts reason to backend', async () => {
+    let items = [{
+      ...withdrawal,
+      status: 'PENDING_APPROVAL',
+      sku: 'WH-Q7-AK2-000018',
+      productImageUrl: 'https://img.test/ao-len.jpg',
+    }];
+    let rejectBody = null;
+    server.use(
+      http.get(queuesUrl, () => ok(items)),
+      http.post(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.REJECT_WITHDRAWAL('withdrawal-1')}`, async ({ request }) => {
+        rejectBody = await request.json();
+        items = [];
+        return ok({ id: 'withdrawal-1', status: 'REJECTED', rejectReason: rejectBody.reason });
+      }),
+    );
+
+    renderPage(<ConsignmentQueuePage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Duyệt yêu cầu' }));
+    const dialog = screen.getByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Từ chối' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Xác nhận từ chối' }));
+    expect(within(dialog).getByRole('alert')).toHaveTextContent('Vui lòng nhập lý do từ chối');
+    expect(rejectBody).toBeNull();
+
+    fireEvent.change(within(dialog).getByLabelText(/Lý do từ chối/), { target: { value: '  Sản phẩm đang giữ cho đơn hàng khác  ' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Xác nhận từ chối' }));
+    await waitFor(() => expect(rejectBody).toEqual({ reason: 'Sản phẩm đang giữ cho đơn hàng khác' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
 });

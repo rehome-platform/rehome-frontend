@@ -2,6 +2,7 @@ import { fixtureFallback } from './fixtureTransport.js';
 
 import { API_ENDPOINTS } from '../../../configs/api.config.js';
 import { isFixtureMode } from "../config/warehouseContract.js";
+import { Phase2Error } from '../models/warehouseModel.js';
 
 import { callBackend } from './warehouseTransport.js';
 
@@ -52,6 +53,7 @@ export const queueService = {
       name: item.targetName ?? item.name ?? item.productName ?? item.orderNo ?? item.orgName,
       memberName: item.subjectSubtitle ?? item.memberName ?? item.recipientName,
       sku: item.sku ?? item.productId ?? null,
+      productImageUrl: item.productImageUrl ?? item.imageUrl ?? item.photoUrl ?? null,
       status: item.status || (item.claimedBy ? 'PROCESSING' : 'PENDING'),
     });
 
@@ -135,6 +137,40 @@ export const queueService = {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.REJECT_FORM(formId),
         data: { reason },
+      },
+      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+    );
+  },
+
+  approveWithdrawal: async (withdrawalId, options) => {
+    const fallback = fixtureFallback('withdrawalApprove', { ids: { id: withdrawalId }, ...options });
+
+    return callBackend(
+      {
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.APPROVE_WITHDRAWAL(withdrawalId),
+      },
+      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
+    );
+  },
+
+  rejectWithdrawal: async (withdrawalId, reason, options) => {
+    const trimmed = String(reason || '').trim();
+    if (!trimmed) {
+      throw new Phase2Error('Vui lòng nhập lý do từ chối yêu cầu rút hàng.', 400);
+    }
+
+    const fallback = fixtureFallback('withdrawalReject', {
+      ids: { id: withdrawalId },
+      data: { reason: trimmed },
+      ...options,
+    });
+
+    return callBackend(
+      {
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.REJECT_WITHDRAWAL(withdrawalId),
+        data: { reason: trimmed },
       },
       { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
     );

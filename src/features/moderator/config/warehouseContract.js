@@ -10,6 +10,8 @@ export const phase2Contract = {
     queueList: { gate: 'A', method: 'get', path: '/queues' },
     queueClaim: { gate: 'A', method: 'post', path: '/queues/:queueId/claim' },
     queueRelease: { gate: 'A', method: 'post', path: '/queues/:queueId/release' },
+    withdrawalApprove: { gate: 'A', method: 'post', path: '/item-withdrawal-requests/:id/approve' },
+    withdrawalReject: { gate: 'A', method: 'post', path: '/item-withdrawal-requests/:id/reject' },
     formRead: {
       gate: 'A', method: 'get', path: '/moderator/consignment-forms/:formId',
       limitation: 'Member: own forms; Moderator: non-draft forms in the assigned warehouse; Admin: all forms. Access depends on the deployed backend.',

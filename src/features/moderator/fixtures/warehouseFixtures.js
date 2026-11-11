@@ -429,6 +429,43 @@ export async function fixtureRequest(
     case 'formRead':
       result = formView(find(db.forms, 'formId', ids.formId, scope), scope);
       break;
+    case 'withdrawalApprove': {
+      const queue = db.queues.find(
+        (row) => (row.type === 'WITHDRAWAL' || row.type === 'ITEM_WITHDRAWAL') && row.refId === ids.id,
+      );
+      if (!queue) fail('Không tìm thấy yêu cầu rút hàng.', 404);
+      queue.status = 'PENDING_PICKUP';
+      const pickupDeadline = new Date(Date.now() + 7 * 86400000).toISOString();
+      queue.pickupDeadline = pickupDeadline;
+      result = {
+        id: ids.id,
+        productId: queue.sku || null,
+        feeCharged: queue.feeCharged ?? 0,
+        status: 'PENDING_PICKUP',
+        pickupDeadline,
+        feePaymentDeadline: null,
+        rejectReason: null,
+      };
+      break;
+    }
+    case 'withdrawalReject': {
+      if (!data?.reason?.trim()) fail('Cần lý do từ chối.', 422);
+      const index = db.queues.findIndex(
+        (row) => (row.type === 'WITHDRAWAL' || row.type === 'ITEM_WITHDRAWAL') && row.refId === ids.id,
+      );
+      if (index < 0) fail('Không tìm thấy yêu cầu rút hàng.', 404);
+      const [removed] = db.queues.splice(index, 1);
+      result = {
+        id: ids.id,
+        productId: removed?.sku || null,
+        feeCharged: removed?.feeCharged ?? 0,
+        status: 'REJECTED',
+        pickupDeadline: null,
+        feePaymentDeadline: null,
+        rejectReason: data.reason.trim(),
+      };
+      break;
+    }
     case 'formApprove':
     case 'formReject': {
       const form = find(db.forms, 'formId', ids.formId, scope);
