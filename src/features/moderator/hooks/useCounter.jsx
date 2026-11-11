@@ -37,9 +37,10 @@ export function useCounter() {
   selectedRef.current = selected;
 
   useEffect(() => {
-    const lookupVal = urlMemberCode || urlPhone || urlAccountId;
+    // API 25 accepts memberCode, phone or qrPayload, not accountId.
+    const lookupVal = urlMemberCode || urlPhone;
     if (lookupVal && !selectedRef.current && !submitted) {
-      const detectedKind = urlPhone ? 'phone' : detectLookupKind(lookupVal);
+      const detectedKind = urlMemberCode ? 'memberCode' : 'phone';
       setKind(detectedKind);
       setQuery(lookupVal);
       const request = { params: lookupParams(detectedKind, lookupVal), reopen: true };
@@ -175,6 +176,7 @@ export function useCounter() {
 
     return {
     selected,
+    needsMemberLookup: Boolean(urlAccountId && !urlMemberCode && !urlPhone && !selected && !submitted),
     confirmed,
     reset,
     results,

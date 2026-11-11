@@ -43,6 +43,11 @@ export default function CounterPage() {
       }
     >
       <ResourceState resource={model.results} empty={false} />
+      {model.needsMemberLookup && (
+        <p role="status" className="rounded-xl border border-neutral bg-background p-3 text-sm text-textSecondary">
+          Yêu cầu chưa có mã Member. Nhập mã Member hoặc số điện thoại của khách để tra cứu và đối chiếu danh tính.
+        </p>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr] items-start">
         {/* ===================== CỘT TRÁI ===================== */}

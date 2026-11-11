@@ -18,6 +18,16 @@ export function taskTypeLabel(item, typeParam) {
   return QUEUE_TYPE_LABELS[type] || 'Công việc kho';
 }
 
+export function withdrawalCounterLink(item) {
+  const params = new URLSearchParams();
+  const refId = item.refId || item.id;
+  if (refId) params.set('refId', refId);
+  if (item.memberCode) params.set('memberCode', item.memberCode);
+  if (item.accountId) params.set('accountId', item.accountId);
+  const query = params.toString();
+  return query ? `/moderator/counter?${query}` : '/moderator/counter';
+}
+
 export function formatElapsedHours(value) {
   if (value == null || !Number.isFinite(Number(value))) return '—';
   const hours = Math.max(0, Math.floor(Number(value)));

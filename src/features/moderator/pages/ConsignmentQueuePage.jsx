@@ -6,6 +6,7 @@ import React from "react";
 import Button from '../../../components/common/Button.jsx';
 
 import { ownsClaim } from "../models/warehouseModel.js";
+import { withdrawalCounterLink } from '../models/queueModel.js';
 import { Page, Pager, ResourceState } from "../components/WarehouseUi.jsx";
 
 function getQueueLinkTarget(item, typeParam) {
@@ -15,12 +16,7 @@ function getQueueLinkTarget(item, typeParam) {
     return `/moderator/packing?orderId=${encodeURIComponent(item.orderId || refId)}`;
   }
   if (type === 'WITHDRAWAL' || type === 'ITEM_WITHDRAWAL') {
-    const params = new URLSearchParams();
-    if (refId) params.set('refId', refId);
-    if (item.memberCode) params.set('memberCode', item.memberCode);
-    if (item.accountId) params.set('accountId', item.accountId);
-    const query = params.toString();
-    return query ? `/moderator/counter?${query}` : `/moderator/counter`;
+    return withdrawalCounterLink(item);
   }
   if (type === 'FORM_REVIEW' || type === 'INSPECTION') {
     return `/moderator/consignments/${encodeURIComponent(item.formId || refId)}`;

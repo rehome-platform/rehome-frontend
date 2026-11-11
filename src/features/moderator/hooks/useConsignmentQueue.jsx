@@ -81,10 +81,13 @@ export function useConsignmentQueue() {
         }
         const isWithdrawal = item.type === 'WITHDRAWAL' || item.type === 'ITEM_WITHDRAWAL';
         const isViolationReport = item.type === 'VIOLATION_REPORT';
+        const isReturn = item.type === 'RETURN';
         const msg = release
           ? `Đã nhả việc "${item.typeLabel}" (${item.formId || item.orderId || item.queueId}) về hàng đợi thành công.`
           : isWithdrawal
             ? `Đã nhận việc "${item.typeLabel}" (${item.formId || item.orderId || item.refId || item.queueId}) thành công! Bạn có thể mở Quầy tiếp nhận (BG-01) để bàn giao cho khách khi khách đến quầy.`
+            : isReturn
+              ? `Đã nhận việc "${item.typeLabel}" (${item.returnId || item.refId || item.queueId}) thành công! Bạn có thể mở trang "Trả hàng" để duyệt và xử lý yêu cầu.`
             : isViolationReport
               ? `Đã nhận việc "${item.typeLabel}" (${item.formId || item.orderId || item.refId || item.queueId}) thành công! Bạn có thể chuyển sang trang "Báo cáo vi phạm" để kiểm duyệt và xử lý.`
               : `Đã nhận việc "${item.typeLabel}" (${item.formId || item.orderId || item.queueId}) thành công! Bạn có thể chuyển sang tab "Kiểm định & nhập kho" để mở duyệt.`;
