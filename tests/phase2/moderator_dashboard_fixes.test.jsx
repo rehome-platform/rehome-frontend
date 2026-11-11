@@ -293,6 +293,7 @@ describe('TASK-01: Stop Sending Unsupported WAITING_END_OF_TERM Status', () => {
     let capturedStatus = null;
 
     server.use(
+      http.get(`${API_BASE_URL}/end-of-term-decisions/pending-pricing`, () => HttpResponse.json([])),
       http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.INVENTORY}`, ({ request }) => {
         const url = new URL(request.url);
         capturedStatus = url.searchParams.get('status');
@@ -311,6 +312,7 @@ describe('TASK-01: Stop Sending Unsupported WAITING_END_OF_TERM Status', () => {
   it('SUPPORTED_INVENTORY_STATUSES contains only supported backend enum values', () => {
     expect(SUPPORTED_INVENTORY_STATUSES).toEqual([
       'ON_SALE',
+      'WAREHOUSE',
       'RESERVED',
       'SOLD',
       'WITHDRAWN',

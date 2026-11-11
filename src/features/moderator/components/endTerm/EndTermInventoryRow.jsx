@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from 'react-router-dom';
 
 import Button from "../../../../components/common/Button.jsx";
 
@@ -18,6 +19,7 @@ export function EndTermInventoryRow({ item, sku, change }) {
           <span className="text-textSecondary">·</span>
           <span className="font-semibold text-text">{item.name}</span>
           <Status>{item.status}</Status>
+          {item.status === 'WAREHOUSE' && <span className="text-xs">{item.reConsignStatus === 'PROPOSAL_SENT' ? 'Chờ Member xác nhận biên nhận' : item.pricingEligible ? 'Chờ thương lượng giá' : 'Chờ Member chọn phương án'}</span>}
         </div>
         <div className="flex items-center gap-3 text-xs text-textSecondary flex-wrap">
           {item.deadline && (
@@ -32,12 +34,12 @@ export function EndTermInventoryRow({ item, sku, change }) {
           )}
         </div>
       </div>
-      <Button
+      {item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT' ? <Link className="text-primary hover:underline" to={`/moderator/inventory/${encodeURIComponent(item.sku)}/re-consign`}>{item.reConsignStatus === 'PROPOSAL_SENT' ? 'Theo dõi xác nhận →' : 'Đàm phán giá →'}</Link> : <Button
         variant={sku === item.sku ? 'primary' : 'outline'}
         onClick={() => change('sku', item.sku)}
       >
         {sku === item.sku ? 'Đang mở' : 'Mở xử lý'}
-      </Button>
+      </Button>}
     </div>
   );
 }
