@@ -94,8 +94,6 @@ export const API_ENDPOINTS = {
     PRODUCT_DETAIL: (id) => `/products/detail/${moderatorId(id)}`,
     INVENTORY: "/inventory",
     PRODUCT_BY_SKU: (sku) => `/products/${moderatorId(sku)}`,
-    UPDATE_SHELF_LOCATION: (id) => `/products/${moderatorId(id)}/shelf-location`,
-    STOCK_MOVEMENTS: (id) => `/products/${moderatorId(id)}/stock-movements`,
 
     // API 44, 45, 46, 47, 48: Danh mục & Thương hiệu
     CATEGORIES: "/categories",

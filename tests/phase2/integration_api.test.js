@@ -102,9 +102,9 @@ describe('API 25-48 Integration & Safety Resilience Tests', () => {
   });
 
   // 5. 403 Forbidden: Missing warehouse permission or unauthorized warehouse
-  it('API 42: throws 403 when updating shelf for product in another warehouse', async () => {
+  it('API 41: throws 403 when reading a product in another warehouse', async () => {
     server.use(
-      http.patch(`${API_BASE_URL}/products/Q7-AK-000001/shelf-location`, () => {
+      http.get(`${API_BASE_URL}/products/Q7-AK-000001`, () => {
         return HttpResponse.json(
           { code: 'PRODUCT_NOT_IN_YOUR_WAREHOUSE', message: 'Sản phẩm không thuộc kho của bạn' },
           { status: 403 },
@@ -112,7 +112,7 @@ describe('API 25-48 Integration & Safety Resilience Tests', () => {
       }),
     );
 
-    await expect(inventoryService.shelf('Q7-AK-000001', 'B2-01')).rejects.toMatchObject({
+    await expect(inventoryService.read('Q7-AK-000001')).rejects.toMatchObject({
       status: 403,
       code: 'PRODUCT_NOT_IN_YOUR_WAREHOUSE',
     });
@@ -714,66 +714,6 @@ describe('real API mode never substitutes warehouse fixtures', () => {
         status: 404,
         code: 'PRODUCT_NOT_FOUND',
       });
-    });
-
-    it('API 42: updates shelf location and returns new location', async () => {
-      server.use(
-        http.patch(`${API_BASE_URL}/products/Q7-AK-000845/shelf-location`, async ({ request }) => {
-          const body = await request.json();
-          expect(body.shelfLocation).toBe('B2-10');
-          return HttpResponse.json({
-            id: 'Q7-AK-000845',
-            shelfLocation: 'B2-10',
-          });
-        }),
-      );
-
-      const res = await inventoryService.shelf('Q7-AK-000845', '  B2-10  ');
-      expect(res.shelfLocation).toBe('B2-10');
-    });
-
-    it('API 42: rejects empty shelf location on client without calling backend', async () => {
-      await expect(inventoryService.shelf('Q7-AK-000845', '   ')).rejects.toMatchObject({
-        status: 400,
-        message: 'Vui lòng nhập vị trí kệ mới.',
-      });
-    });
-
-    it('API 43: loads stock movements and maps them through formatStockMovement', async () => {
-      server.use(
-        http.get(`${API_BASE_URL}/products/Q7-AK-000845/stock-movements`, () => {
-          return HttpResponse.json([
-            {
-              id: 'log-move-1',
-              type: 'SHELF_MOVE',
-              fromLocation: 'A1-02',
-              toLocation: 'B2-10',
-              note: 'Điều chuyển khu áo ấm',
-              createdAt: '2026-10-27T09:30:00Z',
-            },
-            {
-              id: 'log-stock-2',
-              type: 'STOCK_IN',
-              fromLocation: null,
-              toLocation: 'A1-02',
-              note: 'Nhập kho',
-              createdAt: '2026-10-26T15:00:00Z',
-            },
-          ]);
-        }),
-      );
-
-      const res = await inventoryService.movements('Q7-AK-000845');
-      expect(res).toHaveLength(2);
-
-      expect(res[0].type).toBe('SHELF_MOVE');
-      expect(res[0].label).toBe('Điều chuyển kệ');
-      expect(res[0].locationText).toBe('A1-02 → B2-10');
-      expect(res[0].note).toBe('Điều chuyển khu áo ấm');
-
-      expect(res[1].type).toBe('STOCK_IN');
-      expect(res[1].label).toBe('Nhập kho ban đầu');
-      expect(res[1].locationText).toBe('Kệ A1-02');
     });
   });
 

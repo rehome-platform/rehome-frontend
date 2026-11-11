@@ -40,8 +40,6 @@ export const phase2Contract = {
       reason: 'Backend chưa hỗ trợ thêm ảnh vào sản phẩm đã nhập kho.',
     },
     photoUpload: { gate: 'C', method: 'post', path: '/uploads', params: { folder: 'PRODUCTS' } },
-    shelfUpdate: { gate: 'C', method: 'patch', path: '/products/:sku/shelf-location' },
-    stockMovements: { gate: 'C', method: 'get', path: '/products/:sku/stock-movements' },
     skuLabel: { gate: 'C', method: 'get', path: '/products/:sku/sku-label', responseType: 'blob' },
     catalogList: {
       gate: 'D', method: 'get', path: null, supported: false,

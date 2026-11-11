@@ -6,7 +6,6 @@ import {
   extractReceiptId,
   filterCatalogItems,
   filterUnclaimedItems,
-  formatStockMovement,
   formatTryOnSlot,
   listItems,
   lookupParams,
@@ -17,12 +16,10 @@ import {
   normalizeUnclaimedItem,
   ownsClaim,
   safeDocumentUrl,
-  STOCK_MOVEMENT_CONFIG,
   SUPPORTED_TRYON_SLOTS,
   TRYON_SLOT_CONFIG,
   unwrap,
   validateCatalogInput,
-  validateNewShelf,
   validatePartnerName,
   validMoney,
 } from '../../src/features/moderator/models/warehouseModel.js';
@@ -140,65 +137,6 @@ describe('Phase 2 boundary rules', () => {
     expect(created.id).toBe('Q7-AO-000001');
     expect(created.name).toBe('Áo lụa');
     expect(created.status).toBe('ON_SALE');
-  });
-
-  describe('Task 6: Inventory & Stock Movement models', () => {
-    it('formatStockMovement: formats different movement types correctly', () => {
-      expect(formatStockMovement(null)).toBeNull();
-
-      // SHELF_MOVE from backend (fromLocation and toLocation)
-      const shelfMove = formatStockMovement({
-        id: 'log-1',
-        type: 'SHELF_MOVE',
-        fromLocation: 'A1-03',
-        toLocation: 'B2-10',
-        note: 'Đổi sang khu áo khoác',
-        createdAt: '2026-10-27T08:00:00Z',
-      });
-      expect(shelfMove.type).toBe('SHELF_MOVE');
-      expect(shelfMove.label).toBe('Điều chuyển kệ');
-      expect(shelfMove.locationText).toBe('A1-03 → B2-10');
-      expect(shelfMove.note).toBe('Đổi sang khu áo khoác');
-      expect(shelfMove.badgeClass).toContain('bg-blue-100');
-
-      // STOCK_IN
-      const stockIn = formatStockMovement({
-        id: 'log-2',
-        type: 'STOCK_IN',
-        toLocation: 'B1-05',
-        createdAt: '2026-10-26T14:00:00Z',
-      });
-      expect(stockIn.label).toBe('Nhập kho ban đầu');
-      expect(stockIn.locationText).toBe('Kệ B1-05');
-      expect(stockIn.badgeClass).toContain('bg-emerald-100');
-
-      // Legacy/fixture fallback (shelfLocation)
-      const legacyFixture = formatStockMovement({
-        type: 'SHELF_MOVE',
-        shelfLocation: 'C3-01',
-      });
-      expect(legacyFixture.locationText).toBe('Kệ C3-01');
-
-      // WITHDRAWAL_OUT
-      const withdrawal = formatStockMovement({
-        type: 'WITHDRAWAL_OUT',
-        partnerName: 'Nguyễn Văn A',
-      });
-      expect(withdrawal.label).toBe('Rút hàng trả Member');
-      expect(withdrawal.locationText).toBe('Đối tác: Nguyễn Văn A');
-    });
-
-    it('validateNewShelf: validates shelf inputs rigorously', () => {
-      expect(validateNewShelf('', 'A1-01').valid).toBe(false);
-      expect(validateNewShelf('   ', 'A1-01').valid).toBe(false);
-      expect(validateNewShelf('a'.repeat(256), 'A1-01').valid).toBe(false);
-
-      // Same location (case insensitive & trimmed)
-      expect(validateNewShelf('A1-01', 'A1-01').valid).toBe(false);
-      expect(validateNewShelf(' a1-01 ', 'A1-01').valid).toBe(false);
-      expect(validateNewShelf('B2-10', 'A1-01')).toEqual({ valid: true, value: 'B2-10' });
-      expect(validateNewShelf('  B2-10  ', 'A1-01')).toEqual({ valid: true, value: 'B2-10' });
-    });
   });
 
   describe('Task 7: Category & Brand models and helpers', () => {

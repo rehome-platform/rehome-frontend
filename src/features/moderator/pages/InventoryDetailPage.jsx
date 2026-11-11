@@ -24,8 +24,6 @@ export default function InventoryDetailPage() {
     done: (value) => !value?.photos?.some((photo) => photo.status === 'PROCESSING'),
   });
 
-  const movements = useResource((options) => inventoryService.movements(sku, options), [sku]);
-
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [print, setPrint] = useState(false);
   const [photoUrls, setPhotos] = useState([]);
@@ -75,8 +73,6 @@ export default function InventoryDetailPage() {
   });
   const pricingRequest = pricingForProduct(pricing.data || [], data?.id || sku);
   const canNegotiate = Boolean(pricingRequest?.decisionId && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(data?.status));
-
-  const movementList = listItems(movements.data);
 
   const handleCopySku = () => {
     if (!sku) return;
@@ -131,13 +127,7 @@ export default function InventoryDetailPage() {
           <Button variant="outline" onClick={() => navigate('/moderator/inventory')}>
             ← Quay lại tồn kho
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              product.refresh();
-              movements.refresh();
-            }}
-          >
+          <Button variant="outline" onClick={() => product.refresh()}>
             Tải lại
           </Button>
         </div>
@@ -353,49 +343,6 @@ export default function InventoryDetailPage() {
                 Ảnh tách nền được cập nhật theo kết quả xử lý của máy chủ.
               </p>
             </Card>
-          )}
-
-
-
-          <ResourceState resource={movements} empty={!movementList.length} />
-
-          {movementList.length > 0 && (
-            <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-[#e0e0e0]">
-              {movementList.map((movement, index) => {
-                return (
-                  <div key={movement.id || index} className="relative flex items-start gap-4 text-xs">
-                    {/* Timeline Dot */}
-                    <div className="absolute -left-6 top-1 h-5 w-5 rounded-full border-2 border-white bg-[#006B2C] shadow-sm flex items-center justify-center">
-                      <div className="h-1.5 w-1.5 rounded-full bg-white" />
-                    </div>
-
-                    <div className="flex-1 rounded-xl border border-neutral bg-background p-4 space-y-2">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span
-                          className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${movement.badgeClass || 'bg-background text-text border-neutral'
-                            }`}
-                        >
-                          {movement.label || movement.type}
-                        </span>
-                        <span className="text-[11px] text-textSecondary">
-                          {date(movement.createdAt)}
-                        </span>
-                      </div>
-
-                      <div className="text-sm font-bold text-text">
-                        {movement.locationText || '—'}
-                      </div>
-
-                      {movement.note && (
-                        <p className="text-xs text-[#5f5f5f] bg-white p-2.5 rounded-lg border border-[#ececec]">
-                          Ghi chú: {movement.note}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           )}
         </div>
       )

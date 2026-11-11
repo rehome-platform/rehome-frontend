@@ -823,36 +823,17 @@ describe('ConsignmentDetailPage component behaviors', () => {
       expect(screen.getByText('Áo khoác dạ Zara')).toBeInTheDocument();
     });
 
-    it('InventoryDetailPage: renders details, movements timeline, and handles shelf relocation', async () => {
+    it('InventoryDetailPage: renders product details', async () => {
       vi.spyOn(inventoryService, 'read').mockResolvedValue({
         id: 'Q7-AK-000845',
         sku: 'Q7-AK-000845',
         name: 'Áo khoác dạ Zara',
-        shelfLocation: 'A1-02',
         agreedPrice: 850000,
         status: 'ON_SALE',
         brandName: 'Zara',
         size: 'L',
-        allowedActions: ['CHANGE_SHELF'],
       });
 
-      vi.spyOn(inventoryService, 'movements').mockResolvedValue([
-        {
-          id: 'log-1',
-          type: 'STOCK_IN',
-          label: 'Nhập kho ban đầu',
-          locationText: 'Kệ A1-02',
-          badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-          createdAt: '2026-10-26T15:00:00Z',
-        },
-      ]);
-
-      const shelfSpy = vi.spyOn(inventoryService, 'shelf').mockResolvedValue({
-        id: 'Q7-AK-000845',
-        shelfLocation: 'C1-05',
-      });
-
-      const user = userEvent.setup();
       render(
         <StrictMode>
           <MemoryRouter initialEntries={['/moderator/inventory/Q7-AK-000845']}>
@@ -867,17 +848,12 @@ describe('ConsignmentDetailPage component behaviors', () => {
 
       expect(await screen.findByRole('heading', { name: 'Áo khoác dạ Zara' })).toBeInTheDocument();
       expect(screen.getByText('SKU: Q7-AK-000845')).toBeInTheDocument();
-      expect(screen.getByText('Nhập kho ban đầu')).toBeInTheDocument();
-      expect(screen.getByText('Kệ A1-02')).toBeInTheDocument();
-
-// Shelf update omitted as per review
     });
 
     it('InventoryDetailPage: handles 403 PRODUCT_NOT_IN_YOUR_WAREHOUSE gracefully', async () => {
       vi.spyOn(inventoryService, 'read').mockRejectedValue(
         new Phase2Error('Forbidden', 403, 'PRODUCT_NOT_IN_YOUR_WAREHOUSE'),
       );
-      vi.spyOn(inventoryService, 'movements').mockResolvedValue([]);
 
       render(
         <StrictMode>

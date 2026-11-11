@@ -89,7 +89,6 @@ describe('Moderator uses stored consignment deadlines', () => {
       id: 'product-1', sku: 'RH-1', name: 'Hàng cuối kỳ', decision: 'TAKE_BACK',
       status: 'WITHDRAWN', daysToTakeBack, degradedCaseId: null,
     });
-    vi.spyOn(inventoryService, 'movements').mockResolvedValue([]);
     renderPage('/moderator/inventory/RH-1', '/moderator/inventory/:sku', <InventoryDetailPage />);
 
     const notice = await screen.findByText(/Khách đã chọn nhận lại hàng/);

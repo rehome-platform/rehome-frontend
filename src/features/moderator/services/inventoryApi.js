@@ -6,7 +6,7 @@ import { inventoryQuery, inventoryResult, inventoryDetail, productPayload, creat
 import baseApi from '../../../services/baseApi.js';
 import { API_ENDPOINTS } from '../../../configs/api.config.js';
 import { isFixtureMode } from "../config/warehouseContract.js";
-import { formatStockMovement, Phase2Error } from "../models/warehouseModel.js";
+import { Phase2Error } from "../models/warehouseModel.js";
 import { callBackend } from './warehouseTransport.js';
 import { enrichListRows } from './listDetailEnrichment.js';
 
@@ -191,48 +191,6 @@ export const inventoryService = {
     throw new Phase2Error('Backend chưa hỗ trợ thêm ảnh cho sản phẩm đã nhập kho.', 501, 'OPERATION_UNSUPPORTED');
   },
 
-  // API 42: PATCH /products/{id}/shelf-location
-  shelf: async (sku, shelfLocation, options) => {
-    const fallback = fixtureFallback('shelfUpdate', { ids: { sku }, data: { shelfLocation }, ...options });
-
-    const trimmed = String(shelfLocation || '').trim();
-    if (!trimmed) {
-      throw new Phase2Error('Vui lòng nhập vị trí kệ mới.', 400);
-    }
-
-    return callBackend(
-      {
-        method: 'patch',
-        url: API_ENDPOINTS.MODERATOR.UPDATE_SHELF_LOCATION(sku),
-        data: { shelfLocation: trimmed },
-      },
-      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
-    );
-  },
-
-  // API 43: GET /products/{id}/stock-movements
-  movements: async (sku, options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      const res = await fixtureRequest('stockMovements', { ids: { sku }, ...options });
-      return movementResult(res);
-    };
-
-    try {
-      const res = await callBackend(
-        {
-          method: 'get',
-          url: API_ENDPOINTS.MODERATOR.STOCK_MOVEMENTS(sku),
-        },
-        { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
-      );
-      return movementResult(res);
-    } catch (err) {
-      if (isFixtureMode && fallback) return fallback();
-      throw err;
-    }
-  },
-
   // API 39: GET /products/{id}/sku-label
   label: async (sku, options) => {
     const fallback = fixtureFallback('skuLabel', { ids: { sku }, ...options });
@@ -272,10 +230,6 @@ async function enrichInventoryResult(result, options) {
   return { ...result, items, content: items };
 }
 
-function movementResult(res) {
-  const raw = Array.isArray(res) ? res : [];
-  return raw.map(formatStockMovement).filter(Boolean);
-}
 
 async function allInventory(status, options) {
   const rows = [];

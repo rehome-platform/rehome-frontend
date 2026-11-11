@@ -17,7 +17,6 @@ const pricing = { decisionId: 'decision-uuid', productId: 'SKU-A', productName: 
 beforeEach(() => {
   sessionStorage.clear();
   vi.spyOn(inventoryService, 'read').mockResolvedValue(item);
-  vi.spyOn(inventoryService, 'movements').mockResolvedValue([]);
   vi.spyOn(inventoryService, 'degradedCases').mockResolvedValue([]);
   vi.spyOn(endTermService, 'pendingPricing').mockResolvedValue([pricing]);
   vi.spyOn(endTermService, 'proposeReConsignPrice').mockResolvedValue({ decisionId: 'decision-uuid', newReceiptId: 'receipt-uuid' });

@@ -12,7 +12,6 @@ const product = { id: 'product-id', sku: 'display-sku', name: 'Actual item', sta
 const pending = { id: 'case-id', productId: product.id, productName: product.name, photos: ['https://photos.test/damage'], moderatorNote: 'Actual damage', decision: null, status: 'PENDING_DECISION', decisionDeadline: '2026-12-11T10:00:00Z', compensationAmount: 0, degradedCompensationRate: 0.5 };
 beforeEach(() => {
   vi.spyOn(inventoryService, 'read').mockResolvedValue(product);
-  vi.spyOn(inventoryService, 'movements').mockResolvedValue([]);
   vi.spyOn(inventoryService, 'degradedCases').mockResolvedValue([pending]);
   vi.spyOn(inventoryService, 'upload').mockResolvedValue({ url: 'https://photos.test/damage' });
   vi.spyOn(returnService, 'createDegradedCase').mockResolvedValue(pending);
