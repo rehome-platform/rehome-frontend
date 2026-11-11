@@ -136,12 +136,12 @@ export default function AdminAccountsView({
   onUnbanAccount,
 }) {
   const [accounts, setAccounts] = useState(
-    remoteAccounts && remoteAccounts.length > 0 ? remoteAccounts : initialAccounts
+    Array.isArray(remoteAccounts) ? remoteAccounts : initialAccounts
   );
 
   if (typeof React.useEffect === 'function') {
     React.useEffect(() => {
-      if (remoteAccounts && remoteAccounts.length > 0) {
+      if (Array.isArray(remoteAccounts)) {
         setAccounts(remoteAccounts);
       }
     }, [remoteAccounts]);

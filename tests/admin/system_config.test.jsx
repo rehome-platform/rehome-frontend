@@ -14,10 +14,14 @@ const rows = [
   ['term_length_days', '45', 'INT', 1, 365],
   ['max_renewals', '4', 'INT', 0, 10],
   ['free_withdrawal_window_days', '9', 'INT', 0, 365],
+  ['end_of_term_decision_days', '30', 'INT', 1, 365],
+  ['bring_in_deadline_days', '7', 'INT', 1, 90],
+  ['max_pending_forms_per_member', '5', 'INT', 1, 50],
   ['commission_rate_term1', '0.1234', 'DECIMAL', 0, 1],
   ['commission_rate_term2', '0.25', 'DECIMAL', 0, 1],
   ['commission_rate_term3', '0.3', 'DECIMAL', 0, 1],
   ['floor_price_ratio', '0.6', 'DECIMAL', 0.01, 1],
+  ['max_price_changes_per_day', '2', 'INT', 1, 20],
   ['withdrawal_fee', '40000', 'DECIMAL', 0, 10000000],
   ['degraded_compensation_rate', '0.7', 'DECIMAL', 0, 1],
   ['max_concurrent_campaigns', '5', 'INT', 1, 100],
@@ -25,6 +29,11 @@ const rows = [
   ['overdue_task_hours', '72', 'INT', 1, 720],
   ['min_payout_amount', '75000', 'DECIMAL', 1, 10000000],
   ['max_payout_requests_per_day', '6', 'INT', 1, 100],
+  ['order_payment_timeout_minutes', '20', 'INT', 1, 1440],
+  ['order_auto_complete_days', '4', 'INT', 1, 30],
+  ['return_request_window_days', '5', 'INT', 1, 30],
+  ['return_handover_carrier_days', '3', 'INT', 1, 30],
+  ['counter_pickup_days', '10', 'INT', 1, 90],
 ];
 const fixture = () => rows.map(([key, value, type, min, max]) => ({
   key, value, defaultValue: value, usingDefault: false, type, min, max,
@@ -51,38 +60,51 @@ describe('Admin system configuration HTTP contract', () => {
     await mount();
     expect(baseApi.get).toHaveBeenCalledWith('/api/admin/config');
     expect(screen.getByLabelText(/Độ dài một kỳ/)).toHaveValue(45);
+    expect(screen.getByLabelText(/Hạn chọn xử lý cuối kỳ/)).toHaveValue(30);
+    expect(screen.getByLabelText(/Hạn mang đồ đến kho/)).toHaveValue(7);
+    expect(screen.getByLabelText(/Số form đang chờ tối đa/)).toHaveValue(5);
     tab(/2\. Giá/);
     expect(screen.getByLabelText(/Hoa hồng kỳ 1/)).toHaveValue(12.34);
+    expect(screen.getByLabelText(/Số lần đổi giá tối đa/)).toHaveValue(2);
     tab(/3\. Ví/);
     expect(screen.getByLabelText(/Số tiền rút tối thiểu/)).toHaveValue(75000);
     expect(screen.getByLabelText(/Số lần rút tối đa/)).toHaveValue(6);
+    tab(/4\. Đơn/);
+    expect(screen.getByLabelText(/Thời hạn thanh toán đơn/)).toHaveValue(20);
+    expect(screen.getByLabelText(/Thời hạn tự hoàn thành sau giao/)).toHaveValue(4);
+    expect(screen.getByLabelText(/Thời hạn gửi yêu cầu trả hàng/)).toHaveValue(5);
+    expect(screen.getByLabelText(/Thời hạn bàn giao hàng trả cho GHN/)).toHaveValue(3);
+    expect(screen.getByLabelText(/Thời hạn đến kho nhận hàng trả/)).toHaveValue(10);
   });
 
-  it('locks unsupported settings and labels them as not applied', async () => {
+  it('enables all 23 catalog keys across all 5 tabs when returned by backend', async () => {
     await mount();
     for (const label of [/Hạn chọn xử lý/, /Hạn mang đồ/, /Số form đang chờ/]) {
-      expect(screen.getByLabelText(label)).toBeDisabled();
+      expect(screen.getByLabelText(label)).toBeEnabled();
     }
-    expect(screen.getAllByText(/Chưa áp dụng/).length).toBeGreaterThan(0);
     tab(/2\. Giá/);
-    expect(screen.getByLabelText(/Số lần đổi giá/)).toBeDisabled();
+    expect(screen.getByLabelText(/Số lần đổi giá/)).toBeEnabled();
     tab(/4\. Đơn/);
-    for (const input of screen.getAllByRole('spinbutton')) expect(input).toBeDisabled();
+    for (const input of screen.getAllByRole('spinbutton')) expect(input).toBeEnabled();
   });
 
-  it('sends both wallet keys, preserves fractional percentages, and refreshes from the server after saving', async () => {
+  it('sends all 23 catalog keys, preserves fractional percentages, and refreshes from the server after saving', async () => {
     await mount();
     tab(/3\. Ví/);
     fireEvent.change(screen.getByLabelText(/Số tiền rút tối thiểu/), { target: { value: '80000' } });
     fireEvent.change(screen.getByLabelText(/Số lần rút tối đa/), { target: { value: '7' } });
+    tab(/4\. Đơn/);
+    fireEvent.change(screen.getByLabelText(/Thời hạn thanh toán đơn/), { target: { value: '30' } });
     baseApi.get.mockResolvedValue(response(fixture().map(row => row.key === 'min_payout_amount' ? { ...row, value: '80000' } : row)));
     fireEvent.click(saveButton());
     await screen.findByText(/Đã đồng bộ tham số/);
     expect(baseApi.put).toHaveBeenCalledWith('/api/admin/config/min_payout_amount', { value: '80000' });
     expect(baseApi.put).toHaveBeenCalledWith('/api/admin/config/max_payout_requests_per_day', { value: '7' });
+    expect(baseApi.put).toHaveBeenCalledWith('/api/admin/config/order_payment_timeout_minutes', { value: '30' });
     expect(baseApi.put).toHaveBeenCalledWith('/api/admin/config/commission_rate_term1', { value: '0.1234' });
-    expect(baseApi.put).toHaveBeenCalledTimes(14);
+    expect(baseApi.put).toHaveBeenCalledTimes(23);
     expect(baseApi.get).toHaveBeenCalledTimes(2);
+    tab(/3\. Ví/);
     expect(screen.getByLabelText(/Số lần rút tối đa/)).toHaveValue(6);
     expect(localStorage.getItem('rehome_admin_saved_configs')).toBeNull();
     expect(onLogAction).toHaveBeenCalledTimes(1);

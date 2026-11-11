@@ -218,7 +218,7 @@ export default function ConfigPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <Input
-                label="Độ dài một kỳ (ngày) [term_length_days]"
+                label="Độ dài một kỳ (ngày)"
                 type="number"
                 {...getFieldProps('consignment', 'termDays')}
                 onChange={(e) => setConfigs({
@@ -228,7 +228,7 @@ export default function ConfigPage() {
               />
 
               <Input
-                label="Số lần gia hạn tối đa [max_renewals]"
+                label="Số lần gia hạn tối đa"
                 type="number"
                 {...getFieldProps('consignment', 'maxRenewals')}
                 onChange={(e) => setConfigs({
@@ -238,7 +238,7 @@ export default function ConfigPage() {
               />
 
               <Input
-                label="Cửa sổ rút hàng miễn phí (ngày) [free_withdrawal_window_days]"
+                label="Cửa sổ rút hàng miễn phí (ngày)"
                 type="number"
                 {...getFieldProps('consignment', 'freeWithdrawalDays')}
                 onChange={(e) => setConfigs({
@@ -292,7 +292,7 @@ export default function ConfigPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Input
-                label="Hoa hồng kỳ 1 (%) [commission_rate_term1]"
+                label="Hoa hồng kỳ 1 (%)"
                 type="number"
                 {...getFieldProps('pricingAndCommission', 'commissionTerm1')}
                 onChange={(e) => setConfigs({
@@ -301,7 +301,7 @@ export default function ConfigPage() {
                 })}
               />
               <Input
-                label="Hoa hồng kỳ 2 (%) [commission_rate_term2]"
+                label="Hoa hồng kỳ 2 (%)"
                 type="number"
                 {...getFieldProps('pricingAndCommission', 'commissionTerm2')}
                 onChange={(e) => setConfigs({
@@ -310,7 +310,7 @@ export default function ConfigPage() {
                 })}
               />
               <Input
-                label="Hoa hồng kỳ 3 (%) [commission_rate_term3]"
+                label="Hoa hồng kỳ 3 (%)"
                 type="number"
                 {...getFieldProps('pricingAndCommission', 'commissionTerm3')}
                 onChange={(e) => setConfigs({
@@ -322,7 +322,7 @@ export default function ConfigPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
               <Input
-                label="Tỷ lệ Giá sàn (% giá chốt) [floor_price_ratio]"
+                label="Tỷ lệ Giá sàn (% giá chốt)"
                 type="number"
                 {...getFieldProps('pricingAndCommission', 'floorPricePercent')}
                 onChange={(e) => setConfigs({
@@ -342,7 +342,7 @@ export default function ConfigPage() {
               />
 
               <Input
-                label="Phí rút lại hàng cố định (VNĐ) [withdrawal_fee]"
+                label="Phí rút lại hàng cố định (VNĐ)"
                 type="number"
                 {...getFieldProps('pricingAndCommission', 'withdrawalFee')}
                 onChange={(e) => setConfigs({
@@ -352,7 +352,7 @@ export default function ConfigPage() {
               />
 
               <Input
-                label="Tỷ lệ đền hàng xuống cấp (%) [degraded_compensation_rate]"
+                label="Tỷ lệ đền hàng xuống cấp (%)"
                 type="number"
                 {...getFieldProps('pricingAndCommission', 'degradedCompensationRate')}
                 onChange={(e) => setConfigs({
@@ -474,7 +474,7 @@ export default function ConfigPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <Input
-                label="Thời gian cảnh báo quá hạn việc (giờ) [overdue_task_hours]"
+                label="Thời gian cảnh báo quá hạn việc (giờ)"
                 type="number"
                 {...getFieldProps('operationsAndCommunity', 'taskAutoReleaseHours')}
                 onChange={(e) => setConfigs({
@@ -484,7 +484,7 @@ export default function ConfigPage() {
               />
 
               <Input
-                label="Số chiến dịch đồng thời / Tổ chức [max_concurrent_campaigns]"
+                label="Số chiến dịch đồng thời / Tổ chức"
                 type="number"
                 {...getFieldProps('operationsAndCommunity', 'maxConcurrentCampaignsPerOrg')}
                 onChange={(e) => setConfigs({
@@ -494,7 +494,7 @@ export default function ConfigPage() {
               />
 
               <Input
-                label="Số ngày giữ ảnh giấy tờ CCCD sau duyệt (ngày) [legal_image_retention_days]"
+                label="Số ngày giữ ảnh giấy tờ CCCD sau duyệt (ngày)"
                 type="number"
                 {...getFieldProps('operationsAndCommunity', 'legalDocsRetentionDays')}
                 onChange={(e) => setConfigs({

@@ -27,7 +27,7 @@ export function EndTermInventoryRow({ item, sku, change }) {
           )}
           {item.status === 'UNCLAIMED' && (
             <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-              Quá hạn 30 ngày
+              Đã quá hạn xử lý
             </span>
           )}
         </div>

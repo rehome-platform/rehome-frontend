@@ -275,7 +275,7 @@ export function ConsignmentReviewPanel({ decision, setDecision, setRejectReason,
           />
           <div>
             <p className="font-bold text-xs text-[#191C19]">Duyệt — mời mang đến kho</p>
-            <p className="text-[11px] text-[#5B6776] mt-0.5">Member có 7 ngày để mang đồ đến kho ReHome</p>
+            <p className="text-[11px] text-[#5B6776] mt-0.5">Member mang sản phẩm đến kho ReHome trong thời hạn được thông báo</p>
           </div>
         </div>
       </label>
@@ -334,12 +334,25 @@ export function ConsignmentReviewPanel({ decision, setDecision, setRejectReason,
             loading={resource.busy}
             onClick={() =>
               resource.mutate(
-                (opts) => queueService.approve(formId, opts),
+                async (opts) => {
+                  const approved = await queueService.approve(formId, opts);
+                  if (approved?.bringInDeadline || approved?.bringDeadline) return approved;
+                  try {
+                    return await consignmentService.read(formId, opts);
+                  } catch (error) {
+                    if (opts.signal?.aborted) throw error;
+                    // Approval has succeeded even if the deadline cannot be fetched.
+                    return approved;
+                  }
+                },
                 {
-                  onSuccess: () => {
+                  onSuccess: (approved) => {
+                    const deadline = approved?.bringInDeadline || approved?.bringDeadline;
                     setFeedback({
                       type: 'success',
-                      message: 'Đã duyệt form ký gửi thành công! Khách hàng có 7 ngày để mang sản phẩm đến kho.',
+                      message: deadline
+                        ? `Đã duyệt form ký gửi thành công! Hạn mang sản phẩm đến kho: ${date(deadline)}.`
+                        : 'Đã duyệt form ký gửi thành công!',
                     });
                   },
                 },

@@ -186,7 +186,7 @@ export default function EndOfTermPage() {
         </h3>
         <ul className="text-xs text-textSecondary space-y-1 list-disc list-inside">
           <li>
-            <span className="font-medium">Chuyển giao từ thiện (API 36):</span> Dành cho sản phẩm vô thừa nhận (<span className="font-mono">UNCLAIMED</span>) quá hạn 30 ngày. Moderator nhập tên tổ chức từ thiện để đổi trạng thái sang <span className="font-semibold">DONATED</span>.
+            <span className="font-medium">Chuyển giao từ thiện (API 36):</span> Dành cho sản phẩm đã ở trạng thái vô thừa nhận (<span className="font-mono">UNCLAIMED</span>) sau khi quá hạn xử lý. Moderator nhập tên tổ chức từ thiện để đổi trạng thái sang <span className="font-semibold">DONATED</span>.
           </li>
           <li>
             <span className="font-medium">Khách đến quầy nhận lại hàng cuối kỳ (API 72):</span> Khách hàng cần đối chiếu danh tính trực tiếp tại <Link to="/moderator/counter" className="underline font-semibold text-primary">Quầy tiếp nhận</Link> trước khi Moderator thực hiện bàn giao.

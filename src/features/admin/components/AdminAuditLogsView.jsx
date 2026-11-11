@@ -70,6 +70,16 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
         return 'Cập nhật cấu hình';
       case 'RESOLVE_VIOLATION':
         return 'Xử lý vi phạm';
+      case 'VIOLATION_RESOLVE_REMOVE_POST':
+        return 'Gỡ bài viết vi phạm';
+      case 'VIOLATION_RESOLVE_HIDE_CAMPAIGN':
+        return 'Ẩn chiến dịch vi phạm';
+      case 'VIOLATION_RESOLVE_WARN_ORG':
+        return 'Cảnh cáo tổ chức';
+      case 'VIOLATION_RESOLVE_PROPOSE_BAN':
+        return 'Đề xuất khóa tổ chức (Moderator)';
+      case 'VIOLATION_DISMISS':
+        return 'Bác bỏ báo cáo vi phạm';
       default:
         return actionType || 'Thao tác hệ thống';
     }
@@ -100,6 +110,16 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
           if (typeof l.detail === 'object') {
             beforeState = l.detail.beforeStatus || l.detail.beforeState || l.detail.oldValue || '—';
             afterState = l.detail.afterStatus || l.detail.afterState || l.detail.newValue || '—';
+            if (typeof l.actionType === 'string' && l.actionType.startsWith('VIOLATION_')) {
+              const count = l.detail.closedReportCount ?? 1;
+              if (beforeState === '—') beforeState = 'PENDING';
+              if (afterState === '—') {
+                afterState =
+                  l.actionType === 'VIOLATION_DISMISS'
+                    ? `DISMISSED (${count} báo cáo)`
+                    : `RESOLVED (${count} báo cáo)`;
+              }
+            }
             reason = l.detail.reason || l.detail.note || l.detail.message || JSON.stringify(l.detail);
           } else {
             reason = String(l.detail);
@@ -339,6 +359,9 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
             >
               <option value="ALL">Đối tượng: Tất cả</option>
               <option value="ACCOUNT">Tài khoản (Member / Moderator)</option>
+              <option value="ORGANIZATION_ACCOUNT">Hồ sơ Tổ chức (ORGANIZATION_ACCOUNT)</option>
+              <option value="POST">Bài viết cộng đồng (POST)</option>
+              <option value="CAMPAIGN">Chiến dịch quyên góp (CAMPAIGN)</option>
               <option value="WAREHOUSE">Điểm kí gửi (Kho)</option>
               <option value="ORGANIZATION">Tổ chức từ thiện</option>
               <option value="PRODUCT">Sản phẩm & Hàng kí gửi</option>

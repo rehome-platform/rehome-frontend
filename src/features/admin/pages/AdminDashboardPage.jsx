@@ -6,11 +6,29 @@ import adminApi from '../services/adminApi.js';
 import AdminOverviewView from '../components/AdminOverviewView.jsx';
 import { useToast } from '../../../context/ToastContext.jsx';
 
+// Calendar arithmetic uses UTC after extracting the date in Vietnam, so the
+// export range does not depend on the browser's local timezone.
+function getExportDateRange(period, now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(now);
+  const value = (type) => parts.find((part) => part.type === type).value;
+  const to = `${value('year')}-${value('month')}-${value('day')}`;
+  const start = new Date(`${to}T00:00:00Z`);
+  if (period === 'ALL') return { from: '1970-01-01', to };
+  if (period === 'WEEK') {
+    start.setUTCDate(start.getUTCDate() - (start.getUTCDay() + 6) % 7);
+  } else {
+    start.setUTCDate(1);
+  }
+  return { from: start.toISOString().slice(0, 10), to };
+}
+
 /**
  * Trang Dashboard Điều Hành & Quỹ Nền Tảng ReHome (Admin)
  * Chuẩn hóa 100% Real Data:
  * - Nối API backend thực tế: GET /api/admin/dashboard & GET /api/admin/dashboard/export
- * - Phần trăm dưới lợi nhuận ròng (Net Profit Margin % = platformRevenue / revenue * 100%)
+ * - Tỷ lệ doanh thu nền tảng / tổng tiền đơn hoàn thành
  * - Empty State chuẩn khi backend chưa cung cấp API phân rã hoa hồng theo kỳ
  * - Thống kê tồn kho thực tế từ backend
  * - Đã loại bỏ dòng thông tin Admin tĩnh theo yêu cầu
@@ -22,7 +40,7 @@ export default function AdminDashboardPage() {
   // Tab: 'fund' (Dashboard & Quỹ) | 'revenue_report' (Báo cáo doanh thu) | 'activities' (Tăng trưởng)
   const [activeTab, setActiveTab] = useState('fund');
   const [exporting, setExporting] = useState(false);
-  const [filterPeriod, setFilterPeriod] = useState('MONTH'); // 'WEEK' | 'MONTH' | 'ALL'
+  const [exportPeriod, setExportPeriod] = useState('MONTH'); // 'WEEK' | 'MONTH' | 'ALL'
   const [loading, setLoading] = useState(true);
 
   // Dữ liệu từ API GET /api/admin/dashboard
@@ -61,31 +79,31 @@ export default function AdminDashboardPage() {
     };
   }, []);
 
-  // Tính tỷ suất lợi nhuận ròng (% dưới số tiền Lợi nhuận ròng)
-  const netProfitMargin = dashboardData.revenue > 0
+  // API revenue là tổng tiền đơn hoàn thành; đây không phải tỷ suất lợi nhuận ròng.
+  const platformRevenueRatio = dashboardData.revenue > 0
     ? ((dashboardData.platformRevenue / dashboardData.revenue) * 100).toFixed(1)
     : '0.0';
 
   // 4 Thẻ Quỹ & Dòng tiền thực tế từ backend
   const fundMetrics = [
     {
-      label: 'Tiền đang giữ hộ (Holding)',
+      label: 'Tổng số dư ví thành viên',
       value: dashboardData.walletBalanceHeld || 0,
-      description: 'Tổng số dư ví Member + Tiền đơn đang treo chưa hoàn thành',
+      description: 'Tổng số dư hiện tại trong các ví thành viên',
       icon: 'lock_clock',
       iconBg: 'bg-[#FFF3E0]',
       iconColor: 'text-[#D97706]',
       badge: 'Sổ kép đối ứng',
     },
     {
-      label: 'Doanh thu thực tế nền tảng',
+      label: 'Doanh thu nền tảng',
       value: dashboardData.platformRevenue || 0,
-      description: 'Tổng hoa hồng lũy tiến (10-20%) + Phí rút hàng - Chi đền bù',
+      description: 'Hoa hồng và phí rút hàng đã thu, chưa trừ chi đền bù',
       icon: 'trending_up',
       iconBg: 'bg-[#E8F5E9]',
       iconColor: 'text-[#006B2C]',
-      badge: 'Lợi nhuận ròng',
-      extraInfo: `${netProfitMargin}% tỷ suất lợi nhuận ròng`,
+      badge: 'Doanh thu nền tảng',
+      extraInfo: `${platformRevenueRatio}% Tỷ lệ doanh thu nền tảng / tổng tiền đơn hoàn thành`,
     },
     {
       label: 'Số dư quỹ nền tảng',
@@ -97,9 +115,9 @@ export default function AdminDashboardPage() {
       badge: 'Cổng thanh toán',
     },
     {
-      label: 'Đơn hàng đang xử lý tại kho',
+      label: 'Tổng đơn đã thanh toán',
       value: `${dashboardData.ordersCount || 0} đơn`,
-      description: 'Đơn hàng đã thanh toán đang chuẩn bị đóng gói & vận chuyển',
+      description: 'Bao gồm đơn đang xử lý, đang giao, đã giao, hoàn thành và trả hàng',
       icon: 'local_shipping',
       iconBg: 'bg-[#EDE7F6]',
       iconColor: 'text-[#673AB7]',
@@ -111,20 +129,14 @@ export default function AdminDashboardPage() {
   const handleExportExcel = async () => {
     try {
       setExporting(true);
-      const today = new Date();
-      const thirtyDaysAgo = new Date(today);
-      thirtyDaysAgo.setDate(today.getDate() - 30);
-
-      const fromStr = thirtyDaysAgo.toISOString().split('T')[0];
-      const toStr = today.toISOString().split('T')[0];
-
-      const blob = await adminApi.exportDashboard(fromStr, toStr);
+      const { from, to } = getExportDateRange(exportPeriod);
+      const blob = await adminApi.exportDashboard(from, to);
 
       // Kích hoạt tải file xuống trình duyệt
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `dashboard_report_${today.toISOString().slice(0, 7)}.xlsx`);
+      link.setAttribute('download', `dashboard_report_${from}_${to}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
@@ -179,7 +191,20 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Nút xuất báo cáo Excel gọi API thật */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1 text-xs text-[#414942]">
+            <span>Khoảng thời gian xuất Excel</span>
+            <select
+              value={exportPeriod}
+              onChange={(event) => setExportPeriod(event.target.value)}
+              disabled={exporting}
+              className="rounded-xl border border-[#E2E8E0] bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30 disabled:opacity-50"
+            >
+              <option value="WEEK">Tuần này</option>
+              <option value="MONTH">Tháng này</option>
+              <option value="ALL">Tất cả</option>
+            </select>
+          </label>
           <Button
             onClick={handleExportExcel}
             loading={exporting}
@@ -190,6 +215,11 @@ export default function AdminDashboardPage() {
           </Button>
         </div>
       </div>
+
+      <p className="text-xs text-[#717971]">
+        Số liệu doanh thu và đơn hàng trên dashboard là toàn thời gian; số dư và tồn kho là hiện tại.
+        {' '}Khoảng thời gian chỉ áp dụng cho báo cáo Excel, theo giờ Việt Nam.
+      </p>
 
       {/* Nội dung Tab Hoạt động & Tăng trưởng */}
       {activeTab === 'activities' && (
@@ -207,26 +237,6 @@ export default function AdminDashboardPage() {
               <p className="text-xs text-[#717971] mt-0.5">
                 Doanh thu hoa hồng được chốt lũy tiến (10% - 15% - 20%) và chỉ tính cho sản phẩm đã bán thành công
               </p>
-            </div>
-            <div className="flex items-center bg-white border border-[#E2E8E0] rounded-xl p-1 text-xs font-medium">
-              <button
-                onClick={() => setFilterPeriod('WEEK')}
-                className={`px-3 py-1.5 rounded-lg transition-colors ${filterPeriod === 'WEEK' ? 'bg-[#006B2C] text-white' : 'text-[#717971]'}`}
-              >
-                Tuần này
-              </button>
-              <button
-                onClick={() => setFilterPeriod('MONTH')}
-                className={`px-3 py-1.5 rounded-lg transition-colors ${filterPeriod === 'MONTH' ? 'bg-[#006B2C] text-white' : 'text-[#717971]'}`}
-              >
-                Tháng này
-              </button>
-              <button
-                onClick={() => setFilterPeriod('ALL')}
-                className={`px-3 py-1.5 rounded-lg transition-colors ${filterPeriod === 'ALL' ? 'bg-[#006B2C] text-white' : 'text-[#717971]'}`}
-              >
-                Tất cả
-              </button>
             </div>
           </div>
 
@@ -278,14 +288,13 @@ export default function AdminDashboardPage() {
                   </p>
                 </div>
 
-                {/* Phần trăm dưới lợi nhuận ròng */}
-                {m.extraInfo ? (
+                <p className="text-[11px] text-[#717971] mt-3">{m.description}</p>
+                {/* Tỷ lệ doanh thu so với tổng tiền đơn hoàn thành */}
+                {m.extraInfo && (
                   <div className="mt-3 pt-2.5 border-t border-[#F0F5EE] flex items-center gap-1.5 text-xs font-bold text-[#006B2C]">
                     <span className="material-symbols-outlined text-[16px]">trending_up</span>
                     <span>{m.extraInfo}</span>
                   </div>
-                ) : (
-                  <p className="text-[11px] text-[#717971] mt-3 line-clamp-1">{m.description}</p>
                 )}
               </div>
             ))}

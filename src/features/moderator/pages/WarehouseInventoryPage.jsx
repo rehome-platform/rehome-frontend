@@ -1,3 +1,5 @@
+import DegradedCaseDetails from '../components/DegradedCaseDetails.jsx';
+import { degradedCaseLabel, degradedInventoryItem } from '../models/degradedCaseModel.js';
 import React, { useState, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
@@ -22,6 +24,7 @@ export const SUPPORTED_INVENTORY_STATUSES = [
 
 export const INVENTORY_STATUS_LABELS = {
   ON_SALE: 'Đang bán',
+  WAREHOUSE: 'Lưu kho, tạm ngừng bán',
   RESERVED: 'Đang giữ',
   SOLD: 'Đã bán, chờ đóng gói',
   WAITING_END_OF_TERM: 'Chờ xử lý cuối kỳ',
@@ -46,32 +49,23 @@ export default function WarehouseInventoryPage() {
   const page = Math.max(0, Number(search.get('page')) || 0);
   const sku = search.get('sku') || '';
   const status = search.get('status') || '';
+  const linkedCaseId = search.get('caseId');
+
+  React.useEffect(() => {
+    if (linkedCaseId) setDegradedModalItem({ caseId: linkedCaseId });
+  }, [linkedCaseId]);
+
+  const closeDegradedCase = () => {
+    setDegradedModalItem(null);
+    if (linkedCaseId) setSearch(previous => { const next = new URLSearchParams(previous); next.delete('caseId'); return next; }, { replace: true });
+  };
 
   const resource = useResource(
     async (options) => {
       if (status === 'DEGRADED') {
         const degradedList = await inventoryService.degradedCases({ status: '' }, options);
         return {
-          content: (degradedList || []).map((c) => ({
-            sku: c.productId || c.id,
-            id: c.id,
-            productId: c.productId,
-            name: c.productName || 'Sản phẩm ký gửi',
-            brandName: 'ReHome',
-            degradedDate: c.receivedAt,
-            degradedReason: c.reason || c.moderatorNote || 'Hàng xuống cấp sau khi trả về',
-            conditionNote: c.moderatorNote,
-            decisionStatus: c.decision || (c.status === 'DECIDED' ? 'FULL_COMPENSATION' : 'PENDING'),
-            decisionStatusLabel:
-              c.decision === 'FULL_COMPENSATION'
-                ? 'Đã đền 100%'
-                : c.decision === 'PARTIAL_WITH_ITEM_BACK'
-                ? 'Đền 50% + nhận lại'
-                : 'Chờ Member chọn',
-            compensationAmount: c.compensationAmount,
-            paidAmount: c.paidAmount,
-            photos: c.photos || [],
-          })),
+          content: (degradedList || []).map(degradedInventoryItem),
           totalElements: (degradedList || []).length,
           totalPages: 1,
         };
@@ -106,6 +100,7 @@ export default function WarehouseInventoryPage() {
   const statusTabs = [
     { label: 'Tất cả', value: '' },
     { label: 'Đang bán', value: 'ON_SALE' },
+    { label: 'Lưu kho', value: 'WAREHOUSE' },
     { label: 'Đang giữ', value: 'RESERVED' },
     { label: 'Đã bán, chờ đóng gói', value: 'SOLD' },
     { label: 'Chờ xử lý cuối kỳ', value: 'WAITING_END_OF_TERM' },
@@ -305,9 +300,11 @@ export default function WarehouseInventoryPage() {
                               ? 'bg-[#E8F5E9] text-[#006B2C]'
                               : (item.decisionStatus === 'PARTIAL_COMPENSATION' || item.decisionStatus === 'PARTIAL_WITH_ITEM_BACK')
                               ? 'bg-[#E3F2FD] text-[#1565C0]'
+                              : item.decisionStatus === 'UNCLAIMED'
+                              ? 'bg-[#FFEBEE] text-[#C62828]'
                               : 'bg-[#FFF3E0] text-[#E65100]'
                           }`}>
-                            {item.decisionStatusLabel || (item.decisionStatus === 'FULL_COMPENSATION' ? 'Đã đền 100%' : (item.decisionStatus === 'PARTIAL_COMPENSATION' || item.decisionStatus === 'PARTIAL_WITH_ITEM_BACK') ? 'Đền 50% + nhận lại' : 'Chờ Member chọn')}
+                            {item.decisionStatusLabel || degradedCaseLabel(item)}
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-right">
@@ -555,115 +552,13 @@ export default function WarehouseInventoryPage() {
       {degradedModalItem && (
         <Modal
           isOpen={!!degradedModalItem}
-          onClose={() => setDegradedModalItem(null)}
-          title={`Biên bản hàng xuống cấp · SKU ${degradedModalItem.sku || degradedModalItem.id}`}
+          onClose={closeDegradedCase}
+          title="Biên bản hàng xuống cấp"
         >
-          <div className="space-y-4 text-xs font-sans">
-            <div className="p-3.5 rounded-xl border border-neutral bg-[#f9faf9] space-y-1.5">
-              <div className="flex justify-between">
-                <span className="text-[#5f5f5f]">Sản phẩm:</span>
-                <span className="font-bold text-[#191C19]">
-                  {degradedModalItem.name} ({degradedModalItem.brandName || degradedModalItem.brand || '—'})
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#5f5f5f]">Người ký gửi:</span>
-                <span className="font-semibold text-[#191C19]">{degradedModalItem.memberName || 'Member ký gửi'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#5f5f5f]">Ngày lập biên bản:</span>
-                <span className="text-[#191C19]">
-                  {degradedModalItem.degradedDate ? new Date(degradedModalItem.degradedDate).toLocaleString('vi-VN') : 'Gần đây'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[#5f5f5f]">Trạng thái quyết định:</span>
-                <span className={`inline-block px-2.5 py-1 rounded text-xs font-bold ${
-                  degradedModalItem.decisionStatus === 'FULL_COMPENSATION'
-                    ? 'bg-[#E8F5E9] text-[#006B2C]'
-                    : (degradedModalItem.decisionStatus === 'PARTIAL_COMPENSATION' || degradedModalItem.decisionStatus === 'PARTIAL_WITH_ITEM_BACK')
-                    ? 'bg-[#E3F2FD] text-[#1565C0]'
-                    : 'bg-[#FFF3E0] text-[#E65100]'
-                }`}>
-                  {degradedModalItem.decisionStatusLabel || (degradedModalItem.decisionStatus === 'FULL_COMPENSATION' ? 'Đã đền 100%' : (degradedModalItem.decisionStatus === 'PARTIAL_COMPENSATION' || degradedModalItem.decisionStatus === 'PARTIAL_WITH_ITEM_BACK') ? 'Đền 50% + nhận lại' : 'Chờ Member chọn')}
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <span className="font-bold uppercase tracking-wider text-[10px] text-[#5f5f5f]">Mô tả lý do xuống cấp</span>
-              <p className="p-3 rounded-xl border border-[#d4d4d4] bg-white text-[#191C19] leading-relaxed">
-                {degradedModalItem.degradedReason || degradedModalItem.conditionNote || 'Hàng trả về có vết bẩn khó tẩy, rách chỉ hoặc xơ vải so với thời điểm nhập kho ban đầu.'}
-              </p>
-            </div>
-
-            {/* Mức tiền đền tự động */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 rounded-xl border border-[#006B2C] bg-[#E8F5E9]/50 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-[#006B2C]">Phương án 1 · Đền đủ 100%</span>
-                <p className="text-base font-extrabold text-[#006B2C]">
-                  {money(degradedModalItem.compensationAmount || degradedModalItem.agreedPrice || 0)}
-                </p>
-                <p className="text-[10px] text-[#5f5f5f]">Hàng thành tài sản nền tảng (PLATFORM_OWNED), Member nhận đủ tiền đền vào ví.</p>
-              </div>
-              <div className="p-3 rounded-xl border border-[#D97706] bg-[#FFFBEB] space-y-1">
-                <span className="text-[10px] uppercase font-bold text-[#D97706]">Phương án 2 · Đền 50% + Nhận lại</span>
-                <p className="text-base font-extrabold text-[#D97706]">
-                  {money(degradedModalItem.paidAmount || degradedModalItem.halfCompensationAmount || Math.round((degradedModalItem.compensationAmount || degradedModalItem.agreedPrice || 0) * 0.5))}
-                </p>
-                <p className="text-[10px] text-[#5f5f5f]">Member nhận 50% tiền đền vào ví và đến quầy tiếp nhận nhận lại đồ.</p>
-              </div>
-            </div>
-
-            {/* Ảnh chụp đối chiếu */}
-            <div className="space-y-2">
-              <span className="font-bold uppercase tracking-wider text-[10px] text-[#5f5f5f]">Ảnh chụp hiện trạng hư hỏng</span>
-              {degradedModalItem.photos && degradedModalItem.photos.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {degradedModalItem.photos.map((url, idx) => (
-                    <div key={idx} className="h-32 rounded-xl border border-[#d4d4d4] overflow-hidden bg-[#fafafa]">
-                      <img
-                        src={url}
-                        alt={`Ảnh hư hỏng ${idx + 1}`}
-                        className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                        onClick={() => window.open(url, '_blank')}
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-4 rounded-xl border border-dashed border-[#d4d4d4] text-center text-xs text-[#5f5f5f] bg-[#fafafa]">
-                  Chưa có ảnh hư hỏng được tải lên
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-between items-center pt-2">
-              {(degradedModalItem.decisionStatus === 'PARTIAL_COMPENSATION' || degradedModalItem.decisionStatus === 'PARTIAL_WITH_ITEM_BACK') && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate('/moderator/counter')}
-                  className="px-4 py-2 text-xs font-semibold text-[#006B2C] border-[#006B2C]"
-                >
-                  Mở Quầy tiếp nhận (BG-01) →
-                </Button>
-              )}
-              {degradedModalItem.decisionStatus === 'FULL_COMPENSATION' && (
-                <span className="text-xs font-semibold text-[#006B2C]">
-                  ✓ Đã chuyển thành Tài sản nền tảng (PLATFORM_OWNED)
-                </span>
-              )}
-              <Button
-                type="button"
-                variant="primary"
-                onClick={() => setDegradedModalItem(null)}
-                className="ml-auto px-4 py-2 text-sm font-semibold"
-              >
-                Đóng biên bản
-              </Button>
-            </div>
-          </div>
+          <DegradedCaseDetails
+            caseId={degradedModalItem.caseId}
+            onNavigateToCounter={() => navigate('/moderator/counter')}
+          />
         </Modal>
       )}
     </Page>

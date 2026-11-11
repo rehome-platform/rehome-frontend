@@ -21,7 +21,7 @@ export const DEFAULT_SYSTEM_CONFIGS = {
     commissionTerm3: 20, // Hoa hồng kỳ 3 (%) - Ngày 61-90
     floorPricePercent: 50, // Giá sàn (% giá chốt) - Chặn Member hạ giá quá thấp
     maxPriceChangesPerDay: 1, // Số lần đổi giá tối đa mỗi ngày
-    withdrawalFee: 50000, // Phí rút lại hàng ngoài cửa sổ miễn phí (VNĐ)
+    withdrawalFee: 0, // Phí rút lại hàng ngoài cửa sổ miễn phí (VNĐ)
     degradedCompensationRate: 50, // Tỷ lệ đền bù khi Member lấy hàng xuống cấp về (%)
     vatRate: 8, // Tỷ lệ thuế khấu trừ (%)
   },
@@ -49,20 +49,29 @@ export const DEFAULT_SYSTEM_CONFIGS = {
   },
 };
 
-// Only these UI fields have corresponding keys in SystemConfigCatalog.
+// All 23 UI fields mapped to keys in Backend SystemConfigCatalog.
 // Ratios are displayed as percentages but stored as fractions by the API.
 export const SYSTEM_CONFIG_FIELDS = [
   { key: 'term_length_days', group: 'consignment', field: 'termDays' },
   { key: 'max_renewals', group: 'consignment', field: 'maxRenewals' },
   { key: 'free_withdrawal_window_days', group: 'consignment', field: 'freeWithdrawalDays' },
+  { key: 'end_of_term_decision_days', group: 'consignment', field: 'unclaimedDeadlineDays' },
+  { key: 'bring_in_deadline_days', group: 'consignment', field: 'bringItemDeadlineDays' },
+  { key: 'max_pending_forms_per_member', group: 'consignment', field: 'maxPendingFormsPerMember' },
   { key: 'commission_rate_term1', group: 'pricingAndCommission', field: 'commissionTerm1', percent: true },
   { key: 'commission_rate_term2', group: 'pricingAndCommission', field: 'commissionTerm2', percent: true },
   { key: 'commission_rate_term3', group: 'pricingAndCommission', field: 'commissionTerm3', percent: true },
   { key: 'floor_price_ratio', group: 'pricingAndCommission', field: 'floorPricePercent', percent: true },
+  { key: 'max_price_changes_per_day', group: 'pricingAndCommission', field: 'maxPriceChangesPerDay' },
   { key: 'withdrawal_fee', group: 'pricingAndCommission', field: 'withdrawalFee' },
   { key: 'degraded_compensation_rate', group: 'pricingAndCommission', field: 'degradedCompensationRate', percent: true },
   { key: 'min_payout_amount', group: 'walletAndPayout', field: 'minWithdrawalAmount' },
   { key: 'max_payout_requests_per_day', group: 'walletAndPayout', field: 'maxWithdrawalsPerDay' },
+  { key: 'order_payment_timeout_minutes', group: 'ordersAndReturns', field: 'paymentTimeoutMinutes' },
+  { key: 'order_auto_complete_days', group: 'ordersAndReturns', field: 'autoCompleteDeliveredDays' },
+  { key: 'return_request_window_days', group: 'ordersAndReturns', field: 'returnRequestWindowDays' },
+  { key: 'return_handover_carrier_days', group: 'ordersAndReturns', field: 'returnHandoverCarrierDays' },
+  { key: 'counter_pickup_days', group: 'ordersAndReturns', field: 'counterPickupDays' },
   { key: 'max_concurrent_campaigns', group: 'operationsAndCommunity', field: 'maxConcurrentCampaignsPerOrg' },
   { key: 'legal_image_retention_days', group: 'operationsAndCommunity', field: 'legalDocsRetentionDays' },
   { key: 'overdue_task_hours', group: 'operationsAndCommunity', field: 'taskAutoReleaseHours' },

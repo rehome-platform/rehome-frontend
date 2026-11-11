@@ -187,8 +187,6 @@ export const API_ENDPOINTS = {
 
     AUDIT_LOGS: "/api/admin/audit-logs",
     AUDIT_LOG_FILTER_OPTIONS: "/api/admin/audit-logs/filter-options",
-
-    VIOLATION_WORDS: "/api/admin/violation-words",
   },
 
   // 4. Notifications (API 114)
