@@ -9,6 +9,8 @@ function normalizeCampaign(c) {
     ...c,
     id: c.id,
     title: c.title || 'Chiến dịch quyên góp',
+    endTime: c.endTime || null,
+    preferredItemTypes: Array.isArray(c.preferredItemTypes) ? c.preferredItemTypes : [],
     organizationId: c.organization?.id || c.organization?.accountId || c.organizationId || null,
     organizationName: c.organization?.displayName || c.organizationName || 'Tổ chức',
     warehouses: Array.isArray(c.warehouses) ? c.warehouses : [],
@@ -22,12 +24,23 @@ function extractSkuFromNote(note) {
 
 function normalizeDonation(d) {
   if (!d) return null;
-  const sku = d.productId || d.sku || extractSkuFromNote(d.note);
+  const productObj = d.product && typeof d.product === 'object' ? d.product : null;
+  const sku = productObj?.sku || productObj?.id || d.productId || d.sku || extractSkuFromNote(d.note);
+  const productName = productObj?.name || d.productName || null;
+  const productPhotoUrl = productObj?.photoUrl || productObj?.imageUrl || d.productPhotoUrl || d.photoUrl || null;
+  const source =
+    d.source ||
+    (sku || (typeof d.note === 'string' && d.note.startsWith('Món ký gửi:')) ? 'CONSIGNED_ITEM' : 'DIRECT');
   return {
     ...d,
     id: d.id,
     sku,
-    isConsignedItem: Boolean(d.productId || (typeof d.note === 'string' && d.note.startsWith('Món ký gửi:'))),
+    productName,
+    productPhotoUrl,
+    source,
+    isConsignedItem: source === 'CONSIGNED_ITEM',
+    recordedBy: d.recordedBy || d.moderatorCode || d.recordedByName || null,
+    handedOverToOrganizationName: d.handedOverToOrganizationName || d.organizationName || null,
     status: d.status || 'PENDING_PICKUP',
   };
 }

@@ -5,6 +5,7 @@ import Modal from '../../../components/common/Modal.jsx';
 import { useToast } from '../../../context/ToastContext.jsx';
 import { donationService } from '../services/donationApi.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
+import { normalizeError } from '../models/warehouseModel.js';
 import { Page, Card, ResourceState, date } from '../components/WarehouseUi.jsx';
 
 export default function DonationsPage() {
@@ -12,19 +13,24 @@ export default function DonationsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const focusedDonationId = searchParams.get('donationId') || '';
   const initialCampaignFilter = searchParams.get('campaignId') || '';
+  const initialDonorName = searchParams.get('donorName') || '';
 
   const [campaignFilter, setCampaignFilter] = useState(initialCampaignFilter);
   const [statusFilter, setStatusFilter] = useState('');
 
   // Form ghi nhận lượt quyên góp trực tiếp (Luồng A)
   const [selectedCampaignId, setSelectedCampaignId] = useState('');
-  const [donorName, setDonorName] = useState('');
+  const [donorName, setDonorName] = useState(initialDonorName);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [note, setNote] = useState('');
+  const [recordError, setRecordError] = useState(null);
+  const [recording, setRecording] = useState(false);
 
   // Chọn các lượt chờ lấy để bàn giao cho tổ chức (F-165)
   const [selectedIds, setSelectedIds] = useState([]);
   const [handoverConfirmOpen, setHandoverConfirmOpen] = useState(false);
+  const [handoverError, setHandoverError] = useState(null);
+  const [handingOver, setHandingOver] = useState(false);
 
   const warehouses = useResource((options) => donationService.myWarehouses(options), []);
   const warehouse = Array.isArray(warehouses.data) ? warehouses.data[0] : null;
@@ -77,7 +83,27 @@ export default function DonationsPage() {
   }, [campaigns, donations]);
 
   const effectiveCampaignId = selectedCampaignId || (campaigns[0]?.id ? String(campaigns[0].id) : '');
+  const selectedCampaign = campaignMap.get(String(effectiveCampaignId)) || null;
   const noOpenCampaigns = Boolean(warehouseId) && !campaignsResource.loading && !campaignsResource.error && campaigns.length === 0;
+
+  // Nhóm lượt quyên góp theo chiến dịch để Moderator đối chiếu & chọn bàn giao nhanh
+  const groupedDonations = useMemo(() => {
+    const groups = new Map();
+    donations.forEach((row) => {
+      const key = String(row.campaignId || 'other');
+      if (!groups.has(key)) {
+        const camp = campaignMap.get(key);
+        groups.set(key, {
+          campaignId: row.campaignId || null,
+          campaignTitle: row.campaignTitle || camp?.title || row.campaignId || 'Chiến dịch khác',
+          organizationName: row.organizationName || camp?.organizationName || '',
+          rows: [],
+        });
+      }
+      groups.get(key).rows.push(row);
+    });
+    return Array.from(groups.values());
+  }, [donations, campaignMap]);
 
   const selectedRows = useMemo(
     () => donations.filter((d) => selectedIds.includes(d.id) && d.status === 'PENDING_PICKUP'),
@@ -100,59 +126,80 @@ export default function DonationsPage() {
 
   const toggleSelect = (row) => {
     if (row.status !== 'PENDING_PICKUP') return;
+    setHandoverError(null);
     setSelectedIds((prev) =>
       prev.includes(row.id) ? prev.filter((id) => id !== row.id) : [...prev, row.id],
     );
   };
 
+  const selectAllPendingInGroup = (group) => {
+    const pendingIds = group.rows
+      .filter((r) => {
+        const camp = campaignMap.get(String(r.campaignId));
+        return r.status === 'PENDING_PICKUP' && Boolean(r.campaignId && (r.organizationId || camp?.organizationId));
+      })
+      .map((r) => r.id);
+    if (!pendingIds.length) return;
+    setHandoverError(null);
+    setSelectedIds(pendingIds);
+  };
+
   const handleRecordDonation = async (event) => {
     event.preventDefault();
-    if (!warehouseId || noOpenCampaigns) return;
-    await donationsResource.mutate(
-      (options) =>
-        donationService.recordDonation(
-          warehouseId,
-          { campaignId: effectiveCampaignId, donorName, isAnonymous, note },
-          options,
-        ),
-      {
-        onSuccess: () => {
-          toast.success('Đã ghi nhận lượt quyên góp. Tổ chức sẽ nhận thông báo đến lấy.');
-          setDonorName('');
-          setIsAnonymous(false);
-          setNote('');
-        },
-      },
-    );
+    if (!warehouseId || noOpenCampaigns || recording) return;
+    setRecordError(null);
+    setRecording(true);
+    try {
+      await donationService.recordDonation(
+        warehouseId,
+        { campaignId: effectiveCampaignId, donorName, isAnonymous, note },
+      );
+      toast.success('Đã ghi nhận lượt quyên góp');
+      setDonorName('');
+      setIsAnonymous(false);
+      setNote('');
+      donationsResource.refresh();
+    } catch (err) {
+      setRecordError(normalizeError(err).message);
+    } finally {
+      setRecording(false);
+    }
   };
 
   const handleConfirmHandover = async () => {
-    if (!warehouseId || !selectedRows.length || !activeHandoverCampaignId || !activeHandoverOrgId) return;
-    await donationsResource.mutate(
-      (options) =>
-        donationService.handoverDonations(
-          warehouseId,
-          {
-            donationIds: selectedRows.map((r) => r.id),
-            organizationId: activeHandoverOrgId,
-            campaignId: activeHandoverCampaignId,
-          },
-          options,
-        ),
-      {
-        onSuccess: (res) => {
-          const count = res?.handedOverCount ?? selectedRows.length;
-          toast.success(`Đã bàn giao ${count} lượt quyên góp cho ${activeHandoverOrgName}.`);
-          setSelectedIds([]);
-          setHandoverConfirmOpen(false);
-          if (focusedDonationId) {
-            const next = new URLSearchParams(searchParams);
-            next.delete('donationId');
-            setSearchParams(next, { replace: true });
-          }
+    if (!warehouseId || !selectedRows.length || !activeHandoverCampaignId || !activeHandoverOrgId || handingOver) return;
+    setHandoverError(null);
+    setHandingOver(true);
+    try {
+      const res = await donationService.handoverDonations(
+        warehouseId,
+        {
+          donationIds: selectedRows.map((r) => r.id),
+          organizationId: activeHandoverOrgId,
+          campaignId: activeHandoverCampaignId,
         },
-      },
-    );
+      );
+      const count = res?.handedOverCount ?? selectedRows.length;
+      toast.success(`Đã bàn giao ${count} lượt cho ${activeHandoverOrgName}`);
+      setSelectedIds([]);
+      setHandoverConfirmOpen(false);
+      donationsResource.refresh();
+      if (focusedDonationId) {
+        const next = new URLSearchParams(searchParams);
+        next.delete('donationId');
+        setSearchParams(next, { replace: true });
+      }
+    } catch (err) {
+      const normalized = normalizeError(err);
+      if (normalized.status === 400) {
+        setHandoverError('Danh sách không hợp lệ (có lượt đã bàn giao hoặc khác chiến dịch). Tải lại rồi chọn lại.');
+        donationsResource.refresh();
+      } else {
+        setHandoverError(normalized.message);
+      }
+    } finally {
+      setHandingOver(false);
+    }
   };
 
   return (
@@ -182,8 +229,14 @@ export default function DonationsPage() {
 
               {noOpenCampaigns && (
                 <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900 space-y-1">
-                  <p className="font-bold">Chưa có chiến dịch đang nhận đồ tại điểm ký gửi này</p>
+                  <p className="font-bold">Địa điểm này hiện không có chiến dịch nào nhận đồ</p>
                   <p>Theo quy định vận hành, quầy tạm thời không nhận quyên góp trực tiếp khi chưa có chiến dịch mở nhận tại đây.</p>
+                </div>
+              )}
+
+              {recordError && (
+                <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+                  {recordError}
                 </div>
               )}
 
@@ -195,8 +248,11 @@ export default function DonationsPage() {
                   <select
                     id="donation-campaign"
                     value={effectiveCampaignId}
-                    disabled={noOpenCampaigns || donationsResource.busy}
-                    onChange={(e) => setSelectedCampaignId(e.target.value)}
+                    disabled={noOpenCampaigns || recording}
+                    onChange={(e) => {
+                      setSelectedCampaignId(e.target.value);
+                      if (recordError) setRecordError(null);
+                    }}
                     className="w-full rounded-xl border border-neutral bg-white px-3 py-2 text-xs text-text focus:border-[#006B2C] focus:outline-none disabled:bg-background"
                   >
                     {campaigns.length === 0 ? (
@@ -209,14 +265,35 @@ export default function DonationsPage() {
                       ))
                     )}
                   </select>
+
+                  {selectedCampaign && (
+                    <div className="mt-2 rounded-xl border border-neutral bg-[#F6F9F4] p-2.5 space-y-1 text-[11px] text-textSecondary">
+                      <p>
+                        <span className="font-semibold text-text">Tổ chức:</span> {selectedCampaign.organizationName}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-text">Hạn nhận:</span>{' '}
+                        {selectedCampaign.endTime ? date(selectedCampaign.endTime) : '—'}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-text">Loại đồ cần:</span>{' '}
+                        {selectedCampaign.preferredItemTypes?.length
+                          ? selectedCampaign.preferredItemTypes.join(', ')
+                          : 'Tất cả đồ phù hợp'}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={isAnonymous}
-                    disabled={noOpenCampaigns || donationsResource.busy}
-                    onChange={(e) => setIsAnonymous(e.target.checked)}
+                    disabled={noOpenCampaigns || recording}
+                    onChange={(e) => {
+                      setIsAnonymous(e.target.checked);
+                      if (recordError) setRecordError(null);
+                    }}
                     className="rounded border-neutral text-[#006B2C] focus:ring-[#006B2C]"
                   />
                   <span className="font-semibold text-text">Người góp chọn ẩn danh</span>
@@ -231,8 +308,11 @@ export default function DonationsPage() {
                       id="donation-donor-name"
                       type="text"
                       value={donorName}
-                      disabled={noOpenCampaigns || donationsResource.busy}
-                      onChange={(e) => setDonorName(e.target.value)}
+                      disabled={noOpenCampaigns || recording}
+                      onChange={(e) => {
+                        setDonorName(e.target.value);
+                        if (recordError) setRecordError(null);
+                      }}
                       placeholder="VD: Nguyễn Minh Anh"
                       className="w-full rounded-xl border border-neutral bg-white px-3 py-2 text-xs text-text focus:border-[#006B2C] focus:outline-none"
                     />
@@ -247,9 +327,12 @@ export default function DonationsPage() {
                     id="donation-note"
                     rows={3}
                     value={note}
-                    disabled={noOpenCampaigns || donationsResource.busy}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder='VD: "5 áo, 2 chăn"'
+                    disabled={noOpenCampaigns || recording}
+                    onChange={(e) => {
+                      setNote(e.target.value);
+                      if (recordError) setRecordError(null);
+                    }}
+                    placeholder='VD: "5 áo khoác, 2 chăn"'
                     className="w-full rounded-xl border border-neutral bg-white p-2.5 text-xs text-text focus:border-[#006B2C] focus:outline-none"
                   />
                 </div>
@@ -257,7 +340,7 @@ export default function DonationsPage() {
                 <Button
                   type="submit"
                   variant="primary"
-                  loading={donationsResource.busy}
+                  loading={recording}
                   disabled={noOpenCampaigns || !effectiveCampaignId || (!isAnonymous && !donorName.trim())}
                   className="w-full py-2.5 text-xs font-bold bg-[#006B2C] hover:bg-[#005523] text-white"
                 >
@@ -298,7 +381,7 @@ export default function DonationsPage() {
                   className="rounded-xl border border-neutral bg-white px-3 py-1.5 text-xs font-semibold text-text focus:border-[#006B2C] focus:outline-none"
                 >
                   <option value="">Mọi trạng thái</option>
-                  <option value="PENDING_PICKUP">Chờ tổ chức lấy (PENDING_PICKUP)</option>
+                  <option value="PENDING_PICKUP">Chờ lấy (PENDING_PICKUP)</option>
                   <option value="HANDED_OVER">Đã bàn giao (HANDED_OVER)</option>
                 </select>
 
@@ -324,8 +407,11 @@ export default function DonationsPage() {
                     <Button
                       variant="primary"
                       size="sm"
-                      disabled={!activeHandoverOrgId || !activeHandoverCampaignId || donationsResource.busy}
-                      onClick={() => setHandoverConfirmOpen(true)}
+                      disabled={!activeHandoverOrgId || !activeHandoverCampaignId || handingOver}
+                      onClick={() => {
+                        setHandoverError(null);
+                        setHandoverConfirmOpen(true);
+                      }}
                       className="bg-[#006B2C] hover:bg-[#005523] text-white font-bold"
                     >
                       Bàn giao cho tổ chức ({selectedRows.length})
@@ -336,103 +422,154 @@ export default function DonationsPage() {
 
               <ResourceState resource={donationsResource} empty={!donations.length} />
 
-              {donations.length > 0 && (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[680px] text-left text-xs">
-                    <thead>
-                      <tr className="bg-background border-b border-neutral text-[10px] uppercase font-bold tracking-wider text-textSecondary">
-                        <th className="py-2.5 px-3 w-8">Chọn</th>
-                        <th className="py-2.5 px-3">Nguồn / Ghi chú</th>
-                        <th className="py-2.5 px-3">Chiến dịch & Tổ chức</th>
-                        <th className="py-2.5 px-3">Người góp</th>
-                        <th className="py-2.5 px-3">Trạng thái</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral">
-                      {donations.map((row) => {
-                        const isPending = row.status === 'PENDING_PICKUP';
-                        const isChecked = selectedIds.includes(row.id);
-                        const campaignObj = campaignMap.get(String(row.campaignId));
-                        const orgId = row.organizationId || campaignObj?.organizationId;
-                        const differentCampaignLocked = Boolean(
-                          activeHandoverCampaignId && String(row.campaignId) !== String(activeHandoverCampaignId),
-                        );
-                        const canSelect = isPending && Boolean(row.campaignId && orgId) && !differentCampaignLocked;
-                        const isFocused = focusedDonationId && String(row.id) === String(focusedDonationId);
+              {groupedDonations.length > 0 && (
+                <div className="space-y-4">
+                  {groupedDonations.map((group) => {
+                    const pendingCount = group.rows.filter((r) => r.status === 'PENDING_PICKUP').length;
+                    return (
+                      <div key={group.campaignId || group.campaignTitle} className="rounded-xl border border-neutral overflow-hidden">
+                        <div className="bg-[#F6F9F4] px-3.5 py-2.5 border-b border-neutral flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <div>
+                            <span className="font-bold text-text">{group.campaignTitle}</span>
+                            {group.organizationName && (
+                              <span className="text-textSecondary"> · {group.organizationName}</span>
+                            )}
+                          </div>
+                          {pendingCount > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => selectAllPendingInGroup(group)}
+                              className="text-[11px] font-bold text-[#006B2C] hover:underline cursor-pointer"
+                            >
+                              Chọn {pendingCount} lượt chờ lấy
+                            </button>
+                          )}
+                        </div>
 
-                        return (
-                          <tr
-                            key={row.id}
-                            className={`transition-colors hover:bg-[#F6F9F4] ${
-                              isFocused ? 'bg-[#EBF1E8] ring-2 ring-inset ring-primary' : ''
-                            }`}
-                          >
-                            <td className="py-3 px-3 align-top">
-                              {isPending && (
-                                <input
-                                  type="checkbox"
-                                  aria-label={`Chọn lượt ${row.id}`}
-                                  checked={isChecked}
-                                  disabled={!canSelect}
-                                  title={differentCampaignLocked ? 'Chỉ bàn giao các lượt thuộc cùng 1 chiến dịch' : undefined}
-                                  onChange={() => toggleSelect(row)}
-                                  className="rounded border-neutral text-[#006B2C] focus:ring-[#006B2C]"
-                                />
-                              )}
-                            </td>
-                            <td className="py-3 px-3 align-top space-y-1">
-                              {row.isConsignedItem && (
-                                <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 border border-amber-200 px-2.5 py-0.5 text-[10px] font-bold text-amber-900">
-                                  <span>Món ký gửi · SKU {row.sku || '—'}</span>
-                                  {row.sku && (
-                                    <Link
-                                      to={`/moderator/inventory/${encodeURIComponent(row.sku)}`}
-                                      className="underline text-[#006B2C]"
-                                    >
-                                      Xem
-                                    </Link>
-                                  )}
-                                </div>
-                              )}
-                              <p className="font-medium text-text">{row.note || '—'}</p>
-                              <p className="text-[11px] text-textSecondary">Ghi nhận: {date(row.createdAt)}</p>
-                            </td>
-                            <td className="py-3 px-3 align-top">
-                              <p className="font-semibold text-text">
-                                {row.campaignTitle || campaignObj?.title || row.campaignId || '—'}
-                              </p>
-                              <p className="text-[11px] text-textSecondary">
-                                {row.organizationName || campaignObj?.organizationName || ''}
-                              </p>
-                            </td>
-                            <td className="py-3 px-3 align-top">
-                              {row.isAnonymous ? (
-                                <span className="text-textSecondary italic">Ẩn danh</span>
-                              ) : (
-                                <span className="font-semibold text-text">{row.donorName || '—'}</span>
-                              )}
-                            </td>
-                            <td className="py-3 px-3 align-top">
-                              {isPending ? (
-                                <span className="inline-block rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-800">
-                                  Chờ lấy
-                                </span>
-                              ) : (
-                                <div className="space-y-0.5">
-                                  <span className="inline-block rounded-full bg-[#E8F5E9] px-2.5 py-0.5 text-[10px] font-bold text-[#006B2C]">
-                                    Đã bàn giao
-                                  </span>
-                                  {row.handedOverAt && (
-                                    <p className="text-[10px] text-textSecondary">{date(row.handedOverAt)}</p>
-                                  )}
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                        <div className="overflow-x-auto">
+                          <table className="w-full min-w-[760px] text-left text-xs">
+                            <thead>
+                              <tr className="bg-background border-b border-neutral text-[10px] uppercase font-bold tracking-wider text-textSecondary">
+                                <th className="py-2 px-3 w-8">Chọn</th>
+                                <th className="py-2 px-3">Thời gian</th>
+                                <th className="py-2 px-3">Chiến dịch / Tổ chức</th>
+                                <th className="py-2 px-3">Người góp</th>
+                                <th className="py-2 px-3">Ghi chú & Món ký gửi</th>
+                                <th className="py-2 px-3">Moderator ghi nhận</th>
+                                <th className="py-2 px-3">Trạng thái</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-neutral">
+                              {group.rows.map((row) => {
+                                const isPending = row.status === 'PENDING_PICKUP';
+                                const isChecked = selectedIds.includes(row.id);
+                                const campaignObj = campaignMap.get(String(row.campaignId));
+                                const orgId = row.organizationId || campaignObj?.organizationId;
+                                const differentCampaignLocked = Boolean(
+                                  activeHandoverCampaignId && String(row.campaignId) !== String(activeHandoverCampaignId),
+                                );
+                                const canSelect = isPending && Boolean(row.campaignId && orgId) && !differentCampaignLocked;
+                                const isFocused = focusedDonationId && String(row.id) === String(focusedDonationId);
+
+                                return (
+                                  <tr
+                                    key={row.id}
+                                    className={`transition-colors hover:bg-[#F6F9F4] ${
+                                      isFocused ? 'bg-[#EBF1E8] ring-2 ring-inset ring-primary' : ''
+                                    }`}
+                                  >
+                                    <td className="py-3 px-3 align-top">
+                                      {isPending && (
+                                        <input
+                                          type="checkbox"
+                                          aria-label={`Chọn lượt ${row.id}`}
+                                          checked={isChecked}
+                                          disabled={!canSelect}
+                                          title={differentCampaignLocked ? 'Chỉ bàn giao các lượt thuộc cùng 1 chiến dịch' : undefined}
+                                          onChange={() => toggleSelect(row)}
+                                          className="rounded border-neutral text-[#006B2C] focus:ring-[#006B2C]"
+                                        />
+                                      )}
+                                    </td>
+                                    <td className="py-3 px-3 align-top text-[11px] text-textSecondary whitespace-nowrap">
+                                      {date(row.createdAt)}
+                                    </td>
+                                    <td className="py-3 px-3 align-top">
+                                      <p className="font-semibold text-text">
+                                        {row.campaignTitle || campaignObj?.title || row.campaignId || '—'}
+                                      </p>
+                                      <p className="text-[11px] text-textSecondary">
+                                        {row.organizationName || campaignObj?.organizationName || ''}
+                                      </p>
+                                    </td>
+                                    <td className="py-3 px-3 align-top">
+                                      {row.isAnonymous ? (
+                                        <span className="text-textSecondary italic">Ẩn danh</span>
+                                      ) : (
+                                        <span className="font-semibold text-text">{row.donorName || '—'}</span>
+                                      )}
+                                    </td>
+                                    <td className="py-3 px-3 align-top space-y-1.5">
+                                      {row.isConsignedItem && (
+                                        <div className="flex items-start gap-2">
+                                          {row.productPhotoUrl && (
+                                            <img
+                                              src={row.productPhotoUrl}
+                                              alt={row.productName || row.sku || 'Món ký gửi'}
+                                              className="w-10 h-10 rounded-lg object-cover border border-neutral flex-shrink-0"
+                                            />
+                                          )}
+                                          <div className="space-y-0.5">
+                                            <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 border border-amber-200 px-2.5 py-0.5 text-[10px] font-bold text-amber-900">
+                                              <span>Món ký gửi · SKU {row.sku || '—'}</span>
+                                              {row.sku && (
+                                                <Link
+                                                  to={`/moderator/inventory/${encodeURIComponent(row.sku)}`}
+                                                  className="underline text-[#006B2C]"
+                                                >
+                                                  Xem
+                                                </Link>
+                                              )}
+                                            </div>
+                                            {row.productName && (
+                                              <p className="font-semibold text-text">{row.productName}</p>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                      <p className="font-medium text-text">{row.note || '—'}</p>
+                                    </td>
+                                    <td className="py-3 px-3 align-top text-[11px] font-mono text-textSecondary">
+                                      {row.recordedBy || (row.isConsignedItem ? 'Hệ thống' : '—')}
+                                    </td>
+                                    <td className="py-3 px-3 align-top">
+                                      {isPending ? (
+                                        <span className="inline-block rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-800">
+                                          Chờ lấy
+                                        </span>
+                                      ) : (
+                                        <div className="space-y-0.5">
+                                          <span className="inline-block rounded-full bg-[#E8F5E9] px-2.5 py-0.5 text-[10px] font-bold text-[#006B2C]">
+                                            Đã bàn giao
+                                          </span>
+                                          {row.handedOverToOrganizationName && (
+                                            <p className="text-[10px] text-textSecondary">{row.handedOverToOrganizationName}</p>
+                                          )}
+                                          {row.handedOverAt && (
+                                            <p className="text-[10px] text-textSecondary">{date(row.handedOverAt)}</p>
+                                          )}
+                                        </div>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </Card>
@@ -442,24 +579,47 @@ export default function DonationsPage() {
 
       <Modal
         isOpen={handoverConfirmOpen}
-        onClose={() => !donationsResource.busy && setHandoverConfirmOpen(false)}
+        onClose={() => !handingOver && setHandoverConfirmOpen(false)}
         title="Xác nhận bàn giao đồ quyên góp cho tổ chức"
-        size="sm"
+        size="md"
       >
         <div className="space-y-4 text-xs text-textSecondary">
           <div className="rounded-xl border border-neutral bg-[#F6F9F4] p-3.5 space-y-1.5">
-            <p>Số lượt bàn giao: <strong className="text-text">{selectedRows.length} lượt</strong></p>
-            <p>Chiến dịch: <strong className="text-text">{activeHandoverCampaignTitle}</strong></p>
             <p>Tổ chức nhận: <strong className="text-[#006B2C]">{activeHandoverOrgName}</strong></p>
+            <p>Chiến dịch: <strong className="text-text">{activeHandoverCampaignTitle}</strong></p>
+            <p>Tổng số lượt: <strong className="text-text">{selectedRows.length} lượt</strong></p>
           </div>
+
+          <div className="space-y-1.5">
+            <p className="font-bold text-text">Danh sách ghi chú &amp; mã SKU cần bàn giao:</p>
+            <ul className="max-h-48 overflow-y-auto rounded-xl border border-neutral bg-white divide-y divide-neutral">
+              {selectedRows.map((row) => (
+                <li key={row.id} className="p-2.5 flex items-start justify-between gap-3">
+                  <span className="text-text font-medium">{row.note || row.productName || 'Không có ghi chú'}</span>
+                  {row.sku && (
+                    <span className="font-mono font-bold text-[11px] text-[#006B2C] bg-[#E8F5E9] px-2 py-0.5 rounded flex-shrink-0">
+                      {row.sku}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {handoverError && (
+            <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+              {handoverError}
+            </div>
+          )}
+
           <p>Xác nhận đại diện tổ chức đã đến kho nhận đủ số đồ quyên góp trên? Sau khi xác nhận không thể hoàn tác.</p>
           <div className="flex gap-2 justify-end pt-2">
-            <Button variant="outline" disabled={donationsResource.busy} onClick={() => setHandoverConfirmOpen(false)}>
+            <Button variant="outline" disabled={handingOver} onClick={() => setHandoverConfirmOpen(false)}>
               Hủy
             </Button>
             <Button
               variant="primary"
-              loading={donationsResource.busy}
+              loading={handingOver}
               onClick={handleConfirmHandover}
               className="bg-[#006B2C] hover:bg-[#005523] text-white font-bold"
             >

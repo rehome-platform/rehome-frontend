@@ -32,7 +32,7 @@ export const INVENTORY_STATUS_LABELS = {
   WAITING_END_OF_TERM: 'Chờ xử lý cuối kỳ',
   WITHDRAWN: 'Đã rút hàng',
   UNCLAIMED: 'Vô thừa nhận',
-  DONATED: 'Đã chuyển giao từ thiện',
+  DONATED: 'Đã quyên góp',
   DESTROYED: 'Đã tiêu huỷ',
   RETURNED: 'Đã hoàn trả',
   PLATFORM_OWNED: 'Tài sản nền tảng',
@@ -314,15 +314,14 @@ export default function WarehouseInventoryPage() {
                           </span>
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className={`inline-block px-2.5 py-1 rounded text-[11px] font-bold ${
-                            item.decisionStatus === 'FULL_COMPENSATION'
+                          <span className={`inline-block px-2.5 py-1 rounded text-[11px] font-bold ${item.decisionStatus === 'FULL_COMPENSATION'
                               ? 'bg-[#E8F5E9] text-[#006B2C]'
                               : (item.decisionStatus === 'PARTIAL_COMPENSATION' || item.decisionStatus === 'PARTIAL_WITH_ITEM_BACK')
-                              ? 'bg-[#E3F2FD] text-[#1565C0]'
-                              : item.decisionStatus === 'UNCLAIMED'
-                              ? 'bg-[#FFEBEE] text-[#C62828]'
-                              : 'bg-[#FFF3E0] text-[#E65100]'
-                          }`}>
+                                ? 'bg-[#E3F2FD] text-[#1565C0]'
+                                : item.decisionStatus === 'UNCLAIMED'
+                                  ? 'bg-[#FFEBEE] text-[#C62828]'
+                                  : 'bg-[#FFF3E0] text-[#E65100]'
+                            }`}>
                             {item.decisionStatusLabel || degradedCaseLabel(item)}
                           </span>
                         </td>

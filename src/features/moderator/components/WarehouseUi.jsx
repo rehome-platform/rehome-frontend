@@ -85,7 +85,7 @@ const statusLabels = {
   DESTROYED: 'Đã tiêu huỷ',
   WAITING_END_OF_TERM: 'Chờ xử lý cuối kỳ',
   UNCLAIMED: 'Vô thừa nhận',
-  DONATED: 'Đã chuyển giao',
+  DONATED: 'Đã quyên góp',
   RETURNED: 'Đã bàn giao',
   RETURNED_ONSITE: 'Đã trả tại chỗ',
   PLATFORM_OWNED: 'Tài sản nền tảng',
