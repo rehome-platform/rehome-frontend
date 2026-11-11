@@ -4,6 +4,7 @@ import { safeDocumentUrl } from "../../models/warehouseModel.js";
 import { canPack, canShip } from "../../models/packingModel.js";
 import { operationReady } from "../../config/packingContract.js";
 import { useToast } from "../../../../context/ToastContext.jsx";
+import { formatDeadlineWithCountdown } from "../WarehouseUi.jsx";
 
 export function PackingIncidentDialog({ setIncidentOpen, setIncidentNote, incidentNote }) {
   const toast = useToast();
@@ -116,6 +117,29 @@ export function PackingRecipientPanel({ order, scanLogs }) {
           <p className="text-[10px] text-[#7a7a7a]">
             {paidTimeStr}
           </p>
+        )}
+
+        {(order.paymentDeadline || order.autoCompleteDeadline || order.returnDeadline) && (
+          <div className="pt-2 border-t border-[#E2E8E0] space-y-1 text-[11px]">
+            {order.paymentDeadline && (
+              <div className="flex justify-between gap-2 text-[#5f5f5f]">
+                <span>Hạn thanh toán:</span>
+                <span className="font-semibold text-[#191C19]">{formatDeadlineWithCountdown(order.paymentDeadline)}</span>
+              </div>
+            )}
+            {order.autoCompleteDeadline && (
+              <div className="flex justify-between gap-2 text-[#5f5f5f]">
+                <span>Hạn tự động hoàn tất:</span>
+                <span className="font-semibold text-[#191C19]">{formatDeadlineWithCountdown(order.autoCompleteDeadline)}</span>
+              </div>
+            )}
+            {order.returnDeadline && (
+              <div className="flex justify-between gap-2 text-[#5f5f5f]">
+                <span>Hạn yêu cầu trả hàng:</span>
+                <span className="font-semibold text-[#191C19]">{formatDeadlineWithCountdown(order.returnDeadline)}</span>
+              </div>
+            )}
+          </div>
         )}
 
         <div className="pt-3 border-t border-[#E2E8E0] flex justify-between items-center">
