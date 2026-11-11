@@ -7,6 +7,9 @@ import { consignmentService, inventoryService, queueService } from '../../src/fe
 import ConsignmentDetailPage from '../../src/features/moderator/pages/ConsignmentDetailPage.jsx';
 import InventoryDetailPage from '../../src/features/moderator/pages/InventoryDetailPage.jsx';
 import { CounterHandoverTask } from '../../src/features/moderator/components/counter/CounterHandoverTask.jsx';
+import { WithdrawalCheckModal } from '../../src/features/moderator/components/queue/QueueSections.jsx';
+import { DegradedCaseSummary } from '../../src/features/moderator/components/DegradedCaseDetails.jsx';
+import { formatCountdown, formatDeadlineWithCountdown } from '../../src/features/moderator/components/WarehouseUi.jsx';
 
 vi.mock('../../src/context/AuthContext.jsx', () => ({
   useAuth: () => ({
@@ -91,5 +94,65 @@ describe('Moderator uses stored consignment deadlines', () => {
     if (expected) expect(notice).toHaveTextContent(expected);
     else expect(notice).not.toHaveTextContent(/còn \d+ ngày/);
     expect(notice).not.toHaveTextContent('30 ngày');
+  });
+
+  it('formats countdowns accurately for future and expired deadlines', () => {
+    const now = new Date('2026-11-11T10:00:00Z').getTime();
+    expect(formatCountdown('2026-11-13T15:00:00Z', now)).toBe('còn 2 ngày 5 giờ');
+    expect(formatCountdown('2026-11-11T13:30:00Z', now)).toBe('còn 3 giờ 30 phút');
+    expect(formatCountdown('2026-11-11T10:25:00Z', now)).toBe('còn 25 phút');
+    expect(formatCountdown('2026-11-10T10:00:00Z', now)).toBe('Đã quá hạn');
+    expect(formatDeadlineWithCountdown(null, 'Chưa có thông tin thời hạn', now)).toBe('Chưa có thông tin thời hạn');
+  });
+
+  it('WithdrawalCheckModal uses stored pickupDeadline with countdown and does not invent +7 days from createdAt', () => {
+    const { rerender } = render(
+      <MemoryRouter>
+        <WithdrawalCheckModal
+          target={{
+            id: 'w-no-deadline',
+            targetName: 'Áo sơ mi Linen',
+            createdAt: '2026-11-01T10:00:00Z',
+          }}
+          onClose={() => {}}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByText('Chưa có thông tin thời hạn')).toBeInTheDocument();
+    expect(screen.queryByText(/7 ngày kể từ ngày yêu cầu/)).not.toBeInTheDocument();
+
+    const futureDeadline = new Date(Date.now() + (3 * 24 + 4) * 3600000).toISOString();
+    rerender(
+      <MemoryRouter>
+        <WithdrawalCheckModal
+          target={{
+            id: 'w-with-deadline',
+            targetName: 'Áo sơ mi Linen',
+            pickupDeadline: futureDeadline,
+          }}
+          onClose={() => {}}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByText(/còn 3 ngày/)).toBeInTheDocument();
+  });
+
+  it('DegradedCaseSummary displays countdown on decisionDeadline and pickupDeadline', () => {
+    const futureDecision = new Date(Date.now() + 2 * 24 * 3600000).toISOString();
+    const futurePickup = new Date(Date.now() + 5 * 24 * 3600000).toISOString();
+    render(
+      <DegradedCaseSummary
+        item={{
+          id: 'dc-1',
+          productName: 'Túi da',
+          productId: 'P-1',
+          decision: 'PARTIAL_WITH_ITEM_BACK',
+          decisionDeadline: futureDecision,
+          pickupDeadline: futurePickup,
+        }}
+      />
+    );
+    expect(screen.getByText(/Hạn chọn phương án:.*còn/)).toBeInTheDocument();
+    expect(screen.getByText(/Hạn nhận hàng:.*còn/)).toBeInTheDocument();
   });
 });

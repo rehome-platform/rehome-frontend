@@ -1,6 +1,6 @@
 import React from 'react';
 import Button from '../../../../components/common/Button.jsx';
-import { date, money } from '../WarehouseUi.jsx';
+import { formatDeadlineWithCountdown, money } from '../WarehouseUi.jsx';
 
 const STYLES = {
   ITEM_WITHDRAWAL: {
@@ -70,7 +70,14 @@ export function CounterHandoverTask({ item, context, setConfirmHandover, activeR
   const style = STYLES[context] || STYLES.ITEM_WITHDRAWAL;
   const withdrawal = context === 'ITEM_WITHDRAWAL';
   const degraded = context === 'DEGRADED_ITEM_PICKUP';
-  const deadlineValue = degraded ? item.pickupDeadline : (item.pickupDeadline || item.deadline || item.handoverDeadline);
+  const deadlineValue = degraded
+    ? item.pickupDeadline
+    : (item.pickupDeadline ||
+        item.deadline ||
+        item.handoverDeadline ||
+        item.warehouseDeadline ||
+        item.takeBackDeadline ||
+        item.consignEndDate);
 
   const isMatched = Boolean(
     activeRefId &&
@@ -96,7 +103,7 @@ export function CounterHandoverTask({ item, context, setConfirmHandover, activeR
           )}
         </div>
         {(!degraded || deadlineValue) && <span className="text-[11px] text-[#717971]">
-          {style.deadlineLabel} {deadlineValue ? date(deadlineValue) : 'Chưa có thông tin thời hạn'}
+          {style.deadlineLabel} {formatDeadlineWithCountdown(deadlineValue)}
         </span>}
       </div>
       <div className="p-4 flex flex-wrap items-center justify-between gap-4">
