@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { formatCurrencyVND } from "../../../utils/formatters.js";
+import { formatDeadlineWithCountdown } from "../components/WarehouseUi.jsx";
 import { returnService } from "../services/returnApi.js";
 import { inventoryService } from "../services/inventoryApi.js";
 import { useToast } from "../../../context/ToastContext.jsx";
@@ -247,9 +248,12 @@ export function useReturnProcessing() {
     if (!selectedItem || resolvingRef.current) return;
     resolvingRef.current = true;
     try {
-      await returnService.approveReturnAndCreateWaybill(selectedItem.id);
+      const approved = await returnService.approveReturnAndCreateWaybill(selectedItem.id);
       await fetchReturns();
-      notify('success', `Đã duyệt yêu cầu trả hàng ${selectedItem.code}! Vận đơn thu hồi GHN đã được tự động tạo và gửi tới người mua.`);
+      const handoverNotice = approved?.handoverDeadline
+        ? ` Hạn người mua bàn giao cho GHN: ${formatDeadlineWithCountdown(approved.handoverDeadline)}.`
+        : '';
+      notify('success', `Đã duyệt yêu cầu trả hàng ${selectedItem.code}! Vận đơn thu hồi GHN đã được tự động tạo và gửi tới người mua.${handoverNotice}`);
       setViewMode('QUEUE');
       setSelectedItem(null);
     } catch (err) {
@@ -297,9 +301,12 @@ export function useReturnProcessing() {
           counterfeitSuspected: false,
           conditionNote: invalidReason,
         });
-        await returnService.resolveInvalid(selectedItem.id, invalidReason);
+        const resolved = await returnService.resolveInvalid(selectedItem.id, invalidReason);
         await fetchReturns();
-        notify('success', 'Đã lưu kết luận: TRẢ HÀNG KHÔNG HỢP LỆ. Hàng được lưu kho 7 ngày để người mua tự đến nhận lại hoặc thanh toán phí ship.');
+        const pickupNotice = resolved?.pickupDeadline
+          ? `Hạn người mua chọn phương thức hoặc đến kho nhận lại: ${formatDeadlineWithCountdown(resolved.pickupDeadline)}.`
+          : 'Hàng được lưu kho theo thời hạn cấu hình để người mua tự đến nhận lại hoặc thanh toán phí ship.';
+        notify('success', `Đã lưu kết luận: TRẢ HÀNG KHÔNG HỢP LỆ. ${pickupNotice}`);
         setViewMode('QUEUE');
         setSelectedItem(null);
       } else {

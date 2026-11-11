@@ -4,6 +4,7 @@ import { ReturnQueueRow } from './ReturnQueueRow.jsx';
 import React from "react";
 import { Button, Modal } from "../../../../components/common/index.js";
 import { formatCurrencyVND } from "../../../../utils/formatters.js";
+import { formatDeadlineWithCountdown } from "../WarehouseUi.jsx";
 import { ReturnEvidence } from './ReturnEvidence.jsx';
 import { useToast } from "../../../../context/ToastContext.jsx";
 
@@ -645,7 +646,7 @@ export function ReturnRejectDialog({ isRejectModalOpen, setIsRejectModalOpen, re
             rows="3"
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
-            placeholder="Ví dụ: Lỗi người mua tự gây ra, vượt quá thời hạn 3 ngày kể từ khi nhận hàng..."
+            placeholder="Ví dụ: Lỗi người mua tự gây ra, gửi yêu cầu sau khi đã quá thời hạn trả hàng cho phép..."
             className="w-full p-2.5 border border-neutral rounded-xl text-text bg-surface focus:outline-none focus:border-error"
           />
         </div>
@@ -1027,6 +1028,28 @@ export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybi
         <div className="p-2.5 bg-background rounded-xl text-[10px] text-textSecondary">
           Địa chỉ do người mua nhập. Bấm duyệt là GHN nhận thông tin này và <strong className="font-semibold text-text">hai bên đều không sửa được nữa</strong> — đọc lại trước khi bấm.
         </div>
+        {(selectedItem?.returnDeadline || selectedItem?.handoverDeadline || selectedItem?.pickupDeadline) && (
+          <div className="pt-2 border-t border-neutral space-y-1 text-[11px]">
+            {selectedItem?.returnDeadline && (
+              <div className="flex justify-between gap-2">
+                <span className="text-textSecondary">Hạn gửi yêu cầu trả hàng:</span>
+                <span className="font-semibold text-text">{formatDeadlineWithCountdown(selectedItem.returnDeadline)}</span>
+              </div>
+            )}
+            {selectedItem?.handoverDeadline && (
+              <div className="flex justify-between gap-2">
+                <span className="text-textSecondary">Hạn bàn giao cho GHN:</span>
+                <span className="font-semibold text-text">{formatDeadlineWithCountdown(selectedItem.handoverDeadline)}</span>
+              </div>
+            )}
+            {selectedItem?.pickupDeadline && (
+              <div className="flex justify-between gap-2">
+                <span className="text-textSecondary">Hạn nhận lại tại kho:</span>
+                <span className="font-semibold text-text">{formatDeadlineWithCountdown(selectedItem.pickupDeadline)}</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     
       {/* Footer Buttons */}

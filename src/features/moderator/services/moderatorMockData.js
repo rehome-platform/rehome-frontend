@@ -286,7 +286,7 @@ export const returnService = {
             status: 'RESOLVED',
             outcome: 'INVALID_RETURN',
             rejectReason: reason,
-            carrierStatus: 'Hàng không hợp lệ · Lưu kho 7 ngày chờ khách nhận lại',
+            carrierStatus: 'Hàng không hợp lệ · Chờ khách chọn phương thức nhận lại trong thời hạn quy định',
           }
         : r
     );
