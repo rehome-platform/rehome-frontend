@@ -6,6 +6,7 @@ import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
 import QRScannerModal from '../../../components/QRScannerModal.jsx';
 import { inventoryService } from '../services/warehouseApi.js';
+import { enrichListRows } from '../services/listDetailEnrichment.js';
 import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
 import { listItems } from '../models/warehouseModel.js';
@@ -65,13 +66,29 @@ export default function WarehouseInventoryPage() {
     async (options) => {
       if (status === 'DEGRADED') {
         const degradedList = await inventoryService.degradedCases({ status: '' }, options);
+        const mapped = (degradedList || []).map(degradedInventoryItem);
+        const enriched = await enrichListRows(
+          mapped,
+          (item) => item.sku && (item.currentTerm == null || item.daysIntoTerm == null),
+          async (item) => {
+            const detail = await inventoryService.read(item.sku, options);
+            return {
+              ...item,
+              currentTerm: detail.currentTerm ?? item.currentTerm,
+              daysIntoTerm: detail.daysIntoTerm ?? item.daysIntoTerm,
+              currentPrice: detail.currentPrice ?? item.currentPrice,
+              agreedPrice: item.agreedPrice ?? detail.agreedPrice ?? detail.currentPrice,
+            };
+          },
+          options,
+        );
         return {
-          content: (degradedList || []).map(degradedInventoryItem),
-          totalElements: (degradedList || []).length,
+          content: enriched,
+          totalElements: enriched.length,
           totalPages: 1,
         };
       }
-      return inventoryService.list({ page, sku, status }, options);
+      return inventoryService.list({ page, sku, status }, { ...options, enrichDetails: true });
     },
     [page, sku, status],
     { refreshInterval: 30000 },

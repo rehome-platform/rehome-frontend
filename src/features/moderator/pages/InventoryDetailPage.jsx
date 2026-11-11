@@ -11,7 +11,7 @@ import returnService from '../services/returnApi.js';
 import { endTermService } from '../services/endTermApi.js';
 import { pricingForProduct } from '../services/endTermPricingApi.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
-import { listItems } from '../models/warehouseModel.js';
+import { listItems, resolveInventoryTermAndRates } from '../models/warehouseModel.js';
 import { Page, Card, Photos, Status, ResourceState, date, money } from '../components/WarehouseUi.jsx';
 
 export default function InventoryDetailPage() {
@@ -82,6 +82,7 @@ export default function InventoryDetailPage() {
   };
 
   const sellingPrice = data?.currentPrice ?? data?.agreedPrice;
+  const termAndRates = resolveInventoryTermAndRates(data);
 
   const handleSendDegradedProposal = async () => {
     if (degradedLock.current || degradedUploadPending || data?.status !== 'ON_SALE' || submittedCase || !data?.id) return;
@@ -221,12 +222,12 @@ export default function InventoryDetailPage() {
               </div>
               <div className="flex items-center p-3 gap-3">
                 <span className="w-28 text-[#5f5f5f] flex-shrink-0">Giá sàn:</span>
-                <span className="text-[#191C19]">{money(data.floorPrice || Math.round((data.agreedPrice || data.currentPrice || 420000) * 0.5))}</span>
+                <span className="text-[#191C19]">{money(termAndRates.floorPrice)}</span>
               </div>
               <div className="flex items-center p-3 gap-3 bg-[#fafafa]">
                 <span className="w-28 text-[#5f5f5f] flex-shrink-0">Kỳ ký gửi:</span>
                 <span className="text-[#191C19] font-medium">
-                  Kỳ {data.currentTerm || 1} · ngày {data.daysIntoTerm || 1} / {data.termLengthDays || 30} · hoa hồng {data.currentTerm === 3 ? '20%' : data.currentTerm === 2 ? '15%' : '10%'}
+                  Kỳ {termAndRates.currentTerm} · ngày {termAndRates.daysIntoTerm} / {termAndRates.termLengthDays} · hoa hồng {termAndRates.commissionPercent}%
                 </span>
               </div>
             </div>

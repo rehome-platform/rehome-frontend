@@ -15,6 +15,7 @@ import {
   normalizeProductResponse,
   normalizeUnclaimedItem,
   ownsClaim,
+  resolveInventoryTermAndRates,
   safeDocumentUrl,
   SUPPORTED_TRYON_SLOTS,
   TRYON_SLOT_CONFIG,
@@ -137,6 +138,50 @@ describe('Phase 2 boundary rules', () => {
     expect(created.id).toBe('Q7-AO-000001');
     expect(created.name).toBe('Áo lụa');
     expect(created.status).toBe('ON_SALE');
+  });
+
+  it('resolveInventoryTermAndRates prefers product snapshot rates, then effective config, then defaults', () => {
+    const fromProduct = resolveInventoryTermAndRates(
+      {
+        currentTerm: 2,
+        daysIntoTerm: 14,
+        termLengthDays: 45,
+        commissionRateTerm1: 0.05,
+        commissionRateTerm2: 0.1,
+        commissionRateTerm3: 0.15,
+        agreedPrice: 500000,
+        floorPriceRatio: 0.3,
+      },
+      { termLengthDays: 20, commissionTerm2: 18, floorPricePercent: 40 },
+    );
+    expect(fromProduct).toMatchObject({
+      currentTerm: 2,
+      daysIntoTerm: 14,
+      termLengthDays: 45,
+      commissionPercent: 10,
+      floorPrice: 150000,
+    });
+
+    const fromEffectiveConfig = resolveInventoryTermAndRates(
+      { currentTerm: 1, daysIntoTerm: 3, agreedPrice: 500000 },
+      { termLengthDays: 25, commissionTerm1: 5, commissionTerm2: 10, commissionTerm3: 15, floorPricePercent: 30 },
+    );
+    expect(fromEffectiveConfig).toMatchObject({
+      currentTerm: 1,
+      daysIntoTerm: 3,
+      termLengthDays: 25,
+      commissionPercent: 5,
+      floorPrice: 150000,
+    });
+
+    const fromDefaults = resolveInventoryTermAndRates({ currentTerm: 3 }, null);
+    expect(fromDefaults).toMatchObject({
+      currentTerm: 3,
+      daysIntoTerm: 1,
+      termLengthDays: 30,
+      commissionPercent: 20,
+      floorPrice: null,
+    });
   });
 
   describe('Task 7: Category & Brand models and helpers', () => {
