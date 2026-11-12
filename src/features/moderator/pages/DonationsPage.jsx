@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
 import { useToast } from '../../../context/ToastContext.jsx';
+import PhotoUpload from '../components/PhotoUpload.jsx';
 import { donationService } from '../services/donationApi.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
 import { normalizeError } from '../models/warehouseModel.js';
@@ -23,8 +24,15 @@ export default function DonationsPage() {
   const [donorName, setDonorName] = useState(initialDonorName);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [note, setNote] = useState('');
+  const [donationPhotos, setDonationPhotos] = useState([]);
+  const [donationPhotosPending, setDonationPhotosPending] = useState(false);
   const [recordError, setRecordError] = useState(null);
   const [recording, setRecording] = useState(false);
+
+  const onDonationPhotosChange = useCallback((urls, pending) => {
+    setDonationPhotos(urls);
+    setDonationPhotosPending(pending);
+  }, []);
 
   // Chọn các lượt chờ lấy để bàn giao cho tổ chức (F-165)
   const [selectedIds, setSelectedIds] = useState([]);
@@ -146,18 +154,26 @@ export default function DonationsPage() {
 
   const handleRecordDonation = async (event) => {
     event.preventDefault();
-    if (!warehouseId || noOpenCampaigns || recording) return;
+    if (!warehouseId || noOpenCampaigns || recording || donationPhotosPending) return;
     setRecordError(null);
     setRecording(true);
     try {
+      // Đóng gói theo Cách 1: chèn URL ảnh vào trường note dạng Markdown
+      let combinedNote = note.trim();
+      if (donationPhotos.length > 0) {
+        const photoMarkdown = donationPhotos.map((url, idx) => `![Hiện vật ${idx + 1}](${url})`).join(' ');
+        combinedNote = combinedNote ? `${combinedNote}\n\nẢnh hiện vật: ${photoMarkdown}` : `Ảnh hiện vật: ${photoMarkdown}`;
+      }
+
       await donationService.recordDonation(
         warehouseId,
-        { campaignId: effectiveCampaignId, donorName, isAnonymous, note },
+        { campaignId: effectiveCampaignId, donorName, isAnonymous, note: combinedNote },
       );
       toast.success('Đã ghi nhận lượt quyên góp');
       setDonorName('');
       setIsAnonymous(false);
       setNote('');
+      setDonationPhotos([]);
       donationsResource.refresh();
     } catch (err) {
       setRecordError(normalizeError(err).message);
@@ -320,9 +336,41 @@ export default function DonationsPage() {
                 )}
 
                 <div>
-                  <label htmlFor="donation-note" className="block font-bold text-text mb-1">
-                    Ghi chú gộp hiện vật
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label htmlFor="donation-note" className="block font-bold text-text">
+                      Ghi chú gộp hiện vật
+                    </label>
+                  </div>
+
+                  {/* Suggestion Chips từ 'Loại đồ cần' của chiến dịch đang chọn */}
+                  {selectedCampaign?.preferredItemTypes?.length > 0 && (
+                    <div className="mb-2">
+                      <p className="text-[10px] text-[#5B6776] mb-1 font-medium">
+                        Gợi ý loại hiện vật chiến dịch cần (bấm để thêm vào ghi chú):
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedCampaign.preferredItemTypes.map((itemType) => (
+                          <button
+                            key={itemType}
+                            type="button"
+                            onClick={() => {
+                              setNote((prev) => {
+                                const trimmed = prev.trim();
+                                if (!trimmed) return itemType;
+                                if (trimmed.includes(itemType)) return prev;
+                                return `${trimmed}, ${itemType}`;
+                              });
+                              if (recordError) setRecordError(null);
+                            }}
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#E8F5E9] text-[#006B2C] border border-[#006B2C]/20 hover:bg-[#D0EBD2] transition-colors cursor-pointer"
+                          >
+                            + {itemType}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <textarea
                     id="donation-note"
                     rows={3}
@@ -337,11 +385,22 @@ export default function DonationsPage() {
                   />
                 </div>
 
+                {/* Tải / Chụp ảnh gói hiện vật quyên góp */}
+                <div>
+                  <label className="block font-bold text-text mb-1">
+                    Ảnh gói hiện vật quyên góp (tuỳ chọn)
+                  </label>
+                  <p className="text-[10px] text-[#5B6776] mb-1.5">
+                    Chụp hoặc tải ảnh gói đồ quyên góp tại quầy để lưu chứng từ đối soát.
+                  </p>
+                  <PhotoUpload disabled={noOpenCampaigns || recording} onChange={onDonationPhotosChange} />
+                </div>
+
                 <Button
                   type="submit"
                   variant="primary"
-                  loading={recording}
-                  disabled={noOpenCampaigns || !effectiveCampaignId || (!isAnonymous && !donorName.trim())}
+                  loading={recording || donationPhotosPending}
+                  disabled={noOpenCampaigns || !effectiveCampaignId || (!isAnonymous && !donorName.trim()) || donationPhotosPending}
                   className="w-full py-2.5 text-xs font-bold bg-[#006B2C] hover:bg-[#005523] text-white"
                 >
                   Ghi nhận lượt quyên góp
@@ -537,7 +596,44 @@ export default function DonationsPage() {
                                           </div>
                                         </div>
                                       )}
-                                      <p className="font-medium text-text">{row.note || '—'}</p>
+                                      {/* Hiển thị ghi chú và ảnh hiện vật (nếu có nhúng URL) */}
+                                      {(() => {
+                                        const noteText = row.note || '';
+                                        const imgRegex = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
+                                        const photos = [];
+                                        let match;
+                                        while ((match = imgRegex.exec(noteText)) !== null) {
+                                          photos.push(match[2]);
+                                        }
+                                        const cleanText = noteText.replace(imgRegex, '').replace(/Ảnh hiện vật:\s*/g, '').trim();
+
+                                        return (
+                                          <div className="space-y-1.5">
+                                            {cleanText && <p className="font-medium text-text">{cleanText}</p>}
+                                            {!cleanText && photos.length === 0 && <p className="text-textSecondary">—</p>}
+                                            {photos.length > 0 && (
+                                              <div className="flex flex-wrap gap-1.5 pt-1">
+                                                {photos.map((src, i) => (
+                                                  <a
+                                                    key={i}
+                                                    href={src}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    title="Xem ảnh hiện vật kích thước lớn"
+                                                    className="block group"
+                                                  >
+                                                    <img
+                                                      src={src}
+                                                      alt={`Hiện vật ${i + 1}`}
+                                                      className="w-12 h-12 rounded-lg object-cover border border-[#DDE5D9] group-hover:opacity-85 shadow-2xs"
+                                                    />
+                                                  </a>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })()}
                                     </td>
                                     <td className="py-3 px-3 align-top text-[11px] font-mono text-textSecondary">
                                       {row.recordedBy || (row.isConsignedItem ? 'Hệ thống' : '—')}
