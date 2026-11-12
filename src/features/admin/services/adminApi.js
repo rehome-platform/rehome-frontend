@@ -16,8 +16,11 @@ function unwrap(res) {
  */
 export const adminApi = {
   // 1. Dashboard & Báo cáo
-  async getDashboard() {
-    const res = await baseApi.get(API_ENDPOINTS.ADMIN.DASHBOARD);
+  async getDashboard({ from, to } = {}) {
+    const params = {};
+    if (from) params.from = from;
+    if (to) params.to = to;
+    const res = await baseApi.get(API_ENDPOINTS.ADMIN.DASHBOARD, { params });
     return unwrap(res);
   },
 
@@ -30,6 +33,44 @@ export const adminApi = {
       responseType: 'blob',
     });
     return res.data;
+  },
+
+  async getRevenueItems({ from, to, term, page = 0, size = 20 } = {}) {
+    const params = { page, size };
+    if (from) params.from = from;
+    if (to) params.to = to;
+    if (term !== undefined && term !== null && term !== '' && term !== 'ALL') {
+      params.term = Number(term);
+    }
+    const res = await baseApi.get(API_ENDPOINTS.ADMIN.REVENUE_ITEMS, { params });
+    return unwrap(res);
+  },
+
+  async getFundLedger({ from, to, type, page = 0, size = 20 } = {}) {
+    const params = { page, size };
+    if (from) params.from = from;
+    if (to) params.to = to;
+    if (type && type !== 'ALL') {
+      params.type = type;
+    }
+    const res = await baseApi.get(API_ENDPOINTS.ADMIN.FUND_LEDGER, { params });
+    return unwrap(res);
+  },
+
+  async getFundReconciliation() {
+    const res = await baseApi.get(API_ENDPOINTS.ADMIN.FUND_RECONCILIATION);
+    return unwrap(res);
+  },
+
+  async getAccountGrowth({ from, to, granularity = 'day', role } = {}) {
+    const params = { granularity };
+    if (from) params.from = from;
+    if (to) params.to = to;
+    if (role && role !== 'ALL') {
+      params.role = role;
+    }
+    const res = await baseApi.get(API_ENDPOINTS.ADMIN.ACCOUNTS_GROWTH, { params });
+    return unwrap(res);
   },
 
   // 2. Quản lý Tài khoản (Member, Moderator, Organization)
