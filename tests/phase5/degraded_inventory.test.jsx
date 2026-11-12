@@ -43,6 +43,26 @@ it.each(['WAREHOUSE', 'SOLD', 'UNCLAIMED', 'PLATFORM_OWNED'])('does not open ano
   await screen.findByText('Actual item');
   expect(screen.queryByRole('button', { name: /^Hàng xuống cấp$/ })).not.toBeInTheDocument();
 });
+it('displays snapshot commission rates and degradedCompensationRate in detail and proposal modal', async () => {
+  inventoryService.read.mockResolvedValue({
+    ...product,
+    currentPrice: 500000,
+    currentTerm: 2,
+    daysIntoTerm: 5,
+    termLengthDays: 45,
+    commissionRateTerm1: 0.12,
+    commissionRateTerm2: 0.18,
+    commissionRateTerm3: 0.25,
+    degradedCompensationRate: 0.6,
+  });
+  openPage();
+  await screen.findByText(/12% \/ 18% \/ 25%/);
+  expect(screen.getByText(/Đền xuống cấp \(nhận lại\): 60%/)).toBeInTheDocument();
+  expect(screen.getByText(/Kỳ 2 · ngày 5 \/ 45 · hoa hồng 18%/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /^Hàng xuống cấp$/ }));
+  expect(screen.getByText(/theo tỷ lệ trên biên nhận \(60%\)/)).toBeInTheDocument();
+});
+
 it.each([403, 404, 409])('keeps the proposal open on create error %s', async status => {
   returnService.createDegradedCase.mockRejectedValueOnce(Object.assign(new Error(`Create error ${status}`), { status }));
   openPage();

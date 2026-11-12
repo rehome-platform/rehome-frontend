@@ -218,7 +218,7 @@ export default function InventoryDetailPage() {
               </div>
               <div className="flex items-center p-3 gap-3">
                 <span className="w-28 text-[#5f5f5f] flex-shrink-0">Giá bán hiện tại:</span>
-                <span className="font-bold text-sm text-[#006B2C]">{money(data.agreedPrice || data.currentPrice)}</span>
+                <span className="font-bold text-sm text-[#006B2C]">{money(sellingPrice)}</span>
               </div>
               <div className="flex items-center p-3 gap-3">
                 <span className="w-28 text-[#5f5f5f] flex-shrink-0">Giá sàn:</span>
@@ -228,6 +228,12 @@ export default function InventoryDetailPage() {
                 <span className="w-28 text-[#5f5f5f] flex-shrink-0">Kỳ ký gửi:</span>
                 <span className="text-[#191C19] font-medium">
                   Kỳ {termAndRates.currentTerm} · ngày {termAndRates.daysIntoTerm} / {termAndRates.termLengthDays} · hoa hồng {termAndRates.commissionPercent}%
+                </span>
+              </div>
+              <div className="flex items-center p-3 gap-3">
+                <span className="w-28 text-[#5f5f5f] flex-shrink-0">Điều khoản biên nhận:</span>
+                <span className="text-[#191C19]">
+                  Hoa hồng kỳ 1/2/3: {termAndRates.commissionTerm1}% / {termAndRates.commissionTerm2}% / {termAndRates.commissionTerm3}% · Đền xuống cấp (nhận lại): {termAndRates.degradedCompensationRatePercent}%
                 </span>
               </div>
             </div>
@@ -386,8 +392,8 @@ export default function InventoryDetailPage() {
             </div>
 
             <div className="rounded-xl border border-neutral p-4 space-y-2">
-              <p>Mức đền đủ = giá đang bán trừ hoa hồng kỳ hiện tại; sản phẩm trở thành tài sản nền tảng khi Member chọn nhận đền đủ.</p>
-              <p>Nếu nhận lại hàng, mức đền áp dụng theo tỷ lệ trên biên nhận. Backend xác định và lưu mức đền khi mở ca.</p>
+              <p>Mức đền đủ = giá đang bán trừ hoa hồng kỳ hiện tại ({termAndRates.commissionPercent}%); sản phẩm trở thành tài sản nền tảng khi Member chọn nhận đền đủ.</p>
+              <p>Nếu nhận lại hàng, mức đền áp dụng theo tỷ lệ trên biên nhận ({termAndRates.degradedCompensationRatePercent}%). Backend xác định và lưu mức đền khi mở ca.</p>
               <p>{DEGRADED_DECISION_POLICY}</p>
             </div>
 

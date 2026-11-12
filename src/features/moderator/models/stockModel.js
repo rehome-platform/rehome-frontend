@@ -59,7 +59,12 @@ export function resolveInventoryTermAndRates(data, effectiveConfig = readEffecti
     DEFAULT_SYSTEM_CONFIGS.pricingAndCommission.floorPricePercent,
   );
 
-  const sellingPrice = data?.agreedPrice ?? data?.currentPrice;
+  const degradedCompensationRatePercent = normalizePercent(
+    data?.degradedCompensationRate ?? effectiveConfig?.degradedCompensationRate,
+    DEFAULT_SYSTEM_CONFIGS.pricingAndCommission.degradedCompensationRate,
+  );
+
+  const sellingPrice = data?.currentPrice ?? data?.agreedPrice;
   const floorPrice =
     data?.floorPrice != null
       ? data.floorPrice
@@ -77,5 +82,6 @@ export function resolveInventoryTermAndRates(data, effectiveConfig = readEffecti
     commissionTerm3,
     floorPricePercent,
     floorPrice,
+    degradedCompensationRatePercent,
   };
 }
