@@ -53,13 +53,28 @@ it('does not confuse automatic unclaimed with a compensated member decision', as
 });
 
 it('uses actual partial rate and paid zero, without inventing a pickup deadline', async () => {
-  returnService.getDegradedCase.mockResolvedValue({ ...pending, compensationAmount: 100000, decision: 'PARTIAL_WITH_ITEM_BACK', paidAmount: 0, status: 'DECIDED', pickupDeadline: null });
+  returnService.getDegradedCase.mockResolvedValue({ ...pending, compensationAmount: 100000, decision: 'PARTIAL_WITH_ITEM_BACK', paidAmount: 0, status: 'DECIDED', pickupDeadline: null, pickedUpAt: null });
   render(<DegradedCaseDetails caseId="case-1" onNavigateToCounter={() => {}} />, { wrapper });
   await screen.findByText('Actual note');
   expect(screen.getByText(/40%/)).toBeInTheDocument();
   expect(screen.getByText(/Đã cộng vào ví: 0/)).toBeInTheDocument();
   expect(screen.queryByText(/Hạn nhận hàng/)).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Quầy/ })).toBeInTheDocument();
+});
+
+it('shows pickedUpAt status and hides counter navigation button when item has been picked up', async () => {
+  returnService.getDegradedCase.mockResolvedValue({
+    ...pending,
+    compensationAmount: 100000,
+    decision: 'PARTIAL_WITH_ITEM_BACK',
+    paidAmount: 40000,
+    status: 'DECIDED',
+    pickedUpAt: '2026-11-12T11:30:00Z',
+  });
+  render(<DegradedCaseDetails caseId="case-1" onNavigateToCounter={() => {}} />, { wrapper });
+  await screen.findByText(/Đã bàn giao tại quầy lúc/);
+  expect(screen.getByText(/12\/11\/2026/)).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Quầy/ })).not.toBeInTheDocument();
 });
 
 it('retries a missing case after return resolution without performing any mutation', async () => {

@@ -166,6 +166,10 @@ export const API_ENDPOINTS = {
     DASHBOARD_STATS: "/api/admin/dashboard/stats",
     DASHBOARD_FUND: "/api/admin/dashboard/fund",
     EXPORT_EXCEL: "/api/admin/dashboard/export",
+    REVENUE_ITEMS: "/api/admin/revenue/items",
+    FUND_LEDGER: "/api/admin/fund/ledger",
+    FUND_RECONCILIATION: "/api/admin/fund/reconciliation",
+    ACCOUNTS_GROWTH: "/api/admin/accounts/growth",
 
     ACCOUNTS: "/api/admin/accounts",
     USERS: "/api/admin/accounts",

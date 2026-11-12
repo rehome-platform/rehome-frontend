@@ -162,6 +162,11 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
         {(isWithdrawal || item.type === 'DONATION_PICKUP') && item.sku && (
           <div className="mt-0.5 text-[11px] font-mono text-textSecondary">SKU: {item.sku}</div>
         )}
+        {item.type === 'DONATION_PICKUP' && (item.campaignTitle || item.organizationName) && (
+          <div className="mt-0.5 text-[11px] text-textSecondary">
+            {[item.campaignTitle, item.organizationName].filter(Boolean).join(' · ')}
+          </div>
+        )}
         {isFocused && <span className="ml-2 inline-block rounded-full bg-primary px-2.5 py-0.5 text-[10px] text-white font-medium">Việc vừa mở</span>}
       </td>
       <td className="py-3 px-3 text-textSecondary">
@@ -170,6 +175,16 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
             <div>{item.subjectSubtitle || item.memberName || item.sellerName || '—'}</div>
             {item.memberCode && (
               <div className="mt-1 text-[11px]">Mã Member: <span className="font-mono">{item.memberCode}</span></div>
+            )}
+            {item.feeCharged > 0 && (
+              <div className="mt-1 text-[11px]">
+                Phí rút: <strong className="text-text">{money(item.feeCharged)}</strong>{' '}
+                {item.feePaid ? (
+                  <span className="text-[#006B2C] font-semibold">(Đã thanh toán)</span>
+                ) : (
+                  <span className="text-[#BA1A1A] font-semibold">(Chưa thanh toán)</span>
+                )}
+              </div>
             )}
           </>
         ) : (item.subjectSubtitle || item.fieldChanged || item.buyerName || item.memberName || item.sellerName || item.memberCode || '—')}

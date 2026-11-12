@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import adminApi from '../services/adminApi';
+import AdminAccountGrowthChart from './AdminAccountGrowthChart.jsx';
 
 /**
  * View Tổng quan Dashboard Quản trị ReHome
  * Kết nối Real Data với backend Spring Boot:
  * - Thống kê số lượng thực tế: Member, Tổ chức, Moderator, Kho hàng
+ * - Biểu đồ tăng trưởng tài khoản từ GET /api/admin/accounts/growth
  * - Biểu đồ tròn Donut động theo tỷ lệ thực tế
  * - Bảng "Hoạt động gần đây" kết nối trực tiếp với Nhật ký kiểm soát (Audit Log - API 149)
  */
 export default function AdminOverviewView({ onNavigateToAudit }) {
-  const [hoveredPoint, setHoveredPoint] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Thống kê thực tế
@@ -152,85 +153,10 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
 
       {/* 2 Khối trực quan trung tâm */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Biểu đồ Tài khoản mới theo tuần (7 cột / 12) */}
-        <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-            <div>
-              <h3 className="text-base font-bold text-[#191C19] font-heading">
-                Tài khoản mới theo chu kỳ
-              </h3>
-              <p className="text-xs text-[#717971] mt-0.5">
-                Quy mô tăng trưởng thành viên nền tảng ReHome
-              </p>
-            </div>
-            <button
-              onClick={loadOverviewData}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4] hover:bg-[#E9F0E5] text-xs font-medium text-[#414942] transition-colors"
-            >
-              <span className="material-symbols-outlined text-sm text-[#006B2C]">refresh</span>
-              <span>Làm mới số liệu</span>
-            </button>
-          </div>
-
-          {/* SVG Visual Graphic */}
-          <div className="relative w-full h-56 pt-2">
-            <svg
-              className="w-full h-full overflow-visible"
-              viewBox="0 0 600 200"
-              preserveAspectRatio="none"
-            >
-              <defs>
-                <linearGradient id="greenAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#006B2C" stopOpacity="0.18" />
-                  <stop offset="100%" stopColor="#006B2C" stopOpacity="0.0" />
-                </linearGradient>
-              </defs>
-
-              {/* Grid Lines */}
-              {[40, 80, 120, 160].map((yVal, i) => (
-                <g key={i}>
-                  <line
-                    x1="40"
-                    y1={yVal}
-                    x2="560"
-                    y2={yVal}
-                    stroke="#E9F0E5"
-                    strokeDasharray="4 4"
-                    strokeWidth="1"
-                  />
-                  <text
-                    x="25"
-                    y={yVal + 4}
-                    fontSize="10"
-                    fill="#8E998D"
-                    textAnchor="end"
-                  >
-                    {100 - i * 25}
-                  </text>
-                </g>
-              ))}
-
-              {/* Shaded Area */}
-              <path
-                d="M 50 150 L 120 115 L 190 105 L 260 122 L 330 78 L 400 70 L 470 86 L 540 40 L 540 180 L 50 180 Z"
-                fill="url(#greenAreaGrad)"
-              />
-
-              {/* Line path */}
-              <path
-                d="M 50 150 L 120 115 L 190 105 L 260 122 L 330 78 L 400 70 L 470 86 L 540 40"
-                fill="none"
-                stroke="#006B2C"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-          <p className="text-[11px] text-[#717971] text-center mt-2">
-            Tổng cộng {stats.totalAccounts} tài khoản thuộc ba nhóm Member, tổ chức và Moderator.
-          </p>
-        </div>
+        {/* Biểu đồ Tài khoản mới theo chu kỳ (7 cột / 12) */}
+        <AdminAccountGrowthChart
+          footerNote={`Tổng cộng ${stats.totalAccounts} tài khoản thuộc ba nhóm Member, tổ chức và Moderator.`}
+        />
 
         {/* Biểu đồ Tròn Donut: Tài khoản theo vai trò (5 cột / 12) */}
         <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between">

@@ -182,5 +182,31 @@ describe('AdminWarehousesView component', () => {
     expect(latInput.value).toBe('10.823100');
     expect(lngInput.value).toBe('106.629700');
   });
+
+  it('filters warehouses by status and displays warehouse code when present', async () => {
+    adminApi.getWarehouses.mockResolvedValue([
+      { ...mockWarehouses[0], code: 'KHO-Q7' },
+    ]);
+
+    renderComponent();
+    expect(await screen.findByText('KHO-Q7')).toBeInTheDocument();
+    expect(adminApi.getWarehouses).toHaveBeenCalledWith(undefined);
+
+    const statusSelect = screen.getByLabelText('Lọc trạng thái kho');
+    fireEvent.change(statusSelect, { target: { value: 'ACTIVE' } });
+    await waitFor(() => {
+      expect(adminApi.getWarehouses).toHaveBeenLastCalledWith('ACTIVE');
+    });
+
+    fireEvent.change(statusSelect, { target: { value: 'HIDDEN' } });
+    await waitFor(() => {
+      expect(adminApi.getWarehouses).toHaveBeenLastCalledWith('HIDDEN');
+    });
+
+    fireEvent.change(statusSelect, { target: { value: 'ALL' } });
+    await waitFor(() => {
+      expect(adminApi.getWarehouses).toHaveBeenLastCalledWith(undefined);
+    });
+  });
 });
 

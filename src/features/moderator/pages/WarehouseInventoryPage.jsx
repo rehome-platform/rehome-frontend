@@ -403,10 +403,10 @@ export default function WarehouseInventoryPage() {
                             )}
                           </td>
                           <td className="py-3.5 px-4 text-[#5f5f5f]">
-                            {item.currentTerm ? `Kỳ ${item.currentTerm} · ngày ${item.daysIntoTerm || 1}` : '—'}
+                            {item.currentTerm ? `Kỳ ${item.currentTerm} · ngày ${item.daysIntoTerm ?? 1}${item.termLengthDays ? ` / ${item.termLengthDays}` : ''}` : '—'}
                           </td>
                           <td className="py-3.5 px-4 font-bold text-[#191C19] text-right">
-                            {item.currentPrice || item.agreedPrice ? money(item.currentPrice || item.agreedPrice) : '—'}
+                            {item.currentPrice != null ? money(item.currentPrice) : (item.agreedPrice != null ? money(item.agreedPrice) : '—')}
                           </td>
                           <td className="py-3.5 px-4 text-right">
                             <div className="flex items-center justify-end gap-2.5">

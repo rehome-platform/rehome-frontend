@@ -1,90 +1,113 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrencyVND } from '../../../utils/formatters.js';
 import { Button, Badge } from '../../../components/common/index.js';
 import adminApi from '../services/adminApi.js';
 import AdminOverviewView from '../components/AdminOverviewView.jsx';
+import AdminRevenueBreakdownCard from '../components/AdminRevenueBreakdownCard.jsx';
+import AdminFundLedgerSection from '../components/AdminFundLedgerSection.jsx';
+import AdminRevenueReportView from '../components/AdminRevenueReportView.jsx';
+import {
+  getPeriodDateRange,
+  getVietnamToday,
+  validateDateRange,
+} from '../utils/adminDateUtils.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 
-// Calendar arithmetic uses UTC after extracting the date in Vietnam, so the
-// export range does not depend on the browser's local timezone.
-function getExportDateRange(period, now = new Date()) {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(now);
-  const value = (type) => parts.find((part) => part.type === type).value;
-  const to = `${value('year')}-${value('month')}-${value('day')}`;
-  const start = new Date(`${to}T00:00:00Z`);
-  if (period === 'ALL') return { from: '1970-01-01', to };
-  if (period === 'WEEK') {
-    start.setUTCDate(start.getUTCDate() - (start.getUTCDay() + 6) % 7);
-  } else {
-    start.setUTCDate(1);
-  }
-  return { from: start.toISOString().slice(0, 10), to };
-}
+const DEFAULT_DASHBOARD = {
+  revenue: 0,
+  ordersCount: 0,
+  inventoryCount: 0,
+  avgServiceRating: 0,
+  walletBalanceHeld: 0,
+  platformRevenue: 0,
+  commissionRevenue: 0,
+  withdrawalFeeRevenue: 0,
+  compensationExpense: 0,
+  fundBalance: 0,
+  overdueTaskCount: 0,
+  term1SalesRevenue: 0,
+  term1Commission: 0,
+  term2SalesRevenue: 0,
+  term2Commission: 0,
+  term3SalesRevenue: 0,
+  term3Commission: 0,
+  term1StockCount: 0,
+  term2StockCount: 0,
+  term3StockCount: 0,
+  totalSoldItemsCount: 0,
+  netProfitMarginPercent: 0,
+};
 
 /**
  * Trang Dashboard Điều Hành & Quỹ Nền Tảng ReHome (Admin)
- * Chuẩn hóa 100% Real Data:
- * - Nối API backend thực tế: GET /api/admin/dashboard & GET /api/admin/dashboard/export
- * - Tỷ lệ doanh thu nền tảng / tổng tiền đơn hoàn thành
- * - Empty State chuẩn khi backend chưa cung cấp API phân rã hoa hồng theo kỳ
- * - Thống kê tồn kho thực tế từ backend
- * - Đã loại bỏ dòng thông tin Admin tĩnh theo yêu cầu
+ * Dùng chung một bộ lọc thời gian cho toàn bộ Dashboard, Báo cáo theo kỳ, Sổ quỹ và Xuất Excel.
  */
 export default function AdminDashboardPage() {
   const toast = useToast();
   const navigate = useNavigate();
 
-  // Tab: 'fund' (Dashboard & Quỹ) | 'revenue_report' (Báo cáo doanh thu) | 'activities' (Tăng trưởng)
   const [activeTab, setActiveTab] = useState('fund');
   const [exporting, setExporting] = useState(false);
-  const [exportPeriod, setExportPeriod] = useState('MONTH'); // 'WEEK' | 'MONTH' | 'ALL'
+
+  const initialMonth = useMemo(() => getPeriodDateRange('MONTH'), []);
+  const [period, setPeriod] = useState('MONTH'); // 'TODAY' | 'WEEK' | 'MONTH' | 'ALL' | 'CUSTOM'
+  const [customFrom, setCustomFrom] = useState(initialMonth.exportFrom);
+  const [customTo, setCustomTo] = useState(initialMonth.exportTo);
+
   const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState(DEFAULT_DASHBOARD);
 
-  // Dữ liệu từ API GET /api/admin/dashboard
-  const [dashboardData, setDashboardData] = useState({
-    revenue: 0,
-    ordersCount: 0,
-    inventoryCount: 0,
-    avgServiceRating: 0,
-    walletBalanceHeld: 0,
-    platformRevenue: 0,
-    fundBalance: 0,
-    overdueTaskCount: 0,
-  });
+  const dashSeqRef = useRef(0);
 
-  // Tải dữ liệu dashboard thực tế từ backend
+  const dateError = period === 'CUSTOM' ? validateDateRange(customFrom, customTo) : null;
+
+  const activeRange = useMemo(() => {
+    if (period !== 'CUSTOM') {
+      return getPeriodDateRange(period);
+    }
+    const today = getVietnamToday();
+    return {
+      apiFrom: customFrom || undefined,
+      apiTo: customTo || undefined,
+      exportFrom: customFrom || '1970-01-01',
+      exportTo: customTo || today,
+    };
+  }, [period, customFrom, customTo]);
+
   useEffect(() => {
-    let isMounted = true;
+    if (dateError) return;
 
+    const reqId = ++dashSeqRef.current;
     const loadData = async () => {
       try {
         setLoading(true);
-        const dashRes = await adminApi.getDashboard();
-        if (isMounted && dashRes) {
-          setDashboardData(dashRes);
+        const dashRes = await adminApi.getDashboard({
+          from: activeRange.apiFrom,
+          to: activeRange.apiTo,
+        });
+        if (reqId === dashSeqRef.current && dashRes) {
+          setDashboardData({ ...DEFAULT_DASHBOARD, ...dashRes });
         }
       } catch (err) {
-        console.error('Lỗi tải dữ liệu dashboard:', err);
+        if (reqId === dashSeqRef.current) {
+          console.error('Lỗi tải dữ liệu dashboard:', err);
+        }
       } finally {
-        if (isMounted) setLoading(false);
+        if (reqId === dashSeqRef.current) {
+          setLoading(false);
+        }
       }
     };
 
     loadData();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  }, [activeRange.apiFrom, activeRange.apiTo, dateError]);
 
-  // API revenue là tổng tiền đơn hoàn thành; đây không phải tỷ suất lợi nhuận ròng.
-  const platformRevenueRatio = dashboardData.revenue > 0
-    ? ((dashboardData.platformRevenue / dashboardData.revenue) * 100).toFixed(1)
-    : '0.0';
+  const platformRevenueRatio =
+    dashboardData.revenue > 0
+      ? ((dashboardData.platformRevenue / dashboardData.revenue) * 100).toFixed(1)
+      : '0.0';
 
-  // 4 Thẻ Quỹ & Dòng tiền thực tế từ backend
   const fundMetrics = [
     {
       label: 'Tổng số dư ví thành viên',
@@ -125,18 +148,21 @@ export default function AdminDashboardPage() {
     },
   ];
 
-  // Xử lý xuất báo cáo Excel thật từ Backend API
   const handleExportExcel = async () => {
+    if (dateError) {
+      toast.error(dateError);
+      return;
+    }
+
     try {
       setExporting(true);
-      const { from, to } = getExportDateRange(exportPeriod);
-      const blob = await adminApi.exportDashboard(from, to);
+      const { exportFrom, exportTo } = activeRange;
+      const blob = await adminApi.exportDashboard(exportFrom, exportTo);
 
-      // Kích hoạt tải file xuống trình duyệt
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `dashboard_report_${from}_${to}.xlsx`);
+      link.setAttribute('download', `dashboard_report_${exportFrom}_${exportTo}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
@@ -150,61 +176,101 @@ export default function AdminDashboardPage() {
   };
 
   const totalStock = dashboardData.inventoryCount || 0;
+  const termStocks = [
+    { label: 'Kỳ 1', count: Number(dashboardData.term1StockCount || 0), color: 'bg-[#006B2C]' },
+    { label: 'Kỳ 2', count: Number(dashboardData.term2StockCount || 0), color: 'bg-[#00685F]' },
+    { label: 'Kỳ 3', count: Number(dashboardData.term3StockCount || 0), color: 'bg-[#FEA619]' },
+  ];
 
   return (
     <div className="min-w-0 space-y-6">
-      {/* Tab Switcher: Quỹ & Doanh thu VS Báo cáo doanh thu chi tiết VS Hoạt động */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E2E8E0] pb-4">
+      {/* Tab Switcher + Bộ lọc thời gian dùng chung + Xuất Excel */}
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4 border-b border-[#E2E8E0] pb-4">
         <div className="flex flex-wrap items-center gap-2">
           <button
+            type="button"
             onClick={() => setActiveTab('fund')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${activeTab === 'fund'
-              ? 'bg-[#006B2C] text-white shadow-sm'
-              : 'bg-white border border-[#E2E8E0] text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
-              }`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${
+              activeTab === 'fund'
+                ? 'bg-[#006B2C] text-white shadow-sm'
+                : 'bg-white border border-[#E2E8E0] text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
+            }`}
           >
             <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
-            <span>Quỹ nền tảng & Doanh thu</span>
+            <span>Quỹ nền tảng &amp; Doanh thu</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('revenue_report')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${activeTab === 'revenue_report'
-              ? 'bg-[#006B2C] text-white shadow-sm'
-              : 'bg-white border border-[#E2E8E0] text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
-              }`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${
+              activeTab === 'revenue_report'
+                ? 'bg-[#006B2C] text-white shadow-sm'
+                : 'bg-white border border-[#E2E8E0] text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
+            }`}
           >
             <span className="material-symbols-outlined text-[18px]">table_chart</span>
             <span>Báo cáo doanh thu theo kỳ</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('activities')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${activeTab === 'activities'
-              ? 'bg-[#006B2C] text-white shadow-sm'
-              : 'bg-white border border-[#E2E8E0] text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
-              }`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${
+              activeTab === 'activities'
+                ? 'bg-[#006B2C] text-white shadow-sm'
+                : 'bg-white border border-[#E2E8E0] text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
+            }`}
           >
             <span className="material-symbols-outlined text-[18px]">insights</span>
-            <span>Hoạt động & Tăng trưởng hệ thống</span>
+            <span>Hoạt động &amp; Tăng trưởng hệ thống</span>
           </button>
         </div>
 
-        {/* Nút xuất báo cáo Excel gọi API thật */}
+        {/* Bộ lọc thời gian dùng chung & nút xuất báo cáo Excel */}
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1 text-xs text-[#414942]">
-            <span>Khoảng thời gian xuất Excel</span>
+            <span>Khoảng thời gian</span>
             <select
-              value={exportPeriod}
-              onChange={(event) => setExportPeriod(event.target.value)}
+              aria-label="Khoảng thời gian"
+              value={period}
+              onChange={(event) => setPeriod(event.target.value)}
               disabled={exporting}
               className="rounded-xl border border-[#E2E8E0] bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30 disabled:opacity-50"
             >
+              <option value="TODAY">Hôm nay</option>
               <option value="WEEK">Tuần này</option>
               <option value="MONTH">Tháng này</option>
-              <option value="ALL">Tất cả</option>
+              <option value="ALL">Toàn thời gian</option>
+              <option value="CUSTOM">Tùy chọn ngày</option>
             </select>
           </label>
+
+          {period === 'CUSTOM' && (
+            <>
+              <label className="flex flex-col gap-1 text-xs text-[#414942]">
+                <span>Từ ngày</span>
+                <input
+                  type="date"
+                  aria-label="Từ ngày"
+                  value={customFrom}
+                  onChange={(e) => setCustomFrom(e.target.value)}
+                  className="rounded-xl border border-[#E2E8E0] bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-[#414942]">
+                <span>Đến ngày</span>
+                <input
+                  type="date"
+                  aria-label="Đến ngày"
+                  value={customTo}
+                  onChange={(e) => setCustomTo(e.target.value)}
+                  className="rounded-xl border border-[#E2E8E0] bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30"
+                />
+              </label>
+            </>
+          )}
+
           <Button
             onClick={handleExportExcel}
             loading={exporting}
@@ -216,52 +282,35 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
+      {dateError && (
+        <div
+          role="alert"
+          className="px-4 py-2.5 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-xs font-semibold text-[#B91C1C]"
+        >
+          {dateError}
+        </div>
+      )}
+
       <p className="text-xs text-[#717971]">
-        Số liệu doanh thu và đơn hàng trên dashboard là toàn thời gian; số dư và tồn kho là hiện tại.
-        {' '}Khoảng thời gian chỉ áp dụng cho báo cáo Excel, theo giờ Việt Nam.
+        Doanh thu, số đơn, điểm đánh giá và cơ cấu nguồn thu được lọc theo khoảng thời gian đang chọn (giờ Việt Nam);
+        {' '}tồn kho, số dư ví, quỹ nền tảng và việc quá hạn luôn là số liệu hiện tại.
       </p>
 
-      {/* Nội dung Tab Hoạt động & Tăng trưởng */}
+      {/* Tab Hoạt động & Tăng trưởng */}
       {activeTab === 'activities' && (
         <AdminOverviewView onNavigateToAudit={() => navigate('/admin/audit-logs')} />
       )}
 
-      {/* Nội dung Tab Báo cáo doanh thu chi tiết theo kỳ */}
+      {/* Tab Báo cáo doanh thu chi tiết theo kỳ */}
       {activeTab === 'revenue_report' && (
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-extrabold text-[#191C19] font-heading">
-                Báo Cáo Doanh Thu Nền Tảng Theo Kỳ Kí Gửi
-              </h2>
-              <p className="text-xs text-[#717971] mt-0.5">
-                Doanh thu hoa hồng được chốt lũy tiến (10% - 15% - 20%) và chỉ tính cho sản phẩm đã bán thành công
-              </p>
-            </div>
-          </div>
-
-          {/* Empty State cho Tab Báo Cáo Doanh Thu */}
-          <div className="bg-white rounded-2xl border border-[#E2E8E0] p-12 text-center flex flex-col items-center justify-center shadow-xs">
-            <div className="w-16 h-16 rounded-2xl bg-[#E8F5E9] text-[#006B2C] flex items-center justify-center mb-4">
-              <span className="material-symbols-outlined text-3xl font-light">
-                query_stats
-              </span>
-            </div>
-            <h3 className="text-base font-bold text-[#191C19] font-heading">
-              Chưa có dữ liệu giao dịch chi tiết theo kỳ từ máy chủ
-            </h3>
-            <p className="text-xs text-[#717971] max-w-md mt-1 mb-4">
-              Tổng doanh thu nền tảng hiện tại là <strong className="text-[#006B2C]">{formatCurrencyVND(dashboardData.platformRevenue || 0)}</strong>. Dữ liệu phân rã hoa hồng chi tiết theo Kỳ 1, Kỳ 2, Kỳ 3 và danh sách sản phẩm bán thành công sẽ tự động hiển thị khi API máy chủ cung cấp dữ liệu phân bổ.
-            </p>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-[11px] text-[#717971]">
-              <span className="material-symbols-outlined text-sm text-[#006B2C]">info</span>
-              <span>Đang kết nối API: <code>GET /api/admin/dashboard</code></span>
-            </div>
-          </div>
-        </div>
+        <AdminRevenueReportView
+          from={activeRange.apiFrom}
+          to={activeRange.apiTo}
+          dashboardData={dashboardData}
+        />
       )}
 
-      {/* Nội dung Tab Quỹ & Doanh thu Chính */}
+      {/* Tab Quỹ & Doanh thu Chính */}
       {activeTab === 'fund' && (
         <div className="space-y-6">
           {/* 4 Thẻ Quỹ & Dòng tiền */}
@@ -284,12 +333,11 @@ export default function AdminDashboardPage() {
                   </div>
                   <p className="text-xs font-medium text-[#717971]">{m.label}</p>
                   <p className="text-2xl font-black font-heading text-[#191C19] mt-1 tracking-tight">
-                    {typeof m.value === 'number' ? formatCurrencyVND(m.value) : m.value}
+                    {loading ? '...' : typeof m.value === 'number' ? formatCurrencyVND(m.value) : m.value}
                   </p>
                 </div>
 
                 <p className="text-[11px] text-[#717971] mt-3">{m.description}</p>
-                {/* Tỷ lệ doanh thu so với tổng tiền đơn hoàn thành */}
                 {m.extraInfo && (
                   <div className="mt-3 pt-2.5 border-t border-[#F0F5EE] flex items-center gap-1.5 text-xs font-bold text-[#006B2C]">
                     <span className="material-symbols-outlined text-[16px]">trending_up</span>
@@ -302,51 +350,10 @@ export default function AdminDashboardPage() {
 
           {/* 2 Khối Trung tâm: Cơ cấu Doanh thu & Thống kê Tồn kho theo kỳ */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Khối Cơ Cấu Doanh Thu Nền Tảng (7 cột) */}
-            <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-[#E2E8E0] shadow-xs flex flex-col justify-between">
-              <div className="flex items-center justify-between border-b border-[#E2E8E0] pb-3 mb-4">
-                <div>
-                  <h3 className="text-base font-bold text-[#191C19] font-heading">
-                    Cơ Cấu Doanh Thu Nền Tảng
-                  </h3>
-                  <p className="text-xs text-[#717971] mt-0.5">
-                    Tỷ trọng doanh thu theo hoa hồng Kỳ 1, Kỳ 2, Kỳ 3 & các nguồn thu khác
-                  </p>
-                </div>
-                <button
-                  onClick={() => setActiveTab('revenue_report')}
-                  className="text-xs font-bold text-[#006B2C] hover:underline flex items-center gap-1"
-                >
-                  <span>Xem chi tiết báo cáo</span>
-                  <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-                </button>
-              </div>
-
-              {/* Empty State Tinh Tế Cho Cơ Cấu Doanh Thu (chờ API phân rã) */}
-              <div className="p-8 my-auto rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center flex flex-col items-center justify-center">
-                <div className="w-14 h-14 rounded-2xl bg-[#E8F5E9] text-[#006B2C] flex items-center justify-center mb-3">
-                  <span className="material-symbols-outlined text-2xl">
-                    pie_chart
-                  </span>
-                </div>
-                <h4 className="text-sm font-bold text-[#191C19]">
-                  Chưa có dữ liệu phân bổ theo kỳ từ máy chủ
-                </h4>
-                <p className="text-xs text-[#717971] max-w-sm mt-1 mb-4">
-                  Tính năng phân rã hoa hồng theo kỳ đang chờ hỗ trợ từ API máy chủ. Biểu đồ tròn sẽ tự động hiển thị ngay khi hệ thống cung cấp dữ liệu phân bổ.
-                </p>
-                <div className="px-4 py-2 rounded-xl bg-white border border-[#E2E8E0] shadow-2xs text-xs">
-                  <span className="text-[#717971] mr-1.5">Tổng doanh thu nền tảng:</span>
-                  <span className="font-extrabold text-[#006B2C]">
-                    {formatCurrencyVND(dashboardData.platformRevenue || 0)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-[#E2E8E0] text-[11px] text-[#717971] flex items-center justify-between">
-                <span>Số liệu doanh thu được tổng hợp tự động từ máy chủ ReHome.</span>
-              </div>
-            </div>
+            <AdminRevenueBreakdownCard
+              dashboardData={dashboardData}
+              onViewDetail={() => setActiveTab('revenue_report')}
+            />
 
             {/* Thống kê sản phẩm đang tồn kho trong mỗi kỳ (5 cột) */}
             <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-[#E2E8E0] shadow-xs flex flex-col justify-between">
@@ -358,16 +365,14 @@ export default function AdminDashboardPage() {
                   <Badge variant="outline">Tổng: {totalStock} món</Badge>
                 </div>
                 <p className="text-xs text-[#717971] mt-0.5">
-                  Số lượng sản phẩm thực tế đang lưu tại hệ thống kho
+                  Số lượng sản phẩm thực tế đang lưu tại hệ thống kho theo kỳ hiện tại
                 </p>
               </div>
 
               {totalStock === 0 ? (
                 <div className="p-8 my-auto rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center flex flex-col items-center justify-center">
                   <div className="w-12 h-12 rounded-xl bg-[#E0F2F1] text-[#00685F] flex items-center justify-center mb-2">
-                    <span className="material-symbols-outlined text-2xl">
-                      inventory_2
-                    </span>
+                    <span className="material-symbols-outlined text-2xl">inventory_2</span>
                   </div>
                   <h4 className="text-xs font-bold text-[#191C19]">
                     Kho hàng hiện chưa có sản phẩm tồn
@@ -378,19 +383,32 @@ export default function AdminDashboardPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="p-3.5 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-[#191C19]">Tổng sản phẩm trong kho</span>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C]">
-                          Đang lưu kho
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-[#717971] mt-0.5">Bao gồm hàng đang bán, giữ chỗ và chờ xử lý</p>
+                  <div className="p-3.5 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-[#191C19]">Phân bổ tồn kho theo kỳ</span>
+                      <span className="text-xs font-extrabold text-[#006B2C]">{totalStock} món</span>
                     </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-lg font-black text-[#191C19] block">{totalStock}</span>
-                      <span className="text-[10px] font-semibold text-[#717971]">100% tồn kho</span>
+
+                    <div className="space-y-2">
+                      {termStocks.map((t) => {
+                        const pct = totalStock > 0 ? Math.round((t.count / totalStock) * 100) : 0;
+                        return (
+                          <div key={t.label} className="space-y-1">
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="font-semibold text-[#414942]">
+                                {t.label}: {t.count} món
+                              </span>
+                              <span className="text-[#717971]">{pct}%</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-[#E2E8E0] rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${t.color}`}
+                                style={{ width: `${Math.min(100, pct)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -411,39 +429,13 @@ export default function AdminDashboardPage() {
               )}
 
               <div className="mt-4 pt-3 border-t border-[#E2E8E0] text-[11px] text-[#717971] flex items-center justify-between">
-                <span>Hết 90 ngày: Gỡ khỏi sàn & gửi thông báo 30 ngày</span>
+                <span>Hết 90 ngày: Gỡ khỏi sàn &amp; gửi thông báo 30 ngày</span>
               </div>
             </div>
           </div>
 
-          {/* Bút toán đối ứng sổ kép */}
-          <div className="bg-white p-6 rounded-2xl border border-[#E2E8E0] shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E2E8E0] pb-3">
-              <div>
-                <h3 className="text-base font-bold text-[#191C19]">
-                  Nhật Ký Ghi Sổ Kép (Quỹ Nền Tảng ↔ Ví Member)
-                </h3>
-                <p className="text-xs text-[#717971]">
-                  Mọi giao dịch thanh toán, rút tiền và hoa hồng được hạch toán đối ứng tự động
-                </p>
-              </div>
-              <Badge variant="success">Đối soát: Khớp 100%</Badge>
-            </div>
-
-            <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center flex flex-col items-center justify-center">
-              <div className="w-12 h-12 rounded-xl bg-[#F1F5F9] text-[#64748B] flex items-center justify-center mb-2">
-                <span className="material-symbols-outlined text-2xl font-light">
-                  receipt_long
-                </span>
-              </div>
-              <h4 className="text-xs font-bold text-[#191C19]">
-                Chưa có bút toán ghi sổ kép phát sinh
-              </h4>
-              <p className="text-[11px] text-[#717971] mt-0.5 max-w-sm">
-                Các giao dịch hoàn thành và biến động số dư giữa Quỹ nền tảng và Ví thành viên sẽ hiển thị tự động tại đây.
-              </p>
-            </div>
-          </div>
+          {/* Nhật ký ghi sổ kép & đối soát quỹ nền tảng */}
+          <AdminFundLedgerSection from={activeRange.apiFrom} to={activeRange.apiTo} />
         </div>
       )}
     </div>
