@@ -204,4 +204,40 @@ describe('API 28 queue contract', () => {
     await waitFor(() => expect(rejectBody).toEqual({ reason: 'Sản phẩm đang giữ cho đơn hàng khác' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
+
+  it('renders DONATION_PICKUP with sku, campaignTitle, organizationName and withdrawal feePaid status', async () => {
+    const donationPickup = {
+      id: 'queue-don-1',
+      type: 'DONATION_PICKUP',
+      refId: 'don-1',
+      sku: 'WH-Q7-AO-000123',
+      targetName: 'Áo khoác jean',
+      subjectSubtitle: 'Trần Bình',
+      campaignId: 'camp-1',
+      campaignTitle: 'Áo ấm vùng cao',
+      organizationId: 'org-1',
+      organizationName: 'Quỹ Hy Vọng',
+      status: 'PENDING_PICKUP',
+      claimedBy: 'mod-a',
+      createdAt: '2026-11-11T00:00:00Z',
+    };
+    const unpaidWithdrawal = {
+      ...withdrawal,
+      id: 'queue-w-fee',
+      sku: 'WH-Q7-QU-000999',
+      feeCharged: 20000,
+      feePaid: false,
+    };
+    server.use(http.get(queuesUrl, () => ok([donationPickup, unpaidWithdrawal])));
+    renderPage(<ConsignmentQueuePage />);
+
+    const donRow = (await screen.findByText('Áo khoác jean')).closest('tr');
+    expect(within(donRow).getByText(/WH-Q7-AO-000123/)).toBeInTheDocument();
+    expect(within(donRow).getByText(/Áo ấm vùng cao · Quỹ Hy Vọng/)).toBeInTheDocument();
+    expect(within(donRow).getByRole('link', { name: 'Mở việc' })).toHaveAttribute('href', '/moderator/donations?donationId=don-1&campaignId=camp-1');
+
+    const withRow = screen.getByText('Áo len').closest('tr');
+    expect(within(withRow).getByText(/20\.000/)).toBeInTheDocument();
+    expect(within(withRow).getByText(/Chưa thanh toán/)).toBeInTheDocument();
+  });
 });
