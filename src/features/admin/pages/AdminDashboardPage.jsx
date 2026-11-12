@@ -110,16 +110,16 @@ export default function AdminDashboardPage() {
 
   const fundMetrics = [
     {
-      label: 'Tổng số dư ví thành viên',
+      label: 'Tiền đang giữ hộ',
       value: dashboardData.walletBalanceHeld || 0,
-      description: 'Tổng số dư hiện tại trong các ví thành viên',
+      description: 'Tiền bán được tổng giá của sản phẩm đang giữ hộ cho Member (chờ đối soát rút ví)',
       icon: 'lock_clock',
       iconBg: 'bg-[#FFF3E0]',
       iconColor: 'text-[#D97706]',
-      badge: 'Sổ kép đối ứng',
+      badge: 'Tiền giữ hộ Member',
     },
     {
-      label: 'Doanh thu nền tảng',
+      label: 'Doanh thu hiện có',
       value: dashboardData.platformRevenue || 0,
       description: 'Hoa hồng và phí rút hàng đã thu, chưa trừ chi đền bù',
       icon: 'trending_up',

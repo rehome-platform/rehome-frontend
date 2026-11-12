@@ -6,7 +6,27 @@ import { consignmentService } from "../../services/warehouseApi.js";
 import { validMoney } from "../../models/warehouseModel.js";
 import { Field, money } from "../WarehouseUi.jsx";
 
+export const CONDITION_PRESETS = [
+  { value: 'NEW_TAG', label: 'Mới, còn tem (100%)', noteTemplate: 'Mới 100%, còn nguyên tem mác, chưa qua sử dụng' },
+  { value: 'LIKE_NEW', label: 'Như mới (99%)', noteTemplate: 'Như mới 99%, không vết bẩn, không trầy xước' },
+  { value: 'GOOD', label: 'Tốt, có dấu hiệu dùng (90-95%)', noteTemplate: 'Tốt 95%, có dấu hiệu đã dùng nhẹ, phom dáng đẹp' },
+  { value: 'FLAW', label: 'Có lỗi nhỏ (80-85%)', noteTemplate: 'Có lỗi nhỏ ở viền/khuy, tổng thể 85% còn tốt' },
+];
+
 export function ConsignmentInspectionForm({ price, term, conditionNote, allChecked, resource, formId, proof, setFeedback, setReceiptId, setCondition, errors, setPrice, setTerm, termOptions, consignmentConfig }) {
+  const [selectedConditionLevel, setSelectedConditionLevel] = React.useState('LIKE_NEW');
+
+  const handleSelectConditionLevel = (lvl) => {
+    setSelectedConditionLevel(lvl);
+    const preset = CONDITION_PRESETS.find((p) => p.value === lvl);
+    if (preset) {
+      // Nếu ghi chú đang trống hoặc đang là template của mức khác thì tự điền gợi ý tương ứng
+      const isTemplate = CONDITION_PRESETS.some((p) => p.noteTemplate === conditionNote?.trim());
+      if (!conditionNote?.trim() || isTemplate) {
+        setCondition(preset.noteTemplate);
+      }
+    }
+  };
   const numericPrice = Number(price) || 0;
   const floorPricePercent =
     consignmentConfig?.floorPricePercent != null ? Number(consignmentConfig.floorPricePercent) : 50;
@@ -81,14 +101,30 @@ export function ConsignmentInspectionForm({ price, term, conditionNote, allCheck
         <strong>Đây là bước thương lượng, không phải áp giá.</strong> Trao đổi miệng với khách rồi nhập mức hai bên thống nhất. Khách không đồng ý thì trả đồ, không ép.
       </div>
 
-      <Field
-        label="Ghi chú tình trạng thực tế"
-        required
-        value={conditionNote}
-        onChange={(e) => setCondition(e.target.value)}
-        error={errors.conditionNote}
-        placeholder="Mô tả độ mới %, phụ kiện đi kèm..."
-      />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Field label="Tình trạng phân loại">
+          <select
+            value={selectedConditionLevel}
+            onChange={(e) => handleSelectConditionLevel(e.target.value)}
+            className="w-full rounded-xl border-neutral text-xs text-[#191C19]"
+          >
+            {CONDITION_PRESETS.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <Field
+          label="Ghi chú chi tiết tình trạng thực tế"
+          required
+          value={conditionNote}
+          onChange={(e) => setCondition(e.target.value)}
+          error={errors.conditionNote}
+          placeholder="Mô tả độ mới 99%, chi tiết vải hoặc phụ kiện..."
+        />
+      </div>
     
       <div className="grid grid-cols-2 gap-3">
         <Field
