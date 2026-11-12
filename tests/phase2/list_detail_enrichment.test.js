@@ -52,12 +52,15 @@ describe('inventory visible-row detail enrichment', () => {
   it('skips already complete rows, including zero price', async () => {
     let detailRequests = 0;
     server.use(
-      http.get(`${base}/inventory`, () => json(page([{ id: 'sku-1', name: 'Complete', status: 'ON_SALE', currentTerm: 1, daysIntoTerm: 1, currentPrice: 0 }]))),
+      http.get(`${base}/inventory`, () => json(page([{ id: 'sku-1', name: 'Complete', status: 'ON_SALE', currentTerm: 1, daysIntoTerm: 1, currentPrice: 0, termLengthDays: 30 }]))),
       http.get(`${base}/products/:sku`, () => { detailRequests++; return json({ currentPrice: 999 }); }),
     );
     const visible = await inventoryService.list({}, { enrichDetails: true });
     expect(detailRequests).toBe(0);
     expect(visible.items[0].currentPrice).toBe(0);
+    expect(visible.items[0].termLengthDays).toBe(30);
+    expect(visible.items[0].currentTerm).toBe(1);
+    expect(visible.items[0].daysIntoTerm).toBe(1);
   });
 
   it('fetches fresh prices on each list load and retains fields already present on the list row', async () => {
