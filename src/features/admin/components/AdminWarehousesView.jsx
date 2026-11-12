@@ -818,29 +818,51 @@ export default function AdminWarehousesView({ onLogAction }) {
               </button>
             </div>
 
-            {/* Bản đồ preview nhúng trực quan */}
+            {/* Khối hiển thị vị trí & Liên kết bản đồ an toàn (tránh lỗi iframe OSM từ chối kết nối) */}
             {hasValidCoords && (
               <div className="pt-2">
-                <div className="flex items-center justify-between mb-1.5 text-[11px] text-[#717971]">
-                  <span>Xem trước vị trí trên bản đồ:</span>
-                  <a
-                    href={`https://www.google.com/maps?q=${parsedLat},${parsedLng}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[#006B2C] hover:underline flex items-center gap-0.5"
-                  >
-                    <span>Mở Google Maps</span>
-                    <span className="material-symbols-outlined text-[13px]">open_in_new</span>
-                  </a>
+                <div className="flex items-center justify-between mb-2 text-[11px] text-[#717971]">
+                  <span className="font-medium text-[#191C19]">Tọa độ định vị điểm kí gửi:</span>
+                  <div className="flex items-center gap-3">
+                    <a
+                      href={`https://www.google.com/maps?q=${parsedLat},${parsedLng}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[#006B2C] hover:underline flex items-center gap-0.5 font-medium"
+                    >
+                      <span>Mở Google Maps</span>
+                      <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+                    </a>
+                    <a
+                      href={`https://www.openstreetmap.org/?mlat=${parsedLat}&mlon=${parsedLng}#map=16/${parsedLat}/${parsedLng}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[#006B2C] hover:underline flex items-center gap-0.5 font-medium"
+                    >
+                      <span>Mở OpenStreetMap</span>
+                      <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+                    </a>
+                  </div>
                 </div>
-                <iframe
-                  title="Bản đồ vị trí kho"
-                  width="100%"
-                  height="160"
-                  className="rounded-xl border border-[#E2E8E0] bg-white shadow-2xs"
-                  loading="lazy"
-                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${parsedLng - 0.005}%2C${parsedLat - 0.005}%2C${parsedLng + 0.005}%2C${parsedLat + 0.005}&layer=mapnik&marker=${parsedLat}%2C${parsedLng}`}
-                />
+
+                <div className="rounded-xl border border-[#DDE5D9] bg-[#F6F9F4] p-3 text-xs flex items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-[#E8F5E9] text-[#006B2C] flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-[18px]">location_on</span>
+                    </div>
+                    <div>
+                      <p className="font-bold text-[#191C19]">
+                        Vĩ độ: {parsedLat.toFixed(5)} · Kinh độ: {parsedLng.toFixed(5)}
+                      </p>
+                      <p className="text-[11px] text-[#5B6776]">
+                        Tọa độ được dùng để tính khoảng cách và định vị kho gần nhất cho Member
+                      </p>
+                    </div>
+                  </div>
+                  <span className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C] border border-[#006B2C]/20 shrink-0">
+                    Hợp lệ
+                  </span>
+                </div>
               </div>
             )}
           </div>

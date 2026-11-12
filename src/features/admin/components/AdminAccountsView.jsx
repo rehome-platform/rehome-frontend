@@ -575,9 +575,9 @@ function AccountsFilters({
           className="px-3 py-2.5 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
         >
           <option value="ALL">Vai trò: Tất cả</option>
-          <option value="member">Member</option>
-          <option value="organizer">Organizer</option>
-          <option value="moderator">Moderator</option>
+          <option value="member">Thành viên (Member)</option>
+          <option value="organizer">Tổ chức từ thiện (Organizer)</option>
+          <option value="moderator">Kiểm định viên (Moderator)</option>
         </select>
 
         <select
