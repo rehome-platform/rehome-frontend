@@ -12,7 +12,6 @@ import {
   DegradedCaseModal,
   DegradedCaseViewTH07,
 } from "../components/returns/ReturnSections.jsx";
-import SuspiciousCounterfeitModal from '../components/SuspiciousCounterfeitModal.jsx';
 import React from "react";
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 
@@ -156,8 +155,11 @@ export default function ReturnProcessingPage() {
               {/* Cột trái (6 cols): Đối chiếu hàng về */}
               <ReturnInspectionProduct {...model.sections.ReturnInspectionProduct} />
 
-              {/* Cột phải (6 cols): Kết luận & Hoàn tiền */}
-              <ReturnInspectionVerdict {...model.sections.ReturnInspectionVerdict} />
+              {/* Cột phải (6 cols): Kết luận & Hoàn tiền (ẩn nhánh nghi hàng giả theo C.1 #4 do BE chưa có API) */}
+              <ReturnInspectionVerdict
+                {...model.sections.ReturnInspectionVerdict}
+                handleFlagCounterfeit={null}
+              />
             </div>
           </div>
         )}
@@ -175,9 +177,6 @@ export default function ReturnProcessingPage() {
 
         {/* MODAL: So sánh ảnh cạnh nhau */}
         <ReturnCompareDialog {...model.sections.ReturnCompareDialog} />
-
-        {/* MODAL: Thẩm định hàng nghi giả (F-134, F-135) */}
-        <SuspiciousCounterfeitModal {...model.sections.SuspiciousCounterfeitModal} />
 
         {/* MODAL: Lập biên bản hàng xuống cấp (TH-04 / KG-16) */}
         <DegradedCaseModal {...model.sections.DegradedCaseModal} />

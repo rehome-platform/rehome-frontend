@@ -50,7 +50,7 @@ export default function NotificationToastItem({ toast, onDismiss, userRole }) {
         ease: 'power2.in',
         onComplete: triggerDismiss,
       });
-      if (process.env.NODE_ENV === 'test') {
+      if (import.meta.env?.MODE === 'test') {
         triggerDismiss();
       }
     } else {

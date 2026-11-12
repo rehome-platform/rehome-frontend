@@ -43,6 +43,11 @@ export default function CounterPage() {
       }
     >
       <ResourceState resource={model.results} empty={false} />
+      {model.needsMemberLookup && (
+        <p role="status" className="rounded-xl border border-neutral bg-background p-3 text-sm text-textSecondary">
+          Yêu cầu chưa có mã Member. Nhập mã Member hoặc số điện thoại của khách để tra cứu và đối chiếu danh tính.
+        </p>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr] items-start">
         {/* ===================== CỘT TRÁI ===================== */}
@@ -146,6 +151,22 @@ export default function CounterPage() {
                   <Link to="/moderator/end-of-term">
                     <Button variant="outline" className="text-xs">
                       Mở trang Hàng cuối kỳ
+                    </Button>
+                  </Link>
+                </div>
+
+                <div className="rounded-2xl border border-[#8a8a8a] bg-white p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-[#191C19]">Ghi nhận quyên góp tại quầy</p>
+                    <p className="text-[11px] text-[#5B6776] mt-0.5">
+                      Tiếp nhận đồ quyên góp của {model.selected.fullName || model.selected.name || 'Member'} cho chiến dịch đang mở tại kho
+                    </p>
+                  </div>
+                  <Link
+                    to={`/moderator/donations?donorName=${encodeURIComponent(model.selected.fullName || model.selected.name || '')}`}
+                  >
+                    <Button variant="outline" className="text-xs">
+                      Ghi nhận quyên góp
                     </Button>
                   </Link>
                 </div>

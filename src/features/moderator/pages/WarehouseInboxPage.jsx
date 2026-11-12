@@ -280,21 +280,6 @@ export default function WarehouseInboxPage() {
     }
   };
 
-  const handleMarkAsDone = async () => {
-    if (!selectedConv) return;
-    try {
-      const updated = await warehouseInboxService.markAsDone(selectedConv.id);
-      setSelectedConv((prev) => ({ ...prev, ...updated, status: 'DONE' }));
-      setConversations((prev) =>
-        (prev || []).map((c) => (String(c.id) === String(selectedConv.id) ? { ...c, ...updated, status: 'DONE' } : c))
-      );
-      toast.success(`Đã đánh dấu hoàn tất hội thoại với Member ${selectedConv?.memberName || selectedConv?.counterpart?.displayName || 'Member'}!`);
-    } catch (err) {
-      console.error('Failed to mark conversation as done:', err);
-      toast.error('Có lỗi xảy ra khi cập nhật trạng thái.');
-    }
-  };
-
   // Chuẩn hóa hiển thị số lượng thống kê của Member (0 món, 0 đơn thay vì null / —)
   const formatCountDisplay = (val, unit) => {
     if (val === undefined || val === null || val === '') return `0 ${unit}`;
@@ -460,15 +445,8 @@ export default function WarehouseInboxPage() {
                     {selectedConv?.memberCode || selectedConv?.counterpart?.id || ''}
                   </span>
                 </div>
-                {selectedConv?.status === 'UNANSWERED' ? (
-                  <button
-                    type="button"
-                    onClick={handleMarkAsDone}
-                    className="text-[11px] font-semibold px-3 py-1.5 border border-neutral rounded-xl bg-surface hover:bg-background text-text transition-colors cursor-pointer"
-                  >
-                    Đánh dấu đã xong
-                  </button>
-                ) : (
+                {/* Ẩn nút "Đánh dấu đã xong" (POST /conversations/{id}/done) theo C.1 #4 do BE chưa có API */}
+                {selectedConv?.status === 'DONE' && (
                   <span className="text-[11px] font-bold text-primary">✓ Đã xong</span>
                 )}
               </div>

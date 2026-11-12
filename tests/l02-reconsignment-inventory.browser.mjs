@@ -2,14 +2,17 @@ import { chromium, expect } from '@playwright/test';
 import { createServer } from 'vite';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const out = path.resolve('tmp/l02-qa');
+const projectRoot = fileURLToPath(new URL('../', import.meta.url));
+process.chdir(projectRoot);
+const out = path.resolve(projectRoot, '../tmp/l02-qa');
 await mkdir(out, { recursive: true });
 
 process.env.VITE_PHASE2_MOCK = 'true';
 console.log('1. Starting Vite development server on port 5188 with mock fixtures enabled...');
 const viteServer = await createServer({
-  root: path.resolve('rehome-frontend'),
+  root: projectRoot,
   server: { port: 5188, strictPort: true },
   define: {
     'import.meta.env.VITE_PHASE2_MOCK': JSON.stringify('true'),
@@ -105,7 +108,7 @@ try {
   console.log('4. Navigating to KD-11 (Re-consign negotiation)...');
   await page.getByRole('button', { name: /Đàm phán giá/ }).click();
 
-  await expect(page.getByText('Tồn kho · hết kỳ 3 · Ký gửi lại — chốt giá mới')).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole('heading', { name: 'Ký gửi lại — chốt giá mới', exact: true })).toBeVisible({ timeout: 10000 });
   await expect(page.getByText('Món đang ở kho')).toBeVisible();
   await expect(page.getByText('Tham khảo khi định giá lại')).toBeVisible();
   await expect(page.getByLabel('Giá bán đề xuất ký gửi lại')).toBeVisible();
@@ -120,7 +123,8 @@ try {
 
   // Verify status transition: ĐÃ GỬI ĐỀ XUẤT · CHỜ MEMBER XÁC NHẬN QUA APP
   await expect(page.getByText('ĐÃ GỬI ĐỀ XUẤT · CHỜ MEMBER XÁC NHẬN QUA APP')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Đang chờ Member phản hồi...' })).toBeDisabled();
+  await expect(page.getByText(/Đang chờ Member phản hồi qua app/)).toBeVisible();
+  await expect(page.getByRole('button', { name: /Mở duyệt giá/ })).toHaveCount(0);
 
   await page.screenshot({ path: path.join(out, '03-KD-11-waiting-member.png'), fullPage: true });
   console.log('✓ KD-11 proposal sent and waiting state verified');
@@ -128,19 +132,16 @@ try {
   // -------------------------------------------------------------
   // TEST 3: KG-12 - Member duyệt giá mới qua App
   // -------------------------------------------------------------
-  console.log('6. Opening KG-12 Member confirmation simulation...');
-  await page.getByRole('button', { name: /Mở duyệt giá/ }).click();
-
-  await expect(page.getByText('Mô phỏng Member App (Xác nhận giá mới)')).toBeVisible();
-  await expect(page.getByText(/680\.000/).first()).toBeVisible();
-  await expect(page.getByText('Nếu bán được ở giá này')).toBeVisible();
-  await expect(page.getByText(/612\.000/)).toBeVisible();
-
-  await page.screenshot({ path: path.join(out, '04-KG-12-member-modal.png') });
-
-  // Member confirms
-  console.log('7. Member confirms new price on KG-12...');
-  await page.getByRole('button', { name: 'Đồng ý — xem biên nhận mới' }).click();
+  console.log('6. Simulating an external Member confirmation in the fixture backend...');
+  await page.evaluate(async () => {
+    const scope = { userId: 'mod-qa', warehouseId: 'warehouse-a' };
+    const { readProposals } = await import('/src/features/moderator/services/reconsignProposalStore.js');
+    const { fixtureRequest } = await import('/src/features/moderator/fixtures/warehouseFixtures.js');
+    const proposal = readProposals({ scope }).find(row => row.productId === 'RH-M4T19B');
+    if (!proposal?.receiptId) throw new Error('Missing actual proposal receipt ID');
+    await fixtureRequest('endTermConfirmReceipt', { scope, ids: { receiptId: proposal.receiptId } });
+  });
+  await page.getByRole('button', { name: 'Tải lại', exact: true }).click();
 
   // -------------------------------------------------------------
   // TEST 4: KD-11-DaChot - Hoàn tất chốt ký gửi lại

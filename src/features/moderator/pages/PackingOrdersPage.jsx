@@ -274,7 +274,7 @@ export default function PackingOrdersPage() {
                         item.claimedBy === scope.userId ||
                         item.claimedBy === 'CURRENT_USER' ||
                         (item.claimedByName && item.claimedByName.includes('Bạn đang giữ'));
-                      const targetOrderId = item.orderNo || item.orderId || item.refId;
+                      const targetOrderId = item.orderId || item.refId || item.orderNo;
                       return (
                         <PackingQueueItem
                           key={item.queueId || targetOrderId}

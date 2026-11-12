@@ -17,7 +17,7 @@ export function useEndTermDetail({ sku, onClose, onChanged }) {
     return () => clearInterval(timer);
   }, []);
 
-  const resource = useResource((options) => endTermService.read(sku, options), [sku]);
+  const resource = useResource((options) => endTermService.read(sku, options), [sku], { refreshInterval: 30000 });
   const enums = useResource(
     async () =>
       isFixtureMode

@@ -73,3 +73,15 @@ it('blocks actions after owner changes on refresh', async () => {
   await screen.findByText('Đã quét 0/2 SKU');
   expect(screen.getByRole('button', { name: 'Đối chiếu' })).toBeDisabled();
 });
+it('displays stored order deadlines (paymentDeadline, autoCompleteDeadline, returnDeadline) with countdown when present', async () => {
+  const order = orderFixture();
+  order.paymentDeadline = new Date(Date.now() + 25 * 60 * 1000).toISOString();
+  order.autoCompleteDeadline = new Date(Date.now() + 5 * 24 * 3600000).toISOString();
+  order.returnDeadline = new Date(Date.now() + 3 * 24 * 3600000).toISOString();
+  vi.spyOn(packingService, 'read').mockImplementation(async () => structuredClone(order));
+  mount();
+  await screen.findByText('Đã quét 0/2 SKU');
+  expect(screen.getByText('Hạn thanh toán:')).toBeInTheDocument();
+  expect(screen.getByText('Hạn tự động hoàn tất:')).toBeInTheDocument();
+  expect(screen.getByText('Hạn yêu cầu trả hàng:')).toBeInTheDocument();
+});

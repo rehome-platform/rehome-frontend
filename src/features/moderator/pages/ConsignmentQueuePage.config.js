@@ -6,6 +6,7 @@ export const WORK_TYPES = [
   { key: 'INSPECTION', label: 'Kiểm định' },
   { key: 'PACKING', label: 'Đóng gói' },
   { key: 'WITHDRAWAL', label: 'Rút hàng' },
+  { key: 'DONATION_PICKUP', label: 'Lấy đồ quyên góp' },
   { key: 'RETURN', label: 'Trả hàng' },
   { key: 'ORG_VERIFICATION', label: 'Xác minh tổ chức' },
   { key: 'VIOLATION_REPORT', label: 'Vi phạm' },

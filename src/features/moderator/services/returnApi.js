@@ -10,6 +10,7 @@ import { returnMockApi } from './moderatorMockData.js';
 import { inventoryService } from './inventoryApi.js';
 import { latestDegradedCase } from '../models/degradedCaseModel.js';
 import { Phase2Error } from '../models/warehouseModel.js';
+import { formatDeadlineWithCountdown } from '../components/WarehouseUi.jsx';
 
 /**
  * Chuẩn hóa một bản ghi yêu cầu trả hàng từ Backend thành model hiển thị cho UI
@@ -44,7 +45,8 @@ export function mapReturnItem(raw) {
   const amount = raw.amount ?? raw.itemPrice ?? raw.priceAtOrder ?? raw.consignPrice ?? compensationAmount ?? raw.refundAmount ?? 0;
 
   const prevHistory = Array.isArray(raw.returnHistory) ? raw.returnHistory : [];
-  const senderCode = raw.senderCode || raw.consignorCode || (raw.sellerName ? `MB-${String(raw.sellerName).substring(0, 6).toUpperCase()}` : 'MB-002190');
+  const sellerCode = raw.sellerCode || raw.senderCode || raw.consignorCode || null;
+  const senderCode = sellerCode || (raw.sellerName ? `MB-${String(raw.sellerName).substring(0, 6).toUpperCase()}` : null);
   const submittedAt = raw.submittedAt || (raw.createdAt ? new Date(raw.createdAt).toLocaleDateString('vi-VN') : 'Gần đây');
 
   return {
@@ -72,9 +74,15 @@ export function mapReturnItem(raw) {
     buyerAddress: raw.buyerAddress || 'Kho ReHome nhận hàng trả tại bưu cục GHN',
     buyerNote: raw.buyerNote || raw.conditionNote || raw.reason || 'Sản phẩm không đúng như mô tả trên đơn',
     consignorName: raw.sellerName || raw.consignorName || null,
-    consignorCode: raw.consignorCode || senderCode,
+    consignorCode: sellerCode || raw.consignorCode || senderCode,
+    sellerCode,
     senderCode,
     sellerName: raw.sellerName || raw.consignorName || null,
+    currentTerm: raw.currentTerm ?? raw.term ?? null,
+    daysIntoTerm: raw.daysIntoTerm ?? raw.daysInTerm ?? null,
+    termLengthDays: raw.termLengthDays ?? null,
+    commissionRate: raw.commissionRate ?? null,
+    degradedCompensationRate: raw.degradedCompensationRate ?? null,
     prevReturns: prevHistory.length > 0 ? `${prevHistory.length} lần` : 'Chưa có vi phạm',
     payoutStatus: raw.payoutStatus || 'Chưa chia (chờ hết hạn trả hàng)',
     submittedAt,
@@ -92,9 +100,18 @@ export function mapReturnItem(raw) {
     rawStatus: raw.status,
     carrierStatus: raw.carrierStatus || (
       status === 'PENDING_APPROVAL' ? 'Chờ duyệt · Còn 9 giờ' :
-      status === 'WAITING_BUYER_DISPATCH' ? 'Đã duyệt · Chờ người mua bàn giao GHN' :
+      status === 'WAITING_BUYER_DISPATCH' ? (
+        raw.handoverDeadline
+          ? `Đã duyệt · Hạn bàn giao GHN: ${formatDeadlineWithCountdown(raw.handoverDeadline)}`
+          : 'Đã duyệt · Chờ người mua bàn giao GHN'
+      ) :
       status === 'RETURNING' ? 'Đang chuyển về kho qua GHN' :
       status === 'RECEIVED_INSPECT' ? 'Hàng đã về kho · Chờ kiểm tra' :
+      raw.status === 'INVALID' ? (
+        raw.pickupDeadline
+          ? `Hàng không hợp lệ · Hạn nhận lại: ${formatDeadlineWithCountdown(raw.pickupDeadline)}`
+          : 'Hàng không hợp lệ · Chờ khách nhận lại'
+      ) :
       'Đã hoàn tất xử lý'
     ),
     counterfeitSuspected: Boolean(raw.counterfeitSuspected),
@@ -104,7 +121,11 @@ export function mapReturnItem(raw) {
     ghnReturnTrackingCode: raw.ghnReturnTrackingCode || '',
     handoverDeadline: raw.handoverDeadline || null,
     pickupDeadline: raw.pickupDeadline || null,
-    outcome: raw.itemAction || raw.outcome || (raw.status === 'VALID' ? 'RELIST' : null),
+    returnDeadline: raw.returnDeadline || null,
+    autoCompleteDeadline: raw.autoCompleteDeadline || null,
+    paymentDeadline: raw.paymentDeadline || null,
+    deliveredAt: raw.deliveredAt || null,
+    outcome: raw.itemAction || raw.outcome || null,
     rejectReason: raw.rejectReason || null,
     firstModNote: raw.firstModNote || raw.conditionNote || '',
   };
@@ -208,6 +229,10 @@ export const returnService = {
           if (fullAddress) mapped.buyerAddress = fullAddress;
           if (order.shippingPhone) mapped.buyerPhone = order.shippingPhone;
           if (order.shippingRecipientName) mapped.buyerName = order.shippingRecipientName;
+          if (order.returnDeadline) mapped.returnDeadline = order.returnDeadline;
+          if (order.autoCompleteDeadline) mapped.autoCompleteDeadline = order.autoCompleteDeadline;
+          if (order.paymentDeadline) mapped.paymentDeadline = order.paymentDeadline;
+          if (order.deliveredAt) mapped.deliveredAt = order.deliveredAt;
         }
       } catch (err) {
         // Fallback gracefully without breaking return detail
@@ -356,7 +381,6 @@ export const returnService = {
         url: API_ENDPOINTS.MODERATOR.RESOLVE_RETURN(retId),
         data: {
           resolution: 'INVALID',
-          action: 'DISCARD',
           resolutionNote: reason,
         },
       },

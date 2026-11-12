@@ -1,3 +1,5 @@
+import { DEFAULT_SYSTEM_CONFIGS, readEffectiveConsignmentConfig } from '../../../configs/systemParams.config.js';
+
 export function normalizeProductResponse(res) {
   if (!res) return null;
   const sku = res.id || res.sku || '';
@@ -10,60 +12,70 @@ export function normalizeProductResponse(res) {
   };
 }
 
-export const STOCK_MOVEMENT_CONFIG = {
-  STOCK_IN: { label: 'Nhập kho ban đầu', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
-  SHELF_MOVE: { label: 'Điều chuyển kệ', color: 'bg-blue-100 text-blue-800 border-blue-200' },
-  WITHDRAWAL_OUT: { label: 'Rút hàng trả Member', color: 'bg-amber-100 text-amber-800 border-amber-200' },
-  RETURN_IN: { label: 'Nhận hàng trả về kho', color: 'bg-purple-100 text-purple-800 border-purple-200' },
-  DONATED_OUT: { label: 'Chuyển giao từ thiện', color: 'bg-rose-100 text-rose-800 border-rose-200' },
-  DESTROYED: { label: 'Tiêu hủy sản phẩm', color: 'bg-gray-100 text-gray-800 border-gray-200' },
-};
-
-function movementLocation(movement) {
-  let locationText = '—';
-  if (movement.fromLocation && movement.toLocation) {
-    locationText = `${movement.fromLocation} → ${movement.toLocation}`;
-  } else if (movement.toLocation) {
-    locationText = `Kệ ${movement.toLocation}`;
-  } else if (movement.shelfLocation) {
-    locationText = `Kệ ${movement.shelfLocation}`;
-  } else if (movement.partnerName) {
-    locationText = `Đối tác: ${movement.partnerName}`;
-  }
-
-  return locationText;
+function normalizePercent(value, fallback) {
+  if (value == null || value === '') return fallback;
+  const num = Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  return num <= 1 ? Number((num * 100).toPrecision(15)) : num;
 }
 
-export function formatStockMovement(movement) {
-  if (!movement) return null;
-  const type = movement.type || movement.movementType || 'SHELF_MOVE';
-  const config = STOCK_MOVEMENT_CONFIG[type] || {
-    label: type,
-    color: 'bg-gray-100 text-gray-800 border-gray-200',
-  };
+/**
+ * Resolves term length, commission percentages, and floor price for an inventory product
+ * using product-level receipt snapshot fields first, then cached admin system config,
+ * and finally DEFAULT_SYSTEM_CONFIGS.
+ */
+export function resolveInventoryTermAndRates(data, effectiveConfig = readEffectiveConsignmentConfig()) {
+  const currentTerm = Number(data?.currentTerm) || 1;
+  const daysIntoTerm = Number(data?.daysIntoTerm) || 1;
+  const termLengthDays =
+    Number(data?.termLengthDays) ||
+    Number(effectiveConfig?.termLengthDays) ||
+    DEFAULT_SYSTEM_CONFIGS.consignment.termDays;
+
+  const commissionTerm1 = normalizePercent(
+    data?.commissionRateTerm1 ?? effectiveConfig?.commissionTerm1,
+    DEFAULT_SYSTEM_CONFIGS.pricingAndCommission.commissionTerm1,
+  );
+  const commissionTerm2 = normalizePercent(
+    data?.commissionRateTerm2 ?? effectiveConfig?.commissionTerm2,
+    DEFAULT_SYSTEM_CONFIGS.pricingAndCommission.commissionTerm2,
+  );
+  const commissionTerm3 = normalizePercent(
+    data?.commissionRateTerm3 ?? effectiveConfig?.commissionTerm3,
+    DEFAULT_SYSTEM_CONFIGS.pricingAndCommission.commissionTerm3,
+  );
+
+  const termRate =
+    currentTerm >= 3 ? commissionTerm3 : currentTerm === 2 ? commissionTerm2 : commissionTerm1;
+  const commissionPercent =
+    data?.commissionRate != null
+      ? normalizePercent(data.commissionRate, termRate)
+      : data?.currentCommissionRate != null
+        ? normalizePercent(data.currentCommissionRate, termRate)
+        : termRate;
+
+  const floorPricePercent = normalizePercent(
+    data?.floorPriceRatio ?? effectiveConfig?.floorPricePercent,
+    DEFAULT_SYSTEM_CONFIGS.pricingAndCommission.floorPricePercent,
+  );
+
+  const sellingPrice = data?.agreedPrice ?? data?.currentPrice;
+  const floorPrice =
+    data?.floorPrice != null
+      ? data.floorPrice
+      : sellingPrice != null
+        ? Math.round(Number(sellingPrice) * (floorPricePercent / 100))
+        : null;
+
   return {
-    id: movement.id || movement.movementId || null,
-    type,
-    label: config.label,
-    badgeClass: config.color,
-    fromLocation: movement.fromLocation || null,
-    toLocation: movement.toLocation || movement.shelfLocation || null,
-    locationText: movementLocation(movement),
-    note: movement.note || null,
-    createdAt: movement.createdAt || new Date().toISOString(),
+    currentTerm,
+    daysIntoTerm,
+    termLengthDays,
+    commissionPercent,
+    commissionTerm1,
+    commissionTerm2,
+    commissionTerm3,
+    floorPricePercent,
+    floorPrice,
   };
-}
-
-export function validateNewShelf(newShelf, currentShelf) {
-  const trimmed = String(newShelf || '').trim();
-  if (!trimmed) {
-    return { valid: false, message: 'Vui lòng nhập vị trí kệ mới.' };
-  }
-  if (trimmed.length > 255) {
-    return { valid: false, message: 'Vị trí kệ không được vượt quá 255 ký tự.' };
-  }
-  if (currentShelf && trimmed.toLowerCase() === String(currentShelf).trim().toLowerCase()) {
-    return { valid: false, message: 'Vị trí kệ mới phải khác vị trí kệ hiện tại.' };
-  }
-  return { valid: true, value: trimmed };
 }

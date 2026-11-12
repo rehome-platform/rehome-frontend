@@ -24,6 +24,7 @@ export function useConsignmentQueue() {
   // Modal nhận việc & nhả việc (HQ-02-NhanViec & HQ-02-NhaViec)
   const [claimTarget, setClaimTarget] = useState(null);
   const [releaseTarget, setReleaseTarget] = useState(null);
+  const [withdrawalCheckTarget, setWithdrawalCheckTarget] = useState(null);
   const [feedback, setFeedback] = useState(null);
 
   // Gọi API lấy dữ liệu hàng đợi
@@ -81,10 +82,15 @@ export function useConsignmentQueue() {
         }
         const isWithdrawal = item.type === 'WITHDRAWAL' || item.type === 'ITEM_WITHDRAWAL';
         const isViolationReport = item.type === 'VIOLATION_REPORT';
+        const isReturn = item.type === 'RETURN';
         const msg = release
           ? `Đã nhả việc "${item.typeLabel}" (${item.formId || item.orderId || item.queueId}) về hàng đợi thành công.`
           : isWithdrawal
-            ? `Đã nhận việc "${item.typeLabel}" (${item.formId || item.orderId || item.refId || item.queueId}) thành công! Bạn có thể mở Quầy tiếp nhận (BG-01) để bàn giao cho khách khi khách đến quầy.`
+            ? item.status === 'PENDING_APPROVAL'
+              ? `Đã nhận việc "${item.typeLabel}" (${item.refId || item.queueId}) thành công! Vui lòng mở yêu cầu để duyệt hoặc từ chối.`
+              : `Đã nhận việc "${item.typeLabel}" (${item.formId || item.orderId || item.refId || item.queueId}) thành công! Bạn có thể mở Quầy tiếp nhận (BG-01) để bàn giao cho khách khi khách đến quầy.`
+            : isReturn
+              ? `Đã nhận việc "${item.typeLabel}" (${item.returnId || item.refId || item.queueId}) thành công! Bạn có thể mở trang "Trả hàng" để duyệt và xử lý yêu cầu.`
             : isViolationReport
               ? `Đã nhận việc "${item.typeLabel}" (${item.formId || item.orderId || item.refId || item.queueId}) thành công! Bạn có thể chuyển sang trang "Báo cáo vi phạm" để kiểm duyệt và xử lý.`
               : `Đã nhận việc "${item.typeLabel}" (${item.formId || item.orderId || item.queueId}) thành công! Bạn có thể chuyển sang tab "Kiểm định & nhập kho" để mở duyệt.`;
@@ -98,6 +104,39 @@ export function useConsignmentQueue() {
   };
   const handleClaim = item => mutateTask(item, false);
   const handleRelease = item => mutateTask(item, true);
+
+  const handleApproveWithdrawal = async (item) => {
+    const withdrawalId = item?.refId || item?.id;
+    if (!withdrawalId) return;
+    setFeedback(null);
+    await resource.mutate((options) => queueService.approveWithdrawal(withdrawalId, options), {
+      onSuccess: (updated) => {
+        const msg = 'Đã duyệt yêu cầu rút hàng. Yêu cầu đã chuyển sang bước bàn giao tại quầy.';
+        setFeedback({ type: 'success', message: msg });
+        toast.success(msg);
+        setWithdrawalCheckTarget((prev) => (prev ? {
+          ...prev,
+          status: updated?.status || 'PENDING_PICKUP',
+          pickupDeadline: updated?.pickupDeadline ?? prev.pickupDeadline,
+          feeCharged: updated?.feeCharged ?? prev.feeCharged,
+        } : null));
+      },
+    });
+  };
+
+  const handleRejectWithdrawal = async (item, reason) => {
+    const withdrawalId = item?.refId || item?.id;
+    if (!withdrawalId) return;
+    setFeedback(null);
+    await resource.mutate((options) => queueService.rejectWithdrawal(withdrawalId, reason, options), {
+      onSuccess: () => {
+        const msg = 'Đã từ chối yêu cầu rút hàng.';
+        setFeedback({ type: 'success', message: msg });
+        toast.success(msg);
+        setWithdrawalCheckTarget(null);
+      },
+    });
+  };
 
   return {
     focusedQueueId,
@@ -120,6 +159,10 @@ export function useConsignmentQueue() {
     page,
     releaseTarget,
     handleRelease,
+    withdrawalCheckTarget,
+    setWithdrawalCheckTarget,
+    handleApproveWithdrawal,
+    handleRejectWithdrawal,
     sections: {
       QueueFilters: { statusFilter, changeFilter, claimParam, toggleOverdue, overdueOnly, filteredItems, rawItems },
       QueueClaimDialog: { claimTarget, resource, setClaimTarget, handleClaim },

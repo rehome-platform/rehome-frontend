@@ -11,6 +11,7 @@ export { default as PackingOrdersPage } from './PackingOrdersPage.jsx';
 export { default as ReturnProcessingPage } from './ReturnProcessingPage.jsx';
 export { default as OrgVerificationPage } from './OrgVerificationPage.jsx';
 export { default as ViolationReportsPage } from './ViolationReportsPage.jsx';
+export { default as DonationsPage } from './DonationsPage.jsx';
 export { default as CategoryBrandPage } from './CategoryBrandPage.jsx';
 export { default as WarehouseInboxPage } from './WarehouseInboxPage.jsx';
 export { default as ReConsignNegotiationPage } from './ReConsignNegotiationPage.jsx';

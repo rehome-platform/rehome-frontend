@@ -59,8 +59,6 @@ describe('view-model workflow fixtures (not live backend evidence)', () => {
     await expect(call('productCreate', { data })).rejects.toMatchObject({ status: 409 });
     const recovered = await call('productByReceipt', { ids: { receiptId } });
     expect(recovered.sku).toBe(product.sku);
-    await call('shelfUpdate', { ids: { sku: product.sku }, data: { shelfLocation: 'B2' } });
-    expect(await call('stockMovements', { ids: { sku: product.sku } })).toHaveLength(2);
   });
   it('keeps history references when catalog is hidden and rejects duplicate names', async () => {
     await call('brandHide', { ids: { id: 'brand-1' } });

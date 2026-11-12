@@ -43,6 +43,7 @@ export default function ModeratorLayout({ children, apiColors = false }) {
     { to: '/moderator/inventory', label: 'Tồn kho', icon: 'inventory_2', active: onPath('/moderator/inventory', '/moderator/end-of-term') },
     { to: '/moderator/packing', label: 'Đóng gói đơn hàng', icon: 'package_2', active: onPath('/moderator/packing') },
     { to: '/moderator/returns', label: 'Yêu cầu trả hàng', icon: 'assignment_return', active: onPath('/moderator/returns') },
+    { to: '/moderator/donations', label: 'Quyên góp', icon: 'volunteer_activism', active: onPath('/moderator/donations') },
     { to: '/moderator/verifications', label: 'Hồ sơ tổ chức', icon: 'verified_user', active: onPath('/moderator/verifications') },
     { to: '/moderator/reports', label: 'Báo cáo vi phạm', icon: 'flag', active: onPath('/moderator/reports') },
     { to: '/moderator/categories', label: 'Danh mục & thương hiệu', icon: 'category', active: onPath('/moderator/categories') },

@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import InventoryDetailPage from '../../src/features/moderator/pages/InventoryDetailPage.jsx';
 import CounterPage from '../../src/features/moderator/pages/CounterPage.jsx';
-import { inventoryService, counterService } from '../../src/features/moderator/services/warehouseApi.js';
+import { inventoryService, counterService, endTermService } from '../../src/features/moderator/services/warehouseApi.js';
 import { Phase2Provider } from '../../src/features/moderator/hooks/warehouseHooks.jsx';
 
 const auth = vi.hoisted(() => ({
@@ -17,6 +17,8 @@ vi.mock('../../src/context/AuthContext.jsx', () => ({ useAuth: () => auth }));
 describe('Luồng Hết hạn 3 kỳ (TK-02 & BG-01)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(inventoryService, 'degradedCases').mockResolvedValue([]);
+    vi.spyOn(endTermService, 'pendingPricing').mockResolvedValue([]);
   });
 
   it('InventoryDetailPage: displays TAKE_BACK banner with formatted date and links to counter with memberCode', async () => {
@@ -24,7 +26,7 @@ describe('Luồng Hết hạn 3 kỳ (TK-02 & BG-01)', () => {
       id: 'PROD-301',
       sku: 'RH-T3N77F',
       name: 'Áo len cổ lọ Muji',
-      status: 'ON_SALE',
+      status: 'WITHDRAWN',
       decision: 'TAKE_BACK',
       takeBackDate: '2026-10-30T10:00:00Z',
       daysToTakeBack: 5,
@@ -34,7 +36,6 @@ describe('Luồng Hết hạn 3 kỳ (TK-02 & BG-01)', () => {
       },
       currentPrice: 350000,
     });
-    vi.spyOn(inventoryService, 'movements').mockResolvedValue([]);
 
     render(
       <StrictMode>
@@ -63,7 +64,7 @@ describe('Luồng Hết hạn 3 kỳ (TK-02 & BG-01)', () => {
       id: 'PROD-302',
       sku: 'RH-RECON01',
       name: 'Váy dạ hội cao cấp',
-      status: 'WAITING_END_OF_TERM',
+      status: 'WAREHOUSE',
       decision: 'RE_CONSIGN',
       member: {
         memberCode: 'MB-009988',
@@ -71,7 +72,7 @@ describe('Luồng Hết hạn 3 kỳ (TK-02 & BG-01)', () => {
       },
       currentPrice: 850000,
     });
-    vi.spyOn(inventoryService, 'movements').mockResolvedValue([]);
+    endTermService.pendingPricing.mockResolvedValue([{ decisionId: 'decision-302', productId: 'PROD-302' }]);
 
     render(
       <StrictMode>
@@ -86,7 +87,7 @@ describe('Luồng Hết hạn 3 kỳ (TK-02 & BG-01)', () => {
     );
 
     expect(await screen.findByRole('heading', { name: 'Váy dạ hội cao cấp' })).toBeInTheDocument();
-    expect(screen.getByText('ĐƯỢC YÊU CẦU KÝ GỬI LẠI')).toBeInTheDocument();
+    expect(await screen.findByText('ĐƯỢC YÊU CẦU KÝ GỬI LẠI')).toBeInTheDocument();
     expect(screen.getByText(/Ký gửi lại cuối kỳ \(Hết kỳ 3: 90 ngày\)/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Đàm phán giá →' })).toBeInTheDocument();
   });

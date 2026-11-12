@@ -113,7 +113,7 @@ function routeConfigs() {
 
 test('TC-B-004/005/007/008: Actual route configuration and guard preserve explicit role policy', () => {
   const routes = routeConfigs().filter(n => n.props.path?.startsWith('/admin') || n.props.path?.startsWith('/moderator'));
-  assert.equal(routes.length, 19);
+  assert.equal(routes.length, 20);
   for (const route of routes) {
     const roles = route.props.element.props.roles;
     for (const role of ['admin', 'staff', 'moderator']) {

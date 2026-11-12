@@ -7,6 +7,7 @@ export const QUEUE_TYPE_LABELS = {
   PACKING: 'Đóng gói đơn hàng',
   WITHDRAWAL: 'Rút hàng',
   ITEM_WITHDRAWAL: 'Rút hàng',
+  DONATION_PICKUP: 'Lấy món quyên góp',
   RETURN: 'Yêu cầu trả hàng',
   ORG_VERIFICATION: 'Xác minh tổ chức',
   LEGAL_CHANGE: 'Đổi pháp lý tổ chức',
@@ -16,6 +17,16 @@ export const QUEUE_TYPE_LABELS = {
 export function taskTypeLabel(item, typeParam) {
   const type = item?.type || typeParam;
   return QUEUE_TYPE_LABELS[type] || 'Công việc kho';
+}
+
+export function withdrawalCounterLink(item) {
+  const params = new URLSearchParams();
+  const refId = item.refId || item.id;
+  if (refId) params.set('refId', refId);
+  if (item.memberCode) params.set('memberCode', item.memberCode);
+  if (item.accountId) params.set('accountId', item.accountId);
+  const query = params.toString();
+  return query ? `/moderator/counter?${query}` : '/moderator/counter';
 }
 
 export function formatElapsedHours(value) {

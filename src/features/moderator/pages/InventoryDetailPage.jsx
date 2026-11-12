@@ -8,8 +8,10 @@ import BarcodePrintModal from '../components/BarcodePrintModal.jsx';
 import PhotoUpload from '../components/PhotoUpload.jsx';
 import { inventoryService } from '../services/warehouseApi.js';
 import returnService from '../services/returnApi.js';
+import { endTermService } from '../services/endTermApi.js';
+import { pricingForProduct } from '../services/endTermPricingApi.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
-import { listItems } from '../models/warehouseModel.js';
+import { listItems, resolveInventoryTermAndRates } from '../models/warehouseModel.js';
 import { Page, Card, Photos, Status, ResourceState, date, money } from '../components/WarehouseUi.jsx';
 
 export default function InventoryDetailPage() {
@@ -18,10 +20,9 @@ export default function InventoryDetailPage() {
 
   const product = useResource((options) => inventoryService.read(sku, options), [sku], {
     poll: true,
+    refreshInterval: 30000,
     done: (value) => !value?.photos?.some((photo) => photo.status === 'PROCESSING'),
   });
-
-  const movements = useResource((options) => inventoryService.movements(sku, options), [sku]);
 
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [print, setPrint] = useState(false);
@@ -58,12 +59,20 @@ export default function InventoryDetailPage() {
 
   const data = product.data;
   const existingCase = useResource(async options => {
+    if (data.degradedCaseId) return returnService.getDegradedCase(data.degradedCaseId, options);
+    if (data.degradedCaseId === null) return null;
     const cases = await inventoryService.degradedCases({}, options);
     return latestDegradedCase(cases, data.id);
-  }, [data?.id, data?.status], { enabled: Boolean(data?.id && data.status !== 'ON_SALE') });
-  const activeCase = existingCase.data || submittedCase;
-
-  const movementList = listItems(movements.data);
+  }, [data?.id, data?.status, data?.degradedCaseId], { enabled: Boolean(data?.id && data.status !== 'ON_SALE'), refreshInterval: 30000 });
+  const activeCase = data?.status === 'ON_SALE' || data?.degradedCaseId === null ? null
+    : data?.degradedCaseId
+      ? [existingCase.data, submittedCase].find(item => item?.id === data.degradedCaseId)
+      : existingCase.data || submittedCase;
+  const pricing = useResource(options => endTermService.pendingPricing(options), [sku], {
+    enabled: Boolean(data && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(data.status)), refreshInterval: 30000,
+  });
+  const pricingRequest = pricingForProduct(pricing.data || [], data?.id || sku);
+  const canNegotiate = Boolean(pricingRequest?.decisionId && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(data?.status));
 
   const handleCopySku = () => {
     if (!sku) return;
@@ -73,6 +82,7 @@ export default function InventoryDetailPage() {
   };
 
   const sellingPrice = data?.currentPrice ?? data?.agreedPrice;
+  const termAndRates = resolveInventoryTermAndRates(data);
 
   const handleSendDegradedProposal = async () => {
     if (degradedLock.current || degradedUploadPending || data?.status !== 'ON_SALE' || submittedCase || !data?.id) return;
@@ -118,13 +128,7 @@ export default function InventoryDetailPage() {
           <Button variant="outline" onClick={() => navigate('/moderator/inventory')}>
             ← Quay lại tồn kho
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              product.refresh();
-              movements.refresh();
-            }}
-          >
+          <Button variant="outline" onClick={() => product.refresh()}>
             Tải lại
           </Button>
         </div>
@@ -218,12 +222,12 @@ export default function InventoryDetailPage() {
               </div>
               <div className="flex items-center p-3 gap-3">
                 <span className="w-28 text-[#5f5f5f] flex-shrink-0">Giá sàn:</span>
-                <span className="text-[#191C19]">{money(data.floorPrice || Math.round((data.agreedPrice || data.currentPrice || 420000) * 0.5))}</span>
+                <span className="text-[#191C19]">{money(termAndRates.floorPrice)}</span>
               </div>
               <div className="flex items-center p-3 gap-3 bg-[#fafafa]">
                 <span className="w-28 text-[#5f5f5f] flex-shrink-0">Kỳ ký gửi:</span>
                 <span className="text-[#191C19] font-medium">
-                  Kỳ {data.currentTerm || 1} · ngày {data.daysIntoTerm || 1} / {data.termLengthDays || 30} · hoa hồng {data.currentTerm === 3 ? '20%' : data.currentTerm === 2 ? '15%' : '10%'}
+                  Kỳ {termAndRates.currentTerm} · ngày {termAndRates.daysIntoTerm} / {termAndRates.termLengthDays} · hoa hồng {termAndRates.commissionPercent}%
                 </span>
               </div>
             </div>
@@ -255,7 +259,7 @@ export default function InventoryDetailPage() {
 
           {data.status === 'WAREHOUSE' && (
             <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">
-              Sản phẩm đang lưu kho, tạm ngừng bán trong khi chờ xử lý. {DEGRADED_DECISION_POLICY}
+              Sản phẩm đang lưu kho, tạm ngừng bán trong khi chờ xử lý. {activeCase && DEGRADED_DECISION_POLICY}
             </div>
           )}
           <ResourceState resource={existingCase} />
@@ -266,7 +270,9 @@ export default function InventoryDetailPage() {
 
 
           {/* BANNER XỬ LÝ CUỐI KỲ (L-02 · TK-02) */}
-          {(data.decision === 'RE_CONSIGN' || data.allowedActions?.includes('RE_CONSIGN') || data.reConsignStatus === 'PROPOSAL_SENT' || data.status === 'WAITING_END_OF_TERM') && (
+          <ResourceState resource={pricing} />
+          {data.status === 'WAREHOUSE' && data.decisionId && !canNegotiate && <p className="rounded-xl border border-neutral p-4 text-sm">Đã hết kỳ ký gửi. Đang chờ Member chọn nhận lại hoặc ký gửi lại qua app.</p>}
+          {canNegotiate && (
             <div className="rounded-2xl border border-neutral bg-[#F8FAF8] p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
@@ -289,7 +295,7 @@ export default function InventoryDetailPage() {
             </div>
           )}
 
-          {data.decision === 'TAKE_BACK' && (
+          {data.status === 'WITHDRAWN' && data.decision === 'TAKE_BACK' && (
             <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
@@ -338,49 +344,6 @@ export default function InventoryDetailPage() {
                 Ảnh tách nền được cập nhật theo kết quả xử lý của máy chủ.
               </p>
             </Card>
-          )}
-
-
-
-          <ResourceState resource={movements} empty={!movementList.length} />
-
-          {movementList.length > 0 && (
-            <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-[#e0e0e0]">
-              {movementList.map((movement, index) => {
-                return (
-                  <div key={movement.id || index} className="relative flex items-start gap-4 text-xs">
-                    {/* Timeline Dot */}
-                    <div className="absolute -left-6 top-1 h-5 w-5 rounded-full border-2 border-white bg-[#006B2C] shadow-sm flex items-center justify-center">
-                      <div className="h-1.5 w-1.5 rounded-full bg-white" />
-                    </div>
-
-                    <div className="flex-1 rounded-xl border border-neutral bg-background p-4 space-y-2">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span
-                          className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${movement.badgeClass || 'bg-background text-text border-neutral'
-                            }`}
-                        >
-                          {movement.label || movement.type}
-                        </span>
-                        <span className="text-[11px] text-textSecondary">
-                          {date(movement.createdAt)}
-                        </span>
-                      </div>
-
-                      <div className="text-sm font-bold text-text">
-                        {movement.locationText || '—'}
-                      </div>
-
-                      {movement.note && (
-                        <p className="text-xs text-[#5f5f5f] bg-white p-2.5 rounded-lg border border-[#ececec]">
-                          Ghi chú: {movement.note}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           )}
         </div>
       )

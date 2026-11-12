@@ -355,17 +355,19 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
       expect(screen.getByText(/Chọn phương án xử lý món hàng \(TH-04\)/i)).toBeInTheDocument();
     });
 
-    // Choose "Đăng bán lại (Relist)"
+    // Click "Đăng bán lại (Relist)" should only select, not auto-submit
     fireEvent.click(screen.getByText(/Đăng bán lại \(Relist\)/i));
+    expect(window.alert).not.toHaveBeenCalled();
+
+    // Confirm explicitly
+    fireEvent.click(screen.getByRole('button', { name: 'Xác nhận xử lý' }));
 
     await waitFor(() => {
       expect(window.alert).toHaveBeenCalled();
     });
   });
 
-  it('F-134/F-135: supports 2-Moderator counterfeit flagging & conclusion', async () => {
-    window.alert = vi.fn();
-
+  it('C.1 #4: hides unsupported counterfeit flagging UI in return inspection view', async () => {
     render(
       <MemoryRouter initialEntries={['/moderator/returns']}>
         <Routes>
@@ -383,35 +385,10 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     fireEvent.click(inspectBtns[0]);
 
     await waitFor(() => {
-      expect(screen.getByText(/⚠️ Báo nghi hàng giả/i)).toBeInTheDocument();
+      expect(screen.getByText(/kiểm tra hàng về kho/i)).toBeInTheDocument();
     });
 
-    // Upload evidence photos before flagging counterfeit
-    const fileInput = screen.getByLabelText(/Tải ảnh bằng chứng kiểm hàng/i);
-    const file1 = new File(['a'], 'ev1.jpg', { type: 'image/jpeg' });
-    const file2 = new File(['b'], 'ev2.jpg', { type: 'image/jpeg' });
-    fireEvent.change(fileInput, { target: { files: [file1, file2] } });
-
-    await waitFor(() => {
-      expect(screen.getByText(/2 \/ 5 ảnh đã tải lên/i)).toBeInTheDocument();
-    });
-
-    // Click counterfeit button
-    fireEvent.click(screen.getByText(/⚠️ Báo nghi hàng giả/i));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Thẩm Định Hàng Nghi Giả/i)).toBeInTheDocument();
-    });
-
-    // Fill note and submit
-    const noteInput = screen.getByPlaceholderText(/Ghi rõ chi tiết đối chiếu chất liệu vải/i);
-    fireEvent.change(noteInput, { target: { value: 'Chất liệu vải nhái thô cứng, chỉ thừa nhiều' } });
-
-    fireEvent.click(screen.getByText(/Lưu kết luận & Thực thi/i));
-
-    await waitFor(() => {
-      expect(window.alert).toHaveBeenCalled();
-    }, { timeout: 2000 });
+    expect(screen.queryByText(/Báo nghi hàng giả/i)).not.toBeInTheDocument();
   });
 
   it('TH-08: allows marking a returning parcel as lost with buyer refund', async () => {
@@ -440,5 +417,61 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
       expect(window.confirm).toHaveBeenCalled();
       expect(window.alert).toHaveBeenCalled();
     });
+  });
+
+  it('maps handoverDeadline, pickupDeadline, and order returnDeadline with countdowns without hardcoding 3 or 7 days', async () => {
+    const handoverFuture = new Date(Date.now() + 2 * 24 * 3600000).toISOString();
+    const pickupFuture = new Date(Date.now() + 5 * 24 * 3600000).toISOString();
+    const returnFuture = new Date(Date.now() + 3 * 24 * 3600000).toISOString();
+
+    server.use(
+      http.get(`${API_BASE_URL}/return-requests/:id/detail`, async ({ params }) => {
+        return HttpResponse.json({
+          result: {
+            id: params.id,
+            code: 'YC-DL01',
+            orderId: 'ORD-DL01',
+            status: 'APPROVED',
+            handoverDeadline: handoverFuture,
+            pickupDeadline: pickupFuture,
+          },
+          isSuccess: true,
+          statusCode: 200,
+        });
+      }),
+      http.get(`${API_BASE_URL}/return-requests/:id`, async ({ params }) => {
+        return HttpResponse.json({
+          result: {
+            id: params.id,
+            code: 'YC-DL01',
+            orderId: 'ORD-DL01',
+            status: 'APPROVED',
+            handoverDeadline: handoverFuture,
+            pickupDeadline: pickupFuture,
+          },
+          isSuccess: true,
+          statusCode: 200,
+        });
+      }),
+      http.get(`${API_BASE_URL}/orders/:id`, async ({ params }) => {
+        return HttpResponse.json({
+          result: {
+            id: params.id,
+            orderNo: 'ORD-DL01',
+            returnDeadline: returnFuture,
+            autoCompleteDeadline: returnFuture,
+            items: [{ productId: 'P-DL01', name: 'Đầm lụa' }],
+          },
+          isSuccess: true,
+          statusCode: 200,
+        });
+      })
+    );
+
+    const detail = await returnService.detail('RET-DL01');
+    expect(detail.handoverDeadline).toBe(handoverFuture);
+    expect(detail.pickupDeadline).toBe(pickupFuture);
+    expect(detail.returnDeadline).toBe(returnFuture);
+    expect(detail.carrierStatus).toMatch(/Hạn bàn giao GHN:.*còn/);
   });
 });

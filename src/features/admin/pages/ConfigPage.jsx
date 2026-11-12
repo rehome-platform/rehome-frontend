@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { Input, Button } from '../../../components/common/index.js';
-import { DEFAULT_SYSTEM_CONFIGS, SYSTEM_CONFIG_FIELDS } from '../../../configs/systemParams.config.js';
+import {
+  DEFAULT_SYSTEM_CONFIGS,
+  SYSTEM_CONFIG_FIELDS,
+  saveEffectiveConsignmentConfig,
+} from '../../../configs/systemParams.config.js';
 import adminApi from '../services/adminApi';
 
 /**
@@ -62,6 +66,7 @@ export default function ConfigPage() {
     setConfigs(updated);
     setSpecs(nextSpecs);
     setLoaded(true);
+    saveEffectiveConsignmentConfig(updated);
   };
 
   const loadBackendConfigs = async () => {

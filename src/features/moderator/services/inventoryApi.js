@@ -1,10 +1,12 @@
+import { pendingPricing, pricingForProduct } from './endTermPricingApi.js';
+import { readProposals, proposalForProduct } from './reconsignProposalStore.js';
 import { skuLabelError } from './skuLabelError.js';
 import { fixtureFallback } from './fixtureTransport.js';
 import { inventoryQuery, inventoryResult, inventoryDetail, productPayload, createdProduct, uploadedPhoto } from '../models/inventoryApiModel.js';
 import baseApi from '../../../services/baseApi.js';
 import { API_ENDPOINTS } from '../../../configs/api.config.js';
 import { isFixtureMode } from "../config/warehouseContract.js";
-import { formatStockMovement, Phase2Error } from "../models/warehouseModel.js";
+import { Phase2Error } from "../models/warehouseModel.js";
 import { callBackend } from './warehouseTransport.js';
 import { enrichListRows } from './listDetailEnrichment.js';
 
@@ -17,43 +19,30 @@ export const inventoryService = {
       if (params?.status === 'WAITING_END_OF_TERM') {
         if (isFixtureMode && fallback) return fallback();
 
-        const queryWithdrawn = inventoryQuery({ ...params, status: 'WITHDRAWN' });
-        const queryUnclaimed = inventoryQuery({ ...params, status: 'UNCLAIMED' });
-
-        const [resWithdrawn, resUnclaimed] = await Promise.all([
-          callBackend(
-            {
-              method: 'get',
-              url: API_ENDPOINTS.MODERATOR.INVENTORY,
-              params: queryWithdrawn,
-            },
-            { fallback, signal: options?.signal }
-          ),
-          callBackend(
-            {
-              method: 'get',
-              url: API_ENDPOINTS.MODERATOR.INVENTORY,
-              params: queryUnclaimed,
-            },
-            { fallback, signal: options?.signal }
-          ),
+        // This UI queue is not a backend ProductStatus. Filter before pagination.
+        const [stored, withdrawn, unclaimed, pricing] = await Promise.all([
+          allInventory('WAREHOUSE', options), allInventory('WITHDRAWN', options),
+          allInventory('UNCLAIMED', options), pendingPricing(options),
         ]);
-
-        const itemsWithdrawn = resWithdrawn?.content || resWithdrawn?.items || (Array.isArray(resWithdrawn) ? resWithdrawn : []);
-        const itemsUnclaimed = resUnclaimed?.content || resUnclaimed?.items || (Array.isArray(resUnclaimed) ? resUnclaimed : []);
-        const combined = [...itemsWithdrawn, ...itemsUnclaimed];
-        const totalElements = (resWithdrawn?.totalElements ?? itemsWithdrawn.length) + (resUnclaimed?.totalElements ?? itemsUnclaimed.length);
-
-        return enrichInventoryResult(inventoryResult(
-          {
-            ...resWithdrawn,
-            content: combined,
-            items: combined,
-            totalElements,
-            totalPages: Math.ceil(totalElements / (params?.size ?? 20)),
-          },
-          params
-        ), options);
+        const storedDetails = await enrichListRows(stored, () => true, async item => ({
+          ...item, ...await inventoryService.read(item.id || item.sku, options),
+        }), options);
+        const proposals = readProposals(options);
+        const rows = [...storedDetails, ...withdrawn, ...unclaimed].map(item => {
+          const request = item.status === 'WAREHOUSE' && pricingForProduct(pricing, item.id || item.sku);
+          const proposal = item.status === 'WAREHOUSE' && proposalForProduct(proposals, item, request);
+          return inventoryDetail({ ...item,
+            ...(proposal ? { reConsignStatus: 'PROPOSAL_SENT', newReceiptId: proposal.receiptId } : {}),
+            ...(request ? { decisionId: request.decisionId, decision: 'RE_CONSIGN', pricingEligible: true,
+              name: item.name || request.productName, currentPrice: request.currentPrice,
+              previousAgreedPrice: request.previousAgreedPrice } : {}),
+          }, item.id || item.sku);
+        }).filter(item => ['WITHDRAWN', 'UNCLAIMED'].includes(item.status) || (item.status === 'WAREHOUSE' && (item.decisionId || item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT')));
+        const filtered = inventoryResult(rows, params).items;
+        const size = params?.size ?? 20;
+        const page = params?.page ?? 0;
+        const items = filtered.slice(page * size, (page + 1) * size);
+        return { items, content: items, totalElements: filtered.length, totalPages: Math.ceil(filtered.length / size) };
       }
 
       // Backend ProductStatus enum does not support WAITING_END_OF_TERM
@@ -68,7 +57,26 @@ export const inventoryService = {
         { fallback, signal: options?.signal }
       );
 
-      return enrichInventoryResult(inventoryResult(result, params), options);
+      let normalized = inventoryResult(result, params);
+      if (normalized.items.some(item => item.status === 'WAREHOUSE')) {
+        const [details, pricing] = await Promise.all([
+          enrichListRows(normalized.items,
+            item => item.status === 'WAREHOUSE' && item.decisionId === undefined,
+            async item => ({ ...item, ...await inventoryService.read(item.sku, options) }), options),
+          pendingPricing(options),
+        ]);
+        const items = details.map(item => {
+          const request = item.status === 'WAREHOUSE' && pricingForProduct(pricing, item.sku);
+          const proposal = item.status === 'WAREHOUSE' && proposalForProduct(readProposals(options), item, request);
+          return inventoryDetail({ ...item,
+            ...(proposal ? { reConsignStatus: 'PROPOSAL_SENT', newReceiptId: proposal.receiptId } : {}), ...(request ? {
+            decisionId: request.decisionId, pricingEligible: true, decision: 'RE_CONSIGN',
+            previousAgreedPrice: request.previousAgreedPrice,
+          } : {}) }, item.sku);
+        });
+        normalized = { ...normalized, items, content: items };
+      }
+      return enrichInventoryResult(normalized, options);
     } catch (err) {
       if (isFixtureMode && fallback) return fallback();
       throw err;
@@ -183,48 +191,6 @@ export const inventoryService = {
     throw new Phase2Error('Backend chưa hỗ trợ thêm ảnh cho sản phẩm đã nhập kho.', 501, 'OPERATION_UNSUPPORTED');
   },
 
-  // API 42: PATCH /products/{id}/shelf-location
-  shelf: async (sku, shelfLocation, options) => {
-    const fallback = fixtureFallback('shelfUpdate', { ids: { sku }, data: { shelfLocation }, ...options });
-
-    const trimmed = String(shelfLocation || '').trim();
-    if (!trimmed) {
-      throw new Phase2Error('Vui lòng nhập vị trí kệ mới.', 400);
-    }
-
-    return callBackend(
-      {
-        method: 'patch',
-        url: API_ENDPOINTS.MODERATOR.UPDATE_SHELF_LOCATION(sku),
-        data: { shelfLocation: trimmed },
-      },
-      { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
-    );
-  },
-
-  // API 43: GET /products/{id}/stock-movements
-  movements: async (sku, options) => {
-    const fallback = async () => {
-      const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
-      const res = await fixtureRequest('stockMovements', { ids: { sku }, ...options });
-      return movementResult(res);
-    };
-
-    try {
-      const res = await callBackend(
-        {
-          method: 'get',
-          url: API_ENDPOINTS.MODERATOR.STOCK_MOVEMENTS(sku),
-        },
-        { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
-      );
-      return movementResult(res);
-    } catch (err) {
-      if (isFixtureMode && fallback) return fallback();
-      throw err;
-    }
-  },
-
   // API 39: GET /products/{id}/sku-label
   label: async (sku, options) => {
     const fallback = fixtureFallback('skuLabel', { ids: { sku }, ...options });
@@ -264,7 +230,18 @@ async function enrichInventoryResult(result, options) {
   return { ...result, items, content: items };
 }
 
-function movementResult(res) {
-  const raw = Array.isArray(res) ? res : [];
-  return raw.map(formatStockMovement).filter(Boolean);
+
+async function allInventory(status, options) {
+  const rows = [];
+  let page = 0, totalPages = 1;
+  while (page < totalPages) {
+    if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    const result = await callBackend({ method: 'get', url: API_ENDPOINTS.MODERATOR.INVENTORY,
+      params: { status, page, size: 50 },
+    }, { signal: options?.signal });
+    rows.push(...(result?.content || result?.items || (Array.isArray(result) ? result : [])));
+    totalPages = result?.totalPages ?? 1;
+    page++;
+  }
+  return rows;
 }

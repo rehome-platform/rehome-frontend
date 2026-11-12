@@ -110,7 +110,6 @@ export function resetFixtures() {
     receipts: [],
     identities: [],
     products: [],
-    movements: [],
     catalog: {
       categories: [
         { id: 'cat-1', name: 'Áo', slot: 'TOP', hidden: false },
@@ -329,30 +328,14 @@ export function resetFixtures() {
   });
   db.products.push({ id: 'RH-DG-ONSALE', sku: 'RH-DG-ONSALE', name: 'Áo sơ mi kiểm kho', warehouseId: 'warehouse-degraded', status: 'ON_SALE', currentPrice: 200000, currentTerm: 1, photos: [], allowedActions: [] });
 
-  // Initial movements for RH-M4T19B
-  db.movements.push(
-    {
-      sku: 'RH-M4T19B',
-      type: 'STOCK_IN',
-      label: 'Nhập kho · gán SKU · in tem',
-      shelfLocation: 'C2-11',
-      createdAt: '2026-07-15T09:00:00Z',
-    },
-    {
-      sku: 'RH-M4T19B',
-      type: 'TERM_CHANGED',
-      label: 'Hết kỳ 3 · chuyển sang Chờ xử lý cuối kỳ',
-      shelfLocation: 'C2-11',
-      createdAt: '2026-10-15T09:00:00Z',
-    },
-    {
-      sku: 'RH-M4T19B',
-      type: 'DECISION_MADE',
-      label: 'Member yêu cầu ký gửi lại với giá mới',
-      shelfLocation: 'C2-11',
-      createdAt: '2026-10-18T14:20:00Z',
-    }
-  );
+  db.endTermDecisions = db.products.filter(product => product.decision).map((product, index) => {
+    if (product.status === 'WAITING_END_OF_TERM') product.status = product.decision === 'TAKE_BACK' ? 'WITHDRAWN' : 'WAREHOUSE';
+    product.decisionId = null;
+    product.pricingEligible = product.decision === 'RE_CONSIGN';
+    return { id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+      productId: product.id || product.sku, decision: product.decision, newReceiptId: null,
+      decidedAt: '2026-10-18T14:20:00Z' };
+  });
 }
 resetFixtures();
 const fail = (message, status = 409) => {
@@ -446,6 +429,43 @@ export async function fixtureRequest(
     case 'formRead':
       result = formView(find(db.forms, 'formId', ids.formId, scope), scope);
       break;
+    case 'withdrawalApprove': {
+      const queue = db.queues.find(
+        (row) => (row.type === 'WITHDRAWAL' || row.type === 'ITEM_WITHDRAWAL') && row.refId === ids.id,
+      );
+      if (!queue) fail('Không tìm thấy yêu cầu rút hàng.', 404);
+      queue.status = 'PENDING_PICKUP';
+      const pickupDeadline = new Date(Date.now() + 7 * 86400000).toISOString();
+      queue.pickupDeadline = pickupDeadline;
+      result = {
+        id: ids.id,
+        productId: queue.sku || null,
+        feeCharged: queue.feeCharged ?? 0,
+        status: 'PENDING_PICKUP',
+        pickupDeadline,
+        feePaymentDeadline: null,
+        rejectReason: null,
+      };
+      break;
+    }
+    case 'withdrawalReject': {
+      if (!data?.reason?.trim()) fail('Cần lý do từ chối.', 422);
+      const index = db.queues.findIndex(
+        (row) => (row.type === 'WITHDRAWAL' || row.type === 'ITEM_WITHDRAWAL') && row.refId === ids.id,
+      );
+      if (index < 0) fail('Không tìm thấy yêu cầu rút hàng.', 404);
+      const [removed] = db.queues.splice(index, 1);
+      result = {
+        id: ids.id,
+        productId: removed?.sku || null,
+        feeCharged: removed?.feeCharged ?? 0,
+        status: 'REJECTED',
+        pickupDeadline: null,
+        feePaymentDeadline: null,
+        rejectReason: data.reason.trim(),
+      };
+      break;
+    }
     case 'formApprove':
     case 'formReject': {
       const form = find(db.forms, 'formId', ids.formId, scope);
@@ -590,12 +610,6 @@ export async function fixtureRequest(
       db.products.push(product);
       receipt.productSku = product.sku;
       form.status = 'STOCKED';
-      db.movements.push({
-        sku: product.sku,
-        type: 'STOCK_IN',
-        shelfLocation: product.shelfLocation,
-        createdAt: new Date().toISOString(),
-      });
       result = product;
       break;
     }
@@ -632,33 +646,20 @@ export async function fixtureRequest(
         db.products.filter(
           (row) =>
             row.warehouseId === scope.warehouseId &&
-            (!params.status || (params.status === 'WAITING_END_OF_TERM' ? (row.status === 'WAITING_END_OF_TERM' || row.status === 'WITHDRAWN' || row.status === 'UNCLAIMED') : params.status === 'DEGRADED' ? (row.status === 'DEGRADED' || row.status === 'PLATFORM_OWNED') : row.status === params.status)) &&
+            (!params.status || (params.status === 'WAITING_END_OF_TERM' ? ((row.status === 'WAREHOUSE' && (row.decisionId || row.decision)) || row.status === 'WITHDRAWN' || row.status === 'UNCLAIMED') : params.status === 'DEGRADED' ? (row.status === 'DEGRADED' || row.status === 'PLATFORM_OWNED') : row.status === params.status)) &&
             (!params.shelf || row.shelfLocation.includes(params.shelf)) &&
             (!params.sku || row.sku.includes(params.sku)),
         ),
         params,
       );
       break;
-    case 'productRead':
-      result = find(db.products, 'sku', ids.sku, scope);
-      break;
-    case 'shelfUpdate': {
+    case 'productRead': {
       const product = find(db.products, 'sku', ids.sku, scope);
-      if (!data.shelfLocation?.trim()) fail('Cần vị trí kệ.', 422);
-      product.shelfLocation = data.shelfLocation;
-      db.movements.push({
-        sku: product.sku,
-        type: 'SHELF_CHANGED',
-        shelfLocation: product.shelfLocation,
-        createdAt: new Date().toISOString(),
-      });
-      result = null;
+      const decision = db.endTermDecisions.find(row => row.productId === (product.id || product.sku) && row.decision === null);
+      const degraded = db.degradedCases.find(row => row.productId === (product.id || product.sku) && !row.decision);
+      result = { ...product, decisionId: decision?.id || null, degradedCaseId: degraded?.id || null };
       break;
     }
-    case 'stockMovements':
-      find(db.products, 'sku', ids.sku, scope);
-      result = db.movements.filter((row) => row.sku === ids.sku);
-      break;
     case 'skuLabel':
       find(db.products, 'sku', ids.sku, scope);
       result = { labelPdfUrl: null };
@@ -707,7 +708,7 @@ export async function fixtureRequest(
       result = page(
         db.products.filter(
           (row) =>
-            row.warehouseId === scope.warehouseId && row.decision && row.allowedActions.length,
+            row.warehouseId === scope.warehouseId && ['WAREHOUSE', 'WITHDRAWN', 'UNCLAIMED'].includes(row.status) && (row.decision || row.decisionId),
         ),
         params,
       );
@@ -727,17 +728,29 @@ export async function fixtureRequest(
       result = null;
       break;
     }
+    case 'endTermPendingPricing':
+      result = db.endTermDecisions.filter(decision => decision.decision === 'RE_CONSIGN' && !decision.newReceiptId)
+        .flatMap(decision => {
+          const product = db.products.find(row => (row.id || row.sku) === decision.productId && row.warehouseId === scope.warehouseId && row.status === 'WAREHOUSE');
+          return product ? [{ decisionId: decision.id, productId: decision.productId, productName: product.name,
+            currentPrice: product.currentPrice, previousAgreedPrice: product.agreedPrice, decidedAt: decision.decidedAt }] : [];
+        });
+      break;
     case 'endTermReconsignTerms': {
-      const product = find(db.products, 'sku', ids.sku || ids.decisionId, scope);
+      const decision = db.endTermDecisions.find(row => row.id === ids.decisionId);
+      if (!decision) fail('Không tìm thấy quyết định.', 404);
+      const product = find(db.products, 'sku', decision.productId, scope);
+      if (decision.decision !== 'RE_CONSIGN' || decision.newReceiptId || product.status !== 'WAREHOUSE') fail('Không thể gửi đề xuất.', 409);
       const agreedPrice = Number(data.agreedPrice);
       if (!Number.isSafeInteger(agreedPrice) || agreedPrice <= 0) {
         fail('Giá bán đề xuất không hợp lệ.', 400);
       }
-      const receiptId = `KG-2026-${String(db.receipts.length + 214).padStart(6, '0')}`;
+      const receiptId = crypto.randomUUID();
+      const receiptNo = `KG-2026-${String(db.receipts.length + 214).padStart(6, '0')}`;
       const receipt = {
         id: receiptId,
         receiptId,
-        receiptNo: receiptId,
+        receiptNo,
         sku: product.sku,
         formId: product.formId || 'form-qa',
         productName: product.name,
@@ -753,39 +766,32 @@ export async function fixtureRequest(
         confirmedAt: null,
       };
       db.receipts.push(receipt);
+      decision.newReceiptId = receiptId;
       product.newReceiptId = receiptId;
+      product.pricingEligible = false;
       product.proposedPrice = agreedPrice;
       product.moderatorNote = data.moderatorNote;
       product.reConsignStatus = 'PROPOSAL_SENT';
-      db.movements.push({
-        sku: product.sku,
-        type: 'PRICE_PROPOSED',
-        label: `Moderator đề xuất giá mới ${agreedPrice.toLocaleString('vi-VN')} đ`,
-        shelfLocation: product.shelfLocation,
-        createdAt: new Date().toISOString(),
-      });
-      result = { decisionId: product.sku, receiptId, newReceiptId: receiptId };
+      result = { decisionId: decision.id, newReceiptId: receiptId };
       break;
     }
     case 'endTermConfirmReceipt': {
       const receipt = db.receipts.find(r => r.receiptId === ids.receiptId || r.id === ids.receiptId);
-      const product = db.products.find(p => p.newReceiptId === ids.receiptId || p.sku === ids.receiptId || p.sku === receipt?.sku);
+      const product = db.products.find(p => p.newReceiptId === ids.receiptId && p.warehouseId === scope.warehouseId);
       if (!product) fail('Không tìm thấy sản phẩm.', 404);
       if (receipt) receipt.confirmedAt = new Date().toISOString();
       product.status = 'ON_SALE';
       product.currentTerm = 1;
+      product.receiptId = ids.receiptId;
+      product.termStartedAt = new Date().toISOString();
+      product.endOfTermDeadline = new Date(Date.parse(product.termStartedAt) + 90 * 86400000).toISOString();
       product.daysIntoTerm = 1;
       product.currentPrice = product.proposedPrice || product.agreedPrice;
       product.agreedPrice = product.proposedPrice || product.agreedPrice;
       product.decision = null;
+      product.decisionId = null;
+      product.allowedActions = ['CHANGE_SHELF'];
       product.reConsignStatus = 'CONFIRMED';
-      db.movements.push({
-        sku: product.sku,
-        type: 'RE_CONSIGNED',
-        label: `Member đồng ý giá mới · Bắt đầu Kỳ 1 · hoa hồng 10%`,
-        shelfLocation: product.shelfLocation,
-        createdAt: new Date().toISOString(),
-      });
       result = { success: true, receiptId: ids.receiptId, product };
       break;
     }
@@ -819,12 +825,6 @@ export async function fixtureRequest(
         fail('Không đủ điều kiện chuyển giao.');
       product.status = 'DONATED';
       product.allowedActions = [];
-      db.movements.push({
-        sku: product.sku,
-        type: 'DONATED',
-        partnerName: data.partnerName,
-        createdAt: new Date().toISOString(),
-      });
       result = null;
       break;
     }
@@ -848,6 +848,5 @@ export function confirmFixtureReceipt(receiptId) {
       decision: null,
       allowedActions: ['CHANGE_SHELF', 'ADD_PHOTOS'],
     });
-    db.movements.push({ sku: product.sku, type: 'RE_CONSIGNED', createdAt: receipt.confirmedAt });
   }
 }

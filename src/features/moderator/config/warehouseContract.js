@@ -10,6 +10,8 @@ export const phase2Contract = {
     queueList: { gate: 'A', method: 'get', path: '/queues' },
     queueClaim: { gate: 'A', method: 'post', path: '/queues/:queueId/claim' },
     queueRelease: { gate: 'A', method: 'post', path: '/queues/:queueId/release' },
+    withdrawalApprove: { gate: 'A', method: 'post', path: '/item-withdrawal-requests/:id/approve' },
+    withdrawalReject: { gate: 'A', method: 'post', path: '/item-withdrawal-requests/:id/reject' },
     formRead: {
       gate: 'A', method: 'get', path: '/moderator/consignment-forms/:formId',
       limitation: 'Member: own forms; Moderator: non-draft forms in the assigned warehouse; Admin: all forms. Access depends on the deployed backend.',
@@ -40,8 +42,6 @@ export const phase2Contract = {
       reason: 'Backend chưa hỗ trợ thêm ảnh vào sản phẩm đã nhập kho.',
     },
     photoUpload: { gate: 'C', method: 'post', path: '/uploads', params: { folder: 'PRODUCTS' } },
-    shelfUpdate: { gate: 'C', method: 'patch', path: '/products/:sku/shelf-location' },
-    stockMovements: { gate: 'C', method: 'get', path: '/products/:sku/stock-movements' },
     skuLabel: { gate: 'C', method: 'get', path: '/products/:sku/sku-label', responseType: 'blob' },
     catalogList: {
       gate: 'D', method: 'get', path: null, supported: false,

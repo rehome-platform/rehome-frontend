@@ -74,7 +74,7 @@ export function usePhase2() {
 export function useResource(
   loader,
   dependencies = [],
-  { enabled = true, poll = false, done = () => false } = {},
+  { enabled = true, poll = false, done = () => false, refreshInterval = 0 } = {},
 ) {
   const session = usePhase2();
   const [state, setState] = useState({ data: null, loading: false, error: null });
@@ -132,8 +132,8 @@ export function useResource(
     const load = async () => {
       clearTimeout(timer);
       if (controller.signal.aborted || inFlight) return;
-      if (poll && document.visibilityState === 'hidden') return;
-      if (poll && Date.now() - started >= 600000) {
+      if ((poll || refreshInterval) && document.visibilityState === 'hidden') return;
+      if (poll && !refreshInterval && Date.now() - started >= 600000) {
         setPollExpired(true);
         return;
       }
@@ -161,27 +161,28 @@ export function useResource(
         inFlight = false;
       }
       if (
-        poll &&
+        (refreshInterval || poll) &&
         !terminal &&
-        !complete &&
+        (refreshInterval || !complete) &&
         !controller.signal.aborted &&
         document.visibilityState !== 'hidden'
       ) {
-        if (Date.now() - started >= 600000) {
+        if (!refreshInterval && Date.now() - started >= 600000) {
           setPollExpired(true);
           return;
         }
-        timer = setTimeout(load, Math.min(30000, 5000 * 2 ** failures));
+        timer = setTimeout(load, refreshInterval && (!poll || complete)
+          ? refreshInterval : Math.min(30000, 5000 * 2 ** failures));
       }
     };
     const visibility = () => {
       clearTimeout(timer);
-      if (document.visibilityState !== 'hidden' && !terminal && (!poll || !complete)) {
-        if (poll && Date.now() - started >= 600000) setPollExpired(true);
+      if (document.visibilityState !== 'hidden' && !terminal && (refreshInterval || !poll || !complete)) {
+        if (poll && !refreshInterval && Date.now() - started >= 600000) setPollExpired(true);
         else load();
       }
     };
-    if (poll && document.visibilityState === 'hidden') {
+    if ((poll || refreshInterval) && document.visibilityState === 'hidden') {
       setState({ data: null, loading: false, error: null });
     } else load();
     document.addEventListener('visibilitychange', visibility);
@@ -192,7 +193,7 @@ export function useResource(
     };
     // Callers supply stable resource identifiers, never the inline loader.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session.scope, session.signal, enabled, poll, version, ...dependencies]);
+  }, [session.scope, session.signal, enabled, poll, refreshInterval, version, ...dependencies]);
 
   const mutate = async (action, { onSuccess, onUncertain } = {}) => {
     if (mutationLock.current || session.signal.aborted) return false;

@@ -51,7 +51,7 @@ async function identify(page) {
   await page.getByRole('button', { name: 'Tôi đã đối chiếu đúng Member' }).click();
   await expect(page.getByText('Đã xác nhận danh tính', { exact: true })).toBeVisible();
 }
-test('inspect → wait Member → stock-in → SKU → shelf history (fixtures)', async ({
+test('inspect → wait Member → stock-in → SKU → detail (fixtures)', async ({
   page,
   browser,
 }, testInfo) => {
@@ -77,7 +77,6 @@ test('inspect → wait Member → stock-in → SKU → shelf history (fixtures)'
   await page.getByRole('button', { name: 'Tải lại biên nhận' }).click();
   await page.getByLabel('Tên sản phẩm').fill('Quần jeans thử nghiệm');
   await page.getByLabel('Size', { exact: true }).fill('M');
-  await page.getByLabel('Vị trí kệ', { exact: true }).fill('A2');
   await page.getByLabel('Danh mục', { exact: true }).selectOption('cat-2');
   await page.getByLabel('Thương hiệu', { exact: true }).selectOption('brand-1');
   await page
@@ -93,10 +92,6 @@ test('inspect → wait Member → stock-in → SKU → shelf history (fixtures)'
   await page.getByRole('button', { name: 'Nhập kho · tạo SKU' }).click();
   await page.getByRole('link', { name: /Đã nhập kho · TEST-SKU-4/ }).click();
   await expect(page.getByText('SKU: TEST-SKU-4', { exact: true })).toBeVisible();
-  await page.getByLabel('Vị trí kệ mới').fill('B2');
-  await page.getByRole('button', { name: 'Lưu vị trí kệ' }).click();
-  await expect(page.getByText('SHELF_CHANGED', { exact: true })).toBeVisible();
-  await expect(page.getByText('Kệ B2', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Mở / In lại tem SKU' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Mở PDF tem để xem và in' })).toHaveCount(0);
