@@ -526,8 +526,6 @@ describe('ConsignmentDetailPage component behaviors', () => {
     );
     expect(await screen.findByRole('heading', { name: /Váy dạ hội/ })).toBeInTheDocument();
 
-    const quickBoxes = screen.getAllByRole('checkbox');
-    for (const b of quickBoxes) { fireEvent.click(b); }
     const startBtn = screen.getByRole('button', { name: 'Bắt đầu kiểm định tại quầy' });
     fireEvent.click(startBtn);
 

@@ -10,11 +10,19 @@ function photoUrlOf(photo) {
   return typeof photo === 'string' ? photo : photo.url || photo.imageUrl || '';
 }
 
+const CONDITION_LEVEL_OPTIONS = [
+  { value: 'NEW_TAG', label: 'Mới, còn tem (100%)', template: 'Mới 100%, còn nguyên tem mác, chưa qua sử dụng' },
+  { value: 'LIKE_NEW', label: 'Như mới (99%)', template: 'Như mới 99%, không vết bẩn, không trầy xước' },
+  { value: 'GOOD', label: 'Tốt, có dấu hiệu dùng (90-95%)', template: 'Tốt 95%, có dấu hiệu đã dùng nhẹ, phom dáng đẹp' },
+  { value: 'FLAW', label: 'Có lỗi nhỏ (80-85%)', template: 'Có lỗi nhỏ ở viền/khuy, tổng thể 85% còn tốt' },
+];
+
 export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
   const sku = item?.id || item?.sku || '';
 
   const [name, setName] = useState('');
   const [size, setSize] = useState('');
+  const [conditionLevel, setConditionLevel] = useState('LIKE_NEW');
   const [conditionNote, setConditionNote] = useState('');
   const [existingPhotos, setExistingPhotos] = useState([]);
   const [uploadedPhotos, setUploadedPhotos] = useState([]);
@@ -27,13 +35,35 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
     if (!isOpen) return;
     setName(item?.name || '');
     setSize(item?.size || '');
-    setConditionNote(item?.conditionNote || item?.condition || '');
+    const currentNote = item?.conditionNote || item?.condition || '';
+    setConditionNote(currentNote);
+    // Tự động nhận diện mức tình trạng
+    if (currentNote.includes('100%') || currentNote.includes('NEW_TAG')) {
+      setConditionLevel('NEW_TAG');
+    } else if (currentNote.includes('95%') || currentNote.includes('90%') || currentNote.includes('GOOD')) {
+      setConditionLevel('GOOD');
+    } else if (currentNote.includes('80%') || currentNote.includes('85%') || currentNote.includes('FLAW')) {
+      setConditionLevel('FLAW');
+    } else {
+      setConditionLevel('LIKE_NEW');
+    }
     setExistingPhotos((item?.photos || []).map(photoUrlOf).filter(Boolean));
     setUploadedPhotos([]);
     setUploadPending(false);
     setUploadVersion((v) => v + 1);
     setErrorMessage('');
   }, [isOpen, item]);
+
+  const handleLevelChange = (lvl) => {
+    setConditionLevel(lvl);
+    const opt = CONDITION_LEVEL_OPTIONS.find((o) => o.value === lvl);
+    if (opt) {
+      const isTemplate = CONDITION_LEVEL_OPTIONS.some((o) => o.template === conditionNote.trim());
+      if (!conditionNote.trim() || isTemplate) {
+        setConditionNote(opt.template);
+      }
+    }
+  };
 
   const onUploadedChange = useCallback((urls, pending) => {
     setUploadedPhotos(urls);
@@ -139,19 +169,40 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
           />
         </div>
 
-        <div className="space-y-1">
-          <label htmlFor="edit-product-condition" className="block font-bold text-[#191C19]">
-            Ghi chú tình trạng <span className="text-red-600">*</span>
-          </label>
-          <textarea
-            id="edit-product-condition"
-            rows={3}
-            value={conditionNote}
-            disabled={submitting}
-            onChange={(e) => setConditionNote(e.target.value)}
-            placeholder="Mô tả chi tiết tình trạng thực tế của sản phẩm..."
-            className="w-full rounded-xl border border-[#8a8a8a] p-2.5 text-xs text-[#191C19] focus:border-[#006B2C] focus:outline-none"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label htmlFor="edit-product-condition-level" className="block font-bold text-[#191C19]">
+              Mức độ tình trạng
+            </label>
+            <select
+              id="edit-product-condition-level"
+              value={conditionLevel}
+              disabled={submitting}
+              onChange={(e) => handleLevelChange(e.target.value)}
+              className="w-full rounded-xl border border-[#8a8a8a] px-3 py-2 text-xs text-[#191C19] focus:border-[#006B2C] focus:outline-none"
+            >
+              {CONDITION_LEVEL_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label htmlFor="edit-product-condition" className="block font-bold text-[#191C19]">
+              Ghi chú tình trạng <span className="text-red-600">*</span>
+            </label>
+            <textarea
+              id="edit-product-condition"
+              rows={2}
+              value={conditionNote}
+              disabled={submitting}
+              onChange={(e) => setConditionNote(e.target.value)}
+              placeholder="VD: Như mới 99%, không lỗi, chất vải dày..."
+              className="w-full rounded-xl border border-[#8a8a8a] p-2.5 text-xs text-[#191C19] focus:border-[#006B2C] focus:outline-none"
+            />
+          </div>
         </div>
 
         <div className="space-y-2">
