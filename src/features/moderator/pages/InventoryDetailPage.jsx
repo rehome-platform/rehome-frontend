@@ -6,6 +6,7 @@ import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
 import BarcodePrintModal from '../components/BarcodePrintModal.jsx';
 import PhotoUpload from '../components/PhotoUpload.jsx';
+import ProductEditModal from '../components/ProductEditModal.jsx';
 import { inventoryService } from '../services/warehouseApi.js';
 import returnService from '../services/returnApi.js';
 import { endTermService } from '../services/endTermApi.js';
@@ -38,11 +39,13 @@ export default function InventoryDetailPage() {
   const [isSubmittingDegraded, setIsSubmittingDegraded] = useState(false);
   const [submittedCase, setSubmittedCase] = useState(null);
   const [caseDetailsOpen, setCaseDetailsOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const degradedLock = useRef(false);
   useEffect(() => {
     setSubmittedCase(null);
     setCaseDetailsOpen(false);
     setDegradedModalOpen(false);
+    setEditModalOpen(false);
     setDegradedNotes('');
     setDegradedPhotos([]);
   }, [sku]);
@@ -191,261 +194,278 @@ export default function InventoryDetailPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                {data.status === 'ON_SALE' && !submittedCase && <Button
-                  onClick={() => setDegradedModalOpen(true)}
-                  variant="outline"
-                  className="border-red-600 text-red-600 hover:bg-red-50 font-bold py-2 px-4 shadow-sm"
-                >
-                  Hàng xuống cấp
-                </Button>}
-                <Button
-                  onClick={() => setPrint(true)}
-                  className="bg-[#006B2C] text-white hover:bg-[#005221] font-bold py-2 px-4 shadow-sm"
-                >
-                  Mở / In lại tem SKU
-                </Button>
-              </div>
-            </div>
-
-            {/* Bảng thuộc tính chi tiết chuẩn TK-02 */}
-            <div className="border border-[#c4c4c4] rounded-xl overflow-hidden divide-y divide-[#e0e0e0] text-xs">
-              <div className="flex items-center p-3 gap-3 bg-[#fafafa]">
-                <span className="w-28 text-[#5f5f5f] flex-shrink-0">Người ký gửi:</span>
-                <span className="text-[#191C19]">
-                  <strong className="font-mono">{data.member?.memberCode || data.memberCode || data.memberId || '—'}</strong> · {data.member?.fullName || data.memberName || 'Chưa có thông tin'}
-                </span>
-              </div>
-              <div className="flex items-center p-3 gap-3">
-                <span className="w-28 text-[#5f5f5f] flex-shrink-0">Giá bán hiện tại:</span>
-                <span className="font-bold text-sm text-[#006B2C]">{money(sellingPrice)}</span>
-              </div>
-              <div className="flex items-center p-3 gap-3">
-                <span className="w-28 text-[#5f5f5f] flex-shrink-0">Giá sàn:</span>
-                <span className="text-[#191C19]">{money(termAndRates.floorPrice)}</span>
-              </div>
-              <div className="flex items-center p-3 gap-3 bg-[#fafafa]">
-                <span className="w-28 text-[#5f5f5f] flex-shrink-0">Kỳ ký gửi:</span>
-                <span className="text-[#191C19] font-medium">
-                  Kỳ {termAndRates.currentTerm} · ngày {termAndRates.daysIntoTerm} / {termAndRates.termLengthDays} · hoa hồng {termAndRates.commissionPercent}%
-                </span>
-              </div>
-              <div className="flex items-center p-3 gap-3">
-                <span className="w-28 text-[#5f5f5f] flex-shrink-0">Điều khoản biên nhận:</span>
-                <span className="text-[#191C19]">
-                  Hoa hồng kỳ 1/2/3: {termAndRates.commissionTerm1}% / {termAndRates.commissionTerm2}% / {termAndRates.commissionTerm3}% · Đền xuống cấp (nhận lại): {termAndRates.degradedCompensationRatePercent}%
-                </span>
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-[#e5e5e5]">
-              <div className="p-3.5 rounded-xl border border-[#e0e0e0] bg-[#fafafa]">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-[#5f5f5f]">Giá niêm yết</p>
-                <p className="text-lg font-bold text-[#191C19] mt-0.5">
-                  {money(data.agreedPrice || data.currentPrice)}
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl border border-[#e0e0e0] bg-[#fafafa]">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-[#5f5f5f]">Kích cỡ & Phân loại</p>
-                <p className="text-base font-semibold text-[#191C19] mt-0.5">
-                  {data.brandName || data.brand || 'ReHome'}
-                  {data.size ? ` · Size ${data.size}` : ''}
-                </p>
-              </div>
-            </div>
-
-            {data.photos && data.photos.length > 0 && (
-              <div className="pt-2">
-                <p className="text-xs font-bold text-[#191C19] mb-2">Ảnh sản phẩm lưu kho</p>
-                <Photos photos={data.photos} />
-              </div>
-            )}
-          </div>
-
-          {data.status === 'WAREHOUSE' && (
-            <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">
-              Sản phẩm đang lưu kho, tạm ngừng bán trong khi chờ xử lý. {activeCase && DEGRADED_DECISION_POLICY}
-            </div>
-          )}
-          <ResourceState resource={existingCase} />
-          {activeCase && <div className="rounded-2xl border border-neutral bg-surface p-5 space-y-4">
-            <DegradedCaseSummary item={activeCase} onNavigateToCounter={() => navigate('/moderator/counter')} />
-            <Button variant="outline" onClick={() => setCaseDetailsOpen(true)}>Xem biên bản hàng xuống cấp</Button>
-          </div>}
-
-
-          {/* BANNER XỬ LÝ CUỐI KỲ (L-02 · TK-02) */}
-          <ResourceState resource={pricing} />
-          {data.status === 'WAREHOUSE' && data.decisionId && !canNegotiate && <p className="rounded-xl border border-neutral p-4 text-sm">Đã hết kỳ ký gửi. Đang chờ Member chọn nhận lại hoặc ký gửi lại qua app.</p>}
-          {canNegotiate && (
-            <div className="rounded-2xl border border-neutral bg-[#F8FAF8] p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-[#006B2C] text-white rounded">
-                    {data.reConsignStatus === 'PROPOSAL_SENT' ? 'ĐÃ GỬI ĐỀ XUẤT' : 'ĐƯỢC YÊU CẦU KÝ GỬI LẠI'}
-                  </span>
-                  <h3 className="text-sm font-bold text-[#191C19]">Ký gửi lại cuối kỳ (Hết kỳ 3: 90 ngày)</h3>
+                <div className="flex flex-wrap items-center gap-3">
+                  {['ON_SALE', 'WAREHOUSE'].includes(data.status) && (
+                    <Button
+                      onClick={() => setEditModalOpen(true)}
+                      variant="outline"
+                      className="border-[#006B2C] text-[#006B2C] hover:bg-[#F1F8F4] font-bold py-2 px-4 shadow-sm"
+                    >
+                      Chỉnh sửa thông tin
+                    </Button>
+                  )}
+                  {data.status === 'ON_SALE' && !submittedCase && <Button
+                    onClick={() => setDegradedModalOpen(true)}
+                    variant="outline"
+                    className="border-red-600 text-red-600 hover:bg-red-50 font-bold py-2 px-4 shadow-sm"
+                  >
+                    Hàng xuống cấp
+                  </Button>}
+                  <Button
+                    onClick={() => setPrint(true)}
+                    className="bg-[#006B2C] text-white hover:bg-[#005221] font-bold py-2 px-4 shadow-sm"
+                  >
+                    Mở / In lại tem SKU
+                  </Button>
                 </div>
-                <p className="text-xs text-[#5f5f5f]">
-                  Member đã chọn ký gửi lại với giá mới. Moderator cần đàm phán giá và tạo biên nhận mới tại quầy.
-                </p>
               </div>
-              <Button
-                variant="primary"
-                onClick={() => navigate(`/moderator/inventory/${encodeURIComponent(sku)}/re-consign`)}
-                className="text-xs py-2 px-3.5 font-semibold"
-              >
-                Đàm phán giá →
-              </Button>
-            </div>
-          )}
 
-          {data.status === 'WITHDRAWN' && data.decision === 'TAKE_BACK' && (
-            <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-amber-800 text-white rounded">
-                    ĐƯỢC YÊU CẦU NHẬN LẠI HÀNG
+              {/* Bảng thuộc tính chi tiết chuẩn TK-02 */}
+              <div className="border border-[#c4c4c4] rounded-xl overflow-hidden divide-y divide-[#e0e0e0] text-xs">
+                <div className="flex items-center p-3 gap-3 bg-[#fafafa]">
+                  <span className="w-28 text-[#5f5f5f] flex-shrink-0">Người ký gửi:</span>
+                  <span className="text-[#191C19]">
+                    <strong className="font-mono">{data.member?.memberCode || data.memberCode || data.memberId || '—'}</strong> · {data.member?.fullName || data.memberName || 'Chưa có thông tin'}
                   </span>
-                  <h3 className="text-sm font-bold text-amber-900">Khách đã chọn nhận lại cuối kỳ (miễn phí)</h3>
                 </div>
-                <p className="text-xs text-amber-800">
-                  Khách đã chọn nhận lại hàng{data.takeBackDate ? ` ${date(data.takeBackDate)}` : ''}{data.daysToTakeBack != null ? ` — còn ${data.daysToTakeBack} ngày đến quầy lấy` : ''}. Vui lòng nhận hàng trong thời hạn được thông báo.
-                </p>
+                <div className="flex items-center p-3 gap-3">
+                  <span className="w-28 text-[#5f5f5f] flex-shrink-0">Giá bán hiện tại:</span>
+                  <span className="font-bold text-sm text-[#006B2C]">{money(sellingPrice)}</span>
+                </div>
+                <div className="flex items-center p-3 gap-3">
+                  <span className="w-28 text-[#5f5f5f] flex-shrink-0">Giá sàn:</span>
+                  <span className="text-[#191C19]">{money(termAndRates.floorPrice)}</span>
+                </div>
+                <div className="flex items-center p-3 gap-3 bg-[#fafafa]">
+                  <span className="w-28 text-[#5f5f5f] flex-shrink-0">Kỳ ký gửi:</span>
+                  <span className="text-[#191C19] font-medium">
+                    Kỳ {termAndRates.currentTerm} · ngày {termAndRates.daysIntoTerm} / {termAndRates.termLengthDays} · hoa hồng {termAndRates.commissionPercent}%
+                  </span>
+                </div>
+                <div className="flex items-center p-3 gap-3">
+                  <span className="w-28 text-[#5f5f5f] flex-shrink-0">Điều khoản biên nhận:</span>
+                  <span className="text-[#191C19]">
+                    Hoa hồng kỳ 1/2/3: {termAndRates.commissionTerm1}% / {termAndRates.commissionTerm2}% / {termAndRates.commissionTerm3}% · Đền xuống cấp (nhận lại): {termAndRates.degradedCompensationRatePercent}%
+                  </span>
+                </div>
               </div>
-              <Link
-                to={
-                  (data.member?.memberCode || data.memberCode)
-                    ? `/moderator/counter?memberCode=${encodeURIComponent(data.member?.memberCode || data.memberCode)}&refId=${encodeURIComponent(data.id || data.sku || sku || '')}`
-                    : '/moderator/counter'
-                }
-              >
-                <Button variant="outline" className="text-xs border-amber-800 text-amber-900 font-bold">
-                  Quầy tiếp nhận →
-                </Button>
-              </Link>
-            </div>
-          )}
 
-          {/* Bổ sung ảnh (nếu được hỗ trợ) */}
-          {data.allowedActions?.includes('ADD_PHOTOS') && (
-            <Card title="Bổ sung ảnh">
-              <PhotoUpload key={uploadVersion} disabled={product.busy} onChange={onPhotos} />
-              <Button
-                disabled={!photoUrls.length || uploadPending}
-                loading={product.busy}
-                onClick={() =>
-                  product.mutate((options) => inventoryService.addPhotos(sku, photoUrls, options), {
-                    onSuccess: () => {
-                      setPhotos([]);
-                      setUploadVersion((version) => version + 1);
-                    },
-                  })
-                }
-              >
-                Lưu ảnh bổ sung
-              </Button>
-              <p className="text-sm text-textSecondary">
-                Ảnh tách nền được cập nhật theo kết quả xử lý của máy chủ.
-              </p>
-            </Card>
-          )}
-        </div>
-      )
-      }
+              <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-[#e5e5e5]">
+                <div className="p-3.5 rounded-xl border border-[#e0e0e0] bg-[#fafafa]">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-[#5f5f5f]">Giá niêm yết</p>
+                  <p className="text-lg font-bold text-[#191C19] mt-0.5">
+                    {money(data.agreedPrice || data.currentPrice)}
+                  </p>
+                </div>
 
-      {/* Modal In tem mã vạch SKU */}
-      <BarcodePrintModal isOpen={print} onClose={() => setPrint(false)} item={data} />
-
-      {/* Modal Lập biên bản hàng xuống cấp tại kho (TK-02) */}
-      {caseDetailsOpen && activeCase && <Modal isOpen onClose={() => setCaseDetailsOpen(false)} title="Biên bản hàng xuống cấp">
-        <DegradedCaseDetails caseId={activeCase.id} onNavigateToCounter={() => navigate('/moderator/counter')} />
-      </Modal>}
-
-      {degradedModalOpen && (
-        <Modal
-          isOpen={degradedModalOpen}
-          onClose={() => !isSubmittingDegraded && setDegradedModalOpen(false)}
-          title="Lập biên bản hàng xuống cấp (TK-02)"
-        >
-          <div className="space-y-4 max-w-lg text-xs">
-            <div className="p-3 bg-[#fafafa] rounded-xl border border-[#e0e0e0] space-y-1">
-              <div className="flex justify-between">
-                <span className="text-[#5f5f5f]">Mã SKU:</span>
-                <span className="font-mono font-bold text-[#191C19]">{sku}</span>
+                <div className="p-3.5 rounded-xl border border-[#e0e0e0] bg-[#fafafa]">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-[#5f5f5f]">Kích cỡ & Phân loại</p>
+                  <p className="text-base font-semibold text-[#191C19] mt-0.5">
+                    {data.brandName || data.brand || 'ReHome'}
+                    {data.size ? ` · Size ${data.size}` : ''}
+                  </p>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-[#5f5f5f]">Tên sản phẩm:</span>
-                <span className="font-bold text-[#191C19]">{data?.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#5f5f5f]">Giá bán niêm yết:</span>
-                <span className="font-bold text-[#006B2C]">{money(sellingPrice)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#5f5f5f]">Kỳ ký gửi hiện tại:</span>
-                <span className="font-semibold text-[#191C19]">
-                  {data?.currentTerm ? `Kỳ ${data.currentTerm}` : 'Chưa có thông tin kỳ'}
-                </span>
-              </div>
-            </div>
 
-            <div className="rounded-xl border border-neutral p-4 space-y-2">
-              <p>Mức đền đủ = giá đang bán trừ hoa hồng kỳ hiện tại ({termAndRates.commissionPercent}%); sản phẩm trở thành tài sản nền tảng khi Member chọn nhận đền đủ.</p>
-              <p>Nếu nhận lại hàng, mức đền áp dụng theo tỷ lệ trên biên nhận ({termAndRates.degradedCompensationRatePercent}%). Backend xác định và lưu mức đền khi mở ca.</p>
-              <p>{DEGRADED_DECISION_POLICY}</p>
-            </div>
-
-            {/* Mô tả hư hỏng */}
-            <div className="space-y-1">
-              <label className="block font-bold text-[#191C19]">
-                Mô tả hiện trạng hư hỏng / nguyên nhân xuống cấp <span className="text-red-600">*</span>
-              </label>
-              <textarea
-                rows={3}
-                value={degradedNotes}
-                onChange={(e) => setDegradedNotes(e.target.value)}
-                placeholder="VD: Sản phẩm bị ẩm mốc góc dưới, xước mặt kính hoặc sờn rách trong quá trình lưu kho..."
-                className="w-full rounded-xl border border-[#8a8a8a] p-2.5 text-xs text-[#191C19] focus:border-[#006B2C] focus:outline-none"
-              />
-            </div>
-
-            {/* Upload ảnh hư hỏng thực tế */}
-            <div className="space-y-1">
-              <label className="block font-bold text-[#191C19]">
-                Ảnh chụp hiện trạng hư hỏng thực tế <span className="text-red-600">*</span>
-              </label>
-              <PhotoUpload onChange={onDegradedPhotos} disabled={isSubmittingDegraded} />
-              {degradedPhotos.length > 0 && (
-                <p className="text-[11px] text-[#006B2C] font-semibold">
-                  ✓ Đã tải lên {degradedPhotos.length} ảnh bằng chứng
-                </p>
+              {data.photos && data.photos.length > 0 && (
+                <div className="pt-2">
+                  <p className="text-xs font-bold text-[#191C19] mb-2">Ảnh sản phẩm lưu kho</p>
+                  <Photos photos={data.photos} />
+                </div>
               )}
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-[#e0e0e0]">
-              <Button
-                variant="outline"
-                disabled={isSubmittingDegraded}
-                onClick={() => setDegradedModalOpen(false)}
-                className="px-3.5 py-1.5 text-xs"
-              >
-                Hủy bỏ
-              </Button>
-              <Button
-                variant="primary"
-                loading={isSubmittingDegraded}
-                disabled={isSubmittingDegraded || degradedUploadPending || !degradedNotes.trim() || !degradedPhotos.length}
-                onClick={handleSendDegradedProposal}
-                className="px-4 py-1.5 text-xs font-bold bg-[#006B2C] hover:bg-[#005221]"
-              >
-                Gửi đề xuất cho người ký gửi
-              </Button>
-            </div>
+            {data.status === 'WAREHOUSE' && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">
+                Sản phẩm đang lưu kho, tạm ngừng bán trong khi chờ xử lý. {activeCase && DEGRADED_DECISION_POLICY}
+              </div>
+            )}
+            <ResourceState resource={existingCase} />
+            {activeCase && <div className="rounded-2xl border border-neutral bg-surface p-5 space-y-4">
+              <DegradedCaseSummary item={activeCase} onNavigateToCounter={() => navigate('/moderator/counter')} />
+              <Button variant="outline" onClick={() => setCaseDetailsOpen(true)}>Xem biên bản hàng xuống cấp</Button>
+            </div>}
+
+
+            {/* BANNER XỬ LÝ CUỐI KỲ (L-02 · TK-02) */}
+            <ResourceState resource={pricing} />
+            {data.status === 'WAREHOUSE' && data.decisionId && !canNegotiate && <p className="rounded-xl border border-neutral p-4 text-sm">Đã hết kỳ ký gửi. Đang chờ Member chọn nhận lại hoặc ký gửi lại qua app.</p>}
+            {canNegotiate && (
+              <div className="rounded-2xl border border-neutral bg-[#F8FAF8] p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-[#006B2C] text-white rounded">
+                      {data.reConsignStatus === 'PROPOSAL_SENT' ? 'ĐÃ GỬI ĐỀ XUẤT' : 'ĐƯỢC YÊU CẦU KÝ GỬI LẠI'}
+                    </span>
+                    <h3 className="text-sm font-bold text-[#191C19]">Ký gửi lại cuối kỳ (Hết kỳ 3: 90 ngày)</h3>
+                  </div>
+                  <p className="text-xs text-[#5f5f5f]">
+                    Member đã chọn ký gửi lại với giá mới. Moderator cần đàm phán giá và tạo biên nhận mới tại quầy.
+                  </p>
+                </div>
+                <Button
+                  variant="primary"
+                  onClick={() => navigate(`/moderator/inventory/${encodeURIComponent(sku)}/re-consign`)}
+                  className="text-xs py-2 px-3.5 font-semibold"
+                >
+                  Đàm phán giá →
+                </Button>
+              </div>
+            )}
+
+            {data.status === 'WITHDRAWN' && data.decision === 'TAKE_BACK' && (
+              <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-amber-800 text-white rounded">
+                      ĐƯỢC YÊU CẦU NHẬN LẠI HÀNG
+                    </span>
+                    <h3 className="text-sm font-bold text-amber-900">Khách đã chọn nhận lại cuối kỳ (miễn phí)</h3>
+                  </div>
+                  <p className="text-xs text-amber-800">
+                    Khách đã chọn nhận lại hàng{data.takeBackDate ? ` ${date(data.takeBackDate)}` : ''}{data.daysToTakeBack != null ? ` — còn ${data.daysToTakeBack} ngày đến quầy lấy` : ''}. Vui lòng nhận hàng trong thời hạn được thông báo.
+                  </p>
+                </div>
+                <Link
+                  to={
+                    (data.member?.memberCode || data.memberCode)
+                      ? `/moderator/counter?memberCode=${encodeURIComponent(data.member?.memberCode || data.memberCode)}&refId=${encodeURIComponent(data.id || data.sku || sku || '')}`
+                      : '/moderator/counter'
+                  }
+                >
+                  <Button variant="outline" className="text-xs border-amber-800 text-amber-900 font-bold">
+                    Quầy tiếp nhận →
+                  </Button>
+                </Link>
+              </div>
+            )}
+
+            {/* Bổ sung ảnh (nếu được hỗ trợ) */}
+            {data.allowedActions?.includes('ADD_PHOTOS') && (
+              <Card title="Bổ sung ảnh">
+                <PhotoUpload key={uploadVersion} disabled={product.busy} onChange={onPhotos} />
+                <Button
+                  disabled={!photoUrls.length || uploadPending}
+                  loading={product.busy}
+                  onClick={() =>
+                    product.mutate((options) => inventoryService.addPhotos(sku, photoUrls, options), {
+                      onSuccess: () => {
+                        setPhotos([]);
+                        setUploadVersion((version) => version + 1);
+                      },
+                    })
+                  }
+                >
+                  Lưu ảnh bổ sung
+                </Button>
+                <p className="text-sm text-textSecondary">
+                  Ảnh tách nền được cập nhật theo kết quả xử lý của máy chủ.
+                </p>
+              </Card>
+            )}
           </div>
-        </Modal>
-      )}
-    </Page >
-  );
+          )
+      }
+
+          {/* Modal In tem mã vạch SKU */}
+          <BarcodePrintModal isOpen={print} onClose={() => setPrint(false)} item={data} />
+
+          {/* Modal Chỉnh sửa thông tin sản phẩm */}
+          <ProductEditModal
+            isOpen={editModalOpen}
+            onClose={() => setEditModalOpen(false)}
+            item={data}
+            onUpdated={() => product.refresh()}
+          />
+
+          {/* Modal Lập biên bản hàng xuống cấp tại kho (TK-02) */}
+          {caseDetailsOpen && activeCase && <Modal isOpen onClose={() => setCaseDetailsOpen(false)} title="Biên bản hàng xuống cấp">
+            <DegradedCaseDetails caseId={activeCase.id} onNavigateToCounter={() => navigate('/moderator/counter')} />
+          </Modal>}
+
+          {degradedModalOpen && (
+            <Modal
+              isOpen={degradedModalOpen}
+              onClose={() => !isSubmittingDegraded && setDegradedModalOpen(false)}
+              title="Lập biên bản hàng xuống cấp (TK-02)"
+            >
+              <div className="space-y-4 max-w-lg text-xs">
+                <div className="p-3 bg-[#fafafa] rounded-xl border border-[#e0e0e0] space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-[#5f5f5f]">Mã SKU:</span>
+                    <span className="font-mono font-bold text-[#191C19]">{sku}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#5f5f5f]">Tên sản phẩm:</span>
+                    <span className="font-bold text-[#191C19]">{data?.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#5f5f5f]">Giá bán niêm yết:</span>
+                    <span className="font-bold text-[#006B2C]">{money(sellingPrice)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#5f5f5f]">Kỳ ký gửi hiện tại:</span>
+                    <span className="font-semibold text-[#191C19]">
+                      {data?.currentTerm ? `Kỳ ${data.currentTerm}` : 'Chưa có thông tin kỳ'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-neutral p-4 space-y-2">
+                  <p>Mức đền đủ = giá đang bán trừ hoa hồng kỳ hiện tại ({termAndRates.commissionPercent}%); sản phẩm trở thành tài sản nền tảng khi Member chọn nhận đền đủ.</p>
+                  <p>Nếu nhận lại hàng, mức đền áp dụng theo tỷ lệ trên biên nhận ({termAndRates.degradedCompensationRatePercent}%). Backend xác định và lưu mức đền khi mở ca.</p>
+                  <p>{DEGRADED_DECISION_POLICY}</p>
+                </div>
+
+                {/* Mô tả hư hỏng */}
+                <div className="space-y-1">
+                  <label className="block font-bold text-[#191C19]">
+                    Mô tả hiện trạng hư hỏng / nguyên nhân xuống cấp <span className="text-red-600">*</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={degradedNotes}
+                    onChange={(e) => setDegradedNotes(e.target.value)}
+                    placeholder="VD: Sản phẩm bị ẩm mốc góc dưới, xước mặt kính hoặc sờn rách trong quá trình lưu kho..."
+                    className="w-full rounded-xl border border-[#8a8a8a] p-2.5 text-xs text-[#191C19] focus:border-[#006B2C] focus:outline-none"
+                  />
+                </div>
+
+                {/* Upload ảnh hư hỏng thực tế */}
+                <div className="space-y-1">
+                  <label className="block font-bold text-[#191C19]">
+                    Ảnh chụp hiện trạng hư hỏng thực tế <span className="text-red-600">*</span>
+                  </label>
+                  <PhotoUpload onChange={onDegradedPhotos} disabled={isSubmittingDegraded} />
+                  {degradedPhotos.length > 0 && (
+                    <p className="text-[11px] text-[#006B2C] font-semibold">
+                      ✓ Đã tải lên {degradedPhotos.length} ảnh bằng chứng
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-[#e0e0e0]">
+                  <Button
+                    variant="outline"
+                    disabled={isSubmittingDegraded}
+                    onClick={() => setDegradedModalOpen(false)}
+                    className="px-3.5 py-1.5 text-xs"
+                  >
+                    Hủy bỏ
+                  </Button>
+                  <Button
+                    variant="primary"
+                    loading={isSubmittingDegraded}
+                    disabled={isSubmittingDegraded || degradedUploadPending || !degradedNotes.trim() || !degradedPhotos.length}
+                    onClick={handleSendDegradedProposal}
+                    className="px-4 py-1.5 text-xs font-bold bg-[#006B2C] hover:bg-[#005221]"
+                  >
+                    Gửi đề xuất cho người ký gửi
+                  </Button>
+                </div>
+              </div>
+            </Modal>
+          )}
+        </Page >
+      );
 }
