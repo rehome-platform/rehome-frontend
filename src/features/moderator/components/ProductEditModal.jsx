@@ -10,20 +10,41 @@ function photoUrlOf(photo) {
   return typeof photo === 'string' ? photo : photo.url || photo.imageUrl || '';
 }
 
+function detectConditionLevel(note) {
+  if (note.includes('100%') || note.includes('NEW_TAG')) return 'NEW_TAG';
+  if (note.includes('95%') || note.includes('90%') || note.includes('GOOD')) return 'GOOD';
+  if (note.includes('80%') || note.includes('85%') || note.includes('FLAW')) return 'FLAW';
+  return 'LIKE_NEW';
+}
+
+function formatPrice(item) {
+  const raw = item?.currentPrice ?? item?.price ?? item?.sellingPrice;
+  if (raw === null || raw === undefined || raw === '') return '—';
+  const num = Number(raw);
+  return Number.isFinite(num) ? `${num.toLocaleString('vi-VN')} đ` : String(raw);
+}
+
 const CONDITION_LEVEL_OPTIONS = [
-  { value: 'NEW_TAG', label: 'Mới, còn tem (100%)', template: 'Mới 100%, còn nguyên tem mác, chưa qua sử dụng' },
-  { value: 'LIKE_NEW', label: 'Như mới (99%)', template: 'Như mới 99%, không vết bẩn, không trầy xước' },
-  { value: 'GOOD', label: 'Tốt, có dấu hiệu dùng (90-95%)', template: 'Tốt 95%, có dấu hiệu đã dùng nhẹ, phom dáng đẹp' },
-  { value: 'FLAW', label: 'Có lỗi nhỏ (80-85%)', template: 'Có lỗi nhỏ ở viền/khuy, tổng thể 85% còn tốt' },
+  { value: 'NEW_TAG', label: 'Mới, còn tem (100%)' },
+  { value: 'LIKE_NEW', label: 'Như mới (99%)' },
+  { value: 'GOOD', label: 'Tốt, có dấu hiệu dùng (90-95%)' },
+  { value: 'FLAW', label: 'Có lỗi nhỏ (80-85%)' },
 ];
+
+const READONLY_INPUT_CLASS =
+  'w-full rounded-xl border border-[#d4d4d4] bg-[#f3f4f6] px-3 py-2 text-xs text-[#5f5f5f] cursor-not-allowed';
+
+const STATUS_ERROR_FALLBACKS = {
+  403: 'Bạn không có quyền chỉnh sửa sản phẩm thuộc kho khác.',
+  404: 'Không tìm thấy sản phẩm.',
+  409: 'Trạng thái sản phẩm đã thay đổi hoặc đang có đơn hàng, không thể chỉnh sửa.',
+};
 
 export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
   const sku = item?.id || item?.sku || '';
+  const isOnSale = item?.status === 'ON_SALE';
 
   const [name, setName] = useState('');
-  const [size, setSize] = useState('');
-  const [conditionLevel, setConditionLevel] = useState('LIKE_NEW');
-  const [conditionNote, setConditionNote] = useState('');
   const [existingPhotos, setExistingPhotos] = useState([]);
   const [uploadedPhotos, setUploadedPhotos] = useState([]);
   const [uploadPending, setUploadPending] = useState(false);
@@ -34,36 +55,12 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
   useEffect(() => {
     if (!isOpen) return;
     setName(item?.name || '');
-    setSize(item?.size || '');
-    const currentNote = item?.conditionNote || item?.condition || '';
-    setConditionNote(currentNote);
-    // Tự động nhận diện mức tình trạng
-    if (currentNote.includes('100%') || currentNote.includes('NEW_TAG')) {
-      setConditionLevel('NEW_TAG');
-    } else if (currentNote.includes('95%') || currentNote.includes('90%') || currentNote.includes('GOOD')) {
-      setConditionLevel('GOOD');
-    } else if (currentNote.includes('80%') || currentNote.includes('85%') || currentNote.includes('FLAW')) {
-      setConditionLevel('FLAW');
-    } else {
-      setConditionLevel('LIKE_NEW');
-    }
     setExistingPhotos((item?.photos || []).map(photoUrlOf).filter(Boolean));
     setUploadedPhotos([]);
     setUploadPending(false);
     setUploadVersion((v) => v + 1);
     setErrorMessage('');
   }, [isOpen, item]);
-
-  const handleLevelChange = (lvl) => {
-    setConditionLevel(lvl);
-    const opt = CONDITION_LEVEL_OPTIONS.find((o) => o.value === lvl);
-    if (opt) {
-      const isTemplate = CONDITION_LEVEL_OPTIONS.some((o) => o.template === conditionNote.trim());
-      if (!conditionNote.trim() || isTemplate) {
-        setConditionNote(opt.template);
-      }
-    }
-  };
 
   const onUploadedChange = useCallback((urls, pending) => {
     setUploadedPhotos(urls);
@@ -73,12 +70,20 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
   if (!isOpen) return null;
 
   const combinedPhotos = [...existingPhotos, ...uploadedPhotos];
+  const conditionNote = item?.conditionNote || item?.condition || '';
+  const conditionLevel = detectConditionLevel(conditionNote);
+  const categoryName = item?.categoryName || item?.category?.name || item?.category || '—';
+  const brandName = item?.brandName || item?.brand?.name || item?.brand || '—';
+  const isSaveDisabled =
+    submitting || uploadPending || !isOnSale || !name.trim() || combinedPhotos.length === 0;
 
   const handleRemoveExisting = (index) => {
+    if (!isOnSale || submitting) return;
     setExistingPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleMoveExisting = (index, direction) => {
+    if (!isOnSale || submitting) return;
     setExistingPhotos((prev) => {
       const target = index + direction;
       if (target < 0 || target >= prev.length) return prev;
@@ -90,14 +95,10 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (submitting || uploadPending) return;
+    if (submitting || uploadPending || !isOnSale) return;
 
     if (!name.trim()) {
       setErrorMessage('Tên sản phẩm không được để trống.');
-      return;
-    }
-    if (!conditionNote.trim()) {
-      setErrorMessage('Ghi chú tình trạng không được để trống.');
       return;
     }
     if (!combinedPhotos.length) {
@@ -110,14 +111,17 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
     try {
       const updated = await inventoryService.update(sku, {
         name: name.trim(),
-        size: size.trim() || null,
-        conditionNote: conditionNote.trim(),
         photoUrls: combinedPhotos,
       });
       await onUpdated?.(updated);
       onClose?.();
     } catch (err) {
-      setErrorMessage(normalizeError(err).message || 'Không thể cập nhật sản phẩm.');
+      const normalized = normalizeError(err);
+      setErrorMessage(
+        normalized.message ||
+          STATUS_ERROR_FALLBACKS[normalized.status] ||
+          'Không thể cập nhật sản phẩm.',
+      );
     } finally {
       setSubmitting(false);
     }
@@ -130,6 +134,15 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
       title={`Chỉnh sửa sản phẩm (${sku})`}
     >
       <form onSubmit={handleSubmit} className="space-y-4 max-w-xl text-xs">
+        {!isOnSale && (
+          <div
+            role="status"
+            className="rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-amber-800 font-medium"
+          >
+            Chỉ được chỉnh sửa tên và ảnh bán hàng khi sản phẩm đang ON_SALE.
+          </div>
+        )}
+
         {errorMessage && (
           <div
             role="alert"
@@ -147,67 +160,20 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
             id="edit-product-name"
             type="text"
             value={name}
-            disabled={submitting}
+            disabled={submitting || !isOnSale}
             onChange={(e) => setName(e.target.value)}
             placeholder="Nhập tên sản phẩm..."
-            className="w-full rounded-xl border border-[#8a8a8a] px-3 py-2 text-xs text-[#191C19] focus:border-[#006B2C] focus:outline-none"
+            className={`w-full rounded-xl border px-3 py-2 text-xs focus:outline-none ${
+              !isOnSale
+                ? 'border-[#d4d4d4] bg-[#f3f4f6] text-[#5f5f5f] cursor-not-allowed'
+                : 'border-[#8a8a8a] text-[#191C19] focus:border-[#006B2C]'
+            }`}
           />
-        </div>
-
-        <div className="space-y-1">
-          <label htmlFor="edit-product-size" className="block font-bold text-[#191C19]">
-            Kích cỡ (Size)
-          </label>
-          <input
-            id="edit-product-size"
-            type="text"
-            value={size}
-            disabled={submitting}
-            onChange={(e) => setSize(e.target.value)}
-            placeholder="VD: S, M, L, 38..."
-            className="w-full rounded-xl border border-[#8a8a8a] px-3 py-2 text-xs text-[#191C19] focus:border-[#006B2C] focus:outline-none"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <label htmlFor="edit-product-condition-level" className="block font-bold text-[#191C19]">
-              Mức độ tình trạng
-            </label>
-            <select
-              id="edit-product-condition-level"
-              value={conditionLevel}
-              disabled={submitting}
-              onChange={(e) => handleLevelChange(e.target.value)}
-              className="w-full rounded-xl border border-[#8a8a8a] px-3 py-2 text-xs text-[#191C19] focus:border-[#006B2C] focus:outline-none"
-            >
-              {CONDITION_LEVEL_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-1">
-            <label htmlFor="edit-product-condition" className="block font-bold text-[#191C19]">
-              Ghi chú tình trạng <span className="text-red-600">*</span>
-            </label>
-            <textarea
-              id="edit-product-condition"
-              rows={2}
-              value={conditionNote}
-              disabled={submitting}
-              onChange={(e) => setConditionNote(e.target.value)}
-              placeholder="VD: Như mới 99%, không lỗi, chất vải dày..."
-              className="w-full rounded-xl border border-[#8a8a8a] p-2.5 text-xs text-[#191C19] focus:border-[#006B2C] focus:outline-none"
-            />
-          </div>
         </div>
 
         <div className="space-y-2">
           <span className="block font-bold text-[#191C19]">
-            Ảnh sản phẩm ({combinedPhotos.length}) <span className="text-red-600">*</span>
+            Ảnh bán hàng ({combinedPhotos.length}) <span className="text-red-600">*</span>
           </span>
 
           {existingPhotos.length > 0 && (
@@ -226,7 +192,7 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        disabled={submitting || index === 0}
+                        disabled={submitting || !isOnSale || index === 0}
                         onClick={() => handleMoveExisting(index, -1)}
                         className="px-1.5 py-0.5 rounded border border-[#d4d4d4] text-[10px] disabled:opacity-40"
                         title="Đưa lên trước"
@@ -235,7 +201,7 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
                       </button>
                       <button
                         type="button"
-                        disabled={submitting || index === existingPhotos.length - 1}
+                        disabled={submitting || !isOnSale || index === existingPhotos.length - 1}
                         onClick={() => handleMoveExisting(index, 1)}
                         className="px-1.5 py-0.5 rounded border border-[#d4d4d4] text-[10px] disabled:opacity-40"
                         title="Đưa ra sau"
@@ -245,9 +211,9 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
                     </div>
                     <button
                       type="button"
-                      disabled={submitting}
+                      disabled={submitting || !isOnSale}
                       onClick={() => handleRemoveExisting(index)}
-                      className="px-1.5 py-0.5 rounded text-[10px] text-red-600 hover:bg-red-50 font-semibold"
+                      className="px-1.5 py-0.5 rounded text-[10px] text-red-600 hover:bg-red-50 font-semibold disabled:opacity-40"
                     >
                       Xóa
                     </button>
@@ -259,7 +225,145 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
 
           <div>
             <p className="text-[11px] text-[#5f5f5f] mb-1">Thêm ảnh mới (tùy chọn):</p>
-            <PhotoUpload key={uploadVersion} onChange={onUploadedChange} disabled={submitting} />
+            <PhotoUpload
+              key={uploadVersion}
+              onChange={onUploadedChange}
+              disabled={submitting || !isOnSale}
+            />
+          </div>
+        </div>
+
+        <div className="pt-2 border-t border-[#e5e7eb] space-y-3">
+          <p className="text-[11px] font-semibold text-[#5f5f5f]">
+            Thông tin cố định (chỉ đọc)
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <label htmlFor="edit-product-sku" className="block font-semibold text-[#5f5f5f]">
+                SKU
+              </label>
+              <input
+                id="edit-product-sku"
+                type="text"
+                value={sku || '—'}
+                disabled
+                readOnly
+                className={READONLY_INPUT_CLASS}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="edit-product-status" className="block font-semibold text-[#5f5f5f]">
+                Trạng thái
+              </label>
+              <input
+                id="edit-product-status"
+                type="text"
+                value={item?.status || '—'}
+                disabled
+                readOnly
+                className={READONLY_INPUT_CLASS}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="edit-product-price" className="block font-semibold text-[#5f5f5f]">
+                Giá bán
+              </label>
+              <input
+                id="edit-product-price"
+                type="text"
+                value={formatPrice(item)}
+                disabled
+                readOnly
+                className={READONLY_INPUT_CLASS}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <label htmlFor="edit-product-category" className="block font-semibold text-[#5f5f5f]">
+                Danh mục
+              </label>
+              <input
+                id="edit-product-category"
+                type="text"
+                value={categoryName}
+                disabled
+                readOnly
+                className={READONLY_INPUT_CLASS}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="edit-product-brand" className="block font-semibold text-[#5f5f5f]">
+                Thương hiệu
+              </label>
+              <input
+                id="edit-product-brand"
+                type="text"
+                value={brandName}
+                disabled
+                readOnly
+                className={READONLY_INPUT_CLASS}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="edit-product-size" className="block font-semibold text-[#5f5f5f]">
+                Kích cỡ (Size)
+              </label>
+              <input
+                id="edit-product-size"
+                type="text"
+                value={item?.size || '—'}
+                disabled
+                readOnly
+                className={READONLY_INPUT_CLASS}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label
+                htmlFor="edit-product-condition-level"
+                className="block font-semibold text-[#5f5f5f]"
+              >
+                Mức độ tình trạng
+              </label>
+              <select
+                id="edit-product-condition-level"
+                value={conditionLevel}
+                disabled
+                className={READONLY_INPUT_CLASS}
+              >
+                {CONDITION_LEVEL_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label
+                htmlFor="edit-product-condition"
+                className="block font-semibold text-[#5f5f5f]"
+              >
+                Ghi chú tình trạng
+              </label>
+              <textarea
+                id="edit-product-condition"
+                rows={2}
+                value={conditionNote || '—'}
+                disabled
+                readOnly
+                className={`${READONLY_INPUT_CLASS} p-2.5`}
+              />
+            </div>
           </div>
         </div>
 
@@ -277,7 +381,7 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
             type="submit"
             variant="primary"
             loading={submitting}
-            disabled={submitting || uploadPending}
+            disabled={isSaveDisabled}
             className="px-4 py-1.5 text-xs font-bold bg-[#006B2C] hover:bg-[#005221]"
           >
             Lưu thay đổi
@@ -287,4 +391,3 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
     </Modal>
   );
 }
-

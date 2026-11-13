@@ -159,8 +159,6 @@ export const inventoryService = {
   update: async (sku, data, options) => {
     const payload = {
       name: String(data?.name || '').trim(),
-      size: data?.size ? String(data.size).trim() : null,
-      conditionNote: String(data?.conditionNote || '').trim(),
       photoUrls: Array.isArray(data?.photoUrls) ? data.photoUrls : [],
     };
 

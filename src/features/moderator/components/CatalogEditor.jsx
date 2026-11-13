@@ -26,6 +26,8 @@ export default function CatalogEditor({ kind, item, slots = [], onClose, onSaved
     mutation.error?.code === 'BRAND_NAME_ALREADY_EXISTS' ||
     mutation.error?.code === 'DUPLICATE' ||
     mutation.error?.status === 409 ||
+    mutation.error?.statusCode === 409 ||
+    mutation.error?.response?.status === 409 ||
     mutation.error?.message?.toLowerCase().includes('đã tồn tại') ||
     mutation.error?.message?.toLowerCase().includes('already exists') ||
     mutation.error?.fields?.name?.toLowerCase().includes('tồn tại');
@@ -95,6 +97,7 @@ export default function CatalogEditor({ kind, item, slots = [], onClose, onSaved
             onChange={(event) => {
               setName(event.target.value);
               if (clientError) setClientError('');
+              if (mutation.error) mutation.clearActionError?.();
             }}
             error={errorMessage}
             placeholder={`VD: ${isCategory ? 'Áo khoác dạ' : 'Uniqlo'}`}
@@ -125,7 +128,7 @@ export default function CatalogEditor({ kind, item, slots = [], onClose, onSaved
               </select>
             </Field>
             <p className="mt-1 text-[11px] text-[#717971]">
-              Slot thử đồ AI xác định vị trí trang phục trên cơ thể người mẫu khi khách hàng thử đồ ảo trên web/app.
+              Slot thử đồ AI xác định vị trí trang phục trên cơ thể người mẫu khi khách hàng thử đồ ảo trên ứng dụng di động (mobile).
             </p>
           </div>
         )}

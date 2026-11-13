@@ -269,7 +269,7 @@ describe('Phase 2 boundary rules', () => {
 
       expect(canTransferUnclaimed({ status: 'UNCLAIMED' })).toBe(true);
       expect(canTransferUnclaimed({ status: 'UNCLAIMED', allowedActions: ['TRANSFER'] })).toBe(true);
-      expect(canTransferUnclaimed({ status: 'UNCLAIMED', allowedActions: ['TRANSFER', 'CHANGE_SHELF'] })).toBe(true);
+      expect(canTransferUnclaimed({ status: 'UNCLAIMED', allowedActions: ['TRANSFER', 'RE_CONSIGN'] })).toBe(true);
     });
 
     it('normalizeUnclaimedItem: formats raw product item into view model with defaults', () => {
@@ -286,31 +286,30 @@ describe('Phase 2 boundary rules', () => {
         id: 'SKU-001',
         sku: 'SKU-001',
         name: 'Áo dạ tweed',
-        shelfLocation: 'B2-01',
         status: 'UNCLAIMED',
         allowedActions: ['TRANSFER'],
       });
+      expect(item).not.toHaveProperty('shelfLocation');
 
       // Item missing optional fields
       const minimal = normalizeUnclaimedItem({ sku: 'SKU-002' });
       expect(minimal.name).toBe('Sản phẩm chưa đặt tên');
-      expect(minimal.shelfLocation).toBe('Chưa gán vị trí');
+      expect(minimal).not.toHaveProperty('shelfLocation');
       expect(minimal.status).toBe('UNCLAIMED');
       expect(minimal.allowedActions).toEqual(['TRANSFER']);
     });
 
-    it('filterUnclaimedItems: filters unclaimed products by SKU, name or shelf location', () => {
+    it('filterUnclaimedItems: filters unclaimed products by SKU or name', () => {
       const items = [
-        { sku: 'Q7-AK-001', name: 'Áo khoác dạ', shelfLocation: 'A1-01' },
-        { sku: 'Q7-QJ-002', name: 'Quần jeans rách', shelfLocation: 'B2-05' },
-        { sku: 'Q7-DH-003', name: 'Đầm hoa nhí', shelfLocation: 'C3-10' },
+        { sku: 'Q7-AK-001', name: 'Áo khoác dạ' },
+        { sku: 'Q7-QJ-002', name: 'Quần jeans rách' },
+        { sku: 'Q7-DH-003', name: 'Đầm hoa nhí' },
       ];
 
       expect(filterUnclaimedItems(items, '')).toHaveLength(3);
       expect(filterUnclaimedItems(items, '  ')).toHaveLength(3);
       expect(filterUnclaimedItems(items, 'ak-001')).toHaveLength(1);
       expect(filterUnclaimedItems(items, 'jeans')).toHaveLength(1);
-      expect(filterUnclaimedItems(items, 'c3-10')).toHaveLength(1);
       expect(filterUnclaimedItems(items, 'khong-ton-tai')).toHaveLength(0);
     });
   });

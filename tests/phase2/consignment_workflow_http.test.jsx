@@ -178,13 +178,18 @@ describe('L-02 HTTP workflow', () => {
     expect(screen.queryByRole('button', { name: 'Nhập kho · tạo SKU' })).not.toBeInTheDocument();
   });
 
-  it('uses slot metadata and keeps new brand selection and form input', async () => {
+  it('keeps new brand selection and form input without web AI try-on/background-removal UI', async () => {
     state.created = true; state.confirmed = true;
-    server.use(http.post(`${base}/brands`, async ({ request }) => { expect((await request.json()).name).toBe('New Brand'); return json({ id: 'brand-2', name: 'New Brand' }); }));
+    server.use(
+      http.get(detailPath, () => json({ ...form(), categoryId: '', brandId: '' })),
+      http.get(receiptPath, () => json({ ...receipt(), categoryId: '', brandId: '' })),
+      http.post(`${base}/brands`, async ({ request }) => { expect((await request.json()).name).toBe('New Brand'); return json({ id: 'brand-2', name: 'New Brand' }); }),
+    );
     const user = userEvent.setup(); app();
-    await screen.findByText(/Ảnh dùng cho thử đồ AI · SLOT ÁO/);
+    await screen.findByLabelText('Danh mục');
+    expect(screen.queryByText(/Ảnh dùng cho thử đồ AI/i)).not.toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText('Danh mục'), 'cat-2');
-    await screen.findByText('Không cần tách nền · KHÔNG CÓ SLOT');
+    expect(screen.queryByText(/Không cần tách nền/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Đang tách nền/)).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '+ Thêm nhanh thương hiệu' }));
     const dialog = screen.getByRole('dialog');

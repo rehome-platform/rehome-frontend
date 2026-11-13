@@ -23,12 +23,12 @@ export function normalizeUnclaimedItem(item) {
   if (!item) return null;
   const sku = item.id || item.sku || '';
   const status = item.status || 'UNCLAIMED';
+  const { shelfLocation: _sl, shelf: _s, ...rest } = item;
   return {
-    ...item,
+    ...rest,
     id: sku,
     sku,
     name: item.name || 'Sản phẩm chưa đặt tên',
-    shelfLocation: item.shelfLocation || 'Chưa gán vị trí',
     status,
     decision: item.decision || (status === 'UNCLAIMED' ? 'UNCLAIMED' : null),
     deadline: item.deadline || null,
@@ -42,8 +42,7 @@ export function filterUnclaimedItems(items = [], keyword = '') {
   return items.filter((it) => {
     const sku = String(it.sku || it.id || '').toLowerCase();
     const name = String(it.name || '').toLowerCase();
-    const shelf = String(it.shelfLocation || '').toLowerCase();
-    return sku.includes(term) || name.includes(term) || shelf.includes(term);
+    return sku.includes(term) || name.includes(term);
   });
 }
 

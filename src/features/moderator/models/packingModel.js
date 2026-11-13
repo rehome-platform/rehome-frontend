@@ -119,7 +119,6 @@ function packingItemIdentity(item) {
     productId: item.productId || item.id,
     name: item.name || item.productName || 'Sản phẩm ReHome',
     size: item.size || 'M',
-    shelfLocation: item.shelfLocation || item.shelf || '',
   };
 }
 

@@ -92,4 +92,7 @@ export const phase2Contract = {
 };
 
 // Explicit opt-in for local fixture development; API mode never falls back to fixtures.
-export const isFixtureMode = import.meta.env.DEV && import.meta.env.VITE_PHASE2_MOCK === 'true';
+export const isFixtureMode =
+  import.meta.env.DEV &&
+  import.meta.env.VITE_PHASE2_MOCK === 'true' &&
+  !(typeof window !== 'undefined' && window.__REHOME_API_MODE__ === true);
