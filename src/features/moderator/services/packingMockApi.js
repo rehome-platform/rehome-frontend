@@ -385,6 +385,22 @@ export const packingMockApi = {
   },
 
   /**
+   * API 71: GET /orders/{id}/shipment/label?size=A5
+   */
+  getLabel: async (orderId, size = 'A5') => {
+    await delay();
+    const order = ordersStore[orderId] || (await packingMockApi.getOrderDetail(orderId));
+    if (!order.ghnTrackingCode) {
+      throw { status: 409, code: 'SHIPMENT_NOT_CREATED', message: 'Đơn hàng chưa có vận đơn GHN.' };
+    }
+    return {
+      printUrl: `https://dev-online-gateway.ghn.vn/a5/public-api/printA5?token=${order.ghnTrackingCode}&size=${size}`,
+      size,
+      trackingCode: order.ghnTrackingCode,
+    };
+  },
+
+  /**
    * API 72: POST /counter/handover
    */
   handover: async (data = {}) => {

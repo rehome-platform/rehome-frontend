@@ -15,6 +15,9 @@ export function WaybillPrintModal({ isOpen, onClose, order }) {
   const [printSize, setPrintSize] = useState('A5');
   const [realOrder, setRealOrder] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [printUrl, setPrintUrl] = useState(null);
+  const [labelLoading, setLabelLoading] = useState(false);
+  const [labelError, setLabelError] = useState(false);
   const phase2 = usePhase2();
   const scope = phase2?.scope;
 
@@ -45,11 +48,42 @@ export function WaybillPrintModal({ isOpen, onClose, order }) {
     };
   }, [isOpen, targetOrderId, scope]);
 
+  // Lấy link in phiếu vận đơn GHN theo khổ in đã chọn (API: GET /orders/{id}/shipment/label?size=)
+  useEffect(() => {
+    if (!isOpen || !targetOrderId || !scope?.warehouseId) return;
+    let active = true;
+
+    setLabelLoading(true);
+    setLabelError(false);
+    packingService
+      .label(targetOrderId, printSize, { scope })
+      .then((data) => {
+        if (active) setPrintUrl(data?.printUrl || null);
+      })
+      .catch(() => {
+        if (active) {
+          setPrintUrl(null);
+          setLabelError(true);
+        }
+      })
+      .finally(() => {
+        if (active) setLabelLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isOpen, targetOrderId, scope, printSize]);
+
   if (!isOpen || !order) return null;
 
   const currentOrder = realOrder || order;
 
   const handlePrint = () => {
+    if (printUrl) {
+      window.open(printUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
     window.print();
   };
 
@@ -263,12 +297,24 @@ export function WaybillPrintModal({ isOpen, onClose, order }) {
           <Button
             type="button"
             onClick={handlePrint}
-            className="py-2.5 px-6 bg-[#006B2C] text-white hover:bg-[#005222] font-bold text-xs flex items-center gap-2 shadow-sm"
+            disabled={labelLoading}
+            className="py-2.5 px-6 bg-[#006B2C] text-white hover:bg-[#005222] font-bold text-xs flex items-center gap-2 shadow-sm disabled:opacity-60"
           >
             <span className="material-symbols-outlined text-sm">print</span>
-            <span>In phiếu ({printSize})</span>
+            <span>
+              {labelLoading
+                ? 'Đang lấy phiếu...'
+                : printUrl
+                ? `In phiếu GHN (${printSize})`
+                : `In phiếu (${printSize})`}
+            </span>
           </Button>
         </div>
+        {labelError && (
+          <p className="text-[10px] text-amber-600 text-right -mt-2">
+            Không lấy được phiếu in từ GHN, đang dùng bản xem trước tạm thời.
+          </p>
+        )}
       </div>
     </div>
   );
