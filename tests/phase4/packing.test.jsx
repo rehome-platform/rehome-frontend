@@ -7,6 +7,7 @@ import { PackingDetail } from '../../src/features/moderator/pages/PackingOrdersP
 import { packingService } from '../../src/features/moderator/services/packingApi.js';
 import { orderFixture } from './fixtures.js';
 import { phase4Contract } from '../../src/features/moderator/config/packingContract.js';
+import { Phase2Error } from '../../src/features/moderator/models/warehouseModel.js';
 const original = structuredClone(phase4Contract);
 beforeEach(() => {
   phase4Contract.revision = 'test-only'; phase4Contract.gates.scan = true; phase4Contract.gates.shipment = true;
@@ -84,4 +85,61 @@ it('displays stored order deadlines (paymentDeadline, autoCompleteDeadline, retu
   expect(screen.getByText('Hạn thanh toán:')).toBeInTheDocument();
   expect(screen.getByText('Hạn tự động hoàn tất:')).toBeInTheDocument();
   expect(screen.getByText('Hạn yêu cầu trả hàng:')).toBeInTheDocument();
+});
+
+it('does not increment scannedCount on wrong SKU (or rejected scan), shows wrong-item feedback, and keeps waybill button disabled', async () => {
+  const order = orderFixture();
+  vi.spyOn(packingService, 'read').mockImplementation(async () => structuredClone(order));
+  const scan = vi.spyOn(packingService, 'scan')
+    .mockResolvedValueOnce({ matched: false, wrongItem: { sku: 'WRONG-SKU', name: 'Món khác', brandName: 'Zara' } })
+    .mockRejectedValueOnce(new Phase2Error('Không tìm thấy sản phẩm với mã SKU-404.', 422));
+
+  mount();
+  await screen.findByText('Đã quét 0/2 SKU');
+  expect(screen.getByRole('button', { name: 'Tạo vận đơn GHN' })).toBeDisabled();
+
+  // 1. Quét sai SKU (matched: false) -> không tăng tiến độ, mở modal sai món + giữ nút tạo vận đơn disabled
+  fireEvent.change(screen.getByLabelText('SKU'), { target: { value: 'WRONG-SKU' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Đối chiếu' }));
+
+  await waitFor(() => expect(scan).toHaveBeenCalledTimes(1));
+  await screen.findByText('SKU không thuộc đơn.');
+  expect(screen.getByText('Đã quét 0/2 SKU')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Tạo vận đơn GHN' })).toBeDisabled();
+
+  // Đóng modal sai món nếu có
+  const closeModalBtn = screen.queryByRole('button', { name: /Đóng|Quay lại/i });
+  if (closeModalBtn) fireEvent.click(closeModalBtn);
+
+  // 2. Quét SKU không tồn tại (reject 404) -> onError hoạt động, không tăng tiến độ, hiển thị lỗi
+  fireEvent.change(screen.getByLabelText('SKU'), { target: { value: 'SKU-404' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Đối chiếu' }));
+
+  await waitFor(() => expect(scan).toHaveBeenCalledTimes(2));
+  const errorMessages = await screen.findAllByText('Không tìm thấy sản phẩm với mã SKU-404.');
+  expect(errorMessages.length).toBeGreaterThan(0);
+  expect(screen.getByText('Đã quét 0/2 SKU')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Tạo vận đơn GHN' })).toBeDisabled();
+});
+
+it('never auto-retries createWaybill on ECONNABORTED timeout and keeps shipment locked', async () => {
+  const order = orderFixture();
+  order.scannedProductIds = ['sku-a', 'SKU-B'];
+  order.scannedCount = 2;
+  vi.spyOn(packingService, 'read').mockImplementation(async () => structuredClone(order));
+  const shipment = vi.spyOn(packingService, 'shipment').mockImplementation(async () => {
+    order.shipmentOutcome = 'UNKNOWN';
+    const err = new Error('timeout of 30000ms exceeded');
+    err.code = 'ECONNABORTED';
+    throw err;
+  });
+
+  mount();
+  const button = await screen.findByRole('button', { name: 'Tạo vận đơn GHN' });
+  await waitFor(() => expect(button).toBeEnabled());
+
+  fireEvent.click(button);
+  await screen.findByText('Đang kiểm tra kết quả tạo vận đơn. Chưa thể tạo mới.');
+  expect(shipment).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Tạo vận đơn GHN' })).toBeDisabled());
 });

@@ -38,6 +38,8 @@ export function useConsignmentQueue() {
   useEffect(() => {
     if (resource.actionError) {
       const msg = queueActionError(resource.actionError);
+      setClaimTarget(null);
+      setReleaseTarget(null);
       setFeedback({ type: 'error', message: msg });
       toast.error(msg);
       resource.clearActionError();

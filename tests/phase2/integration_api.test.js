@@ -469,7 +469,6 @@ describe('real API mode never substitutes warehouse fixtures', () => {
           receiptId: 'rcpt-uuid-201',
           name: 'Áo lụa cao cấp',
           size: 'M',
-          shelfLocation: 'A1-02',
           photoUrls: ['https://example.test/photo1.jpg'],
         });
         return HttpResponse.json(
@@ -491,7 +490,6 @@ describe('real API mode never substitutes warehouse fixtures', () => {
       receiptId: 'rcpt-uuid-201',
       name: 'Áo lụa cao cấp',
       size: 'M',
-      shelfLocation: 'A1-02',
       photoUrls: ['https://example.test/photo1.jpg'],
     });
 
@@ -643,12 +641,13 @@ describe('real API mode never substitutes warehouse fixtures', () => {
   });
 
   describe('Task 6: Inventory management, SKU lookup and stock movements integration', () => {
-    it('API 40: loads paginated inventory with status and shelfLocation params', async () => {
+    it('API 40: loads paginated inventory with status and omits shelfLocation params', async () => {
       server.use(
         http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.INVENTORY}`, ({ request }) => {
           const url = new URL(request.url);
           expect(url.searchParams.get('status')).toBe('ON_SALE');
-          expect(url.searchParams.get('shelfLocation')).toBe('A1-02');
+          expect(url.searchParams.get('shelfLocation')).toBeNull();
+          expect(url.searchParams.get('shelf')).toBeNull();
           expect(url.searchParams.get('page')).toBe('0');
           expect(url.searchParams.get('size')).toBe('20');
 
@@ -676,11 +675,11 @@ describe('real API mode never substitutes warehouse fixtures', () => {
 
       expect(res.items).toHaveLength(1);
       expect(res.items[0].sku).toBe('Q7-AK-000845');
-      expect(res.items[0].shelfLocation).toBe('A1-02');
+      expect(res.items[0].shelfLocation).toBeUndefined();
       expect(res.items[0].status).toBe('ON_SALE');
     });
 
-    it('API 41: reads product details by SKU with normalized allowedActions', async () => {
+    it('API 41: reads product details by SKU without shelfLocation or CHANGE_SHELF', async () => {
       server.use(
         http.get(`${API_BASE_URL}/products/Q7-AK-000845`, () => {
           return HttpResponse.json({
@@ -695,9 +694,9 @@ describe('real API mode never substitutes warehouse fixtures', () => {
       const res = await inventoryService.read('Q7-AK-000845');
       expect(res.sku).toBe('Q7-AK-000845');
       expect(res.name).toBe('Áo khoác dạ Zara');
-      expect(res.shelfLocation).toBe('A1-02');
+      expect(res.shelfLocation).toBeUndefined();
       expect(res.status).toBe('ON_SALE');
-      expect(res.allowedActions).toContain('CHANGE_SHELF');
+      expect(res.allowedActions).not.toContain('CHANGE_SHELF');
     });
 
     it('API 41: throws 404 PRODUCT_NOT_FOUND when SKU does not exist', async () => {

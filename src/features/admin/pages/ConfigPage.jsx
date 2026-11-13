@@ -365,6 +365,16 @@ export default function ConfigPage() {
                   pricingAndCommission: { ...configs.pricingAndCommission, degradedCompensationRate: e.target.value }
                 })}
               />
+
+              <Input
+                label="Tỷ lệ giảm giá voucher tối đa / hoa hồng (%)"
+                type="number"
+                {...getFieldProps('pricingAndCommission', 'voucherMaxRatioOfCommission')}
+                onChange={(e) => setConfigs({
+                  ...configs,
+                  pricingAndCommission: { ...configs.pricingAndCommission, voucherMaxRatioOfCommission: e.target.value }
+                })}
+              />
             </div>
           </div>
         )}
@@ -505,6 +515,16 @@ export default function ConfigPage() {
                 onChange={(e) => setConfigs({
                   ...configs,
                   operationsAndCommunity: { ...configs.operationsAndCommunity, legalDocsRetentionDays: e.target.value }
+                })}
+              />
+
+              <Input
+                label="Số ngày nhắc trước khi hết hạn gói VIP (ngày)"
+                type="number"
+                {...getFieldProps('operationsAndCommunity', 'membershipExpiryReminderDays')}
+                onChange={(e) => setConfigs({
+                  ...configs,
+                  operationsAndCommunity: { ...configs.operationsAndCommunity, membershipExpiryReminderDays: e.target.value }
                 })}
               />
             </div>

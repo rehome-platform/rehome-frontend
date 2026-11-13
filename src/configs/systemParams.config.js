@@ -24,6 +24,7 @@ export const DEFAULT_SYSTEM_CONFIGS = {
     withdrawalFee: 0, // Phí rút lại hàng ngoài cửa sổ miễn phí (VNĐ)
     degradedCompensationRate: 50, // Tỷ lệ đền bù khi Member lấy hàng xuống cấp về (%)
     vatRate: 8, // Tỷ lệ thuế khấu trừ (%)
+    voucherMaxRatioOfCommission: 100, // Tỷ lệ giảm giá voucher tối đa trên hoa hồng (%)
   },
 
   // 3. Ví và rút tiền
@@ -46,10 +47,11 @@ export const DEFAULT_SYSTEM_CONFIGS = {
     taskAutoReleaseHours: 48, // Thời gian tự nhả việc đã nhận của Moderator về hàng đợi (giờ)
     maxConcurrentCampaignsPerOrg: 3, // Số chiến dịch chạy đồng thời mỗi tổ chức
     legalDocsRetentionDays: 30, // Số ngày giữ ảnh giấy tờ CCCD sau khi duyệt (ngày)
+    membershipExpiryReminderDays: 3, // Số ngày nhắc trước khi hết hạn gói VIP (ngày)
   },
 };
 
-// All 23 UI fields mapped to keys in Backend SystemConfigCatalog.
+// All 25 UI fields mapped to keys in Backend SystemConfigCatalog.
 // Ratios are displayed as percentages but stored as fractions by the API.
 export const SYSTEM_CONFIG_FIELDS = [
   { key: 'term_length_days', group: 'consignment', field: 'termDays' },
@@ -75,6 +77,8 @@ export const SYSTEM_CONFIG_FIELDS = [
   { key: 'max_concurrent_campaigns', group: 'operationsAndCommunity', field: 'maxConcurrentCampaignsPerOrg' },
   { key: 'legal_image_retention_days', group: 'operationsAndCommunity', field: 'legalDocsRetentionDays' },
   { key: 'overdue_task_hours', group: 'operationsAndCommunity', field: 'taskAutoReleaseHours' },
+  { key: 'membership_expiry_reminder_days', group: 'operationsAndCommunity', field: 'membershipExpiryReminderDays' },
+  { key: 'voucher_max_ratio_of_commission', group: 'pricingAndCommission', field: 'voucherMaxRatioOfCommission', percent: true },
 ];
 
 const EFFECTIVE_CONSIGNMENT_CONFIG_KEY = 'rehome_effective_consignment_config';

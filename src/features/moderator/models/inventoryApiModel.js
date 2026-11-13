@@ -6,10 +6,8 @@ function supportedStatus(params) {
 
 export function inventoryQuery(params) {
   const status = supportedStatus(params);
-  const shelfLocation = params?.shelfLocation || params?.shelf;
   return {
     ...(status ? { status } : {}),
-    ...(shelfLocation ? { shelfLocation } : {}),
     page: params?.page ?? 0,
     size: params?.size ?? 20,
   };
@@ -17,11 +15,11 @@ export function inventoryQuery(params) {
 
 function inventoryItem(item) {
   const sku = item.id || item.sku;
+  const { shelfLocation: _sl, shelf: _s, ...rest } = item;
   return {
-    ...item, sku, id: sku,
+    ...rest, sku, id: sku,
     allowedActions: inventoryActions(item),
     name: item.name || '',
-    shelfLocation: item.shelfLocation || 'Chưa gán',
     status: item.status || 'ON_SALE',
   };
 }
@@ -45,11 +43,10 @@ export function inventoryResult(result, params) {
 
 function inventoryActions(res) {
   const actions = (Array.isArray(res?.allowedActions) ? res.allowedActions : [])
-    .filter(action => !['RE_CONSIGN', 'TRANSFER', 'HANDOVER'].includes(action));
+    .filter(action => !['RE_CONSIGN', 'TRANSFER', 'HANDOVER', 'CHANGE_SHELF'].includes(action));
   if (['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(res?.status) && res?.pricingEligible) {
     if (!actions.includes('RE_CONSIGN')) actions.push('RE_CONSIGN');
   }
-  if (!actions.includes('CHANGE_SHELF')) actions.push('CHANGE_SHELF');
   if (res?.status === 'UNCLAIMED' && !actions.includes('TRANSFER')) actions.push('TRANSFER');
   if (res?.status === 'WITHDRAWN' && res?.decision === 'TAKE_BACK') actions.push('HANDOVER');
   return actions;
@@ -57,11 +54,11 @@ function inventoryActions(res) {
 
 export function inventoryDetail(res, sku) {
   if (!res) throw new Phase2Error(`Không tìm thấy sản phẩm SKU ${sku}`, 404);
+  const { shelfLocation: _sl, shelf: _s, ...rest } = res;
   return {
-    ...res,
+    ...rest,
     sku: res.id || res.sku || sku,
     name: res.name || sku,
-    shelfLocation: res.shelfLocation || 'Chưa gán',
     status: res.status || 'ON_SALE',
     allowedActions: inventoryActions(res),
   };
@@ -83,7 +80,6 @@ export function productPayload(data) {
     receiptId,
     name: String(data?.name || '').trim(),
     size: optionalText(data?.size),
-    shelfLocation: optionalText(data?.shelfLocation),
     photoUrls: Array.isArray(data?.photoUrls) ? data.photoUrls : [],
       ...(data?.categoryId ? { categoryId: data.categoryId } : {}),
       ...(data?.brandId ? { brandId: data.brandId } : {}),

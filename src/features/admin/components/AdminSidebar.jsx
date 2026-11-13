@@ -75,6 +75,39 @@ export default function AdminSidebar({
     },
   ];
 
+  const membershipMenuItems = [
+    {
+      id: 'membership-plans',
+      path: '/admin/membership-plans',
+      label: 'Cấu hình gói VIP',
+      icon: 'workspace_premium',
+    },
+    {
+      id: 'membership-subscriptions',
+      path: '/admin/membership-subscriptions',
+      label: 'Thành viên VIP',
+      icon: 'card_membership',
+    },
+    {
+      id: 'voucher-templates',
+      path: '/admin/voucher-templates',
+      label: 'Mẫu voucher',
+      icon: 'confirmation_number',
+    },
+    {
+      id: 'membership-stats',
+      path: '/admin/membership-stats',
+      label: 'Thống kê VIP & Voucher',
+      icon: 'analytics',
+    },
+    {
+      id: 'membership-payments',
+      path: '/admin/membership-payments',
+      label: 'Lịch sử thanh toán gói',
+      icon: 'receipt_long',
+    },
+  ];
+
   const isItemActive = (item) => {
     if (activeTab) {
       if (activeTab === item.id) return true;
@@ -83,6 +116,34 @@ export default function AdminSidebar({
       return location.pathname === item.path;
     }
     return location.pathname.startsWith(item.path);
+  };
+
+  const renderMenuItem = (item) => {
+    const active = isItemActive(item);
+    return (
+      <Link
+        key={item.id}
+        to={item.path}
+        onClick={() => {
+          if (onSelectTab) onSelectTab(item.id);
+          if (onCloseMobile) onCloseMobile();
+        }}
+        className={`flex items-center px-3.5 py-2.5 text-xs rounded-xl font-semibold transition-all duration-150 ${
+          active
+            ? 'bg-[#006B2C] text-white shadow-sm'
+            : 'text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
+        }`}
+      >
+        <span
+          className={`material-symbols-outlined text-[20px] mr-3 ${
+            active ? 'text-white' : 'text-[#717971]'
+          }`}
+        >
+          {item.icon}
+        </span>
+        <span>{item.label}</span>
+      </Link>
+    );
   };
 
   return (
@@ -123,33 +184,16 @@ export default function AdminSidebar({
 
           {/* Navigation Items List */}
           <nav aria-label="Điều hướng quản trị" className="p-4 space-y-1.5 overflow-y-auto max-h-[calc(100vh-160px)]">
-            {menuItems.map((item) => {
-              const active = isItemActive(item);
-              return (
-                <Link
-                  key={item.id}
-                  to={item.path}
-                  onClick={() => {
-                    if (onSelectTab) onSelectTab(item.id);
-                    if (onCloseMobile) onCloseMobile();
-                  }}
-                  className={`flex items-center px-3.5 py-2.5 text-xs rounded-xl font-semibold transition-all duration-150 ${
-                    active
-                      ? 'bg-[#006B2C] text-white shadow-sm'
-                      : 'text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
-                  }`}
-                >
-                  <span
-                    className={`material-symbols-outlined text-[20px] mr-3 ${
-                      active ? 'text-white' : 'text-[#717971]'
-                    }`}
-                  >
-                    {item.icon}
-                  </span>
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
+            {menuItems.map(renderMenuItem)}
+
+            <div className="pt-3 mt-3 border-t border-[#E2E8E0]">
+              <p className="px-3.5 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-[#717971]">
+                Gói VIP &amp; Voucher
+              </p>
+              <div className="space-y-1.5">
+                {membershipMenuItems.map(renderMenuItem)}
+              </div>
+            </div>
           </nav>
         </div>
 

@@ -102,4 +102,31 @@ describe('CategoryBrandPage - Delete & Soft-Hide Safeguards (DM-01 & F-145)', ()
     // Toast informing auto-hide according to F-145
     expect(await screen.findByText(/bảo toàn dữ liệu.*F-145/i)).toBeInTheDocument();
   });
+
+  it('displays clear duplicate-name (409) error in CatalogEditor and clears it when name changes', async () => {
+    const dupError = new Error('Category name already exists');
+    dupError.status = 409;
+    dupError.code = 'CATEGORY_NAME_ALREADY_EXISTS';
+    catalogService.save.mockRejectedValueOnce(dupError);
+
+    render(<CategoryBrandPage />, { wrapper: Wrapper });
+    expect(await screen.findByText('Áo khoác cũ')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /\+ Thêm danh mục/i }));
+    const input = screen.getByPlaceholderText(/VD: Áo khoác dạ/i);
+    fireEvent.change(input, { target: { value: 'Áo khoác cũ' } });
+    fireEvent.click(screen.getByRole('button', { name: /Lưu danh mục/i }));
+
+    expect(
+      await screen.findByText(/Danh mục "Áo khoác cũ" đã tồn tại trên hệ thống, vui lòng chọn tên khác\./i)
+    ).toBeInTheDocument();
+
+    // Editing the name must clear the stale 409 duplicate error
+    fireEvent.change(input, { target: { value: 'Áo khoác mới' } });
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/đã tồn tại trên hệ thống, vui lòng chọn tên khác\./i)
+      ).not.toBeInTheDocument();
+    });
+  });
 });

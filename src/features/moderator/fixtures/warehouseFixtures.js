@@ -131,7 +131,6 @@ export function resetFixtures() {
       receiptId: `old-${index}`,
       name: `Sản phẩm cuối kỳ ${index + 1}`,
       size: 'M',
-      shelfLocation: 'A1',
       status: decision === 'UNCLAIMED' ? 'UNCLAIMED' : 'WAITING_END_OF_TERM',
       decision,
       agreedPrice: 200000,
@@ -159,7 +158,6 @@ export function resetFixtures() {
       brand: 'Adidas',
       brandName: 'Adidas',
       size: 'L',
-      shelfLocation: 'C2-11',
       status: 'WAITING_END_OF_TERM',
       decision: 'RE_CONSIGN',
       agreedPrice: 850000,
@@ -171,7 +169,7 @@ export function resetFixtures() {
       daysIntoTerm: 90,
       photos: [],
       deadline: '2026-11-15T00:00:00Z',
-      allowedActions: ['RE_CONSIGN', 'CHANGE_SHELF'],
+      allowedActions: ['RE_CONSIGN'],
     },
     {
       sku: 'RH-AL-000298',
@@ -183,7 +181,6 @@ export function resetFixtures() {
       brand: 'Muji',
       brandName: 'Muji',
       size: 'L',
-      shelfLocation: 'A2-09',
       status: 'WAITING_END_OF_TERM',
       decision: 'TAKE_BACK',
       agreedPrice: 850000,
@@ -194,7 +191,7 @@ export function resetFixtures() {
       photos: [],
       deadline: '2026-11-07T00:00:00Z',
       takeBackDeadline: '2026-10-18T00:00:00Z',
-      allowedActions: ['HANDOVER', 'CHANGE_SHELF'],
+      allowedActions: ['HANDOVER'],
     },
     {
       sku: 'RH-K9B47T',
@@ -205,14 +202,13 @@ export function resetFixtures() {
       brand: 'Zara',
       brandName: 'Zara',
       size: 'L',
-      shelfLocation: 'A3-07',
       status: 'RESERVED',
       currentTerm: 2,
       daysIntoTerm: 41,
       agreedPrice: 350000,
       currentPrice: 350000,
       photos: [],
-      allowedActions: ['CHANGE_SHELF'],
+      allowedActions: [],
     },
     {
       sku: 'RH-C2M08P',
@@ -223,7 +219,6 @@ export function resetFixtures() {
       brand: "Levi's",
       brandName: "Levi's",
       size: '29',
-      shelfLocation: 'B1-22',
       status: 'SOLD',
       currentTerm: 2,
       daysIntoTerm: 46,
@@ -231,7 +226,7 @@ export function resetFixtures() {
       currentPrice: 420000,
       floorPrice: 210000,
       photos: [],
-      allowedActions: ['CHANGE_SHELF'],
+      allowedActions: [],
     },
     {
       sku: 'RH-T3N77F',
@@ -242,12 +237,11 @@ export function resetFixtures() {
       brand: 'Muji',
       brandName: 'Muji',
       size: 'L',
-      shelfLocation: 'A2-09',
       status: 'UNCLAIMED',
       agreedPrice: 550000,
       currentPrice: 550000,
       photos: [],
-      allowedActions: ['TRANSFER', 'CHANGE_SHELF'],
+      allowedActions: ['TRANSFER'],
     },
     {
       sku: 'RH-D6P23L',
@@ -259,7 +253,6 @@ export function resetFixtures() {
       brand: 'Uniqlo',
       brandName: 'Uniqlo',
       size: 'M',
-      shelfLocation: 'D1-01',
       status: 'ON_SALE',
       currentPrice: 320000,
       photos: [],
@@ -275,7 +268,6 @@ export function resetFixtures() {
       brand: 'Uniqlo',
       brandName: 'Uniqlo',
       size: 'M',
-      shelfLocation: 'C1-04',
       status: 'DEGRADED',
       degradedDate: '2026-11-04T10:00:00Z',
       degradedReason: 'Ố vàng vùng cổ và rách chỉ đường may nách khi hoàn về từ người mua',
@@ -297,7 +289,6 @@ export function resetFixtures() {
       brand: 'Zara',
       brandName: 'Zara',
       size: 'S',
-      shelfLocation: 'C1-05',
       status: 'DEGRADED',
       degradedDate: '2026-11-03T14:30:00Z',
       degradedReason: 'Trầy xước bề mặt vải, dính vết son môi không giặt được',
@@ -605,7 +596,7 @@ export async function fixtureRequest(
         status: 'ON_SALE',
         agreedPrice: receipt.snapshot.agreedPrice,
         photos: data.photoUrls.map((url) => ({ url, status: 'PROCESSING' })),
-        allowedActions: ['CHANGE_SHELF', 'ADD_PHOTOS'],
+        allowedActions: ['ADD_PHOTOS'],
       };
       db.products.push(product);
       receipt.productSku = product.sku;
@@ -647,7 +638,6 @@ export async function fixtureRequest(
           (row) =>
             row.warehouseId === scope.warehouseId &&
             (!params.status || (params.status === 'WAITING_END_OF_TERM' ? ((row.status === 'WAREHOUSE' && (row.decisionId || row.decision)) || row.status === 'WITHDRAWN' || row.status === 'UNCLAIMED') : params.status === 'DEGRADED' ? (row.status === 'DEGRADED' || row.status === 'PLATFORM_OWNED') : row.status === params.status)) &&
-            (!params.shelf || row.shelfLocation.includes(params.shelf)) &&
             (!params.sku || row.sku.includes(params.sku)),
         ),
         params,
@@ -790,7 +780,7 @@ export async function fixtureRequest(
       product.agreedPrice = product.proposedPrice || product.agreedPrice;
       product.decision = null;
       product.decisionId = null;
-      product.allowedActions = ['CHANGE_SHELF'];
+      product.allowedActions = [];
       product.reConsignStatus = 'CONFIRMED';
       result = { success: true, receiptId: ids.receiptId, product };
       break;
@@ -846,7 +836,7 @@ export function confirmFixtureReceipt(receiptId) {
       agreedPrice: receipt.snapshot.agreedPrice,
       status: 'ON_SALE',
       decision: null,
-      allowedActions: ['CHANGE_SHELF', 'ADD_PHOTOS'],
+      allowedActions: ['ADD_PHOTOS'],
     });
   }
 }

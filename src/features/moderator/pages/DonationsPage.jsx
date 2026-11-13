@@ -4,7 +4,7 @@ import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
 import { useToast } from '../../../context/ToastContext.jsx';
 import PhotoUpload from '../components/PhotoUpload.jsx';
-import { donationService } from '../services/donationApi.js';
+import { CAMPAIGN_STATUS_LABELS, donationService, isCampaignActive } from '../services/donationApi.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
 import { normalizeError } from '../models/warehouseModel.js';
 import { Page, Card, ResourceState, date } from '../components/WarehouseUi.jsx';
@@ -15,6 +15,11 @@ export default function DonationsPage() {
   const focusedDonationId = searchParams.get('donationId') || '';
   const initialCampaignFilter = searchParams.get('campaignId') || '';
   const initialDonorName = searchParams.get('donorName') || '';
+
+  const [campaignView, setCampaignView] = useState('ACTIVE');
+  const [campaignSearch, setCampaignSearch] = useState('');
+  const [campaignPage, setCampaignPage] = useState(0);
+  const campaignPageSize = 20;
 
   const [campaignFilter, setCampaignFilter] = useState(initialCampaignFilter);
   const [statusFilter, setStatusFilter] = useState('');
@@ -37,6 +42,8 @@ export default function DonationsPage() {
   // Chọn các lượt chờ lấy để bàn giao cho tổ chức (F-165)
   const [selectedIds, setSelectedIds] = useState([]);
   const [handoverConfirmOpen, setHandoverConfirmOpen] = useState(false);
+  const [confirmRecipient, setConfirmRecipient] = useState(false);
+  const [confirmItems, setConfirmItems] = useState(false);
   const [handoverError, setHandoverError] = useState(null);
   const [handingOver, setHandingOver] = useState(false);
 
@@ -45,8 +52,15 @@ export default function DonationsPage() {
   const warehouseId = warehouse?.id || null;
 
   const campaignsResource = useResource(
-    (options) => (warehouseId ? donationService.warehouseCampaigns(warehouseId, options) : Promise.resolve([])),
-    [warehouseId],
+    (options) =>
+      warehouseId
+        ? donationService.warehouseCampaigns(
+            warehouseId,
+            { view: campaignView, q: campaignSearch, page: campaignPage, size: campaignPageSize },
+            options,
+          )
+        : Promise.resolve({ items: [], page: 0, size: campaignPageSize, totalElements: 0, totalPages: 0 }),
+    [warehouseId, campaignView, campaignSearch, campaignPage],
     { enabled: Boolean(warehouseId) },
   );
 
@@ -63,10 +77,17 @@ export default function DonationsPage() {
     { enabled: Boolean(warehouseId) },
   );
 
+  const campaignsPageData = campaignsResource.data || {};
   const campaigns = useMemo(
-    () => (Array.isArray(campaignsResource.data) ? campaignsResource.data : []),
-    [campaignsResource.data],
+    () =>
+      Array.isArray(campaignsPageData.items)
+        ? campaignsPageData.items
+        : Array.isArray(campaignsPageData)
+          ? campaignsPageData
+          : [],
+    [campaignsPageData],
   );
+  const campaignTotalPages = campaignsPageData.totalPages ?? (campaigns.length > 0 ? 1 : 0);
   const donations = useMemo(
     () => (Array.isArray(donationsResource.data) ? donationsResource.data : []),
     [donationsResource.data],
@@ -92,7 +113,14 @@ export default function DonationsPage() {
 
   const effectiveCampaignId = selectedCampaignId || (campaigns[0]?.id ? String(campaigns[0].id) : '');
   const selectedCampaign = campaignMap.get(String(effectiveCampaignId)) || null;
-  const noOpenCampaigns = Boolean(warehouseId) && !campaignsResource.loading && !campaignsResource.error && campaigns.length === 0;
+  const isSelectedCampaignActive = selectedCampaign ? isCampaignActive(selectedCampaign) : false;
+  const noOpenCampaigns =
+    Boolean(warehouseId) &&
+    !campaignsResource.loading &&
+    !campaignsResource.error &&
+    campaignView === 'ACTIVE' &&
+    campaigns.length === 0;
+  const isRecordBlocked = noOpenCampaigns || !selectedCampaign || !isSelectedCampaignActive;
 
   // Nhóm lượt quyên góp theo chiến dịch để Moderator đối chiếu & chọn bàn giao nhanh
   const groupedDonations = useMemo(() => {
@@ -134,6 +162,18 @@ export default function DonationsPage() {
 
   const toggleSelect = (row) => {
     if (row.status !== 'PENDING_PICKUP') return;
+    const campaignObj = campaignMap.get(String(row.campaignId));
+    const rowOrgId = row.organizationId || campaignObj?.organizationId || null;
+    if (!row.campaignId || !rowOrgId) return;
+    if (
+      selectedRows.length > 0 &&
+      !selectedIds.includes(row.id) &&
+      (String(row.campaignId) !== String(activeHandoverCampaignId) ||
+        String(rowOrgId) !== String(activeHandoverOrgId))
+    ) {
+      setHandoverError('Chỉ được bàn giao các lượt thuộc cùng một chiến dịch và cùng một tổ chức.');
+      return;
+    }
     setHandoverError(null);
     setSelectedIds((prev) =>
       prev.includes(row.id) ? prev.filter((id) => id !== row.id) : [...prev, row.id],
@@ -141,10 +181,24 @@ export default function DonationsPage() {
   };
 
   const selectAllPendingInGroup = (group) => {
+    const firstEligible = group.rows.find((r) => {
+      const camp = campaignMap.get(String(r.campaignId));
+      return r.status === 'PENDING_PICKUP' && Boolean(r.campaignId && (r.organizationId || camp?.organizationId));
+    });
+    if (!firstEligible) return;
+    const targetCampaignId = String(firstEligible.campaignId);
+    const targetOrgId = String(
+      firstEligible.organizationId || campaignMap.get(targetCampaignId)?.organizationId,
+    );
     const pendingIds = group.rows
       .filter((r) => {
         const camp = campaignMap.get(String(r.campaignId));
-        return r.status === 'PENDING_PICKUP' && Boolean(r.campaignId && (r.organizationId || camp?.organizationId));
+        const orgId = r.organizationId || camp?.organizationId;
+        return (
+          r.status === 'PENDING_PICKUP' &&
+          String(r.campaignId) === targetCampaignId &&
+          String(orgId) === targetOrgId
+        );
       })
       .map((r) => r.id);
     if (!pendingIds.length) return;
@@ -154,7 +208,7 @@ export default function DonationsPage() {
 
   const handleRecordDonation = async (event) => {
     event.preventDefault();
-    if (!warehouseId || noOpenCampaigns || recording || donationPhotosPending) return;
+    if (!warehouseId || isRecordBlocked || recording || donationPhotosPending) return;
     setRecordError(null);
     setRecording(true);
     try {
@@ -183,7 +237,17 @@ export default function DonationsPage() {
   };
 
   const handleConfirmHandover = async () => {
-    if (!warehouseId || !selectedRows.length || !activeHandoverCampaignId || !activeHandoverOrgId || handingOver) return;
+    if (
+      !warehouseId ||
+      !selectedRows.length ||
+      !activeHandoverCampaignId ||
+      !activeHandoverOrgId ||
+      !confirmRecipient ||
+      !confirmItems ||
+      handingOver
+    ) {
+      return;
+    }
     setHandoverError(null);
     setHandingOver(true);
     try {
@@ -198,6 +262,8 @@ export default function DonationsPage() {
       const count = res?.handedOverCount ?? selectedRows.length;
       toast.success(`Đã bàn giao ${count} lượt cho ${activeHandoverOrgName}`);
       setSelectedIds([]);
+      setConfirmRecipient(false);
+      setConfirmItems(false);
       setHandoverConfirmOpen(false);
       donationsResource.refresh();
       if (focusedDonationId) {
@@ -237,6 +303,163 @@ export default function DonationsPage() {
       <ResourceState resource={warehouses} />
 
       {warehouseId && (
+        <div className="space-y-6">
+          <Card title="Chiến dịch tại điểm ký gửi">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div role="tablist" aria-label="Chế độ xem chiến dịch" className="inline-flex rounded-xl border border-neutral bg-[#F6F9F4] p-1 gap-1">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={campaignView === 'ACTIVE'}
+                  onClick={() => {
+                    setCampaignView('ACTIVE');
+                    setCampaignPage(0);
+                    setSelectedCampaignId('');
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                    campaignView === 'ACTIVE'
+                      ? 'bg-[#006B2C] text-white'
+                      : 'text-textSecondary hover:text-text'
+                  }`}
+                >
+                  Chiến dịch đang diễn ra
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={campaignView === 'HISTORY'}
+                  onClick={() => {
+                    setCampaignView('HISTORY');
+                    setCampaignPage(0);
+                    setSelectedCampaignId('');
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                    campaignView === 'HISTORY'
+                      ? 'bg-[#006B2C] text-white'
+                      : 'text-textSecondary hover:text-text'
+                  }`}
+                >
+                  Lịch sử chiến dịch
+                </button>
+              </div>
+
+              <input
+                type="search"
+                aria-label="Tìm chiến dịch"
+                value={campaignSearch}
+                onChange={(e) => {
+                  setCampaignSearch(e.target.value);
+                  setCampaignPage(0);
+                }}
+                placeholder="Tìm chiến dịch hoặc tổ chức..."
+                className="w-full sm:w-64 rounded-xl border border-neutral bg-white px-3 py-1.5 text-xs text-text focus:border-[#006B2C] focus:outline-none"
+              />
+            </div>
+
+            <ResourceState
+              resource={campaignsResource}
+              empty={!campaigns.length}
+              emptyText={
+                campaignView === 'HISTORY'
+                  ? 'Chưa có lịch sử chiến dịch đã đóng hoặc hết hạn.'
+                  : 'Địa điểm này hiện không có chiến dịch nào đang mở.'
+              }
+            />
+
+            {campaigns.length > 0 && (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {campaigns.map((c) => {
+                  const isSelected = String(c.id) === String(effectiveCampaignId);
+                  const active = isCampaignActive(c);
+                  return (
+                    <div
+                      key={c.id}
+                      className={`rounded-xl border p-3 text-xs space-y-2 transition-colors ${
+                        isSelected ? 'border-[#006B2C] bg-[#F6F9F4]' : 'border-neutral bg-white'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-bold text-text">{c.title}</p>
+                          <p className="text-[11px] text-textSecondary">{c.organizationName}</p>
+                        </div>
+                        <span
+                          className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold whitespace-nowrap ${
+                            active
+                              ? 'bg-[#E8F5E9] text-[#006B2C]'
+                              : 'bg-amber-100 text-amber-900'
+                          }`}
+                        >
+                          {c.organizationLocked
+                            ? 'Tổ chức bị khóa'
+                            : CAMPAIGN_STATUS_LABELS[c.status] || (active ? 'Đang diễn ra' : 'Đã đóng')}
+                        </span>
+                      </div>
+
+                      {(c.pendingCount != null || c.handedOverCount != null) && (
+                        <div className="flex flex-wrap gap-2 text-[11px]">
+                          {c.pendingCount != null && (
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-900">
+                              {c.pendingCount} chờ lấy
+                            </span>
+                          )}
+                          {c.handedOverCount != null && (
+                            <span className="rounded-full bg-[#E8F5E9] px-2 py-0.5 font-semibold text-[#006B2C]">
+                              {c.handedOverCount} đã bàn giao
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[11px] text-textSecondary">
+                          Hạn: {c.endTime ? date(c.endTime) : '—'}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={`Chọn ${c.title}`}
+                          onClick={() => {
+                            setSelectedCampaignId(String(c.id));
+                            setCampaignFilter(String(c.id));
+                            setSelectedIds([]);
+                            if (recordError) setRecordError(null);
+                          }}
+                          className="text-[11px] font-bold text-[#006B2C] hover:underline cursor-pointer"
+                        >
+                          Chọn chiến dịch
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {campaignTotalPages > 1 && (
+              <div className="flex items-center justify-end gap-2 pt-2 text-xs">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={campaignPage <= 0}
+                  onClick={() => setCampaignPage((p) => Math.max(0, p - 1))}
+                >
+                  Trước
+                </Button>
+                <span className="text-textSecondary">
+                  Trang {campaignPage + 1} / {campaignTotalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={campaignPage + 1 >= campaignTotalPages}
+                  onClick={() => setCampaignPage((p) => p + 1)}
+                >
+                  Sau
+                </Button>
+              </div>
+            )}
+          </Card>
+
         <div className="grid gap-6 lg:grid-cols-12 items-start">
           {/* CỘT TRÁI: Ghi nhận lượt quyên góp trực tiếp (Luồng A) */}
           <div className="lg:col-span-4 space-y-4">
@@ -247,6 +470,19 @@ export default function DonationsPage() {
                 <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900 space-y-1">
                   <p className="font-bold">Địa điểm này hiện không có chiến dịch nào nhận đồ</p>
                   <p>Theo quy định vận hành, quầy tạm thời không nhận quyên góp trực tiếp khi chưa có chiến dịch mở nhận tại đây.</p>
+                </div>
+              )}
+
+              {!noOpenCampaigns && selectedCampaign && !isSelectedCampaignActive && (
+                <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900 space-y-1">
+                  <p className="font-bold">
+                    {selectedCampaign.organizationLocked
+                      ? 'Tổ chức của chiến dịch này đang bị khóa'
+                      : `Chiến dịch ${CAMPAIGN_STATUS_LABELS[selectedCampaign.status] || 'đã đóng / hết hạn'}`}
+                  </p>
+                  <p>
+                    Không thể ghi nhận lượt quyên góp mới cho chiến dịch này. Bạn vẫn có thể xem lịch sử và bàn giao các lượt đang chờ lấy.
+                  </p>
                 </div>
               )}
 
@@ -272,7 +508,9 @@ export default function DonationsPage() {
                     className="w-full rounded-xl border border-neutral bg-white px-3 py-2 text-xs text-text focus:border-[#006B2C] focus:outline-none disabled:bg-background"
                   >
                     {campaigns.length === 0 ? (
-                      <option value="">Không có chiến dịch đang mở</option>
+                      <option value="">
+                        {campaignView === 'HISTORY' ? 'Không có chiến dịch trong lịch sử' : 'Không có chiến dịch đang mở'}
+                      </option>
                     ) : (
                       campaigns.map((c) => (
                         <option key={c.id} value={c.id}>
@@ -305,7 +543,7 @@ export default function DonationsPage() {
                   <input
                     type="checkbox"
                     checked={isAnonymous}
-                    disabled={noOpenCampaigns || recording}
+                    disabled={isRecordBlocked || recording}
                     onChange={(e) => {
                       setIsAnonymous(e.target.checked);
                       if (recordError) setRecordError(null);
@@ -324,7 +562,7 @@ export default function DonationsPage() {
                       id="donation-donor-name"
                       type="text"
                       value={donorName}
-                      disabled={noOpenCampaigns || recording}
+                      disabled={isRecordBlocked || recording}
                       onChange={(e) => {
                         setDonorName(e.target.value);
                         if (recordError) setRecordError(null);
@@ -353,6 +591,7 @@ export default function DonationsPage() {
                           <button
                             key={itemType}
                             type="button"
+                            disabled={isRecordBlocked || recording}
                             onClick={() => {
                               setNote((prev) => {
                                 const trimmed = prev.trim();
@@ -362,7 +601,7 @@ export default function DonationsPage() {
                               });
                               if (recordError) setRecordError(null);
                             }}
-                            className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#E8F5E9] text-[#006B2C] border border-[#006B2C]/20 hover:bg-[#D0EBD2] transition-colors cursor-pointer"
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#E8F5E9] text-[#006B2C] border border-[#006B2C]/20 hover:bg-[#D0EBD2] transition-colors cursor-pointer disabled:opacity-50"
                           >
                             + {itemType}
                           </button>
@@ -375,7 +614,7 @@ export default function DonationsPage() {
                     id="donation-note"
                     rows={3}
                     value={note}
-                    disabled={noOpenCampaigns || recording}
+                    disabled={isRecordBlocked || recording}
                     onChange={(e) => {
                       setNote(e.target.value);
                       if (recordError) setRecordError(null);
@@ -393,14 +632,14 @@ export default function DonationsPage() {
                   <p className="text-[10px] text-[#5B6776] mb-1.5">
                     Chụp hoặc tải ảnh gói đồ quyên góp tại quầy để lưu chứng từ đối soát.
                   </p>
-                  <PhotoUpload disabled={noOpenCampaigns || recording} onChange={onDonationPhotosChange} />
+                  <PhotoUpload disabled={isRecordBlocked || recording} onChange={onDonationPhotosChange} />
                 </div>
 
                 <Button
                   type="submit"
                   variant="primary"
                   loading={recording || donationPhotosPending}
-                  disabled={noOpenCampaigns || !effectiveCampaignId || (!isAnonymous && !donorName.trim()) || donationPhotosPending}
+                  disabled={isRecordBlocked || !effectiveCampaignId || (!isAnonymous && !donorName.trim()) || donationPhotosPending}
                   className="w-full py-2.5 text-xs font-bold bg-[#006B2C] hover:bg-[#005523] text-white"
                 >
                   Ghi nhận lượt quyên góp
@@ -469,6 +708,8 @@ export default function DonationsPage() {
                       disabled={!activeHandoverOrgId || !activeHandoverCampaignId || handingOver}
                       onClick={() => {
                         setHandoverError(null);
+                        setConfirmRecipient(false);
+                        setConfirmItems(false);
                         setHandoverConfirmOpen(true);
                       }}
                       className="bg-[#006B2C] hover:bg-[#005523] text-white font-bold"
@@ -524,10 +765,12 @@ export default function DonationsPage() {
                                 const isChecked = selectedIds.includes(row.id);
                                 const campaignObj = campaignMap.get(String(row.campaignId));
                                 const orgId = row.organizationId || campaignObj?.organizationId;
-                                const differentCampaignLocked = Boolean(
-                                  activeHandoverCampaignId && String(row.campaignId) !== String(activeHandoverCampaignId),
+                                const differentGroupLocked = Boolean(
+                                  activeHandoverCampaignId &&
+                                    (String(row.campaignId) !== String(activeHandoverCampaignId) ||
+                                      (activeHandoverOrgId && String(orgId) !== String(activeHandoverOrgId))),
                                 );
-                                const canSelect = isPending && Boolean(row.campaignId && orgId) && !differentCampaignLocked;
+                                const canSelect = isPending && Boolean(row.campaignId && orgId) && !differentGroupLocked;
                                 const isFocused = focusedDonationId && String(row.id) === String(focusedDonationId);
 
                                 return (
@@ -544,7 +787,11 @@ export default function DonationsPage() {
                                           aria-label={`Chọn lượt ${row.id}`}
                                           checked={isChecked}
                                           disabled={!canSelect}
-                                          title={differentCampaignLocked ? 'Chỉ bàn giao các lượt thuộc cùng 1 chiến dịch' : undefined}
+                                          title={
+                                            differentGroupLocked
+                                              ? 'Chỉ bàn giao các lượt thuộc cùng 1 chiến dịch và cùng 1 tổ chức'
+                                              : undefined
+                                          }
                                           onChange={() => toggleSelect(row)}
                                           className="rounded border-neutral text-[#006B2C] focus:ring-[#006B2C]"
                                         />
@@ -671,6 +918,7 @@ export default function DonationsPage() {
             </Card>
           </div>
         </div>
+        </div>
       )}
 
       <Modal
@@ -708,7 +956,34 @@ export default function DonationsPage() {
             </div>
           )}
 
-          <p>Xác nhận đại diện tổ chức đã đến kho nhận đủ số đồ quyên góp trên? Sau khi xác nhận không thể hoàn tác.</p>
+          <div className="space-y-2 rounded-xl border border-neutral bg-[#F6F9F4] p-3">
+            <label className="flex items-start gap-2 cursor-pointer select-none text-text">
+              <input
+                type="checkbox"
+                checked={confirmRecipient}
+                disabled={handingOver}
+                onChange={(e) => setConfirmRecipient(e.target.checked)}
+                className="mt-0.5 rounded border-neutral text-[#006B2C] focus:ring-[#006B2C]"
+              />
+              <span>
+                <strong>Đúng người nhận:</strong> Xác nhận đúng tổ chức / đại diện nhận bàn giao ({activeHandoverOrgName})
+              </span>
+            </label>
+            <label className="flex items-start gap-2 cursor-pointer select-none text-text">
+              <input
+                type="checkbox"
+                checked={confirmItems}
+                disabled={handingOver}
+                onChange={(e) => setConfirmItems(e.target.checked)}
+                className="mt-0.5 rounded border-neutral text-[#006B2C] focus:ring-[#006B2C]"
+              />
+              <span>
+                <strong>Đủ số lượng / đúng đồ bàn giao:</strong> Xác nhận đã kiểm đếm đủ {selectedRows.length} lượt quyên góp nêu trên
+              </span>
+            </label>
+          </div>
+
+          <p>Sau khi xác nhận bàn giao, trạng thái không thể hoàn tác.</p>
           <div className="flex gap-2 justify-end pt-2">
             <Button variant="outline" disabled={handingOver} onClick={() => setHandoverConfirmOpen(false)}>
               Hủy
@@ -716,6 +991,7 @@ export default function DonationsPage() {
             <Button
               variant="primary"
               loading={handingOver}
+              disabled={!confirmRecipient || !confirmItems || handingOver}
               onClick={handleConfirmHandover}
               className="bg-[#006B2C] hover:bg-[#005523] text-white font-bold"
             >

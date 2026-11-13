@@ -9,8 +9,9 @@ import ModeratorLayout from '../../src/layouts/ModeratorLayout.jsx';
 import AdminHeader from '../../src/features/admin/components/AdminHeader.jsx';
 import App from '../../src/App.jsx';
 
-import NotificationContext from '../../src/context/NotificationContext.jsx';
+import NotificationContext, { NotificationProvider, useNotification } from '../../src/context/NotificationContext.jsx';
 import AuthContext from '../../src/context/AuthContext.jsx';
+import baseApi from '../../src/services/baseApi.js';
 
 // Mock AppRouter to isolate App root layout testing
 vi.mock('../../src/routes/AppRouter.jsx', () => ({
@@ -232,6 +233,72 @@ describe('Notification Integration into Layouts', () => {
 
       expect(screen.queryByRole('button', { name: 'Thông báo' })).not.toBeInTheDocument();
       expect(screen.queryByTestId('notification-badge')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('NotificationProvider Deduplication', () => {
+    it('deduplicates notifications by ID on initial fetch and loadMoreNotifications', async () => {
+      const getSpy = vi.spyOn(baseApi, 'get').mockImplementation((url, config) => {
+        if (String(url).includes('unread-count')) {
+          return Promise.resolve({ data: { count: 2 } });
+        }
+        const page = config?.params?.page ?? 0;
+        if (page === 0) {
+          return Promise.resolve({
+            data: {
+              result: {
+                content: [
+                  { id: 'n-1', title: 'Thông báo 1', message: 'Nội dung 1', isRead: false },
+                  { id: 'n-1', title: 'Thông báo 1 trùng', message: 'Nội dung trùng', isRead: false },
+                  { id: 'n-2', title: 'Thông báo 2', message: 'Nội dung 2', isRead: true },
+                ],
+                totalPages: 2,
+              },
+            },
+          });
+        }
+        return Promise.resolve({
+          data: {
+            result: {
+              content: [
+                { id: 'n-2', title: 'Thông báo 2', message: 'Nội dung 2', isRead: true },
+                { id: 'n-3', title: 'Thông báo 3', message: 'Nội dung 3', isRead: false },
+              ],
+              totalPages: 2,
+            },
+          },
+        });
+      });
+
+      function Probe() {
+        const ctx = useNotification();
+        return (
+          <div>
+            <div data-testid="notif-ids">{ctx.notifications.map((n) => n.id).join(',')}</div>
+            <button type="button" onClick={() => ctx.loadMoreNotifications()}>
+              Tải thêm
+            </button>
+          </div>
+        );
+      }
+
+      render(
+        <MemoryRouter>
+          <AuthContext.Provider value={mockAuthContext}>
+            <NotificationProvider>
+              <Probe />
+            </NotificationProvider>
+          </AuthContext.Provider>
+        </MemoryRouter>
+      );
+
+      await screen.findByText('n-1,n-2');
+
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: 'Tải thêm' }));
+
+      await screen.findByText('n-1,n-2,n-3');
+      getSpy.mockRestore();
     });
   });
 });

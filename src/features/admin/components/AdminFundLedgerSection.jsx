@@ -14,6 +14,10 @@ const TRANSACTION_TYPE_OPTIONS = [
   { value: 'WITHDRAWAL', label: 'Rút tiền về ngân hàng' },
   { value: 'REFUND', label: 'Hoàn tiền đơn hàng' },
   { value: 'DEGRADED_COMPENSATION', label: 'Đền bù hàng xuống cấp' },
+  { value: 'MEMBERSHIP_PAYMENT', label: 'Thanh toán gói VIP' },
+  { value: 'MEMBERSHIP_PURCHASE', label: 'Thanh toán gói VIP' },
+  { value: 'VOUCHER_COST', label: 'Chi phí voucher nền tảng' },
+  { value: 'VOUCHER_DISCOUNT', label: 'Chi phí voucher nền tảng' },
 ];
 
 const TYPE_LABELS = Object.fromEntries(

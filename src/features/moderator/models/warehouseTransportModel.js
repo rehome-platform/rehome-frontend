@@ -16,8 +16,8 @@ export class Phase2Error extends Error {
 
 export function normalizeError(error) {
   if (error instanceof Phase2Error) return error;
-  const body = error.response?.data ?? {};
-  const status = error.response?.status ?? 0;
+  const body = error?.response?.data ?? {};
+  const status = error?.response?.status ?? error?.status ?? error?.statusCode ?? 0;
   const messages = {
     403: 'Bạn không có quyền truy cập dữ liệu của kho này.',
     404: 'Không tìm thấy dữ liệu.',
@@ -27,9 +27,10 @@ export function normalizeError(error) {
   return new Phase2Error(
     body.message ||
       messages[status] ||
+      error?.message ||
       'Không thể kết nối máy chủ. Hãy tải lại trạng thái trước khi thử tiếp.',
     status,
-    body.code || '',
-    body.fieldErrors || body.errors || {},
+    body.code || error?.code || '',
+    body.fieldErrors || body.errors || error?.fields || {},
   );
 }

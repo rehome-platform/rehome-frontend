@@ -551,7 +551,7 @@ function WithdrawalModalContent({ target, busy, onApprove, onReject, onClose }) 
         <>
           <div className="rounded-xl border border-neutral bg-white p-3 space-y-1 leading-relaxed">
             <p className="font-bold text-text">Lưu ý nghiệp vụ trước khi ra Quầy:</p>
-            <p>• Moderator kiểm tra hiện vật trong kho theo mã SKU, chuẩn bị sẵn tại kệ chờ giao.</p>
+            <p>• Moderator kiểm tra hiện vật trong kho theo mã SKU, chuẩn bị sẵn để chờ giao.</p>
             <p>• Khi Member tới, vào <strong>Quầy tiếp nhận (BG-01)</strong> đối chiếu danh tính và quét mã SKU để bàn giao.</p>
           </div>
 

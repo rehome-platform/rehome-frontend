@@ -25,6 +25,9 @@ export default function WarehouseInboxPage() {
   const [messages, setMessages] = useState([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [messagesError, setMessagesError] = useState(null);
+  const [messagesPage, setMessagesPage] = useState(0);
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
 
   // Form gửi tin nhắn & ảnh
   const [inputText, setInputText] = useState('');
@@ -37,6 +40,10 @@ export default function WarehouseInboxPage() {
 
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const activeConvIdRef = useRef(null);
+  const fetchSeqRef = useRef(0);
+
+  activeConvIdRef.current = selectedConv?.id ?? null;
 
   // Tải danh sách hội thoại
   const fetchConversations = async () => {
@@ -70,53 +77,104 @@ export default function WarehouseInboxPage() {
   }, []);
 
   // Tải danh sách tin nhắn của hội thoại được chọn (API 112)
-  const fetchMessages = useCallback(async (convId, initialMessages = []) => {
+  const fetchMessages = useCallback(async (convId, initialMessages = [], { page = 0, append = false } = {}) => {
     if (!convId) return;
+    const seq = ++fetchSeqRef.current;
     try {
-      setMessagesLoading(true);
-      setMessagesError(null);
+      if (append) {
+        setLoadingMoreMessages(true);
+      } else {
+        setMessagesLoading(true);
+        setMessagesError(null);
+        setMessagesPage(0);
+        setHasMoreMessages(false);
+      }
 
       let fetchedList = [];
+      let res = null;
       if (typeof warehouseInboxService.getMessages === 'function') {
-        const res = await warehouseInboxService.getMessages(convId, { page: 0, size: 50 });
+        res = await warehouseInboxService.getMessages(convId, { page, size: 50 });
         fetchedList = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
       } else {
         fetchedList = initialMessages;
       }
 
-      // Gộp initialMessages (nếu có từ mock/chuyển tab) với tin nhắn tải từ API
-      const combined = [...initialMessages, ...fetchedList];
-      const dedupeMap = new Map();
-      combined.forEach((m) => {
-        const key = m?.id ? String(m.id) : `${m?.sender}-${m?.text || m?.content}-${m?.createdAt || m?.time}`;
-        if (!dedupeMap.has(key)) dedupeMap.set(key, m);
-      });
-      const uniqueMessages = Array.from(dedupeMap.values());
+      // Guard against stale responses after switching conversations
+      if (seq !== fetchSeqRef.current || String(activeConvIdRef.current) !== String(convId)) {
+        return;
+      }
 
-      // Sắp xếp theo thứ tự thời gian tăng dần: tin cũ ở trên, tin mới ở dưới
-      uniqueMessages.sort((a, b) => {
-        const timeA = new Date(a.createdAt || a.sentAt || 0).getTime();
-        const timeB = new Date(b.createdAt || b.sentAt || 0).getTime();
-        return timeA - timeB;
-      });
+      const mergeAndDedupe = (baseList) => {
+        const combined = [...baseList, ...fetchedList];
+        const dedupeMap = new Map();
+        combined.forEach((m) => {
+          const key = m?.id ? String(m.id) : `${m?.sender}-${m?.text || m?.content}-${m?.createdAt || m?.time}`;
+          if (!dedupeMap.has(key)) dedupeMap.set(key, m);
+        });
+        const uniqueMessages = Array.from(dedupeMap.values());
+        uniqueMessages.sort((a, b) => {
+          const timeA = new Date(a.createdAt || a.sentAt || 0).getTime();
+          const timeB = new Date(b.createdAt || b.sentAt || 0).getTime();
+          return timeA - timeB;
+        });
+        return uniqueMessages;
+      };
 
-      setMessages(uniqueMessages);
+      if (append) {
+        setMessages((prev) => {
+          const merged = mergeAndDedupe(prev);
+          const total = typeof res?.total === 'number' ? res.total : null;
+          setHasMoreMessages(
+            res?.hasMore !== undefined
+              ? Boolean(res.hasMore)
+              : total !== null
+                ? merged.length < total && fetchedList.length > 0
+                : fetchedList.length >= 50
+          );
+          return merged;
+        });
+        setMessagesPage(page);
+      } else {
+        const uniqueMessages = mergeAndDedupe(initialMessages);
+        setMessages(uniqueMessages);
+        setMessagesPage(page);
+        const total = typeof res?.total === 'number' ? res.total : null;
+        setHasMoreMessages(
+          res?.hasMore !== undefined
+            ? Boolean(res.hasMore)
+            : total !== null
+              ? uniqueMessages.length < total && fetchedList.length > 0
+              : fetchedList.length >= 50
+        );
+      }
     } catch (err) {
+      if (seq !== fetchSeqRef.current || String(activeConvIdRef.current) !== String(convId)) {
+        return;
+      }
       console.error('Failed to fetch messages for conversation:', convId, err);
-      setMessagesError('Không thể tải lịch sử tin nhắn. Vui lòng thử lại.');
-      if (initialMessages && initialMessages.length > 0) {
-        setMessages(initialMessages);
+      if (!append) {
+        setMessagesError('Không thể tải lịch sử tin nhắn. Vui lòng thử lại.');
+        if (initialMessages && initialMessages.length > 0) {
+          setMessages(initialMessages);
+        }
       }
     } finally {
-      setMessagesLoading(false);
+      if (seq === fetchSeqRef.current && String(activeConvIdRef.current) === String(convId)) {
+        setMessagesLoading(false);
+        setLoadingMoreMessages(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     if (selectedConv?.id) {
-      fetchMessages(selectedConv.id, selectedConv.messages || []);
+      activeConvIdRef.current = selectedConv.id;
+      fetchMessages(selectedConv.id, selectedConv.messages || [], { page: 0, append: false });
     } else {
+      activeConvIdRef.current = null;
       setMessages([]);
+      setHasMoreMessages(false);
+      setMessagesPage(0);
     }
   }, [selectedConv?.id, fetchMessages]);
 
@@ -131,20 +189,23 @@ export default function WarehouseInboxPage() {
   const handleWebSocketMessage = useCallback(
     (payload) => {
       if (!payload || !payload.id) return;
+      const targetConvId = payload.conversationId ?? selectedConv?.id;
 
-      // Khử trùng: nếu tin nhắn đã có trong danh sách (được gửi trực tiếp từ client trước đó) thì bỏ qua
-      setMessages((prev) => {
-        if (prev.some((m) => String(m.id) === String(payload.id))) {
-          return prev;
-        }
-        return [...prev, payload];
-      });
+      // Chỉ thêm vào khung chat nếu thuộc hội thoại đang mở
+      if (!payload.conversationId || String(payload.conversationId) === String(activeConvIdRef.current)) {
+        setMessages((prev) => {
+          if (prev.some((m) => String(m.id) === String(payload.id))) {
+            return prev;
+          }
+          return [...prev, payload];
+        });
+      }
 
       // Cập nhật tin nhắn cuối cùng trên danh sách hội thoại
       const previewText = payload.content || (payload.imageUrls?.length ? '[Hình ảnh]' : '—');
       setConversations((prev) =>
         (prev || []).map((c) => {
-          if (String(c.id) === String(selectedConv?.id)) {
+          if (String(c.id) === String(targetConvId)) {
             return {
               ...c,
               lastMessage: {
@@ -211,6 +272,7 @@ export default function WarehouseInboxPage() {
     const text = inputText.trim();
     if ((!text && pendingImages.length === 0) || !selectedConv || sending || uploadingImage) return;
 
+    const targetConvId = selectedConv.id;
     setSending(true);
     const imagesToSend = [...pendingImages];
     setInputText('');
@@ -223,7 +285,7 @@ export default function WarehouseInboxPage() {
       };
 
       const res = await warehouseInboxService.sendMessage(
-        selectedConv.id,
+        targetConvId,
         payload,
         user?.name || user?.fullName || 'Nguyễn Văn A'
       );
@@ -245,19 +307,21 @@ export default function WarehouseInboxPage() {
                 time: 'Vừa xong',
               };
 
-        // Cập nhật ngay tin nhắn lên khung chat (và khử trùng nếu id trùng)
-        setMessages((prev) => {
-          if (prev.some((m) => String(m.id) === String(msgItem.id))) {
-            return prev;
-          }
-          return [...prev, msgItem];
-        });
+        // Chỉ cập nhật khung chat nếu người dùng vẫn đang mở đúng hội thoại đó
+        if (String(activeConvIdRef.current) === String(targetConvId)) {
+          setMessages((prev) => {
+            if (prev.some((m) => String(m.id) === String(msgItem.id))) {
+              return prev;
+            }
+            return [...prev, msgItem];
+          });
+        }
 
         // Cập nhật xem trước tin nhắn trong danh sách hội thoại
         const previewText = text || (imagesToSend.length ? '[Hình ảnh]' : '—');
         setConversations((prev) =>
           (prev || []).map((c) => {
-            if (String(c.id) === String(selectedConv.id)) {
+            if (String(c.id) === String(targetConvId)) {
               return {
                 ...c,
                 lastMessage: {
@@ -453,6 +517,18 @@ export default function WarehouseInboxPage() {
 
               {/* Lịch sử tin nhắn */}
               <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-background">
+                {hasMoreMessages && !messagesLoading && (
+                  <div className="text-center pb-2">
+                    <button
+                      type="button"
+                      disabled={loadingMoreMessages}
+                      onClick={() => fetchMessages(selectedConv.id, [], { page: messagesPage + 1, append: true })}
+                      className="px-3 py-1 text-[11px] font-semibold border border-neutral rounded-xl bg-surface hover:bg-neutral-light text-textSecondary cursor-pointer disabled:opacity-50"
+                    >
+                      {loadingMoreMessages ? 'Đang tải...' : 'Tải thêm tin nhắn cũ'}
+                    </button>
+                  </div>
+                )}
                 {messagesLoading && (
                   <div className="text-center text-textSecondary text-xs py-8">
                     Đang tải tin nhắn...

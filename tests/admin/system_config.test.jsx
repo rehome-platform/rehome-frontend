@@ -34,6 +34,8 @@ const rows = [
   ['return_request_window_days', '5', 'INT', 1, 30],
   ['return_handover_carrier_days', '3', 'INT', 1, 30],
   ['counter_pickup_days', '10', 'INT', 1, 90],
+  ['voucher_max_ratio_of_commission', '1', 'DECIMAL', 0, 1],
+  ['membership_expiry_reminder_days', '3', 'INT', 1, 30],
 ];
 const fixture = () => rows.map(([key, value, type, min, max]) => ({
   key, value, defaultValue: value, usingDefault: false, type, min, max,
@@ -66,6 +68,9 @@ describe('Admin system configuration HTTP contract', () => {
     tab(/2\. Giá/);
     expect(screen.getByLabelText(/Hoa hồng kỳ 1/)).toHaveValue(12.34);
     expect(screen.getByLabelText(/Số lần đổi giá tối đa/)).toHaveValue(2);
+    expect(screen.getByLabelText(/Tỷ lệ giảm giá voucher tối đa/)).toHaveValue(100);
+    tab(/5\. Vận hành/);
+    expect(screen.getByLabelText(/Số ngày nhắc trước khi hết hạn gói VIP/)).toHaveValue(3);
     tab(/3\. Ví/);
     expect(screen.getByLabelText(/Số tiền rút tối thiểu/)).toHaveValue(75000);
     expect(screen.getByLabelText(/Số lần rút tối đa/)).toHaveValue(6);
@@ -77,7 +82,7 @@ describe('Admin system configuration HTTP contract', () => {
     expect(screen.getByLabelText(/Thời hạn đến kho nhận hàng trả/)).toHaveValue(10);
   });
 
-  it('enables all 23 catalog keys across all 5 tabs when returned by backend', async () => {
+  it('enables all 25 catalog keys across all 5 tabs when returned by backend', async () => {
     await mount();
     for (const label of [/Hạn chọn xử lý/, /Hạn mang đồ/, /Số form đang chờ/]) {
       expect(screen.getByLabelText(label)).toBeEnabled();
@@ -88,7 +93,7 @@ describe('Admin system configuration HTTP contract', () => {
     for (const input of screen.getAllByRole('spinbutton')) expect(input).toBeEnabled();
   });
 
-  it('sends all 23 catalog keys, preserves fractional percentages, and refreshes from the server after saving', async () => {
+  it('sends all 25 catalog keys, preserves fractional percentages, and refreshes from the server after saving', async () => {
     await mount();
     tab(/3\. Ví/);
     fireEvent.change(screen.getByLabelText(/Số tiền rút tối thiểu/), { target: { value: '80000' } });
@@ -102,7 +107,7 @@ describe('Admin system configuration HTTP contract', () => {
     expect(baseApi.put).toHaveBeenCalledWith('/api/admin/config/max_payout_requests_per_day', { value: '7' });
     expect(baseApi.put).toHaveBeenCalledWith('/api/admin/config/order_payment_timeout_minutes', { value: '30' });
     expect(baseApi.put).toHaveBeenCalledWith('/api/admin/config/commission_rate_term1', { value: '0.1234' });
-    expect(baseApi.put).toHaveBeenCalledTimes(23);
+    expect(baseApi.put).toHaveBeenCalledTimes(25);
     expect(baseApi.get).toHaveBeenCalledTimes(2);
     tab(/3\. Ví/);
     expect(screen.getByLabelText(/Số lần rút tối đa/)).toHaveValue(6);
