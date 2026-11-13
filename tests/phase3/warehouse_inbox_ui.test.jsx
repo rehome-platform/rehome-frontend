@@ -366,4 +366,99 @@ describe('WarehouseInboxPage Crash Resistance & Design Tokens', () => {
     });
     expect(screen.queryByRole('button', { name: /Đánh dấu đã xong/i })).not.toBeInTheDocument();
   });
+
+  it('ignores stale getMessages response from a previous conversation when switching quickly', async () => {
+    let resolveConv1;
+    const conv1Promise = new Promise((resolve) => {
+      resolveConv1 = resolve;
+    });
+
+    vi.mocked(warehouseInboxService.getConversations).mockResolvedValueOnce({
+      data: [
+        { id: 'conv-1', memberName: 'Khách Một', status: 'UNANSWERED', lastMessage: 'Tin 1' },
+        { id: 'conv-2', memberName: 'Khách Hai', status: 'UNANSWERED', lastMessage: 'Tin 2' },
+      ],
+      total: 2,
+    });
+
+    vi.mocked(warehouseInboxService.getMessages).mockImplementation((convId) => {
+      if (convId === 'conv-1') return conv1Promise;
+      return Promise.resolve({
+        data: [{ id: 'm-conv2', sender: 'member', content: 'Tin nhắn của Khách Hai', createdAt: '2026-11-10T10:00:00Z' }],
+        total: 1,
+      });
+    });
+
+    render(
+      <MemoryRouter>
+        <WarehouseInboxPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Khách Hai').length).toBeGreaterThan(0);
+    });
+
+    // Switch to conv-2 while conv-1 is still loading
+    fireEvent.click(screen.getAllByText('Khách Hai')[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText('Tin nhắn của Khách Hai')).toBeInTheDocument();
+    });
+
+    // Now resolve the slow conv-1 request
+    resolveConv1({
+      data: [{ id: 'm-conv1', sender: 'member', content: 'Tin nhắn cũ của Khách Một', createdAt: '2026-11-10T09:00:00Z' }],
+      total: 1,
+    });
+
+    // Active conv-2 messages must NOT be overwritten by stale conv-1 response
+    await waitFor(() => {
+      expect(screen.getByText('Tin nhắn của Khách Hai')).toBeInTheDocument();
+      expect(screen.queryByText('Tin nhắn cũ của Khách Một')).not.toBeInTheDocument();
+    });
+  });
+
+  it('supports message pagination and deduplicates messages by ID', async () => {
+    const page0Messages = Array.from({ length: 50 }, (_, i) => ({
+      id: `msg-${i + 1}`,
+      sender: 'member',
+      content: `Tin nhắn số ${i + 1}`,
+      createdAt: new Date(2026, 10, 10, 10, i).toISOString(),
+    }));
+
+    vi.mocked(warehouseInboxService.getConversations).mockResolvedValueOnce({
+      data: [{ id: 'conv-page', memberName: 'Khách Phân Trang', status: 'UNANSWERED', lastMessage: 'Hi' }],
+      total: 1,
+    });
+
+    vi.mocked(warehouseInboxService.getMessages)
+      .mockResolvedValueOnce({ data: page0Messages, total: 52 })
+      .mockResolvedValueOnce({
+        data: [
+          { id: 'msg-50', sender: 'member', content: 'Tin nhắn số 50', createdAt: new Date(2026, 10, 10, 10, 49).toISOString() },
+          { id: 'msg-older', sender: 'member', content: 'Tin nhắn cũ hơn', createdAt: new Date(2026, 10, 10, 9, 0).toISOString() },
+        ],
+        total: 52,
+      });
+
+    render(
+      <MemoryRouter>
+        <WarehouseInboxPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Tin nhắn số 50')).toBeInTheDocument();
+    });
+
+    const loadMoreBtn = screen.getByRole('button', { name: /Tải thêm tin nhắn cũ/i });
+    fireEvent.click(loadMoreBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Tin nhắn cũ hơn')).toBeInTheDocument();
+    });
+    // msg-50 should be deduplicated (rendered only once)
+    expect(screen.getAllByText('Tin nhắn số 50')).toHaveLength(1);
+  });
 });

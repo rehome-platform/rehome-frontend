@@ -31,6 +31,7 @@ export function useCounter() {
   const { recentServed, rememberServed } = useRecentServed(scope);
   const lookupRequestRef = useRef(null);
   const selectionVersionRef = useRef(0);
+  const handoverLockRef = useRef(false);
 
   const memberCodeInputRef = useRef(null);
   const selectedRef = useRef(selected);
@@ -141,6 +142,8 @@ export function useCounter() {
   };
 
   const executeHandover = async (item, context) => {
+    if (handoverLockRef.current) return;
+    handoverLockRef.current = true;
     setHandoverLoading(true);
     setHandoverFeedback(null);
     try {
@@ -166,6 +169,7 @@ export function useCounter() {
       });
       setConfirmHandover(null);
     } finally {
+      handoverLockRef.current = false;
       setHandoverLoading(false);
     }
   };
