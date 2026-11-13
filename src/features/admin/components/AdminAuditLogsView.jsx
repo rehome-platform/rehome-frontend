@@ -80,6 +80,16 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
         return 'Đề xuất khóa tổ chức (Moderator)';
       case 'VIOLATION_DISMISS':
         return 'Bác bỏ báo cáo vi phạm';
+      case 'UPDATE_MEMBERSHIP_PLAN':
+        return 'Cập nhật gói thành viên';
+      case 'GRANT_MEMBERSHIP':
+        return 'Tặng gói thành viên';
+      case 'CANCEL_MEMBERSHIP':
+        return 'Hủy gói thành viên';
+      case 'UPDATE_VOUCHER_TEMPLATE':
+        return 'Cập nhật mẫu voucher';
+      case 'DEACTIVATE_VOUCHER_TEMPLATE':
+        return 'Ngưng kích hoạt mẫu voucher';
       default:
         return actionType || 'Thao tác hệ thống';
     }
@@ -367,6 +377,9 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
               <option value="PRODUCT">Sản phẩm & Hàng kí gửi</option>
               <option value="ORDER">Đơn hàng</option>
               <option value="SYSTEM_CONFIG">Cấu hình hệ thống</option>
+              <option value="MEMBERSHIP_PLAN">Gói thành viên (MEMBERSHIP_PLAN)</option>
+              <option value="MEMBER_SUBSCRIPTION">Đăng ký thành viên (MEMBER_SUBSCRIPTION)</option>
+              <option value="VOUCHER_TEMPLATE">Mẫu voucher (VOUCHER_TEMPLATE)</option>
             </select>
 
             {/* Filter Loại hành động */}
