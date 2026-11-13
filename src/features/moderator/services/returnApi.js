@@ -67,7 +67,8 @@ export function mapReturnItem(raw) {
     condition: raw.condition || null,
     consignPrice: raw.consignPrice ?? raw.originalPrice ?? null,
     amount,
-    refundAmount: raw.refundAmount ?? raw.amount ?? null,
+    refundAmount: raw.refundAmount ?? null,
+    discountAmount: raw.discountAmount ?? raw.voucherDiscount ?? null,
     shippingFee: raw.shippingFee ?? null,
     buyerName: raw.buyerName || null,
     buyerPhone: raw.buyerPhone || null,
@@ -233,6 +234,15 @@ export const returnService = {
           if (order.autoCompleteDeadline) mapped.autoCompleteDeadline = order.autoCompleteDeadline;
           if (order.paymentDeadline) mapped.paymentDeadline = order.paymentDeadline;
           if (order.deliveredAt) mapped.deliveredAt = order.deliveredAt;
+          if (mapped.discountAmount == null && (order.discountAmount != null || order.voucherDiscount != null)) {
+            mapped.discountAmount = order.discountAmount ?? order.voucherDiscount;
+          }
+          if (mapped.shippingFee == null && order.shippingFee != null) {
+            mapped.shippingFee = order.shippingFee;
+          }
+          if (mapped.refundAmount == null && order.refundAmount != null) {
+            mapped.refundAmount = order.refundAmount;
+          }
         }
       } catch (err) {
         // Fallback gracefully without breaking return detail

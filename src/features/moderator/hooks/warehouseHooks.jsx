@@ -195,7 +195,7 @@ export function useResource(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.scope, session.signal, enabled, poll, refreshInterval, version, ...dependencies]);
 
-  const mutate = async (action, { onSuccess, onUncertain } = {}) => {
+  const mutate = async (action, { onSuccess, onUncertain, onError } = {}) => {
     if (mutationLock.current || session.signal.aborted) return false;
     const controller = new AbortController();
     mutations.current.add(controller);
@@ -222,6 +222,7 @@ export function useResource(
         !['CONTRACT_BLOCKED', 'OPERATION_UNSUPPORTED'].includes(normalized.code)
       )
         onUncertain?.();
+      await onError?.(normalized);
       // Keep action errors separate from refresh to avoid erasing a conflict message.
       setActionError(normalized);
       return false;

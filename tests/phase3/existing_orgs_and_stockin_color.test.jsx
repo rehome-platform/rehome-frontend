@@ -3,6 +3,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import StockInForm, { COMMON_COLORS } from '../../src/features/moderator/components/StockInForm.jsx';
+import CatalogEditor from '../../src/features/moderator/components/CatalogEditor.jsx';
 import { ExistingOrganizationsSection } from '../../src/features/moderator/components/verification/ExistingOrganizationsSection.jsx';
 import { catalogService, consignmentService, inventoryService } from '../../src/features/moderator/services/warehouseApi.js';
 import { Phase2Provider } from '../../src/features/moderator/hooks/warehouseHooks.jsx';
@@ -262,5 +263,86 @@ describe('ExistingOrganizationsSection - Existing Organizations Tab', () => {
     expect(screen.getByText('Nguyễn Văn Đại Diện')).toBeInTheDocument();
     expect(screen.getByText('0912345678')).toBeInTheDocument();
     expect(screen.getByText('contact@abc.org')).toBeInTheDocument();
+  });
+});
+
+describe('StockInForm - Try-on cleanup & Category/Brand locking', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(consignmentService, 'receipt').mockResolvedValue({
+      id: 'rcpt-lock-1',
+      confirmedAt: '2026-11-05T10:00:00Z',
+      agreedPrice: 300000,
+    });
+    vi.spyOn(consignmentService, 'read').mockResolvedValue(null);
+    vi.spyOn(catalogService, 'list').mockResolvedValue({
+      categories: [
+        { id: 'cat-top', name: 'Áo sơ mi', tryonSlot: 'TOP', hidden: false },
+        { id: 'cat-none', name: 'Túi xách', slot: 'NONE', hidden: false },
+      ],
+      brands: [{ id: 'brand-1', name: 'Zara', hidden: false }],
+    });
+  });
+
+  it('does not render AI try-on slot or background-removal info block', async () => {
+    render(
+      <StockInForm
+        receipt={{ id: 'rcpt-lock-1', confirmedAt: '2026-11-05T10:00:00Z', categoryId: 'cat-top', brandId: 'brand-1' }}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await screen.findByLabelText('Danh mục');
+    expect(screen.queryByText(/Ảnh dùng cho thử đồ AI/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Không cần tách nền/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Chưa có thông tin slot thử đồ/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/chưa tách nền/i)).not.toBeInTheDocument();
+  });
+
+  it('locks category and brand selects when pre-populated from approved form/receipt', async () => {
+    render(
+      <StockInForm
+        receipt={{ id: 'rcpt-lock-1', confirmedAt: '2026-11-05T10:00:00Z' }}
+        form={{ id: 'form-1', categoryId: 'cat-top', brandId: 'brand-1' }}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    const categorySelect = await screen.findByLabelText('Danh mục');
+    const brandSelect = screen.getByLabelText('Thương hiệu');
+
+    expect(categorySelect).toHaveValue('cat-top');
+    expect(brandSelect).toHaveValue('brand-1');
+    expect(categorySelect).toBeDisabled();
+    expect(brandSelect).toBeDisabled();
+    expect(screen.getByRole('button', { name: /\+ Thêm nhanh thương hiệu/i })).toBeDisabled();
+  });
+
+  it('keeps category and brand selects enabled when form/receipt has no categoryId or brandId', async () => {
+    render(
+      <StockInForm
+        receipt={{ id: 'rcpt-lock-1', confirmedAt: '2026-11-05T10:00:00Z' }}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    const categorySelect = await screen.findByLabelText('Danh mục');
+    const brandSelect = screen.getByLabelText('Thương hiệu');
+
+    expect(categorySelect).toBeEnabled();
+    expect(brandSelect).toBeEnabled();
+    expect(screen.getByRole('button', { name: /\+ Thêm nhanh thương hiệu/i })).toBeEnabled();
+  });
+});
+
+describe('CatalogEditor - Mobile-only try-on helper copy', () => {
+  it('displays mobile-only copy instead of web/app copy for try-on slot', () => {
+    render(
+      <CatalogEditor kind="category" onClose={vi.fn()} onSaved={vi.fn()} />,
+      { wrapper: Wrapper }
+    );
+
+    expect(screen.getByText(/trên ứng dụng di động \(mobile\)/i)).toBeInTheDocument();
+    expect(screen.queryByText(/trên web\/app/i)).not.toBeInTheDocument();
   });
 });

@@ -809,13 +809,23 @@ export function ReturnInspectionVerdict({
           <span className="text-textSecondary">Phí vận chuyển đơn gốc</span>
           <span className="text-text">{formatCurrencyVND(selectedItem?.shippingFee || 0)}</span>
         </div>
+        {selectedItem?.discountAmount != null && Number(selectedItem.discountAmount) > 0 && (
+          <div className="flex justify-between">
+            <span className="text-textSecondary">Giảm giá / Voucher</span>
+            <span className="text-error font-medium">-{formatCurrencyVND(selectedItem.discountAmount)}</span>
+          </div>
+        )}
         <div className="flex justify-between">
           <span className="text-textSecondary">Phí trả hàng</span>
           <span className="text-primary font-bold">kho chịu</span>
         </div>
         <div className="flex justify-between text-sm font-bold pt-2 border-t border-neutral text-text">
           <span>Hoàn vào ví người mua</span>
-          <span className="text-primary">{formatCurrencyVND((selectedItem?.amount || 0) + (selectedItem?.shippingFee || 0))}</span>
+          <span className="text-primary">
+            {selectedItem?.refundAmount != null
+              ? formatCurrencyVND(selectedItem.refundAmount)
+              : (selectedItem?.amount != null ? formatCurrencyVND(selectedItem.amount) : '—')}
+          </span>
         </div>
         <p className="text-[10px] text-textSecondary pt-1">
           Vào ví ReHome, không hoàn về thẻ/MoMo. Tiền của người ký gửi đang giữ nên không phải đòi lại.

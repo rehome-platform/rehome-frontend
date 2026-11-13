@@ -16,6 +16,21 @@ export const normalizeNotification = (item) => {
   };
 };
 
+export const dedupeNotificationsById = (items = []) => {
+  const seen = new Set();
+  const result = [];
+  for (const item of items) {
+    if (!item) continue;
+    const key = item.id != null ? String(item.id) : null;
+    if (key) {
+      if (seen.has(key)) continue;
+      seen.add(key);
+    }
+    result.push(item);
+  }
+  return result;
+};
+
 export const NotificationProvider = ({ children }) => {
   const { isAuthenticated } = useAuth();
   const { isConnected } = useWebSocket();
@@ -31,9 +46,11 @@ export const NotificationProvider = ({ children }) => {
 
   const notificationsRef = useRef(notifications);
   notificationsRef.current = notifications;
+  const fetchSeqRef = useRef(0);
 
   const fetchNotifications = useCallback(async () => {
     if (!isAuthenticated) return;
+    const seq = ++fetchSeqRef.current;
     setLoading(true);
     try {
       const res = await baseApi.get(API_ENDPOINTS.NOTIFICATIONS.LIST, {
@@ -59,7 +76,8 @@ export const NotificationProvider = ({ children }) => {
         rawList = payload.items;
       }
 
-      const list = rawList.map(normalizeNotification);
+      const list = dedupeNotificationsById(rawList.map(normalizeNotification));
+      if (seq !== fetchSeqRef.current) return;
       setNotifications(list);
       setPage(0);
       setHasMore(totalPages > 1 || rawList.length === 20);
@@ -143,11 +161,7 @@ export const NotificationProvider = ({ children }) => {
       }
 
       const normalized = rawList.map(normalizeNotification);
-      setNotifications((prev) => {
-        const existingIds = new Set(prev.map((n) => String(n.id)));
-        const newItems = normalized.filter((n) => !existingIds.has(String(n.id)));
-        return [...prev, ...newItems];
-      });
+      setNotifications((prev) => dedupeNotificationsById([...prev, ...normalized]));
       setPage(nextPage);
       setHasMore(nextPage + 1 < totalPages && rawList.length > 0);
     } catch (err) {

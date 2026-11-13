@@ -5,12 +5,14 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
 import CounterPage from '../../src/features/moderator/pages/CounterPage.jsx';
+import ConsignmentQueuePage from '../../src/features/moderator/pages/ConsignmentQueuePage.jsx';
 import ConsignmentPrintQueuePage from '../../src/features/moderator/pages/ConsignmentPrintQueuePage.jsx';
 import ReceiptPanel from '../../src/features/moderator/components/ReceiptPanel.jsx';
 import BrandQuickAddModal from '../../src/features/moderator/components/BrandQuickAddModal.jsx';
 import StockInForm from '../../src/features/moderator/components/StockInForm.jsx';
 
-import { counterService, consignmentService, catalogService, inventoryService, skuLabelService } from '../../src/features/moderator/services/warehouseApi.js';
+import { counterService, consignmentService, catalogService, inventoryService, skuLabelService, queueService } from '../../src/features/moderator/services/warehouseApi.js';
+import { Phase2Error } from '../../src/features/moderator/models/warehouseModel.js';
 import * as labelDownload from '../../src/features/moderator/services/skuLabelApi.js';
 import { Phase2Provider } from '../../src/features/moderator/hooks/warehouseHooks.jsx';
 
@@ -143,7 +145,7 @@ describe('Luồng 2 - Bước 3: Quầy tiếp nhận, Kiểm định tại qu�
   });
 
   describe('3. Nhập kho & Thêm nhanh thương hiệu ', () => {
-    it('hiển thị slot thử đồ AI khi chọn danh mục quần áo, và khối không cần tách nền khi chọn danh mục khác', async () => {
+    it('không hiển thị UI thử đồ AI hay tách nền trên web khi chọn danh mục (try-on chỉ có trên mobile)', async () => {
       vi.spyOn(consignmentService, 'receipt').mockResolvedValue({ id: 'rcpt-test', confirmedAt: '2026-11-01T10:00:00Z' });
       vi.spyOn(catalogService, 'list').mockResolvedValue({
         categories: [
@@ -163,16 +165,17 @@ describe('Luồng 2 - Bước 3: Quầy tiếp nhận, Kiểm định tại qu�
       );
 
       const catSelect = await screen.findByLabelText(/Danh mục/i);
+      await screen.findByRole('option', { name: 'Áo khoác' });
 
-      // Chọn Áo khoác -> Hiện Slot thử đồ AI
+      // Chọn Áo khoác -> Không hiển thị UI thử đồ AI / tách nền trên web
       await user.selectOptions(catSelect, 'cat-coat');
-      expect(await screen.findByText(/Ảnh dùng cho thử đồ AI/i)).toBeInTheDocument();
-      expect(screen.getByText(/Ảnh dùng cho thử đồ AI · SLOT ÁO/i)).toBeInTheDocument();
+      expect(screen.queryByText(/Ảnh dùng cho thử đồ AI/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Không cần tách nền/i)).not.toBeInTheDocument();
 
-      // Đổi sang Túi xách -> Hiện Không cần tách nền
+      // Đổi sang Túi xách -> Vẫn không hiển thị UI thử đồ AI / tách nền
       await user.selectOptions(catSelect, 'cat-bag');
-      expect(await screen.findByText(/Không cần tách nền/i)).toBeInTheDocument();
-      expect(screen.getByText(/Không cần tách nền · KHÔNG CÓ SLOT/i)).toBeInTheDocument();
+      expect(screen.queryByText(/Ảnh dùng cho thử đồ AI/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Không cần tách nền/i)).not.toBeInTheDocument();
     });
 
     it('BrandQuickAddModal: phát hiện trùng tên thương hiệu và vô hiệu hóa nút Lưu ', async () => {
@@ -235,6 +238,92 @@ describe('Luồng 2 - Bước 3: Quầy tiếp nhận, Kiểm định tại qu�
         expect(screen.getByText(/Đã tải PDF 1 tem và cập nhật hàng đợi/i)).toBeInTheDocument();
       }, { timeout: 2000 });
       expect(pdf).toHaveBeenCalledWith(['Q7-AK-000846'], expect.anything());
+    });
+  });
+
+  describe('5. Gia cố chống nhập kho trùng (stockedIn/productId) & xung đột hàng đợi (409/release)', () => {
+    it('StockInForm chặn nhập kho trùng khi biên nhận đã có stockedIn hoặc productId', async () => {
+      vi.spyOn(consignmentService, 'receipt').mockResolvedValue({
+        receiptId: 'rcpt-dup',
+        confirmedAt: '2026-11-01T10:00:00Z',
+        stockedIn: true,
+        productId: 'prod-existing-99',
+      });
+      vi.spyOn(catalogService, 'list').mockResolvedValue({
+        categories: [{ id: 'cat-coat', name: 'Áo khoác', tryonSlot: 'TOP', hidden: false }],
+        brands: [{ id: 'b1', name: 'Uniqlo', hidden: false }],
+      });
+      const createSpy = vi.spyOn(inventoryService, 'create');
+
+      renderWithProviders(
+        <StockInForm
+          receipt={{ receiptId: 'rcpt-dup', confirmedAt: '2026-11-01T10:00:00Z', agreedPrice: 850000 }}
+          onSuccess={vi.fn()}
+        />
+      );
+
+      expect(await screen.findByText(/Sản phẩm đã tồn tại · prod-existing-99/i)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Nhập kho · tạo SKU/i })).not.toBeInTheDocument();
+      expect(createSpy).not.toHaveBeenCalled();
+    });
+
+    it('Hàng đợi: xử lý xung đột 409 khi nhận việc trùng và nhả việc thành công', async () => {
+      const unclaimedTask = {
+        queueId: 'q-101',
+        type: 'INSPECTION',
+        formId: 'KG-2026-000999',
+        memberName: 'Nguyễn Văn A',
+        status: 'PENDING',
+        createdAt: new Date(Date.now() - 3600000).toISOString(),
+        claimedBy: null,
+      };
+      const claimedByMeTask = {
+        queueId: 'q-102',
+        type: 'INSPECTION',
+        formId: 'KG-2026-000888',
+        memberName: 'Trần Thị B',
+        status: 'CLAIMED',
+        createdAt: new Date(Date.now() - 3600000).toISOString(),
+        claimedBy: 'mod-a',
+      };
+
+      const listSpy = vi.spyOn(queueService, 'list').mockResolvedValue([unclaimedTask, claimedByMeTask]);
+      vi.spyOn(queueService, 'claim').mockRejectedValue(
+        new Phase2Error('Conflict', 409, 'QUEUE_ITEM_ALREADY_CLAIMED')
+      );
+      const releaseSpy = vi.spyOn(queueService, 'release').mockResolvedValue({ ok: true });
+
+      const user = userEvent.setup();
+      renderWithProviders(<ConsignmentQueuePage />, '/moderator/queue');
+
+      // 1. Bấm nhận việc q-101 -> xác nhận modal -> 409 conflict -> đóng modal + hiện thông báo lỗi + refresh list
+      const claimButtons = await screen.findAllByRole('button', { name: /Nhận việc/i });
+      await user.click(claimButtons[0]);
+
+      await screen.findByText('Nhận việc này?');
+      const claimBtnsInModal = screen.getAllByRole('button', { name: /^Nhận việc$/i });
+      await user.click(claimBtnsInModal[claimBtnsInModal.length - 1]);
+
+      expect(
+        await screen.findByText(/Công việc đã được người khác nhận trước\. Hệ thống đã tải lại danh sách mới nhất\./i)
+      ).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByText('Nhận việc này?')).not.toBeInTheDocument();
+      });
+      expect(listSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+
+      // 2. Bấm nhả việc q-102 -> xác nhận modal -> thành công
+      const releaseButtons = await screen.findAllByRole('button', { name: /Nhả việc/i });
+      await user.click(releaseButtons[0]);
+
+      await screen.findByText('Nhả việc này về hàng đợi?');
+      const releaseBtnsInModal = screen.getAllByRole('button', { name: /^Nhả việc$/i });
+      await user.click(releaseBtnsInModal[releaseBtnsInModal.length - 1]);
+
+      await waitFor(() => {
+        expect(releaseSpy).toHaveBeenCalledWith('q-102', expect.anything());
+      });
+      expect(await screen.findByText(/Đã nhả việc .* về hàng đợi thành công\./i)).toBeInTheDocument();
     });
   });
 });

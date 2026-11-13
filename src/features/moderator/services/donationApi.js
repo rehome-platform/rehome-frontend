@@ -3,17 +3,102 @@ import { isFixtureMode } from '../config/warehouseContract.js';
 import { Phase2Error } from '../models/warehouseModel.js';
 import { callBackend } from './warehouseTransport.js';
 
+export const CAMPAIGN_STATUS_LABELS = {
+  OPEN: 'Đang diễn ra',
+  ACTIVE: 'Đang diễn ra',
+  CLOSED: 'Đã đóng',
+  EXPIRED: 'Đã hết hạn',
+  LOCKED: 'Đã khóa',
+  BANNED: 'Đã bị cấm',
+  HIDDEN: 'Đã ẩn',
+};
+
+const INACTIVE_CAMPAIGN_STATUSES = new Set([
+  'CLOSED',
+  'EXPIRED',
+  'LOCKED',
+  'BANNED',
+  'HIDDEN',
+  'CANCELLED',
+  'ENDED',
+  'INACTIVE',
+]);
+const LOCKED_ORG_STATUSES = new Set(['LOCKED', 'BANNED', 'SUSPENDED']);
+
+export function isCampaignActive(campaign, now = Date.now()) {
+  if (!campaign) return false;
+  if (campaign.organizationLocked) return false;
+  const orgStatus = String(campaign.organizationStatus || '').toUpperCase();
+  if (orgStatus && LOCKED_ORG_STATUSES.has(orgStatus)) return false;
+  const status = String(campaign.status || 'OPEN').toUpperCase();
+  if (INACTIVE_CAMPAIGN_STATUSES.has(status)) return false;
+  if (campaign.endTime) {
+    const endMs = new Date(campaign.endTime).getTime();
+    if (!Number.isNaN(endMs) && endMs <= now) return false;
+  }
+  return true;
+}
+
 function normalizeCampaign(c) {
   if (!c) return null;
-  return {
+  const orgStatus = c.organization?.status || c.organizationStatus || null;
+  const organizationLocked = Boolean(
+    c.organization?.locked ||
+    c.organizationLocked ||
+    LOCKED_ORG_STATUSES.has(String(orgStatus || '').toUpperCase()),
+  );
+  const normalized = {
     ...c,
     id: c.id,
     title: c.title || 'Chiến dịch quyên góp',
+    status: String(c.status || 'OPEN').toUpperCase(),
     endTime: c.endTime || null,
     preferredItemTypes: Array.isArray(c.preferredItemTypes) ? c.preferredItemTypes : [],
     organizationId: c.organization?.id || c.organization?.accountId || c.organizationId || null,
     organizationName: c.organization?.displayName || c.organizationName || 'Tổ chức',
+    organizationStatus: orgStatus,
+    organizationLocked,
+    pendingCount: c.pendingCount ?? c.waitingCount ?? null,
+    handedOverCount: c.handedOverCount ?? null,
     warehouses: Array.isArray(c.warehouses) ? c.warehouses : [],
+  };
+  normalized.isActive = isCampaignActive(normalized);
+  return normalized;
+}
+
+function formatCampaignPage(rawRes, { view = 'ACTIVE', q = '', page = 0, size = 20 } = {}) {
+  const isArray = Array.isArray(rawRes);
+  const rawList = isArray ? rawRes : (rawRes?.content || rawRes?.items || []);
+  let list = rawList.map(normalizeCampaign).filter(Boolean);
+
+  // Enforce view filtering as fallback if backend ignores view=ACTIVE/HISTORY or returns locked orgs
+  list = list.filter((c) => (view === 'HISTORY' ? !isCampaignActive(c) : isCampaignActive(c)));
+
+  const trimmedQ = String(q || '').trim().toLowerCase();
+  if (isArray && trimmedQ) {
+    list = list.filter(
+      (c) =>
+        c.title.toLowerCase().includes(trimmedQ) ||
+        c.organizationName.toLowerCase().includes(trimmedQ) ||
+        c.preferredItemTypes.some((t) => String(t).toLowerCase().includes(trimmedQ)),
+    );
+  }
+
+  if (isArray) {
+    const totalElements = list.length;
+    const totalPages = Math.ceil(totalElements / size);
+    const items = list.slice(page * size, (page + 1) * size);
+    return { items, page, size, totalElements, totalPages };
+  }
+
+  const totalElements = rawRes?.totalElements ?? list.length;
+  const totalPages = rawRes?.totalPages ?? (list.length > 0 ? 1 : 0);
+  return {
+    items: list,
+    page: rawRes?.number ?? rawRes?.page ?? page,
+    size: rawRes?.size ?? size,
+    totalElements,
+    totalPages,
   };
 }
 
@@ -57,34 +142,62 @@ export const donationService = {
     return Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : []);
   },
 
-  warehouseCampaigns: async (warehouseId, options = {}) => {
-    if (!warehouseId) return [];
-    if (isFixtureMode) return [];
+  warehouseCampaigns: async (warehouseId, paramsOrOptions = {}, maybeOptions = {}) => {
+    const isLegacyOptions =
+      paramsOrOptions &&
+      typeof paramsOrOptions === 'object' &&
+      'signal' in paramsOrOptions &&
+      !('view' in paramsOrOptions) &&
+      !('q' in paramsOrOptions) &&
+      !('page' in paramsOrOptions);
+    const params = isLegacyOptions ? {} : (paramsOrOptions || {});
+    const options = isLegacyOptions ? paramsOrOptions : (maybeOptions || {});
+    const view = params.view || 'ACTIVE';
+    const q = params.q || '';
+    const page = Number.isFinite(Number(params.page)) ? Number(params.page) : 0;
+    const size = Number.isFinite(Number(params.size)) && Number(params.size) > 0 ? Number(params.size) : 20;
+
+    if (!warehouseId) return { items: [], page, size, totalElements: 0, totalPages: 0 };
+    if (isFixtureMode) return { items: [], page, size, totalElements: 0, totalPages: 0 };
+
+    const trimmedQ = String(q || '').trim();
+    const requestParams = {
+      view,
+      page,
+      size,
+      ...(trimmedQ ? { q: trimmedQ } : {}),
+    };
+
     try {
       const res = await callBackend(
         {
           method: 'get',
           url: API_ENDPOINTS.MODERATOR.WAREHOUSE_CAMPAIGNS(warehouseId),
-          params: { page: 0, size: 50 },
+          params: requestParams,
         },
         { signal: options?.signal },
       );
-      const list = res?.content || res?.items || (Array.isArray(res) ? res : []);
-      return list.map(normalizeCampaign).filter(Boolean);
+      return formatCampaignPage(res, { view, q: trimmedQ, page, size });
     } catch (err) {
       if (err?.status === 404 || err?.status === 405) {
         const res = await callBackend(
           {
             method: 'get',
             url: API_ENDPOINTS.MODERATOR.PUBLIC_CAMPAIGNS,
-            params: { status: 'OPEN', page: 0, size: 50 },
+            params: {
+              status: view === 'HISTORY' ? 'CLOSED' : 'OPEN',
+              page,
+              size,
+              ...(trimmedQ ? { q: trimmedQ } : {}),
+            },
           },
           { signal: options?.signal },
         );
-        const list = res?.content || res?.items || (Array.isArray(res) ? res : []);
-        return list
-          .map(normalizeCampaign)
-          .filter((c) => c && c.warehouses.some((w) => String(w.id) === String(warehouseId)));
+        const rawList = res?.content || res?.items || (Array.isArray(res) ? res : []);
+        const warehouseFiltered = rawList.filter(
+          (c) => c && Array.isArray(c.warehouses) && c.warehouses.some((w) => String(w.id) === String(warehouseId)),
+        );
+        return formatCampaignPage(warehouseFiltered, { view, q: trimmedQ, page, size });
       }
       throw err;
     }

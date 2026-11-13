@@ -474,4 +474,80 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     expect(detail.returnDeadline).toBe(returnFuture);
     expect(detail.carrierStatus).toMatch(/Hạn bàn giao GHN:.*còn/);
   });
+
+  it('displays exact server-returned refundAmount and discountAmount without client-side recomputation', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.RETURNS}`, async () => {
+        return HttpResponse.json({
+          result: {
+            content: [
+              {
+                id: 'RET-VOUCHER-01',
+                code: 'YC-VOUCHER',
+                orderId: 'ORD-VOUCHER-01',
+                status: 'INSPECTING',
+                buyerName: 'Nguyễn Thị V',
+                productName: 'Áo khoác dạ',
+                amount: 500000,
+                shippingFee: 30000,
+                discountAmount: 100000,
+                refundAmount: 430000,
+              },
+            ],
+            totalElements: 1,
+            page: 0,
+            size: 20,
+          },
+          isSuccess: true,
+          statusCode: 200,
+        });
+      }),
+      http.get(`${API_BASE_URL}/return-requests/RET-VOUCHER-01/detail`, async () => {
+        return HttpResponse.json({
+          result: {
+            id: 'RET-VOUCHER-01',
+            code: 'YC-VOUCHER',
+            orderId: 'ORD-VOUCHER-01',
+            status: 'INSPECTING',
+            buyerName: 'Nguyễn Thị V',
+            productName: 'Áo khoác dạ',
+            amount: 500000,
+            shippingFee: 30000,
+            discountAmount: 100000,
+            refundAmount: 430000,
+          },
+          isSuccess: true,
+          statusCode: 200,
+        });
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/moderator/returns']}>
+        <Routes>
+          <Route path="/moderator/returns" element={<ReturnProcessingPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Hàng đã về, chờ kiểm ·/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Hàng đã về, chờ kiểm ·/i));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Kiểm tra hàng/i })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Kiểm tra hàng/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Nếu kết luận hợp lệ, hoàn cho người mua/i)).toBeInTheDocument();
+    });
+
+    // Must show voucher discount (-100.000 ₫) and exact server refundAmount (430.000 ₫), NOT 530.000 ₫
+    expect(screen.getByText(/Giảm giá \/ Voucher/i)).toBeInTheDocument();
+    expect(screen.getByText(/-100\.000/)).toBeInTheDocument();
+    expect(screen.getByText(/430\.000/)).toBeInTheDocument();
+    expect(screen.queryByText(/530\.000/)).not.toBeInTheDocument();
+  });
 });

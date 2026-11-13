@@ -41,6 +41,12 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
     if (path.startsWith('/admin/warehouses')) return 'Quản lý Điểm kí gửi ReHome';
     if (path.startsWith('/admin/configs')) return 'Cấu hình Tham số Hệ thống';
     if (path.startsWith('/admin/audit-logs')) return 'Nhật ký kiểm toán hệ thống (Audit Log)';
+    if (path.startsWith('/admin/membership-plans')) return 'Cấu hình gói thành viên VIP';
+    if (/^\/admin\/membership-subscriptions\/.+/.test(path)) return 'Chi tiết gói thành viên VIP';
+    if (path.startsWith('/admin/membership-subscriptions')) return 'Danh sách thành viên VIP';
+    if (path.startsWith('/admin/voucher-templates')) return 'Quản lý mẫu voucher';
+    if (path.startsWith('/admin/membership-stats')) return 'Thống kê gói VIP & Voucher';
+    if (path.startsWith('/admin/membership-payments')) return 'Lịch sử thanh toán gói VIP';
     return 'Tổng quan điều hành & Quỹ nền tảng';
   };
 

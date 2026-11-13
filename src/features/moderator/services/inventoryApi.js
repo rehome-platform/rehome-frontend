@@ -31,11 +31,14 @@ export const inventoryService = {
         const rows = [...storedDetails, ...withdrawn, ...unclaimed].map(item => {
           const request = item.status === 'WAREHOUSE' && pricingForProduct(pricing, item.id || item.sku);
           const proposal = item.status === 'WAREHOUSE' && proposalForProduct(proposals, item, request);
-          return inventoryDetail({ ...item,
+          return inventoryDetail({
+            ...item,
             ...(proposal ? { reConsignStatus: 'PROPOSAL_SENT', newReceiptId: proposal.receiptId } : {}),
-            ...(request ? { decisionId: request.decisionId, decision: 'RE_CONSIGN', pricingEligible: true,
+            ...(request ? {
+              decisionId: request.decisionId, decision: 'RE_CONSIGN', pricingEligible: true,
               name: item.name || request.productName, currentPrice: request.currentPrice,
-              previousAgreedPrice: request.previousAgreedPrice } : {}),
+              previousAgreedPrice: request.previousAgreedPrice
+            } : {}),
           }, item.id || item.sku);
         }).filter(item => ['WITHDRAWN', 'UNCLAIMED'].includes(item.status) || (item.status === 'WAREHOUSE' && (item.decisionId || item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT')));
         const filtered = inventoryResult(rows, params).items;
@@ -68,11 +71,13 @@ export const inventoryService = {
         const items = details.map(item => {
           const request = item.status === 'WAREHOUSE' && pricingForProduct(pricing, item.sku);
           const proposal = item.status === 'WAREHOUSE' && proposalForProduct(readProposals(options), item, request);
-          return inventoryDetail({ ...item,
+          return inventoryDetail({
+            ...item,
             ...(proposal ? { reConsignStatus: 'PROPOSAL_SENT', newReceiptId: proposal.receiptId } : {}), ...(request ? {
-            decisionId: request.decisionId, pricingEligible: true, decision: 'RE_CONSIGN',
-            previousAgreedPrice: request.previousAgreedPrice,
-          } : {}) }, item.sku);
+              decisionId: request.decisionId, pricingEligible: true, decision: 'RE_CONSIGN',
+              previousAgreedPrice: request.previousAgreedPrice,
+            } : {})
+          }, item.sku);
         });
         normalized = { ...normalized, items, content: items };
       }
@@ -149,6 +154,24 @@ export const inventoryService = {
     );
 
     return createdProduct(res, payload);
+  },
+
+  update: async (sku, data, options) => {
+    const payload = {
+      name: String(data?.name || '').trim(),
+      photoUrls: Array.isArray(data?.photoUrls) ? data.photoUrls : [],
+    };
+
+    const res = await callBackend(
+      {
+        method: 'put',
+        url: API_ENDPOINTS.MODERATOR.UPDATE_PRODUCT(sku),
+        data: payload,
+      },
+      { signal: options?.signal }
+    );
+
+    return inventoryDetail(res, sku);
   },
 
   // Upload file lên /uploads?folder=PRODUCTS
@@ -236,7 +259,8 @@ async function allInventory(status, options) {
   let page = 0, totalPages = 1;
   while (page < totalPages) {
     if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-    const result = await callBackend({ method: 'get', url: API_ENDPOINTS.MODERATOR.INVENTORY,
+    const result = await callBackend({
+      method: 'get', url: API_ENDPOINTS.MODERATOR.INVENTORY,
       params: { status, page, size: 50 },
     }, { signal: options?.signal });
     rows.push(...(result?.content || result?.items || (Array.isArray(result) ? result : [])));

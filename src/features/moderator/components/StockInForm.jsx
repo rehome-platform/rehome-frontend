@@ -38,13 +38,38 @@ export default function StockInForm({ receipt, form, onSuccess }) {
       formId ? consignmentService.read(formId, options) : Promise.resolve(null),
     ]);
     if (!currentReceipt) throw new Error('Không kiểm tra được trạng thái biên nhận.');
-    return { productSku: currentReceipt.productSku || currentReceipt.sku || currentForm?.productSku || null };
+    const productSku =
+      currentReceipt.productSku ||
+      currentReceipt.sku ||
+      currentForm?.productSku ||
+      receipt?.productSku ||
+      receipt?.sku ||
+      null;
+    const productId =
+      currentReceipt.productId ||
+      currentForm?.productId ||
+      receipt?.productId ||
+      form?.productId ||
+      null;
+    const alreadyStockedIn = Boolean(
+      productSku ||
+      productId ||
+      currentReceipt.stockedIn ||
+      currentForm?.stockedIn ||
+      receipt?.stockedIn ||
+      form?.stockedIn
+    );
+    return { productSku, productId, alreadyStockedIn };
   }, [receiptId, formId]);
   const operation = useResource(async () => null, [], { enabled: false });
   const [name, setName] = useState(receipt?.productName || form?.productName || form?.name || '');
   const [size, setSize] = useState(receipt?.size || form?.size || '');
-  const [categoryId, setCategory] = useState(receipt?.categoryId || form?.categoryId || '');
-  const [brandId, setBrand] = useState(receipt?.brandId || form?.brandId || '');
+  const lockedCategoryId = receipt?.categoryId || form?.categoryId || '';
+  const lockedBrandId = receipt?.brandId || form?.brandId || '';
+  const isCategoryLocked = Boolean(lockedCategoryId);
+  const isBrandLocked = Boolean(lockedBrandId);
+  const [categoryId, setCategory] = useState(lockedCategoryId);
+  const [brandId, setBrand] = useState(lockedBrandId);
 
   const initialColor = (receipt?.color || form?.color || '').trim();
   const isPresetColor = COMMON_COLORS.includes(initialColor);
@@ -63,10 +88,7 @@ export default function StockInForm({ receipt, form, onSuccess }) {
   const categories = catalog.data?.categories?.filter(item => !item.hidden) || [];
   const brands = [...(catalog.data?.brands || []), ...(addedBrand ? [addedBrand] : [])]
     .filter((item, i, all) => !item.hidden && all.findIndex(other => other.id === item.id) === i);
-  const category = categories.find(item => item.id === categoryId);
-  const slot = category?.tryonSlot || category?.slot;
-  const supportsTryOn = ['TOP', 'BOTTOM', 'DRESS'].includes(slot);
-  const valid = canStockIn(receipt) && verification.data && !verification.data.productSku && !verification.error &&
+  const valid = canStockIn(receipt) && verification.data && !verification.data.alreadyStockedIn && !verification.error &&
     !verification.loading && !uncertain && !catalog.error && !catalog.loading && name.trim() &&
     categories.some(item => item.id === categoryId) && brands.some(item => item.id === brandId) && photos.length > 0 && !photosPending;
   const errors = operation.error?.fields || {};
@@ -79,17 +101,19 @@ export default function StockInForm({ receipt, form, onSuccess }) {
       <ResourceState resource={{ ...operation, error: operation.error?.code === 'RECEIPT_NOT_CONFIRMED'
         ? { ...operation.error, message: 'Khách hàng chưa bấm xác nhận biên nhận trên ứng dụng. Vui lòng kiểm tra lại trước khi nhập kho.' }
         : operation.error }} />
-      {verification.data?.productSku ? (
+      {verification.data?.alreadyStockedIn ? (
         <div className="space-y-3">
-          <p>Sản phẩm đã tồn tại · {verification.data.productSku}</p>
-          <Link className="text-primary underline" to={printUrl(verification.data.productSku)}>Đến hàng đợi in tem</Link>
+          <p>Sản phẩm đã tồn tại · {verification.data.productSku || verification.data.productId || 'Đã nhập kho'}</p>
+          {verification.data.productSku && (
+            <Link className="text-primary underline" to={printUrl(verification.data.productSku)}>Đến hàng đợi in tem</Link>
+          )}
         </div>
       ) : (
         <form className="space-y-4" onSubmit={event => {
           event.preventDefault();
-          if (!valid) return;
+          if (!valid || operation.busy) return;
           operation.mutate(options => inventoryService.create({ receiptId, name: name.trim(), size: size.trim(),
-            shelfLocation: '', categoryId, brandId, color: effectiveColor.trim(), description: description.trim(), photoUrls: photos }, options), {
+            categoryId, brandId, color: effectiveColor.trim(), description: description.trim(), photoUrls: photos }, options), {
             onSuccess: result => {
               const sku = result?.sku || result?.id;
               if (!sku) {
@@ -112,10 +136,10 @@ export default function StockInForm({ receipt, form, onSuccess }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Tên sản phẩm" required value={name} onChange={e => setName(e.target.value)} error={errors.name} />
             <Field label="Size" value={size} onChange={e => setSize(e.target.value)} error={errors.size} />
-            <Field label="Danh mục" error={errors.categoryId}><select required value={categoryId} onChange={e => setCategory(e.target.value)}>
+            <Field label="Danh mục" error={errors.categoryId}><select required disabled={isCategoryLocked} value={categoryId} onChange={e => setCategory(e.target.value)}>
               <option value="">Chọn danh mục</option>{categories.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select></Field>
-            <Field label="Thương hiệu" error={errors.brandId}><select required value={brandId} onChange={e => setBrand(e.target.value)}>
+            <Field label="Thương hiệu" error={errors.brandId}><select required disabled={isBrandLocked} value={brandId} onChange={e => setBrand(e.target.value)}>
               <option value="">Chọn thương hiệu</option>{brands.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select></Field>
             <Field label="Màu sắc" error={errors.color}>
@@ -146,13 +170,9 @@ export default function StockInForm({ receipt, form, onSuccess }) {
               />
             )}
           </div>
-          <Button type="button" variant="outline" onClick={() => setQuickAdd(true)}>+ Thêm nhanh thương hiệu</Button>
+          <Button type="button" variant="outline" disabled={isBrandLocked} onClick={() => setQuickAdd(true)}>+ Thêm nhanh thương hiệu</Button>
           <Field label="Mô tả bán hàng" error={errors.description}><textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} /></Field>
           <p className="text-sm">Ghi chú kiểm định: {receipt.conditionNote || '—'}</p>
-          {category && <div className="rounded-xl border border-neutral p-4 text-xs">
-            <p className="font-semibold">{supportsTryOn ? `Ảnh dùng cho thử đồ AI · SLOT ${{ TOP: 'ÁO', BOTTOM: 'QUẦN', DRESS: 'ĐẦM' }[slot]}` : slot === 'NONE' ? 'Không cần tách nền · KHÔNG CÓ SLOT' : 'Chưa có thông tin slot thử đồ'}</p>
-            <p className="mt-2">{supportsTryOn ? 'Ảnh tải lên là ảnh gốc, chưa tách nền. Bạn vẫn có thể nhập kho và đăng bán.' : 'Ảnh bán hàng vẫn được sử dụng để đăng sản phẩm.'}</p>
-          </div>}
           <PhotoUpload disabled={operation.busy} onChange={onPhotos} />
           {uncertain && <div role="alert" className="space-y-2 rounded-xl border bg-amber-50 p-4 text-sm">
             <p>Chưa xác định được kết quả nhập kho. Kiểm tra biên nhận và form trước khi gửi lại để tránh tạo trùng SKU.</p>
