@@ -4,10 +4,18 @@ import { packingService } from '../../services/packingApi.js';
 import { usePhase2 } from '../../hooks/warehouseHooks.jsx';
 
 function ghnA5Url(value) {
-  const url = new URL(value);
+  if (!value || typeof value !== 'string') {
+    throw new Error('Đường dẫn phiếu A5 từ GHN không hợp lệ.');
+  }
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error('Đường dẫn phiếu A5 từ GHN không hợp lệ.');
+  }
   if (url.protocol !== 'https:' || !url.hostname.endsWith('.ghn.vn')
-      || !url.pathname.endsWith('/printA5') || !url.searchParams.get('token')
-      || url.username || url.password) {
+    || !url.pathname.endsWith('/printA5') || !url.searchParams.get('token')
+    || url.username || url.password) {
     throw new Error('Đường dẫn phiếu A5 từ GHN không hợp lệ.');
   }
   return url.href;
@@ -36,7 +44,7 @@ export function WaybillPrintModal({ isOpen, onClose, order }) {
     if (isOpen && targetOrderId && scope?.warehouseId) {
       packingService.read(targetOrderId, { scope, signal: controller.signal }).then(data => {
         if (epoch === generation.current) setRealOrder(data);
-      }).catch(() => {});
+      }).catch(() => { });
     }
     return () => {
       generation.current++;
@@ -86,7 +94,7 @@ export function WaybillPrintModal({ isOpen, onClose, order }) {
     }
   };
   const address = current.shippingAddress || [current.shippingAddressDetail,
-    current.shippingWardName, current.shippingProvinceName].filter(Boolean).join(', ');
+  current.shippingWardName, current.shippingProvinceName].filter(Boolean).join(', ');
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
       <div role="dialog" aria-modal="true" aria-labelledby="waybill-title" className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl space-y-5">

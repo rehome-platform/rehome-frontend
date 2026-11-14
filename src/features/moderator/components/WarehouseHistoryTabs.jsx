@@ -8,16 +8,37 @@ import { listItems } from '../models/warehouseModel.js';
 import { Pager, ResourceState } from './WarehouseUi.jsx';
 
 const actions = {
-  CLAIM_TASK: 'Nhận việc', RELEASE_TASK: 'Nhả việc', SCAN_SKU: 'Đối chiếu SKU',
-  CREATE_SHIPMENT: 'Tạo vận đơn GHN', APPROVE_FORM: 'Duyệt phiếu ký gửi',
-  REJECT_FORM: 'Từ chối phiếu ký gửi', START_INSPECTION: 'Bắt đầu kiểm định',
-  RETURN_ONSITE: 'Trả hàng tại chỗ', COMPLETE_INSPECTION: 'Hoàn tất kiểm định',
-  CONFIRM_RECEIPT: 'Xác nhận biên nhận', STOCK_PRODUCT: 'Nhập kho sản phẩm',
-  UPDATE_PRODUCT: 'Cập nhật sản phẩm', OPEN_DEGRADED_CASE: 'Mở hồ sơ hàng xuống cấp',
-  DECIDE_DEGRADED_CASE: 'Xử lý hàng xuống cấp', DECIDE_END_OF_TERM: 'Quyết định cuối kỳ',
-  RECONSIGN_TERMS: 'Đề xuất điều khoản ký gửi lại', HANDOVER_ITEM: 'Bàn giao nhận lại',
+  // PACKING
+  CLAIM_TASK: 'Nhận việc',
+  RELEASE_TASK: 'Nhả việc',
+  SCAN_SKU: 'Đối chiếu SKU',
+  CREATE_SHIPMENT: 'Tạo vận đơn GHN',
+
+  // INSPECTION
+  APPROVE_FORM: 'Duyệt phiếu ký gửi',
+  REJECT_FORM: 'Từ chối phiếu ký gửi',
+  START_INSPECTION: 'Bắt đầu kiểm định',
+  COMPLETE_INSPECTION: 'Hoàn tất kiểm định',
+  RETURN_ONSITE: 'Trả hàng tại chỗ',
+  CONFIRM_RECEIPT: 'Xác nhận biên nhận',
+  STOCK_IN: 'Nhập kho',
+  STOCK_PRODUCT: 'Nhập kho sản phẩm',
+
+  // INVENTORY
   CONFIRM_RECONSIGN: 'Xác nhận ký gửi lại',
+  OPEN_DEGRADED_CASE: 'Mở hồ sơ hàng xuống cấp',
+  RESOLVE_DEGRADED_CASE: 'Xử lý hàng xuống cấp',
+  DECIDE_DEGRADED_CASE: 'Xử lý hàng xuống cấp',
+  END_OF_TERM_DECISION: 'Quyết định cuối kỳ',
+  DECIDE_END_OF_TERM: 'Quyết định cuối kỳ',
+  PROPOSE_RECONSIGN_TERMS: 'Đề xuất điều khoản ký gửi lại',
+  RECONSIGN_TERMS: 'Đề xuất điều khoản ký gửi lại',
+  HANDOVER_END_OF_TERM: 'Bàn giao hàng cuối kỳ',
+  HANDOVER_DEGRADED_ITEM: 'Bàn giao hàng xuống cấp',
+  HANDOVER_ITEM: 'Bàn giao nhận lại',
   CONFIRM_UNCLAIMED_TRANSFER: 'Chuyển giao hàng vô thừa nhận',
+  UPDATE_PRICE: 'Cập nhật giá',
+  UPDATE_PRODUCT: 'Cập nhật sản phẩm',
 };
 const results = {
   SUCCESS: 'Thành công', PASS: 'Đạt', APPROVED: 'Đã duyệt', REJECTED: 'Đã từ chối',
@@ -27,10 +48,20 @@ const results = {
   FULL_COMPENSATION: 'Đền bù toàn bộ', PARTIAL_WITH_ITEM_BACK: 'Đền bù và nhận lại hàng',
 };
 function detailLink(row) {
-  const id = encodeURIComponent(row.targetId);
-  if (row.targetType === 'ORDER') return `/moderator/packing?orderId=${id}`;
-  if (row.targetType === 'CONSIGNMENT_FORM') return `/moderator/consignments/${id}`;
-  if (row.targetType === 'PRODUCT') return `/moderator/inventory/${id}`;
+  let targetType = row.targetType;
+  let targetId = row.targetId;
+
+  if (!targetType && row.target) {
+    const parts = String(row.target).trim().split(/\s+/);
+    targetType = parts[0];
+    targetId = parts.slice(1).join(' ');
+  }
+
+  if (!targetId) return null;
+  const id = encodeURIComponent(targetId);
+  if (targetType === 'ORDER') return `/moderator/packing?orderId=${id}`;
+  if (targetType === 'CONSIGNMENT_FORM') return `/moderator/consignments/${id}`;
+  if (targetType === 'PRODUCT') return `/moderator/inventory/${id}`;
   return null;
 }
 
@@ -60,14 +91,21 @@ export function WarehouseHistoryTabs({ type, children }) {
             <thead className="bg-background"><tr>
               {['Thời gian', 'Đối tượng', 'Thao tác', 'Người thực hiện', 'Kết quả'].map(label => <th key={label} className="p-3">{label}</th>)}
             </tr></thead>
-            <tbody className="divide-y divide-neutral">{rows.length ? rows.map(row => {
+            <tbody className="divide-y divide-neutral">{rows.length ? rows.map((row, idx) => {
               const href = detailLink(row);
-              return <tr key={row.id}>
-                <td className="p-3">{warehouseDateTime(row.createdAt)}</td>
-                <td className="p-3 break-words">{href ? <Link className="text-primary underline" to={href}>{row.targetLabel || row.targetId}</Link> : row.targetLabel || row.targetId}</td>
-                <td className="p-3">{actions[row.actionType] || row.actionType}</td>
-                <td className="p-3">{row.actorName || 'Chưa có thông tin'}</td>
-                <td className="p-3">{results[row.result] || row.result || 'Thành công'}</td>
+              const targetDisplay = row.targetLabel || row.target || row.targetId || '—';
+              const actionDisplay = actions[row.action || row.actionType] || row.action || row.actionType || 'Thao tác kho';
+              const actorDisplay = row.actorName || row.actor || 'Chưa có thông tin';
+              const resultDisplay = results[row.result] || row.result || 'Thành công';
+              const timeDisplay = warehouseDateTime(row.createdAt || row.timestamp);
+              const rowKey = row.id || `${row.timestamp || row.createdAt || ''}-${row.target || row.targetId || ''}-${row.action || row.actionType || ''}-${idx}`;
+
+              return <tr key={rowKey}>
+                <td className="p-3">{timeDisplay}</td>
+                <td className="p-3 break-words">{href ? <Link className="text-primary underline" to={href}>{targetDisplay}</Link> : targetDisplay}</td>
+                <td className="p-3">{actionDisplay}</td>
+                <td className="p-3">{actorDisplay}</td>
+                <td className="p-3">{resultDisplay}</td>
               </tr>;
             }) : <tr><td className="p-8 text-center text-textSecondary" colSpan={5}>Chưa có lịch sử thao tác.</td></tr>}</tbody>
           </table>
