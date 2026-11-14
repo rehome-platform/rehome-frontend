@@ -1,3 +1,4 @@
+import { WarehouseHistoryTabs } from '../components/WarehouseHistoryTabs.jsx';
 import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Page, ResourceState, Pager, money } from '../components/WarehouseUi.jsx';
@@ -90,6 +91,8 @@ export default function ConsignmentListPage() {
         </div>
       }
     >
+
+      <WarehouseHistoryTabs type="INSPECTION">
       {/* THẺ GHIM ĐƠN VỪA THAO TÁC GẦN ĐÂY */}
       {lastConsignment && (
         <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl text-xs text-[#92400E] shadow-sm">
@@ -230,6 +233,7 @@ export default function ConsignmentListPage() {
       {totalPages > 1 && (
         <Pager page={page} totalPages={totalPages} onChange={handlePageChange} />
       )}
+      </WarehouseHistoryTabs>
     </Page>
   );
 }
