@@ -59,8 +59,8 @@ export async function request(operation, { orderId, data, signal, scope } = {}) 
     if (operation === 'read') return packingMockApi.getOrderDetail(orderId, scope);
     if (operation === 'scan') return packingMockApi.scanSku(orderId, data?.productId);
     if (operation === 'shipment') return packingMockApi.createShipment(orderId, data);
+    if (operation === 'label') throw new Phase2Error('Phiếu GHN thật chỉ có trong chế độ API.', 501);
     if (operation === 'handover') return packingMockApi.handover(data);
-    if (operation === 'label') return packingMockApi.getLabel(orderId, data?.size);
   }
 
   const config = operationConfig(operation);
@@ -72,8 +72,7 @@ export async function request(operation, { orderId, data, signal, scope } = {}) 
       await baseApi.request({
         method: config.method,
         url: config.path.replace(':orderId', encodeURIComponent(orderId)),
-        data: config.method === 'get' ? undefined : data,
-        params: config.method === 'get' ? data : undefined,
+        data,
         signal,
         noReplay: config.method !== 'get',
       })
@@ -134,7 +133,7 @@ export const packingService = {
   scan: (orderId, productId, options) =>
     request('scan', { ...options, orderId, data: { productId: String(productId || '').trim() } }),
   shipment: (orderId, options) => request('shipment', { ...options, orderId, data: options?.data }),
-  label: (orderId, size, options) => request('label', { ...options, orderId, data: { size: size || 'A5' } }),
+  label: (orderId, options) => request('label', { ...options, orderId }),
   handover: (task, identity, options = {}) => {
     const data = handoverPayload(task, identity, options.scope || {});
     if (!data) throw new Phase2Error('Yêu cầu hoặc xác nhận danh tính không còn hợp lệ.', 409);
