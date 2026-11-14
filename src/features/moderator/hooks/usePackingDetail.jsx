@@ -26,16 +26,11 @@ export function usePackingDetail({ orderId, onChanged }) {
   const [now, setNow] = useState(Date.now());
   const [pickedItems, setPickedItems] = useState({});
   const [scanLogs, setScanLogs] = useState([]);
-  const [incidentOpen, setIncidentOpen] = useState(false);
-  const [incidentNote, setIncidentNote] = useState('');
 
   // Trạng thái modal cảnh báo sai món (DG-03-SaiMon) & in phiếu (DG-04)
   const [wrongItemModalOpen, setWrongItemModalOpen] = useState(false);
   const [wrongItem, setWrongItem] = useState(null);
   const [printModalOpen, setPrintModalOpen] = useState(false);
-  const [packageWeight, setPackageWeight] = useState(820);
-  const [packageDimensions, setPackageDimensions] = useState('30 x 22 x 10');
-  const [shipperNote, setShipperNote] = useState('Giao giờ hành chính, gọi trước khi tới.');
 
   const lock = useRef(false);
   const input = useRef(null);
@@ -94,23 +89,14 @@ export function usePackingDetail({ orderId, onChanged }) {
     }
   };
 
-  const create = async (customPayload = {}) => {
-    const extra = (customPayload && typeof customPayload === 'object' && !customPayload.nativeEvent && !customPayload.target)
-      ? customPayload
-      : {};
+  const create = async () => {
     if (actionBlocked('shipment', { lock, uncertain, resource })) return;
     if (!canShip(order, scope, now)) return;
     lock.current = true;
     readEpoch.current++;
     setUncertain(true);
     try {
-      const payload = {
-        weightGrams: packageWeight,
-        dimensions: packageDimensions,
-        shipperNote,
-        ...extra,
-      };
-      await resource.mutate(options => packingService.shipment(orderId, { ...options, data: payload }), {
+      await resource.mutate(options => packingService.shipment(orderId, options), {
         onSuccess: () => {
           changed();
           setPrintModalOpen(true); // Tự động mở tùy chọn in phiếu sau khi tạo vận đơn GHN thành công
@@ -152,23 +138,16 @@ export function usePackingDetail({ orderId, onChanged }) {
     setCamera,
     message,
     create,
-    setIncidentOpen,
+
     scanLogs,
-    incidentOpen,
-    setIncidentNote,
-    incidentNote,
+
     camera,
     wrongItemModalOpen,
     setWrongItemModalOpen,
     wrongItem,
     printModalOpen,
     setPrintModalOpen,
-    packageWeight,
-    setPackageWeight,
-    packageDimensions,
-    setPackageDimensions,
-    shipperNote,
-    setShipperNote,
+
     sections: {
       PackingItemTable: { items, pickedItems, scannedProductIds, togglePicked },
       PackingScanPanel: {
@@ -185,15 +164,8 @@ export function usePackingDetail({ orderId, onChanged }) {
         setCamera,
         message,
         create,
-        setIncidentOpen,
-        packageWeight,
-        setPackageWeight,
-        packageDimensions,
-        setPackageDimensions,
-        shipperNote,
-        setShipperNote,
+
       },
-      PackingIncidentDialog: { setIncidentOpen, setIncidentNote, incidentNote },
     },
   };
 }

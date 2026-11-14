@@ -59,6 +59,7 @@ export async function request(operation, { orderId, data, signal, scope } = {}) 
     if (operation === 'read') return packingMockApi.getOrderDetail(orderId, scope);
     if (operation === 'scan') return packingMockApi.scanSku(orderId, data?.productId);
     if (operation === 'shipment') return packingMockApi.createShipment(orderId, data);
+    if (operation === 'label') throw new Phase2Error('Phiếu GHN thật chỉ có trong chế độ API.', 501);
     if (operation === 'handover') return packingMockApi.handover(data);
   }
 
@@ -132,6 +133,7 @@ export const packingService = {
   scan: (orderId, productId, options) =>
     request('scan', { ...options, orderId, data: { productId: String(productId || '').trim() } }),
   shipment: (orderId, options) => request('shipment', { ...options, orderId, data: options?.data }),
+  label: (orderId, options) => request('label', { ...options, orderId }),
   handover: (task, identity, options = {}) => {
     const data = handoverPayload(task, identity, options.scope || {});
     if (!data) throw new Phase2Error('Yêu cầu hoặc xác nhận danh tính không còn hợp lệ.', 409);

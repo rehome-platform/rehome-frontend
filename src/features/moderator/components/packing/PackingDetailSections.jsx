@@ -1,69 +1,11 @@
 import React from "react";
-import Button from "../../../../components/common/Button.jsx";
 import { safeDocumentUrl } from "../../models/warehouseModel.js";
+import { warehouseDateTime } from "../../models/warehouseTime.js";
+import Button from "../../../../components/common/Button.jsx";
 import { canPack, canShip } from "../../models/packingModel.js";
 import { operationReady } from "../../config/packingContract.js";
 import { useToast } from "../../../../context/ToastContext.jsx";
 import { formatDeadlineWithCountdown } from "../WarehouseUi.jsx";
-
-export function PackingIncidentDialog({ setIncidentOpen, setIncidentNote, incidentNote }) {
-  const toast = useToast();
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl space-y-4">
-        <div className="flex justify-between items-center">
-          <h3 className="text-base font-bold text-[#191C19]">Báo sự cố đóng gói đơn hàng</h3>
-          <button
-            type="button"
-            onClick={() => setIncidentOpen(false)}
-            className="text-gray-400 hover:text-gray-600 text-lg font-bold"
-          >
-            ✕
-          </button>
-        </div>
-        <form
-          className="space-y-4 text-xs"
-          onSubmit={(e) => {
-            e.preventDefault();
-            toast.success('Đã ghi nhận báo cáo sự cố đóng gói. Quản lý kho sẽ kiểm tra.');
-            setIncidentOpen(false);
-            setIncidentNote('');
-          }}
-        >
-          <p className="text-gray-600">
-            Ghi nhận tình trạng thiếu món hoặc sản phẩm rách hỏng trong khâu gom hàng:
-          </p>
-          <div>
-            <label className="block font-bold text-[#191C19] mb-1">Mô tả sự cố</label>
-            <textarea
-              value={incidentNote}
-              onChange={(e) => setIncidentNote(e.target.value)}
-              placeholder="Ghi rõ mã sản phẩm hoặc chi tiết gặp sự cố..."
-              rows={3}
-              className="w-full rounded-xl border border-gray-300 p-2.5 text-xs focus:border-[#006B2C] focus:outline-none"
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIncidentOpen(false)}
-              className="text-xs"
-            >
-              Hủy
-            </Button>
-            <Button
-              type="submit"
-              className="text-xs font-bold bg-[#BA1A1A] text-white hover:bg-red-700"
-            >
-              Gửi báo sự cố
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
 
 export function PackingRecipientPanel({ order, scanLogs }) {
   const recipientName = order.shippingRecipientName || order.recipientName || '—';
@@ -73,11 +15,7 @@ export function PackingRecipientPanel({ order, scanLogs }) {
   const shippingFeeStr = order.shippingFee != null ? `${Number(order.shippingFee).toLocaleString('vi-VN')}đ` : '—';
   const totalAmountStr = order.totalAmount != null ? `${Number(order.totalAmount).toLocaleString('vi-VN')}đ` : '—';
   const paymentMethodStr = order.paymentMethod ? `Đã thu qua ${order.paymentMethod}` : 'Đã thanh toán';
-  const paidTimeStr = order.paidAt
-    ? new Date(order.paidAt).toLocaleString('vi-VN')
-    : order.createdAt
-      ? new Date(order.createdAt).toLocaleString('vi-VN')
-      : '';
+  const paidTimeStr = order.paidAt ? warehouseDateTime(order.paidAt) : "";
 
   return (
     <div className="space-y-5">
@@ -119,14 +57,8 @@ export function PackingRecipientPanel({ order, scanLogs }) {
           </p>
         )}
 
-        {(order.paymentDeadline || order.autoCompleteDeadline || order.returnDeadline) && (
+        {(order.autoCompleteDeadline || order.returnDeadline) && (
           <div className="pt-2 border-t border-[#E2E8E0] space-y-1 text-[11px]">
-            {order.paymentDeadline && (
-              <div className="flex justify-between gap-2 text-[#5f5f5f]">
-                <span>Hạn thanh toán:</span>
-                <span className="font-semibold text-[#191C19]">{formatDeadlineWithCountdown(order.paymentDeadline)}</span>
-              </div>
-            )}
             {order.autoCompleteDeadline && (
               <div className="flex justify-between gap-2 text-[#5f5f5f]">
                 <span>Hạn tự động hoàn tất:</span>
@@ -146,26 +78,6 @@ export function PackingRecipientPanel({ order, scanLogs }) {
           <span className="text-[10px] font-bold uppercase tracking-wider text-[#717971]">Đơn vị vận chuyển</span>
           <span className="font-bold text-[#006B2C]">GHN Express</span>
         </div>
-      </div>
-
-      {/* Phí GHN báo về (DG-04) */}
-      <div className="rounded-2xl border border-[#8a8a8a] bg-white p-4 shadow-sm space-y-2 text-xs">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-[#717971]">Phí GHN báo về</p>
-        <div className="flex justify-between text-[#5f5f5f]">
-          <span>Phí theo 820g · Q7 → Q7</span>
-          <span>30.000đ</span>
-        </div>
-        <div className="flex justify-between text-[#5f5f5f]">
-          <span>Người mua đã trả</span>
-          <span>32.000đ</span>
-        </div>
-        <div className="flex justify-between font-bold text-xs pt-1.5 border-t border-[#E2E8E0]">
-          <span>Chênh lệch kho chịu</span>
-          <span>0đ</span>
-        </div>
-        <p className="text-[10px] text-[#5f5f5f] pt-1">
-          Nếu khối lượng thực vượt mức người mua đã trả, kho chịu phần chênh, không đòi thêm người mua.
-        </p>
       </div>
 
       {/* Nhật ký nhập mã SKU (DG-03) */}
@@ -197,52 +109,26 @@ export function PackingShipmentPanel({ order, onOpenPrintModal }) {
       <div>
         <h3 className="text-base font-bold text-[#006B2C]">Vận đơn đã tạo thành công</h3>
         <p className="text-xs text-[#5B6776] mt-0.5">
-          GHN đã nhận đơn lúc 09:31 · chờ shipper tới lấy
+          Thời điểm tạo vận đơn: {warehouseDateTime(order.shipmentCreatedAt)}
         </p>
       </div>
 
       <div className="p-4 rounded-xl border border-[#2b2b2b] bg-[#f9faf9] space-y-2">
         <p className="text-[10px] font-bold uppercase tracking-wider text-[#717971]">Mã vận đơn GHN</p>
         <p className="text-2xl font-mono font-extrabold text-[#191C19] tracking-wider">
-          {order.ghnTrackingCode || 'GHN5LK9P2XQ'}
+          {order.ghnTrackingCode || 'Chưa có thông tin'}
         </p>
         <div className="flex justify-between text-xs text-[#5f5f5f] pt-1 border-t border-[#e0e0e0]">
           <span>Dự kiến lấy hàng:</span>
-          <span className="font-semibold text-[#191C19]">hôm nay 14:00 – 17:00</span>
+          <span className="font-semibold text-[#191C19]">Chưa có thông tin</span>
         </div>
         <div className="flex justify-between text-xs text-[#5f5f5f]">
           <span>Dự kiến giao:</span>
-          <span className="font-semibold text-[#191C19]">12/10 – 13/10</span>
+          <span className="font-semibold text-[#191C19]">{warehouseDateTime(order.expectedDeliveryDate)}</span>
         </div>
       </div>
 
-      {/* Chi tiết phiếu giao hàng (DG-04) */}
-      <div className="space-y-2">
-        <p className="text-xs font-bold text-[#191C19]">Chi tiết phiếu giao hàng</p>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => onOpenPrintModal ? onOpenPrintModal() : window.print()}
-            className="px-4 py-2 rounded bg-[#006B2C] text-white text-xs font-bold hover:bg-[#005222] flex items-center gap-1.5 shadow-sm"
-          >
-            <span>📄</span> In khổ A5
-          </button>
-          <button
-            type="button"
-            onClick={() => onOpenPrintModal ? onOpenPrintModal() : window.print()}
-            className="px-4 py-2 rounded border border-[#8a8a8a] bg-white text-xs font-semibold hover:bg-[#F0F5EE]"
-          >
-            80 × 80mm
-          </button>
-          <button
-            type="button"
-            onClick={() => onOpenPrintModal ? onOpenPrintModal() : window.print()}
-            className="px-4 py-2 rounded border border-[#8a8a8a] bg-white text-xs font-semibold hover:bg-[#F0F5EE]"
-          >
-            52 × 70mm
-          </button>
-        </div>
-      </div>
+      <Button onClick={onOpenPrintModal} disabled={!order.ghnTrackingCode}>In vận đơn A5</Button>
 
       {/* Khi shipper đã lấy hàng */}
       <div className="p-4 rounded-xl border border-[#8a8a8a] bg-[#fafafa] space-y-3">
@@ -276,15 +162,7 @@ export function PackingScanPanel({
   setCamera,
   message,
   create,
-  setIncidentOpen,
-  packageWeight,
-  setPackageWeight,
-  packageDimensions,
-  setPackageDimensions,
-  shipperNote,
-  setShipperNote,
 }) {
-  const isFullyScanned = (order?.scannedCount ?? 0) >= totalCount && totalCount > 0;
 
   return (
     <div className="rounded-2xl border-2 border-[#2b2b2b] bg-white p-5 space-y-4 shadow-sm">
@@ -357,51 +235,6 @@ export function PackingScanPanel({
         </p>
       )}
 
-      {/* THÔNG TIN KIỆN HÀNG KHI ĐÃ ĐỐI CHIẾU ĐỦ (DG-04) */}
-      {isFullyScanned && (
-        <div className="rounded-xl border border-[#006B2C] bg-[#F0F5EE]/40 p-4 space-y-3 pt-3">
-          <p className="text-xs font-bold text-[#006B2C] uppercase tracking-wider">
-            ✓ Đã đối chiếu {totalCount}/{totalCount} món — Nhập thông tin kiện hàng
-          </p>
-          <div className="grid sm:grid-cols-2 gap-3 text-xs">
-            <div>
-              <label className="block font-bold text-gray-700 mb-1">
-                Khối lượng thực tế (gram)
-              </label>
-              <input
-                type="number"
-                value={packageWeight ?? 820}
-                onChange={(e) => setPackageWeight && setPackageWeight(Number(e.target.value))}
-                className="w-full rounded-xl border border-neutral p-2 text-xs font-mono font-bold"
-              />
-              <span className="text-[10px] text-gray-500">Gợi ý: 800g (2 món, theo danh mục)</span>
-            </div>
-            <div>
-              <label className="block font-bold text-gray-700 mb-1">
-                Kích thước thùng (D x R x C cm)
-              </label>
-              <input
-                type="text"
-                value={packageDimensions ?? '30 x 22 x 10'}
-                onChange={(e) => setPackageDimensions && setPackageDimensions(e.target.value)}
-                className="w-full rounded-xl border border-neutral p-2 text-xs font-mono"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block font-bold text-gray-700 mb-1 text-xs">
-              Ghi chú cho shipper
-            </label>
-            <input
-              type="text"
-              value={shipperNote ?? 'Giao giờ hành chính, gọi trước khi tới.'}
-              onChange={(e) => setShipperNote && setShipperNote(e.target.value)}
-              className="w-full rounded-xl border border-neutral p-2 text-xs"
-            />
-          </div>
-        </div>
-      )}
-
       <div className="flex flex-wrap gap-3 pt-2">
         <Button
           disabled={!operationReady('shipment') || resource.busy || resource.loading || uncertain || !canShip(order, scope, now)}
@@ -409,14 +242,6 @@ export function PackingScanPanel({
           className="py-3 px-6 bg-[#006B2C] text-white hover:bg-[#005523] rounded-xl font-bold text-xs"
         >
           Tạo vận đơn GHN
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setIncidentOpen(true)}
-          className="py-3 px-4 text-xs font-semibold"
-        >
-          Không tìm thấy món · báo sự cố
         </Button>
       </div>
     </div>

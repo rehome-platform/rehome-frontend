@@ -1,3 +1,4 @@
+import { WarehouseHistoryTabs } from '../components/WarehouseHistoryTabs.jsx';
 import React, { useState, useMemo } from "react";
 import { Link, useSearchParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
@@ -11,7 +12,6 @@ import { PackingQueueItem } from '../components/packing/PackingQueueItem.jsx';
 import { PackingWrongItemModal } from '../components/packing/PackingWrongItemModal.jsx';
 import { WaybillPrintModal } from '../components/packing/WaybillPrintModal.jsx';
 import {
-  PackingIncidentDialog,
   PackingRecipientPanel,
   PackingShipmentPanel,
   PackingScanPanel,
@@ -43,7 +43,7 @@ export function PackingDetail({ orderId, onChanged }) {
               className="flex items-center gap-1.5"
               onClick={() => model.setPrintModalOpen(true)}
             >
-              <span>📄</span> Chi tiết phiếu giao hàng
+              <span>📄</span> In vận đơn A5
             </Button>
           )}
         </div>
@@ -99,11 +99,6 @@ export function PackingDetail({ orderId, onChanged }) {
           {/* CỘT PHẢI: NGƯỜI NHẬN, THANH TOÁN, NHẬT KÝ (DG-02, DG-03) */}
           <PackingRecipientPanel order={model.order} scanLogs={model.scanLogs} />
         </div>
-      )}
-
-      {/* Modal Báo sự cố đơn (DG-03) */}
-      {model.incidentOpen && (
-        <PackingIncidentDialog {...model.sections.PackingIncidentDialog} />
       )}
 
       {/* Modal Cảnh báo Quét Sai Món (DG-03-SaiMon) */}
@@ -204,6 +199,8 @@ export default function PackingOrdersPage() {
         </Button>
       }
     >
+
+      <WarehouseHistoryTabs type="PACKING">
       {!orderId ? (
         <div className="space-y-4">
           {/* Header tìm kiếm chuẩn DG-01 */}
@@ -309,6 +306,7 @@ export default function PackingOrdersPage() {
       ) : (
         <PackingDetail key={orderId} orderId={orderId} onChanged={queue.refresh} />
       )}
+      </WarehouseHistoryTabs>
     </Page>
   );
 }
