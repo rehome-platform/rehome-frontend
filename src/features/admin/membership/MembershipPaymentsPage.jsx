@@ -8,6 +8,7 @@ import {
   PAID_TIERS,
   TIER_LABELS,
   PAYMENT_METHOD_LABELS,
+  MEMBERSHIP_PAYMENT_METHODS,
 } from './membershipConstants.js';
 
 const PAGE_SIZE = 20;
@@ -31,6 +32,7 @@ export default function MembershipPaymentsPage() {
   const [dateError, setDateError] = useState(null);
   const [items, setItems] = useState([]);
   const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(true);
   const [pendingNotice, setPendingNotice] = useState(false);
   const [error, setError] = useState('');
@@ -38,14 +40,18 @@ export default function MembershipPaymentsPage() {
   const seqRef = useRef(0);
 
   const fetchPayments = useCallback(async () => {
+    const reqId = ++seqRef.current;
     const validationError = validateDateRange(from, to);
     setDateError(validationError);
     if (validationError) {
       setLoading(false);
+      setItems([]);
+      setTotalPages(0);
+      setTotalElements(0);
+      setError('');
       return;
     }
 
-    const reqId = ++seqRef.current;
     setLoading(true);
     setError('');
     setPendingNotice(false);
@@ -63,18 +69,21 @@ export default function MembershipPaymentsPage() {
 
       const list = Array.isArray(data) ? data : data?.content || [];
       setItems(list);
-      setTotalPages(data?.totalPages ?? 0);
+      setTotalPages(data?.totalPages ?? (list.length > 0 ? 1 : 0));
+      setTotalElements(data?.totalElements ?? list.length);
     } catch (err) {
       if (reqId !== seqRef.current) return;
+      setItems([]);
+      setTotalPages(0);
+      setTotalElements(0);
       const status = err?.response?.status;
       if (status === 404 || status === 501) {
         setPendingNotice(true);
-        setItems([]);
       } else {
         setError(
           err?.response?.data?.message ||
-            err?.message ||
-            'Không thể tải lịch sử thanh toán gói VIP.'
+          err?.message ||
+          'Không thể tải lịch sử thanh toán gói VIP.'
         );
       }
     } finally {
@@ -98,6 +107,7 @@ export default function MembershipPaymentsPage() {
     setTo('');
     setTier('');
     setMethod('');
+    setDateError(null);
     setPage(0);
   };
 
@@ -106,9 +116,16 @@ export default function MembershipPaymentsPage() {
       <div className="bg-white p-6 rounded-xl border border-[#E2E8E0] space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-[#191C19] font-heading">
-              Lịch sử thanh toán gói VIP
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-[#191C19] font-heading">
+                Lịch sử thanh toán gói VIP
+              </h2>
+              {totalElements > 0 && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-[#E8F5E9] text-[#006B2C]">
+                  {totalElements} giao dịch
+                </span>
+              )}
+            </div>
             <p className="text-xs text-[#717971] mt-0.5">
               Tra cứu toàn bộ giao dịch thanh toán gói thành viên theo hạng, phương thức và thời gian.
             </p>
@@ -176,9 +193,9 @@ export default function MembershipPaymentsPage() {
               className="px-3 py-1.5 text-sm rounded-lg border border-[#E2E8E0] bg-white text-[#191C19]"
             >
               <option value="">Tất cả phương thức</option>
-              {Object.entries(PAYMENT_METHOD_LABELS).map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
+              {MEMBERSHIP_PAYMENT_METHODS.map((m) => (
+                <option key={m} value={m}>
+                  {PAYMENT_METHOD_LABELS[m] || m}
                 </option>
               ))}
             </select>
@@ -209,8 +226,20 @@ export default function MembershipPaymentsPage() {
       )}
 
       {error && (
-        <div role="alert" className="p-4 rounded-xl bg-[#FFF5F5] border border-[#D92D20]/30 text-sm text-[#D92D20]">
-          {error}
+        <div
+          role="alert"
+          className="p-4 rounded-xl bg-[#FFF5F5] border border-[#D92D20]/30 text-sm text-[#D92D20] flex items-center justify-between gap-3"
+        >
+          <span>{error}</span>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={fetchPayments}
+            className="border-[#D92D20]/40 text-[#D92D20] hover:bg-[#FEE4E2]"
+          >
+            Thử lại
+          </Button>
         </div>
       )}
 
@@ -230,17 +259,46 @@ export default function MembershipPaymentsPage() {
                 <th className="py-3 px-4">Ngày thanh toán</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E2E8E0] text-sm text-[#1F2A37]">
+            <tbody
+              className={`divide-y divide-[#E2E8E0] text-sm text-[#1F2A37] transition-opacity duration-200 ${loading && items.length > 0 ? 'opacity-50 pointer-events-none' : ''
+                }`}
+            >
               {loading && items.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center text-sm text-[#5B6776]">
-                    Đang tải lịch sử thanh toán...
+                  <td colSpan={8} className="py-12 text-center text-sm text-[#5B6776]">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <span className="material-symbols-outlined text-4xl text-[#006B2C] animate-spin">
+                        progress_activity
+                      </span>
+                      <p className="font-medium">Đang tải lịch sử thanh toán...</p>
+                    </div>
                   </td>
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center text-sm text-[#5B6776]">
-                    Chưa có giao dịch thanh toán nào phù hợp.
+                  <td colSpan={8} className="py-12 text-center text-sm text-[#5B6776]">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <span className="material-symbols-outlined text-4xl text-[#9CA3AF]">
+                        receipt_long
+                      </span>
+                      <p className="font-semibold text-base text-[#191C19]">
+                        Chưa có giao dịch thanh toán nào phù hợp
+                      </p>
+                      <p className="text-xs text-[#717971] max-w-sm">
+                        Không tìm thấy giao dịch nào theo bộ lọc đã chọn. Hãy thử thay đổi khoảng thời gian hoặc bỏ lọc.
+                      </p>
+                      {(from || to || tier || method) && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleResetFilters}
+                          className="mt-2 text-[#006B2C]"
+                        >
+                          Xóa bộ lọc
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -286,7 +344,13 @@ export default function MembershipPaymentsPage() {
                         {formatDateTime(item.createdAt)}
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap text-xs text-[#5B6776]">
-                        {item.paidAt ? formatDateTime(item.paidAt) : '—'}
+                        {item.paidAt ? (
+                          formatDateTime(item.paidAt)
+                        ) : item.status === 'PENDING' ? (
+                          <span className="text-[#D97706] italic font-medium">Chờ thanh toán</span>
+                        ) : (
+                          <span className="text-[#717971] italic">Chưa có</span>
+                        )}
                       </td>
                     </tr>
                   );
@@ -298,9 +362,14 @@ export default function MembershipPaymentsPage() {
 
         {/* Pagination */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8E0] bg-[#F6F9F4]/50 text-xs text-[#5B6776]">
-          <span>
-            Trang {page + 1} / {Math.max(totalPages, 1)}
-          </span>
+          <div>
+            <span>
+              Trang {page + 1} / {Math.max(totalPages, 1)}
+            </span>
+            {totalElements > 0 && (
+              <span className="ml-2 font-medium">({totalElements} bản ghi)</span>
+            )}
+          </div>
           <div className="flex gap-2">
             <Button
               type="button"

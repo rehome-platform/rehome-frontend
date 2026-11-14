@@ -1,3 +1,4 @@
+import { WarehouseHistoryTabs } from '../components/WarehouseHistoryTabs.jsx';
 import DegradedCaseDetails from '../components/DegradedCaseDetails.jsx';
 import { degradedCaseLabel, degradedInventoryItem } from '../models/degradedCaseModel.js';
 import React, { useState, useMemo } from 'react';
@@ -199,6 +200,8 @@ export default function WarehouseInventoryPage() {
         </div>
       }
     >
+
+      <WarehouseHistoryTabs type="INVENTORY">
       {/* 1. KHUNG TÌM KIẾM & BỘ LỌC (TK-01) */}
       <div className="rounded-2xl border border-[#8a8a8a] bg-white p-5 shadow-sm space-y-4">
         {/* Hàng Tab Trạng Thái Nhanh Chuẩn TK-01 */}
@@ -581,6 +584,7 @@ export default function WarehouseInventoryPage() {
           />
         </Modal>
       )}
+      </WarehouseHistoryTabs>
     </Page>
   );
 }

@@ -224,9 +224,9 @@ describe('L-04 Phase 4: Mock API Integration Suite (APIs 68-72)', () => {
 
     // Modal in phiếu vận đơn xuất hiện
     await screen.findByText('In phiếu giao hàng GHN');
-    expect(screen.getByText('Khổ A5')).toBeInTheDocument();
-    expect(screen.getByText('80 x 80mm')).toBeInTheDocument();
-    expect(screen.getByText('52 x 70mm')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toHaveTextContent('In vận đơn A5');
+    expect(screen.queryByText('80 x 80mm')).not.toBeInTheDocument();
+    expect(screen.queryByText('52 x 70mm')).not.toBeInTheDocument();
 
     // Xác nhận API 72: Bàn giao tại quầy hoạt động chuẩn contract
     const handoverRes = await counterService.handover({

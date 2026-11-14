@@ -1,6 +1,7 @@
 @import "./tailwind.css";
 
 :root {
+  --font-system: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   /* Design Tokens from Design tokens.pdf */
   --primary: #006B2C;
   --primary-hover: #005523;
@@ -38,7 +39,7 @@ body {
   margin: 0;
   background-color: var(--background);
   color: var(--text);
-  font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-system);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -55,7 +56,7 @@ input[type="radio"] {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-system);
 }
 
 /* Custom Scrollbar */
@@ -73,3 +74,7 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--outline);
 }
+
+/* Keep form controls and code identifiers in the same typeface as the application. */
+button, input, select, textarea { font-family: inherit; }
+code, pre, kbd, samp, .font-mono, .font-serif { font-family: var(--font-system); }

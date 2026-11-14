@@ -132,12 +132,12 @@ describe('L-04 Moderator Packing Wireframe Test Suite (DG-01 to DG-04)', () => {
 
     // Xuất hiện modal in phiếu vận đơn
     await screen.findByRole('heading', { name: 'Chi tiết phiếu giao hàng' });
-    expect(screen.getByText('Đơn hàng')).toBeInTheDocument();
-    expect(screen.getByText('Vận đơn')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toHaveTextContent('Mã đơn');
+    expect(screen.getByRole('dialog')).toHaveTextContent('Mã vận đơn GHN');
     expect(screen.getByText('Người nhận')).toBeInTheDocument();
     expect(screen.getAllByText('GHN5LK9P2XQ').length).toBeGreaterThan(0);
-    expect(screen.getByText('Khổ A5')).toBeInTheDocument();
-    expect(screen.getByText('80 x 80mm')).toBeInTheDocument();
-    expect(screen.getByText('52 x 70mm')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toHaveTextContent('In vận đơn A5');
+    expect(screen.queryByText('80 x 80mm')).not.toBeInTheDocument();
+    expect(screen.queryByText('52 x 70mm')).not.toBeInTheDocument();
   });
 });
