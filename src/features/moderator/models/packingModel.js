@@ -16,7 +16,9 @@ function claimMatchesScope(order, scope) {
 }
 
 export function canPack(order, scope, now = Date.now()) {
-  return ownsActiveClaim(order, scope, now) && Boolean(order.allowedActions?.includes('SCAN'));
+  if (!order) return false;
+  const isPackableStatus = ['PAID', 'PACKING'].includes(order.status ?? 'PAID');
+  return isPackableStatus && ownsActiveClaim(order, scope, now) && Boolean(order.allowedActions?.includes('SCAN'));
 }
 
 function hasCompleteScan(order) {
@@ -35,8 +37,14 @@ function scanCountsMatch(order, count) {
 }
 
 export function canShip(order, scope, now = Date.now()) {
-  return ownsActiveClaim(order, scope, now) &&
-    Boolean(order.allowedActions?.includes('CREATE_SHIPMENT')) && hasCompleteScan(order);
+  if (!order) return false;
+  const isPackableStatus = ['PAID', 'PACKING'].includes(order.status ?? 'PAID');
+  return (
+    isPackableStatus &&
+    ownsActiveClaim(order, scope, now) &&
+    Boolean(order.allowedActions?.includes('CREATE_SHIPMENT')) &&
+    hasCompleteScan(order)
+  );
 }
 
 function isHandoverTask(task, scope) {
@@ -145,9 +153,12 @@ function packingActions(raw, { scannedCount, totalCount }) {
   let allowedActions = raw.allowedActions;
   if (!allowedActions) {
     allowedActions = [];
-    if (scannedCount < totalCount) allowedActions.push('SCAN');
-    if (scannedCount === totalCount && totalCount > 0 && !raw.ghnTrackingCode) {
-      allowedActions.push('CREATE_SHIPMENT');
+    const isPackableStatus = ['PAID', 'PACKING'].includes(raw?.status ?? 'PAID');
+    if (isPackableStatus) {
+      if (scannedCount < totalCount) allowedActions.push('SCAN');
+      if (scannedCount === totalCount && totalCount > 0 && !raw.ghnTrackingCode) {
+        allowedActions.push('CREATE_SHIPMENT');
+      }
     }
   }
   return allowedActions;
@@ -195,6 +206,8 @@ export function normalizePackingOrder(raw, scope = {}) {
     orderId,
     orderNo: raw.orderNo || `OD-${orderId?.substring(0, 8)}`,
     status: raw.status || 'PAID',
+    shipmentCreatedAt: raw.shipmentCreatedAt || null,
+    expectedDeliveryDate: raw.expectedDeliveryDate || null,
     items,
     ...progress,
     allowedActions: packingActions(raw, progress),

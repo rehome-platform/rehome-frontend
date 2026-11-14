@@ -109,14 +109,14 @@ export function PackingShipmentPanel({ order, onOpenPrintModal }) {
       <div>
         <h3 className="text-base font-bold text-[#006B2C]">Vận đơn đã tạo thành công</h3>
         <p className="text-xs text-[#5B6776] mt-0.5">
-          Thời điểm tạo vận đơn: {warehouseDateTime(order.shipmentCreatedAt)}
+          Thời điểm tạo vận đơn: {warehouseDateTime(order?.shipmentCreatedAt)}
         </p>
       </div>
 
       <div className="p-4 rounded-xl border border-[#2b2b2b] bg-[#f9faf9] space-y-2">
         <p className="text-[10px] font-bold uppercase tracking-wider text-[#717971]">Mã vận đơn GHN</p>
         <p className="text-2xl font-mono font-extrabold text-[#191C19] tracking-wider">
-          {order.ghnTrackingCode || 'Chưa có thông tin'}
+          {order?.ghnTrackingCode || 'Chưa có thông tin'}
         </p>
         <div className="flex justify-between text-xs text-[#5f5f5f] pt-1 border-t border-[#e0e0e0]">
           <span>Dự kiến lấy hàng:</span>
@@ -124,7 +124,7 @@ export function PackingShipmentPanel({ order, onOpenPrintModal }) {
         </div>
         <div className="flex justify-between text-xs text-[#5f5f5f]">
           <span>Dự kiến giao:</span>
-          <span className="font-semibold text-[#191C19]">{warehouseDateTime(order.expectedDeliveryDate)}</span>
+          <span className="font-semibold text-[#191C19]">{warehouseDateTime(order?.expectedDeliveryDate)}</span>
         </div>
       </div>
 

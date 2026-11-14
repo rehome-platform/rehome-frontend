@@ -1,6 +1,6 @@
 import { WarehouseHistoryTabs } from '../components/WarehouseHistoryTabs.jsx';
 import React, { useState, useMemo } from "react";
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import QRScannerModal from '../../../components/QRScannerModal.jsx';
 import { Page, ResourceState } from "../components/WarehouseUi.jsx";
@@ -19,12 +19,37 @@ import {
 } from '../components/packing/PackingDetailSections.jsx';
 
 export function PackingDetail({ orderId, onChanged }) {
+  const navigate = useNavigate();
   const model = usePackingDetail({ orderId, onChanged });
+  const [releasing, setReleasing] = useState(false);
+  const [releaseError, setReleaseError] = useState('');
 
   // Xác định món đơn này đang cần (chưa quét) để hiển thị trong modal báo sai món
   const targetItem = useMemo(() => {
     return model.items.find(i => !model.scannedProductIds.includes(i.productId));
   }, [model.items, model.scannedProductIds]);
+
+  const isClaimedByMe = Boolean(
+    model.order?.claimedBy &&
+    model.scope?.userId &&
+    model.order.claimedBy === model.scope.userId
+  );
+
+  const handleUnclaim = async () => {
+    const queueId = model.order?.queueId || model.order?.id || orderId;
+    setReleasing(true);
+    setReleaseError('');
+    try {
+      await queueService.release(queueId);
+      window.dispatchEvent(new Event('warehouse:changed'));
+      if (onChanged) onChanged();
+      navigate('/moderator/packing');
+    } catch (err) {
+      setReleaseError(err?.message || 'Không thể nhả việc. Vui lòng thử lại.');
+    } finally {
+      setReleasing(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -33,6 +58,16 @@ export function PackingDetail({ orderId, onChanged }) {
           <span>←</span> Quay lại hàng đợi đóng gói
         </Link>
         <div className="flex items-center gap-3">
+          {isClaimedByMe && !model.order?.ghnTrackingCode && (
+            <Button
+              variant="outline"
+              className="text-xs text-[#D92D20] border-[#D92D20]/40 hover:bg-[#FEE4E2]"
+              disabled={releasing}
+              onClick={handleUnclaim}
+            >
+              {releasing ? 'Đang nhả việc...' : 'Nhả việc'}
+            </Button>
+          )}
           <Button variant="outline" className="text-xs" onClick={model.resource.refresh}>
             Kiểm tra trạng thái
           </Button>
@@ -48,6 +83,12 @@ export function PackingDetail({ orderId, onChanged }) {
           )}
         </div>
       </div>
+
+      {releaseError && (
+        <div role="alert" className="p-3 rounded-lg bg-[#FFF5F5] border border-[#D92D20]/30 text-xs text-[#D92D20]">
+          {releaseError}
+        </div>
+      )}
 
       <ResourceState resource={model.resource} />
 
@@ -201,111 +242,111 @@ export default function PackingOrdersPage() {
     >
 
       <WarehouseHistoryTabs type="PACKING">
-      {!orderId ? (
-        <div className="space-y-4">
-          {/* Header tìm kiếm chuẩn DG-01 */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-neutral shadow-sm">
-            <div className="flex items-center gap-2 flex-1 min-w-[280px]">
-              <input
-                type="text"
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-                placeholder="Tìm SKU, mã đơn, mã Member..."
-                className="w-full text-xs outline-none bg-transparent"
-              />
-              {keyword && (
+        {!orderId ? (
+          <div className="space-y-4">
+            {/* Header tìm kiếm chuẩn DG-01 */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-neutral shadow-sm">
+              <div className="flex items-center gap-2 flex-1 min-w-[280px]">
+                <input
+                  type="text"
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  placeholder="Tìm SKU, mã đơn, mã Member..."
+                  className="w-full text-xs outline-none bg-transparent"
+                />
+                {keyword && (
+                  <button
+                    type="button"
+                    onClick={() => setKeyword('')}
+                    className="text-textSecondary hover:text-text text-xs font-bold"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              <div className="text-xs text-textSecondary">
+                Đang có <strong>{items.length}</strong> đơn trong hàng đợi
+              </div>
+            </div>
+
+            {claimError && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-800 flex justify-between items-center">
+                <span>{claimError}</span>
                 <button
                   type="button"
-                  onClick={() => setKeyword('')}
-                  className="text-textSecondary hover:text-text text-xs font-bold"
+                  onClick={() => setClaimError('')}
+                  className="font-bold hover:text-amber-900"
                 >
                   ✕
                 </button>
-              )}
-            </div>
-            <div className="text-xs text-textSecondary">
-              Đang có <strong>{items.length}</strong> đơn trong hàng đợi
-            </div>
-          </div>
+              </div>
+            )}
 
-          {claimError && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-800 flex justify-between items-center">
-              <span>{claimError}</span>
-              <button
-                type="button"
-                onClick={() => setClaimError('')}
-                className="font-bold hover:text-amber-900"
-              >
-                ✕
-              </button>
-            </div>
-          )}
+            <ResourceState resource={queue} />
 
-          <ResourceState resource={queue} />
-
-          {/* BẢNG HÀNG ĐỢI ĐÓNG GÓI 7 CỘT */}
-          <div className="rounded-2xl border border-neutral bg-surface overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px] text-left text-xs">
-                <thead>
-                  <tr className="bg-background border-b border-neutral text-[10px] font-bold uppercase tracking-wider text-textSecondary">
-                    <th className="py-3 px-3">Mã đơn</th>
-                    <th className="py-3 px-3">Người mua</th>
-                    <th className="py-3 px-3">Số món</th>
-                    <th className="py-3 px-3">Thời gian đặt</th>
-                    <th className="py-3 px-3">Chờ</th>
-                    <th className="py-3 px-3">Trạng thái</th>
-                    <th className="py-3 px-3 text-right">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral">
-                  {items.length === 0 ? (
-                    <tr>
-                      <td colSpan="7" className="py-12 text-center text-xs text-textSecondary">
-                        Chưa có dữ liệu phù hợp.
-                      </td>
+            {/* BẢNG HÀNG ĐỢI ĐÓNG GÓI 7 CỘT */}
+            <div className="rounded-2xl border border-neutral bg-surface overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[800px] text-left text-xs">
+                  <thead>
+                    <tr className="bg-background border-b border-neutral text-[10px] font-bold uppercase tracking-wider text-textSecondary">
+                      <th className="py-3 px-3">Mã đơn</th>
+                      <th className="py-3 px-3">Người mua</th>
+                      <th className="py-3 px-3">Số món</th>
+                      <th className="py-3 px-3">Thời gian đặt</th>
+                      <th className="py-3 px-3">Chờ</th>
+                      <th className="py-3 px-3">Trạng thái</th>
+                      <th className="py-3 px-3 text-right">Thao tác</th>
                     </tr>
-                  ) : (
-                    items.map((item) => {
-                      const isMine =
-                        item.claimedBy === scope.userId ||
-                        item.claimedBy === 'CURRENT_USER' ||
-                        (item.claimedByName && item.claimedByName.includes('Bạn đang giữ'));
-                      const targetOrderId = item.orderId || item.refId || item.orderNo;
-                      return (
-                        <PackingQueueItem
-                          key={item.queueId || targetOrderId}
-                          item={item}
-                          targetOrderId={targetOrderId}
-                          isMine={Boolean(isMine)}
-                          setSearch={setSearch}
-                          page={page}
-                          queue={queue}
-                          handleClaim={handleClaim}
-                          handleRelease={handleRelease}
-                        />
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-neutral">
+                    {items.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" className="py-12 text-center text-xs text-textSecondary">
+                          Chưa có dữ liệu phù hợp.
+                        </td>
+                      </tr>
+                    ) : (
+                      items.map((item) => {
+                        const isMine =
+                          item.claimedBy === scope.userId ||
+                          item.claimedBy === 'CURRENT_USER' ||
+                          (item.claimedByName && item.claimedByName.includes('Bạn đang giữ'));
+                        const targetOrderId = item.orderId || item.refId || item.orderNo;
+                        return (
+                          <PackingQueueItem
+                            key={item.queueId || targetOrderId}
+                            item={item}
+                            targetOrderId={targetOrderId}
+                            isMine={Boolean(isMine)}
+                            setSearch={setSearch}
+                            page={page}
+                            queue={queue}
+                            handleClaim={handleClaim}
+                            handleRelease={handleRelease}
+                          />
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
 
-          {!!queue.data && queue.data.totalPages > 1 && (
-            <div className="flex justify-end gap-3 pt-3">
-              <Button disabled={!page} onClick={() => setSearch({ page: String(page - 1) })}>
-                Trước
-              </Button>
-              <Button disabled={!(page + 1 < queue.data?.totalPages)} onClick={() => setSearch({ page: String(page + 1) })}>
-                Sau
-              </Button>
-            </div>
-          )}
-        </div>
-      ) : (
-        <PackingDetail key={orderId} orderId={orderId} onChanged={queue.refresh} />
-      )}
+            {!!queue.data && queue.data.totalPages > 1 && (
+              <div className="flex justify-end gap-3 pt-3">
+                <Button disabled={!page} onClick={() => setSearch({ page: String(page - 1) })}>
+                  Trước
+                </Button>
+                <Button disabled={!(page + 1 < queue.data?.totalPages)} onClick={() => setSearch({ page: String(page + 1) })}>
+                  Sau
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <PackingDetail key={orderId} orderId={orderId} onChanged={queue.refresh} />
+        )}
       </WarehouseHistoryTabs>
     </Page>
   );

@@ -37,25 +37,38 @@ export const queueService = {
       }
     }
 
-    const map = (item) => ({
-      ...item,
-      queueId: item.queueId ?? item.id,
-      id: item.id ?? item.queueId,
-      refId: item.refId ?? item.id,
-      // RETURN refId points to the return request; claim/release uses queueId.
-      ...(item.type === 'RETURN' ? { returnId: item.returnId ?? item.refId } : {}),
-      formId: item.formId ?? item.refId ?? item.id,
-      orderId: item.orderId ?? item.refId,
-      type: item.type,
-      claimedBy: item.claimedBy,
-      claimedAt: item.claimedAt,
-      createdAt: item.createdAt,
-      name: item.targetName ?? item.name ?? item.productName ?? item.orderNo ?? item.orgName,
-      memberName: item.subjectSubtitle ?? item.memberName ?? item.recipientName,
-      sku: item.sku ?? item.productId ?? null,
-      productImageUrl: item.productImageUrl ?? item.imageUrl ?? item.photoUrl ?? null,
-      status: item.status || (item.claimedBy ? 'PROCESSING' : 'PENDING'),
-    });
+    const map = (item) => {
+      const orderCreatedAt = item.orderCreatedAt || item.createdAt || null;
+      let waitingMinutes = item.waitingMinutes;
+      if (waitingMinutes == null && orderCreatedAt) {
+        const parsed = new Date(orderCreatedAt).getTime();
+        if (!Number.isNaN(parsed)) {
+          waitingMinutes = Math.max(0, Math.floor((Date.now() - parsed) / 60000));
+        }
+      }
+
+      return {
+        ...item,
+        queueId: item.queueId ?? item.id,
+        id: item.id ?? item.queueId,
+        refId: item.refId ?? item.id,
+        // RETURN refId points to the return request; claim/release uses queueId.
+        ...(item.type === 'RETURN' ? { returnId: item.returnId ?? item.refId } : {}),
+        formId: item.formId ?? item.refId ?? item.id,
+        orderId: item.orderId ?? item.refId,
+        orderCreatedAt,
+        waitingMinutes: waitingMinutes != null ? waitingMinutes : null,
+        type: item.type,
+        claimedBy: item.claimedBy,
+        claimedAt: item.claimedAt,
+        createdAt: item.createdAt,
+        name: item.targetName ?? item.name ?? item.productName ?? item.orderNo ?? item.orgName,
+        memberName: item.subjectSubtitle ?? item.memberName ?? item.recipientName,
+        sku: item.sku ?? item.productId ?? null,
+        productImageUrl: item.productImageUrl ?? item.imageUrl ?? item.photoUrl ?? null,
+        status: item.status || (item.claimedBy ? 'PROCESSING' : 'PENDING'),
+      };
+    };
 
     // Trả về đúng danh sách từ backend, bảo toàn trạng thái rỗng (empty state) khi không có bản ghi nào
     if (Array.isArray(result)) return result.map(map);
