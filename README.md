@@ -1,8 +1,6 @@
 # ReHome - Frontend Web Application
 
 > **Cổng Điều Hành & Quản Trị Tập Trung Nền Tảng Ký Gửi & Tuần Hoàn Thời Trang ReHome**  
-> Tuân thủ tài liệu đặc tả nghiệp vụ chính thức: `ReHome — Tài liệu tổng quan hệ thống (sau Review 1).pdf`
-
 ---
 
 ## 1. Giới thiệu & Phân định phạm vi nền tảng (Scope & Boundaries)
@@ -108,7 +106,8 @@ rehome-frontend/
 | **`CounterPage.jsx`** | UC-60, UC-62, UC-66, F-122 | **Quầy tiếp nhận ký gửi tại chỗ:** Tra cứu Member bằng mã/SĐT, kiểm định ngoại quan 5 mức độ, chốt giá niêm yết (ràng buộc giá sàn 50%), in tem SKU barcode dán áo, xuất Biên nhận ký gửi chuẩn Mục 12. |
 | **`ConsignmentQueuePage.jsx`** | UC-61, F-111 → F-114 | **Hàng đợi ký gửi Online:** Tiếp nhận ảnh chụp sản phẩm từ xa do Member gửi qua app, duyệt hồ sơ hoặc từ chối nêu rõ lý do. |
 | **`WarehouseInventoryPage.jsx`** | UC-63, UC-64, UC-67, F-123..126, F-130 | **Quản lý kho chi nhánh:** Phân bổ vị trí kệ (Dãy-Tầng-Ô), kiểm kê quét QR bằng camera, xử lý thanh lý hàng vô thừa nhận quá hạn 30 ngày. |
-| **`PackingOrdersPage.jsx`** | UC-65, F-127 | **Đóng gói xuất kho:** Quét mã SKU đối chiếu hàng trước khi đóng gói, tạo mã vận đơn Giao Hàng Nhanh (GHN). |
+| **`PackingOrdersPage.jsx`** | UC-65, F-127 | **Đóng gói xuất kho:** Quét mã SKU đối chiếu hàng trước khi đóng gói, theo dõi `orderCreatedAt`/`waitingMinutes`/`shipmentCreatedAt`, nhận/nhả việc, chỉ cho phép tạo vận đơn GHN ở trạng thái `PAID`/`PACKING` và in phiếu GHN A5 an toàn. |
+| **`WarehouseHistoryTabs.jsx`** | UC-63..65 | **Lịch sử thao tác kho:** Hiển thị 3 nhóm `PACKING`, `INSPECTION`, `INVENTORY` kèm phân trang, trạng thái rỗng/lỗi và thử lại. |
 | **`ReturnProcessingPage.jsx`** | UC-68, F-131 → F-135 | **Xử lý hàng trả về:** Tiếp nhận khiếu nại trả hàng; mở quy trình **Hội chẩn 2 Moderator** thẩm định hàng nghi giả trước khi xác nhận tiêu hủy và hoàn tiền. |
 | **`OrgVerificationPage.jsx`** | UC-69, UC-70, Mục 9 | **Thẩm định tổ chức từ thiện:** Quy trình 8 bước đối chiếu hồ sơ pháp lý (Quyết định thành lập, Điều lệ, CCCD người đại diện, Giấy ủy quyền, Mã số thuế). |
 | **`ViolationReportsPage.jsx`** | UC-71, F-141, Mục 13 | **Xử lý vi phạm cộng đồng:** Xử lý báo cáo bài đăng/bình luận vi phạm tiêu chuẩn cộng đồng, áp dụng chế tài trừ điểm uy tín. |
@@ -129,6 +128,7 @@ rehome-frontend/
 | **`AdminWarehousesView.jsx`** | UC-82 → UC-85 | **Mạng lưới kho chi nhánh:** Thêm mới, chỉnh sửa thông tin kho; tích hợp guardrail **chặn ẩn/xóa kho khi vẫn còn hàng tồn kho**. |
 | **`ConfigPage.jsx`** | UC-86, UC-87, Mục 11 | **Cấu hình 5 nhóm tham số:** Cấu hình thời gian ký gửi, phí dịch vụ, thời hạn xử lý, điểm tín nhiệm và cấu trúc mã SKU. |
 | **`AdminAuditLogsView.jsx`** | UC-90, F-160 | **Nhật ký kiểm toán:** Truy vết lịch sử mọi hành động nhạy cảm của Admin và Moderator phục vụ đối soát an toàn. |
+| **`MembershipPaymentsPage.jsx`** | Gói VIP (1411) | **Lịch sử thanh toán gói VIP:** Lọc theo khoảng ngày (kiểm tra lịch Gregory), hạng thành viên, phương thức thanh toán; phân trang Spring Page (20 bản ghi/trang), xử lý `paidAt` null và thử lại khi lỗi. |
 
 ---
 
