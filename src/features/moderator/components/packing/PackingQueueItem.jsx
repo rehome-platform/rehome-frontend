@@ -1,4 +1,5 @@
 import React from "react";
+import { warehouseDateTime, waitingDuration } from "../../models/warehouseTime.js";
 import Button from "../../../../components/common/Button.jsx";
 
 /**
@@ -30,22 +31,22 @@ export function PackingQueueItem({
 
       {/* 2. Người mua */}
       <td className="py-3 px-3 text-[#191C19]">
-        {item.buyerName || item.name || 'Người mua ReHome'}
+        {item.buyerName || item.recipientName || item.memberName || 'Chưa có thông tin'}
       </td>
 
       {/* 3. Số món */}
       <td className="py-3 px-3 text-[#414942]">
-        {item.itemCount ? `${item.itemCount} món` : '2 món'}
+        {item.itemCount != null ? `${item.itemCount} món` : 'Chưa có thông tin'}
       </td>
 
       {/* 4. Thời gian đặt */}
       <td className="py-3 px-3 text-[#5f5f5f]">
-        {item.orderTime || 'hôm nay 06:48'}
+        {warehouseDateTime(item.orderCreatedAt)}
       </td>
 
       {/* 6. Thời gian chờ */}
       <td className="py-3 px-3 font-semibold text-[#191C19]">
-        {item.waitingTime || '3 giờ'}
+        {waitingDuration(item.waitingMinutes)}
       </td>
 
       {/* 7. Trạng thái người giữ */}

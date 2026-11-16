@@ -59,9 +59,26 @@ export function getDefaultGrowthRange(days = 30, now = new Date()) {
   };
 }
 
+export function isValidCalendarDate(dateStr) {
+  if (typeof dateStr !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const d = new Date(Date.UTC(year, month - 1, day));
+  return (
+    d.getUTCFullYear() === year &&
+    d.getUTCMonth() + 1 === month &&
+    d.getUTCDate() === day
+  );
+}
+
 export function validateDateRange(from, to) {
-  if (!from || !to) return null;
-  if (from > to) {
+  if (!from && !to) return null;
+  if (from && !isValidCalendarDate(from)) {
+    return 'Ngày bắt đầu không đúng định dạng YYYY-MM-DD.';
+  }
+  if (to && !isValidCalendarDate(to)) {
+    return 'Ngày kết thúc không đúng định dạng YYYY-MM-DD.';
+  }
+  if (from && to && from > to) {
     return 'Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.';
   }
   return null;

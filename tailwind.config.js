@@ -54,6 +54,8 @@ export default {
         "elevated": "0 12px 32px -4px rgba(0, 107, 44, 0.12)",
       },
       fontFamily: {
+        mono: ["'Be Vietnam Pro'", "sans-serif"],
+        serif: ["'Be Vietnam Pro'", "sans-serif"],
         sans: ["'Be Vietnam Pro'", "sans-serif"],
         heading: ["'Be Vietnam Pro'", "sans-serif"],
       }
