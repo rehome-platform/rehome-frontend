@@ -1,22 +1,24 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Badge } from '../../../components/common/index.js';
+import { Modal } from '../../../components/common/index.js';
 import { formatCurrencyVND, formatDateTime } from '../../../utils/formatters.js';
 import adminApi from '../services/adminApi.js';
 import { validateDateRange } from '../utils/adminDateUtils.js';
 
+// Khớp đúng enum WalletTransactionType phía backend (rehome-backend/.../entity/enums/WalletTransactionType.java).
+// Trước đây danh sách này có 2 giá trị không tồn tại ở backend (MEMBERSHIP_PAYMENT, VOUCHER_COST) và thiếu
+// MEMBERSHIP_REVENUE - chọn nhầm 2 giá trị sai sẽ làm API lỗi 400 vì backend bind thẳng type thành enum.
 const TRANSACTION_TYPE_OPTIONS = [
-  { value: 'ALL', label: 'Tất cả loại bút toán' },
+  { value: 'ALL', label: 'Tất cả loại giao dịch' },
   { value: 'ORDER_PAYMENT', label: 'Thanh toán đơn hàng' },
   { value: 'ORDER_PAYOUT', label: 'Trả tiền người bán' },
-  { value: 'COMMISSION_REVENUE', label: 'Thu hoa hồng' },
-  { value: 'WITHDRAWAL_FEE', label: 'Phí rút hàng (Member)' },
-  { value: 'WITHDRAWAL_FEE_REVENUE', label: 'Thu phí rút hàng' },
-  { value: 'WITHDRAWAL', label: 'Rút tiền về ngân hàng' },
   { value: 'REFUND', label: 'Hoàn tiền đơn hàng' },
+  { value: 'WITHDRAWAL', label: 'Rút tiền về ngân hàng' },
+  { value: 'WITHDRAWAL_FEE', label: 'Phí rút hàng (Member)' },
   { value: 'DEGRADED_COMPENSATION', label: 'Đền bù hàng xuống cấp' },
-  { value: 'MEMBERSHIP_PAYMENT', label: 'Thanh toán gói VIP' },
-  { value: 'MEMBERSHIP_PURCHASE', label: 'Thanh toán gói VIP' },
-  { value: 'VOUCHER_COST', label: 'Chi phí voucher nền tảng' },
+  { value: 'COMMISSION_REVENUE', label: 'Thu hoa hồng' },
+  { value: 'WITHDRAWAL_FEE_REVENUE', label: 'Thu phí rút hàng' },
+  { value: 'MEMBERSHIP_PURCHASE', label: 'Thanh toán gói VIP (bằng ví)' },
+  { value: 'MEMBERSHIP_REVENUE', label: 'Doanh thu gói VIP' },
   { value: 'VOUCHER_DISCOUNT', label: 'Chi phí voucher nền tảng' },
 ];
 
@@ -35,14 +37,10 @@ function formatSignedAmount(amount) {
 }
 
 /**
- * Nhật ký ghi sổ kép Quỹ nền tảng & Đối soát quỹ (GET /api/admin/fund/ledger & /reconciliation).
- * Nhận { from, to } đồng bộ từ bộ lọc chung của AdminDashboardPage.
+ * Giao dịch quỹ nền tảng (GET /api/admin/fund/ledger). Nhận { from, to } đồng bộ từ bộ lọc của trang.
  */
 export default function AdminFundLedgerSection({ from, to }) {
-  const [reconciliation, setReconciliation] = useState(null);
-  const [recLoading, setRecLoading] = useState(true);
-  const [recError, setRecError] = useState(null);
-
+  const [detailEntry, setDetailEntry] = useState(null);
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [page, setPage] = useState(0);
   const [ledgerPage, setLedgerPage] = useState({
@@ -55,33 +53,7 @@ export default function AdminFundLedgerSection({ from, to }) {
   const [ledgerLoading, setLedgerLoading] = useState(true);
   const [ledgerError, setLedgerError] = useState(null);
 
-  const recSeqRef = useRef(0);
   const ledgerSeqRef = useRef(0);
-
-  const loadReconciliation = useCallback(async () => {
-    const reqId = ++recSeqRef.current;
-    try {
-      setRecLoading(true);
-      setRecError(null);
-      const data = await adminApi.getFundReconciliation();
-      if (reqId === recSeqRef.current) {
-        setReconciliation(data || null);
-      }
-    } catch (err) {
-      if (reqId === recSeqRef.current) {
-        console.error('Lỗi tải đối soát quỹ:', err);
-        setRecError('Không thể kiểm tra đối soát quỹ nền tảng.');
-      }
-    } finally {
-      if (reqId === recSeqRef.current) {
-        setRecLoading(false);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    loadReconciliation();
-  }, [loadReconciliation]);
 
   useEffect(() => {
     setPage(0);
@@ -114,8 +86,8 @@ export default function AdminFundLedgerSection({ from, to }) {
       }
     } catch (err) {
       if (reqId === ledgerSeqRef.current) {
-        console.error('Lỗi tải sổ quỹ nền tảng:', err);
-        setLedgerError('Không thể tải danh sách bút toán sổ quỹ.');
+        console.error('Lỗi tải danh sách giao dịch:', err);
+        setLedgerError('Không thể tải danh sách giao dịch.');
       }
     } finally {
       if (reqId === ledgerSeqRef.current) {
@@ -133,107 +105,26 @@ export default function AdminFundLedgerSection({ from, to }) {
     setPage(0);
   };
 
-  const isBalanced = reconciliation?.status === 'BALANCED';
   const totalPages = Math.max(ledgerPage.totalPages || 0, 1);
   const currentPage = ledgerPage.page ?? page;
 
   return (
     <div className="bg-white p-6 rounded-2xl border border-[#E2E8E0] shadow-xs space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E2E8E0] pb-3">
-        <div>
-          <h3 id="ledger-heading" className="text-base font-bold text-[#191C19] font-heading">
-            Nhật Ký Ghi Sổ Kép (Quỹ Nền Tảng ↔ Ví Member)
-          </h3>
-          <p className="text-xs text-[#717971]">
-            Mọi giao dịch thanh toán, rút tiền và hoa hồng được hạch toán đối ứng tự động
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {recLoading ? (
-            <Badge variant="outline">Đang đối soát...</Badge>
-          ) : recError ? (
-            <Badge variant="danger">Lỗi đối soát</Badge>
-          ) : isBalanced ? (
-            <Badge variant="success">Đối soát: Khớp</Badge>
-          ) : (
-            <Badge variant="danger">Đối soát: Có chênh lệch</Badge>
-          )}
-          <button
-            type="button"
-            onClick={loadReconciliation}
-            disabled={recLoading}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-[#E2E8E0] bg-[#F8FAF8] hover:bg-[#E9F0E5] text-xs font-semibold text-[#414942] disabled:opacity-50"
-          >
-            <span className={`material-symbols-outlined text-sm ${recLoading ? 'animate-spin' : ''}`}>
-              sync
-            </span>
-            <span>Kiểm tra lại</span>
-          </button>
-        </div>
+      <div className="border-b border-[#E2E8E0] pb-3">
+        <h3 id="ledger-heading" className="text-base font-bold text-[#191C19] font-heading">
+          Giao dịch
+        </h3>
       </div>
 
-      {/* Chi tiết trạng thái đối soát */}
-      {recError ? (
-        <div className="p-3 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-xs text-[#B91C1C]">
-          {recError}
-        </div>
-      ) : reconciliation && (
-        <div className="rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] p-3.5 space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#717971]">
-            <span>
-              Kiểm tra lúc: <strong className="text-[#191C19]">{formatDateTime(reconciliation.checkedAt)}</strong>
-            </span>
-            <span>
-              Số dư quỹ: <strong className="text-[#191C19]">{formatCurrencyVND(reconciliation.fundBalance)}</strong>
-              {' · '}
-              Tổng ví Member: <strong className="text-[#191C19]">{formatCurrencyVND(reconciliation.memberWalletBalance)}</strong>
-            </span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
-            <div className="bg-white rounded-lg border border-[#E2E8E0] p-2">
-              <p className="text-[10px] text-[#717971]">Chênh lệch quỹ</p>
-              <p className={`font-bold mt-0.5 ${Number(reconciliation.difference) !== 0 ? 'text-[#DC2626]' : 'text-[#006B2C]'}`}>
-                {formatCurrencyVND(reconciliation.difference)}
-              </p>
-            </div>
-            <div className="bg-white rounded-lg border border-[#E2E8E0] p-2">
-              <p className="text-[10px] text-[#717971]">Chênh lệch ví Member</p>
-              <p className={`font-bold mt-0.5 ${Number(reconciliation.memberDifference) !== 0 ? 'text-[#DC2626]' : 'text-[#006B2C]'}`}>
-                {formatCurrencyVND(reconciliation.memberDifference)}
-              </p>
-            </div>
-            <div className="bg-white rounded-lg border border-[#E2E8E0] p-2">
-              <p className="text-[10px] text-[#717971]">Tổng ròng sổ kép</p>
-              <p className={`font-bold mt-0.5 ${Number(reconciliation.ledgerNetTotal) !== 0 ? 'text-[#DC2626]' : 'text-[#006B2C]'}`}>
-                {formatCurrencyVND(reconciliation.ledgerNetTotal)}
-              </p>
-            </div>
-            <div className="bg-white rounded-lg border border-[#E2E8E0] p-2">
-              <p className="text-[10px] text-[#717971]">Chưa đối ứng</p>
-              <p className={`font-bold mt-0.5 ${Number(reconciliation.unmatchedEntries) > 0 ? 'text-[#DC2626]' : 'text-[#191C19]'}`}>
-                {reconciliation.unmatchedEntries ?? 0} dòng
-              </p>
-            </div>
-            <div className="bg-white rounded-lg border border-[#E2E8E0] p-2">
-              <p className="text-[10px] text-[#717971]">Cặp lệch tiền</p>
-              <p className={`font-bold mt-0.5 ${Number(reconciliation.unbalancedPairs) > 0 ? 'text-[#DC2626]' : 'text-[#191C19]'}`}>
-                {reconciliation.unbalancedPairs ?? 0} cặp
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Bộ lọc loại bút toán */}
+      {/* Bộ lọc loại giao dịch */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <label htmlFor="ledger-type-select" className="text-xs font-medium text-[#414942]">
-            Loại bút toán:
+            Loại giao dịch:
           </label>
           <select
             id="ledger-type-select"
-            aria-label="Lọc loại bút toán"
+            aria-label="Lọc loại giao dịch"
             value={typeFilter}
             onChange={handleTypeChange}
             className="rounded-xl border border-[#E2E8E0] bg-white px-3 py-2 text-xs font-medium text-[#191C19] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30"
@@ -247,14 +138,14 @@ export default function AdminFundLedgerSection({ from, to }) {
         </div>
 
         <span className="text-xs text-[#717971]">
-          Tổng số: <strong className="text-[#191C19]">{ledgerPage.totalElements}</strong> bút toán
+          Tổng số: <strong className="text-[#191C19]">{ledgerPage.totalElements}</strong> giao dịch
         </span>
       </div>
 
-      {/* Bảng sổ bút toán */}
+      {/* Bảng giao dịch */}
       {ledgerLoading ? (
         <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center text-xs text-[#717971]">
-          Đang tải sổ bút toán quỹ nền tảng...
+          Đang tải danh sách giao dịch...
         </div>
       ) : ledgerError ? (
         <div className="p-6 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-center space-y-2">
@@ -273,7 +164,7 @@ export default function AdminFundLedgerSection({ from, to }) {
             <span className="material-symbols-outlined text-2xl font-light">receipt_long</span>
           </div>
           <h4 className="text-xs font-bold text-[#191C19]">
-            Chưa có bút toán ghi sổ kép phát sinh
+            Chưa có giao dịch nào phát sinh
           </h4>
           <p className="text-[11px] text-[#717971] mt-0.5 max-w-sm">
             Các giao dịch hoàn thành và biến động số dư giữa Quỹ nền tảng và Ví thành viên trong khoảng lọc sẽ hiển thị tại đây.
@@ -283,18 +174,19 @@ export default function AdminFundLedgerSection({ from, to }) {
         <>
           <div
             role="region"
-            aria-label="Bảng bút toán sổ quỹ nền tảng"
+            aria-label="Bảng giao dịch"
             tabIndex={0}
             className="overflow-x-auto rounded-xl border border-[#E2E8E0] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30"
           >
-            <table className="w-full text-left text-xs min-w-[760px]">
-              <thead className="bg-[#F8FAF8] text-[#717971] uppercase tracking-wider font-semibold border-b border-[#E2E8E0]">
+            <table className="w-full text-left text-xs min-w-[920px]">
+              <thead className="bg-[#F8FAF8] text-[#717971] font-semibold border-b border-[#E2E8E0]">
                 <tr>
-                  <th className="py-3 px-4">Thời gian &amp; Mã BT</th>
-                  <th className="py-3 px-4">Loại &amp; Diễn giải</th>
-                  <th className="py-3 px-4 text-right">Số tiền &amp; Số dư sau</th>
-                  <th className="py-3 px-4">Tài khoản liên quan</th>
-                  <th className="py-3 px-4">Giao dịch tham chiếu</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Mã giao dịch</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Thời gian</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Loại giao dịch</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Diễn giải</th>
+                  <th className="py-3 px-4 text-right whitespace-nowrap">Số tiền</th>
+                  <th className="py-3 px-4"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8E0]">
@@ -305,68 +197,36 @@ export default function AdminFundLedgerSection({ from, to }) {
 
                   return (
                     <tr key={entry.id} className="hover:bg-[#F8FAF8]/70 transition-colors">
-                      <td className="py-3 px-4 whitespace-nowrap align-top">
-                        <p className="font-bold font-mono text-[#191C19]">
-                          {entry.transactionNo || '—'}
-                        </p>
-                        <p className="text-[11px] text-[#717971] mt-0.5">
-                          {formatDateTime(entry.createdAt)}
-                        </p>
+                      <td className="py-3 px-4 whitespace-nowrap font-bold font-mono text-[#191C19]">
+                        {entry.transactionNo || '—'}
                       </td>
-                      <td className="py-3 px-4 align-top">
+                      <td className="py-3 px-4 whitespace-nowrap text-[#414942]">
+                        {formatDateTime(entry.createdAt)}
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap">
                         <span className="inline-block px-2 py-0.5 rounded-md bg-[#E8F5E9] text-[#006B2C] font-bold text-[10px]">
                           {TYPE_LABELS[entry.type] || entry.type}
                         </span>
-                        <p className="text-[11px] text-[#414942] mt-1">
-                          {entry.note || '—'}
-                        </p>
                       </td>
-                      <td className="py-3 px-4 text-right whitespace-nowrap align-top">
-                        <p
-                          className={`font-extrabold font-mono ${
-                            isInflow ? 'text-[#006B2C]' : isOutflow ? 'text-[#DC2626]' : 'text-[#191C19]'
-                          }`}
+                      <td className="py-3 px-4 text-[#414942] max-w-[220px] truncate">
+                        {entry.note || '—'}
+                      </td>
+                      <td
+                        className={`py-3 px-4 text-right whitespace-nowrap font-extrabold font-mono ${
+                          isInflow ? 'text-[#006B2C]' : isOutflow ? 'text-[#DC2626]' : 'text-[#191C19]'
+                        }`}
+                      >
+                        {formatSignedAmount(entry.amount)}
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap text-right">
+                        <button
+                          type="button"
+                          onClick={() => setDetailEntry(entry)}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[#00685F] hover:bg-[#E0F2F1] font-semibold"
                         >
-                          {formatSignedAmount(entry.amount)}
-                        </p>
-                        <p className="text-[11px] text-[#717971] mt-0.5">
-                          Số dư: {formatCurrencyVND(entry.balanceAfter)}
-                        </p>
-                      </td>
-                      <td className="py-3 px-4 whitespace-nowrap align-top">
-                        {entry.relatedAccount ? (
-                          <span className="font-mono text-[#191C19]">
-                            {entry.relatedAccount.email || entry.relatedAccount.accountId}
-                          </span>
-                        ) : (
-                          <span className="text-[#717971]">—</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 align-top">
-                        {entry.referenceTransaction ? (
-                          <div className="space-y-0.5">
-                            <p className="font-mono font-semibold text-[#191C19]">
-                              {entry.referenceTransaction.transactionNo || '—'}
-                            </p>
-                            <p className="text-[11px] text-[#717971]">
-                              {TYPE_LABELS[entry.referenceTransaction.type] || entry.referenceTransaction.type}
-                              {' · '}
-                              {formatSignedAmount(entry.referenceTransaction.amount)}
-                            </p>
-                          </div>
-                        ) : (
-                          <span className="text-[#717971]">—</span>
-                        )}
-                        {entry.relatedOrderNo && (
-                          <p className="text-[11px] text-[#00685F] font-mono mt-0.5">
-                            Đơn: {entry.relatedOrderNo}
-                          </p>
-                        )}
-                        {entry.commissionAmount != null && (
-                          <p className="text-[11px] text-[#717971] mt-0.5">
-                            Hoa hồng giữ: {formatCurrencyVND(entry.commissionAmount)}
-                          </p>
-                        )}
+                          <span className="material-symbols-outlined text-[16px]">visibility</span>
+                          Chi tiết
+                        </button>
                       </td>
                     </tr>
                   );
@@ -400,6 +260,52 @@ export default function AdminFundLedgerSection({ from, to }) {
           </div>
         </>
       )}
+
+      <Modal isOpen={Boolean(detailEntry)} onClose={() => setDetailEntry(null)} title="Chi tiết giao dịch" size="md">
+        {detailEntry && (
+          <dl className="space-y-3 text-xs">
+            {[
+              ['Mã giao dịch', detailEntry.transactionNo || '—'],
+              ['Thời gian', formatDateTime(detailEntry.createdAt)],
+              ['Loại giao dịch', TYPE_LABELS[detailEntry.type] || detailEntry.type],
+              ['Diễn giải', detailEntry.note || '—'],
+              ['Số tiền', formatSignedAmount(detailEntry.amount)],
+              [
+                'Tài khoản liên quan',
+                detailEntry.relatedAccount
+                  ? detailEntry.relatedAccount.email || detailEntry.relatedAccount.accountId
+                  : '—',
+              ],
+              [
+                'Mã giao dịch tham chiếu',
+                detailEntry.referenceTransaction?.transactionNo || '—',
+              ],
+              [
+                'Loại giao dịch tham chiếu',
+                detailEntry.referenceTransaction
+                  ? TYPE_LABELS[detailEntry.referenceTransaction.type] || detailEntry.referenceTransaction.type
+                  : '—',
+              ],
+              [
+                'Số tiền giao dịch tham chiếu',
+                detailEntry.referenceTransaction
+                  ? formatSignedAmount(detailEntry.referenceTransaction.amount)
+                  : '—',
+              ],
+              ['Đơn hàng liên quan', detailEntry.relatedOrderNo || '—'],
+              [
+                'Hoa hồng giữ lại',
+                detailEntry.commissionAmount != null ? formatCurrencyVND(detailEntry.commissionAmount) : '—',
+              ],
+            ].map(([label, value]) => (
+              <div key={label} className="flex items-start justify-between gap-4 py-1.5 border-b border-[#F0F4EE] last:border-0">
+                <dt className="text-[#717971] shrink-0">{label}</dt>
+                <dd className="text-right font-semibold text-[#191C19] font-mono">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </Modal>
     </div>
   );
 }

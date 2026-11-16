@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
+import AdminPeriodFilter from './AdminPeriodFilter.jsx';
 
 /**
  * View Quản lý Tài khoản ReHome
@@ -134,6 +136,13 @@ export default function AdminAccountsView({
   remoteAccounts,
   onBanAccount,
   onUnbanAccount,
+  page = 0,
+  onPageChange,
+  totalElements,
+  totalPages = 1,
+  accountsLoading = false,
+  dateFilter,
+  dateError,
 }) {
   const [accounts, setAccounts] = useState(
     Array.isArray(remoteAccounts) ? remoteAccounts : initialAccounts
@@ -178,6 +187,7 @@ export default function AdminAccountsView({
     setSearchKeyword('');
     setSelectedRole('ALL');
     setSelectedStatus('ALL');
+    dateFilter?.setPeriod('ALL');
   };
 
   const updateAccountStatus = (account, status, historyEntry) => {
@@ -245,17 +255,24 @@ export default function AdminAccountsView({
           <h1 className="text-2xl font-bold text-[#191C19] font-heading">
             Tài khoản
           </h1>
-          <p className="text-xs text-[#717971] mt-0.5">
-            Xem và khóa, mở khóa tài khoản người dùng trên ReHome.
-          </p>
         </div>
       </div>
+
+      {dateError && (
+        <div
+          role="alert"
+          className="px-4 py-2.5 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-xs font-semibold text-[#B91C1C]"
+        >
+          {dateError}
+        </div>
+      )}
 
       {/* Filter Bar */}
       <AccountsFilters
         searchKeyword={searchKeyword} setSearchKeyword={setSearchKeyword}
         selectedRole={selectedRole} setSelectedRole={setSelectedRole}
         selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus} handleResetFilter={handleResetFilter}
+        dateFilter={dateFilter}
       />
 
       {/* Main Table or Empty State */}
@@ -268,6 +285,9 @@ export default function AdminAccountsView({
           filteredAccounts={filteredAccounts} openActionMenuId={openActionMenuId} setOpenActionMenuId={setOpenActionMenuId}
           setDrawerAccount={setDrawerAccount} setLockModalAccount={setLockModalAccount}
           setLockReason={setLockReason} setLockError={setLockError} handleUnlockAccount={handleUnlockAccount}
+          page={page} onPageChange={onPageChange}
+          totalElements={totalElements ?? accounts.length} totalPages={totalPages}
+          accountsLoading={accountsLoading}
         />
       )}
 
@@ -296,18 +316,65 @@ function withAccountStatus(account, status, historyEntry) {
   return { ...account, status, history: [historyEntry, ...account.history] };
 }
 
+// Menu "Tùy chọn" được đẩy ra document.body bằng Portal và định vị theo toạ độ thật của nút bấm
+// (position: fixed). Lý do: ô này nằm trong bảng có overflow-x-auto (để cuộn ngang) - cứ đặt
+// `position: absolute` bên trong bảng thì trình duyệt coi overflow-x-auto cũng cắt luôn theo
+// chiều dọc, nên menu của các dòng gần cuối bảng bị cắt mất, không thấy hết được các lựa chọn.
 function AccountActions({
   acc, openActionMenuId, setOpenActionMenuId, setDrawerAccount,
   setLockModalAccount, setLockReason, setLockError, handleUnlockAccount,
 }) {
+  const isOpen = openActionMenuId === acc.id;
+  const buttonRef = useRef(null);
+  const menuRef = useRef(null);
+  const [menuPos, setMenuPos] = useState(null);
+
+  const close = () => setOpenActionMenuId(null);
+
+  useLayoutEffect(() => {
+    if (!isOpen || !buttonRef.current) {
+      setMenuPos(null);
+      return;
+    }
+    const updatePosition = () => {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    };
+    updatePosition();
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    // Cuộn trang hoặc đổi cỡ cửa sổ thì toạ độ nút không còn đúng nữa - đóng menu cho đơn giản,
+    // thay vì phải tính lại vị trí liên tục.
+    const handleOutsideOrEscape = (e) => {
+      if (e.type === 'keydown' && e.key !== 'Escape') return;
+      if (
+        e.type === 'mousedown' &&
+        (buttonRef.current?.contains(e.target) || menuRef.current?.contains(e.target))
+      ) {
+        return;
+      }
+      close();
+    };
+    document.addEventListener('mousedown', handleOutsideOrEscape);
+    document.addEventListener('keydown', handleOutsideOrEscape);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideOrEscape);
+      document.removeEventListener('keydown', handleOutsideOrEscape);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
   return (
     <div className="inline-block relative">
       <button
-        onClick={() =>
-          setOpenActionMenuId(
-            openActionMenuId === acc.id ? null : acc.id
-          )
-        }
+        ref={buttonRef}
+        onClick={() => setOpenActionMenuId(isOpen ? null : acc.id)}
         className="p-1 rounded-lg text-[#717971] hover:text-[#191C19] hover:bg-[#E9F0E5] transition-colors"
         title="Tùy chọn"
       >
@@ -316,15 +383,16 @@ function AccountActions({
         </span>
       </button>
 
-      {openActionMenuId === acc.id && (
+      {isOpen && menuPos && createPortal(
         <div
-          className="absolute right-0 mt-1 w-36 bg-white rounded-xl border border-[#DDE5D9] shadow-lg py-1.5 z-30 text-left animate-fadeIn"
-          onMouseLeave={() => setOpenActionMenuId(null)}
+          ref={menuRef}
+          style={{ position: 'fixed', top: menuPos.top, right: menuPos.right }}
+          className="w-36 bg-white rounded-xl border border-[#DDE5D9] shadow-lg py-1.5 z-50 text-left animate-fadeIn"
         >
           <button
             onClick={() => {
               setDrawerAccount(acc);
-              setOpenActionMenuId(null);
+              close();
             }}
             className="w-full px-3 py-1.5 text-xs text-[#414942] hover:bg-[#F6F9F4] flex items-center gap-2"
           >
@@ -340,7 +408,7 @@ function AccountActions({
                 setLockModalAccount(acc);
                 setLockReason('');
                 setLockError('');
-                setOpenActionMenuId(null);
+                close();
               }}
               className="w-full px-3 py-1.5 text-xs text-[#DC2626] hover:bg-[#FEE2E2]/50 flex items-center gap-2 font-medium"
             >
@@ -353,7 +421,7 @@ function AccountActions({
             <button
               onClick={() => {
                 handleUnlockAccount(acc);
-                setOpenActionMenuId(null);
+                close();
               }}
               className="w-full px-3 py-1.5 text-xs text-[#006B2C] hover:bg-[#E8F5E9] flex items-center gap-2 font-medium"
             >
@@ -363,7 +431,8 @@ function AccountActions({
               <span>Mở khóa</span>
             </button>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -378,11 +447,11 @@ function AccountRow({
       key={acc.id}
       className="hover:bg-[#F6F9F4]/70 transition-colors"
     >
-      {/* Name & Avatar */}
+      {/* Name */}
       <td className="py-3.5 px-6 whitespace-nowrap">
         <div className="flex items-center gap-3">
           <div
-            className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs ${
+            className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
               acc.role === 'Member'
                 ? 'bg-[#E8F5E9] text-[#006B2C]'
                 : acc.role === 'Organizer'
@@ -392,10 +461,7 @@ function AccountRow({
           >
             {acc.initials}
           </div>
-          <div>
-            <p className="font-bold text-[#191C19]">{acc.name}</p>
-            <p className="text-[10px] text-[#717971]">#{acc.code}</p>
-          </div>
+          <p className="font-bold text-[#191C19]">{acc.name}</p>
         </div>
       </td>
 
@@ -456,30 +522,30 @@ function AccountRow({
   );
 }
 
-function AccountsPagination({ count }) {
+function AccountsPagination({ count, page, onPageChange, totalElements, totalPages }) {
+  const currentPage = page ?? 0;
   return (
     <div className="p-4 border-t border-[#DDE5D9] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#717971]">
       <span>
-        Hiển thị 1 - {count} trong tổng số 2.498 tài khoản
+        Trang <strong className="text-[#191C19]">{currentPage + 1}</strong> / {Math.max(totalPages || 1, 1)}
+        {' · '}
+        Tổng số <strong className="text-[#191C19]">{(totalElements ?? count).toLocaleString('vi-VN')}</strong> tài khoản
       </span>
       <div className="flex items-center gap-1 font-medium">
-        <button className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4]">
+        <button
+          type="button"
+          onClick={() => onPageChange?.(Math.max(0, currentPage - 1))}
+          disabled={currentPage <= 0}
+          className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4] disabled:opacity-40 disabled:hover:bg-transparent"
+        >
           Trước
         </button>
-        <button className="px-2.5 py-1 rounded-lg bg-[#006B2C] text-white font-bold">
-          1
-        </button>
-        <button className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4]">
-          2
-        </button>
-        <button className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4]">
-          3
-        </button>
-        <span className="px-1 text-[#717971]">...</span>
-        <button className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4]">
-          313
-        </button>
-        <button className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4]">
+        <button
+          type="button"
+          onClick={() => onPageChange?.(currentPage + 1)}
+          disabled={currentPage + 1 >= (totalPages || 1)}
+          className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4] disabled:opacity-40 disabled:hover:bg-transparent"
+        >
           Sau
         </button>
       </div>
@@ -513,20 +579,21 @@ function AccountsEmptyState({ handleResetFilter }) {
 function AccountsTable({
   filteredAccounts, openActionMenuId, setOpenActionMenuId, setDrawerAccount,
   setLockModalAccount, setLockReason, setLockError, handleUnlockAccount,
+  page, onPageChange, totalElements, totalPages, accountsLoading,
 }) {
   return (
     <div className="bg-white rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs">
-          <thead className="bg-[#F6F9F4] text-[#717971] uppercase tracking-wider font-semibold border-b border-[#DDE5D9]">
+          <thead className="bg-[#F6F9F4] text-[#717971] tracking-wider font-semibold border-b border-[#DDE5D9]">
             <tr>
-              <th className="py-3 px-6">Tài khoản</th>
-              <th className="py-3 px-6">Email</th>
-              <th className="py-3 px-6">Số điện thoại</th>
-              <th className="py-3 px-6">Vai trò</th>
-              <th className="py-3 px-6">Ngày tạo</th>
-              <th className="py-3 px-6">Trạng thái</th>
-              <th className="py-3 px-4 text-center">Thao tác</th>
+              <th className="py-3 px-6 whitespace-nowrap">Họ tên</th>
+              <th className="py-3 px-6 whitespace-nowrap">Email</th>
+              <th className="py-3 px-6 whitespace-nowrap">Số điện thoại</th>
+              <th className="py-3 px-6 whitespace-nowrap">Vai trò</th>
+              <th className="py-3 px-6 whitespace-nowrap">Ngày tạo</th>
+              <th className="py-3 px-6 whitespace-nowrap">Trạng thái</th>
+              <th className="py-3 px-4 text-center whitespace-nowrap">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#DDE5D9]">
@@ -541,15 +608,24 @@ function AccountsTable({
         </table>
       </div>
 
-      {/* Pagination bar matching Stitch */}
-      <AccountsPagination count={filteredAccounts.length} />
+      {/* Phân trang thật theo API 135: Trước/Sau tải đúng trang đó từ server; số liệu không viết cứng */}
+      <AccountsPagination
+        count={filteredAccounts.length}
+        page={page}
+        onPageChange={onPageChange}
+        totalElements={totalElements}
+        totalPages={totalPages}
+      />
+      {accountsLoading && (
+        <div className="px-4 pb-3 text-[11px] text-[#717971]">Đang tải trang kế tiếp...</div>
+      )}
     </div>
   );
 }
 
 function AccountsFilters({
   searchKeyword, setSearchKeyword, selectedRole, setSelectedRole,
-  selectedStatus, setSelectedStatus, handleResetFilter,
+  selectedStatus, setSelectedStatus, handleResetFilter, dateFilter,
 }) {
   return (
     <div className="bg-white p-4 rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
@@ -590,7 +666,10 @@ function AccountsFilters({
           <option value="LOCKED">Bị khóa</option>
         </select>
 
-        {(searchKeyword || selectedRole !== 'ALL' || selectedStatus !== 'ALL') && (
+        {/* Lọc theo ngày tạo tài khoản */}
+        {dateFilter && <AdminPeriodFilter filter={dateFilter} name="tài khoản" label="Ngày tạo" />}
+
+        {(searchKeyword || selectedRole !== 'ALL' || selectedStatus !== 'ALL' || (dateFilter && dateFilter.period !== 'ALL')) && (
           <button
             onClick={handleResetFilter}
             className="px-3 py-2.5 text-xs font-semibold text-[#006B2C] hover:text-[#005523] hover:bg-[#E8F5E9] rounded-xl transition-colors flex items-center gap-1"

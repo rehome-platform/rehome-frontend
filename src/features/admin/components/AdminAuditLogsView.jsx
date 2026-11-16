@@ -464,13 +464,13 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
         <div className="bg-white rounded-2xl border border-[#E2E8E0] shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#F8FAF8] text-[#717971] uppercase tracking-wider font-semibold border-b border-[#E2E8E0]">
+              <thead className="bg-[#F8FAF8] text-[#717971] tracking-wider font-semibold border-b border-[#E2E8E0]">
                 <tr>
                   <th className="w-10 py-3 pl-4 pr-1"></th>
-                  <th className="py-3 px-4">Thời gian</th>
-                  <th className="py-3 px-6">Người thực hiện</th>
-                  <th className="py-3 px-6">Hành động</th>
-                  <th className="py-3 px-6">Đối tượng tác động</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Thời gian</th>
+                  <th className="py-3 px-6 whitespace-nowrap">Người thực hiện</th>
+                  <th className="py-3 px-6 whitespace-nowrap">Hành động</th>
+                  <th className="py-3 px-6 whitespace-nowrap">Đối tượng tác động</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8E0]">

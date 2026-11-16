@@ -35,7 +35,8 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
   const getAutoTitle = () => {
     if (activeTitle) return activeTitle;
     const path = location.pathname;
-    if (path.startsWith('/admin/users')) return 'Quản lý Tài khoản (Member & Tổ chức)';
+    if (path.startsWith('/admin/fund-ledger')) return 'Giao dịch';
+    if (path.startsWith('/admin/users')) return 'Quản lý Tài khoản';
     if (path.startsWith('/admin/moderators')) return 'Quản lý Nhân sự Moderator';
     if (path.startsWith('/admin/ban-proposals')) return 'Đề xuất khóa tài khoản';
     if (path.startsWith('/admin/warehouses')) return 'Quản lý Điểm kí gửi ReHome';
@@ -47,7 +48,7 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
     if (path.startsWith('/admin/voucher-templates')) return 'Quản lý mẫu voucher';
     if (path.startsWith('/admin/membership-stats')) return 'Thống kê gói VIP & Voucher';
     if (path.startsWith('/admin/membership-payments')) return 'Lịch sử thanh toán gói VIP';
-    return 'Tổng quan điều hành & Quỹ nền tảng';
+    return 'Tổng quan điều hành';
   };
 
   const currentTitle = getAutoTitle();

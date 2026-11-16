@@ -15,9 +15,12 @@ vi.mock('../../src/features/admin/services/adminApi.js', () => ({
     getWarehouses: vi.fn(),
     getAuditLogs: vi.fn(),
     getRevenueItems: vi.fn(),
+    getRevenueTrend: vi.fn(),
+    getRevenueTrendTotal: vi.fn(),
     getFundLedger: vi.fn(),
     getFundReconciliation: vi.fn(),
     getAccountGrowth: vi.fn(),
+    getAccountGrowthTotal: vi.fn(),
   },
 }));
 
@@ -28,9 +31,19 @@ const dashboard = {
   withdrawalFeeRevenue: 25000,
   compensationExpense: 15000,
   walletBalanceHeld: 2000000,
-  fundBalance: 3000000,
+  fundBalance: -2000000,
+  heldOrderAmount: 4500000,
+  heldOrderCount: 7,
   ordersCount: 15,
   inventoryCount: 24,
+  stockByStatus: {
+    ON_SALE: 15,
+    RESERVED: 2,
+    WAREHOUSE: 3,
+    UNCLAIMED: 1,
+    RETURNED: 2,
+    PLATFORM_OWNED: 1,
+  },
   avgServiceRating: 5,
   overdueTaskCount: 1,
   term1SalesRevenue: 600000,
@@ -56,6 +69,8 @@ function mountDashboard() {
   );
 }
 
+const tab = (name) => screen.getByRole('tab', { name });
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -67,7 +82,7 @@ beforeEach(() => {
     Promise.resolve({ totalElements: role === 'MEMBER' ? 12 : 3 })
   );
   adminApi.getModerators.mockResolvedValue({ totalElements: 2 });
-  adminApi.getWarehouses.mockResolvedValue([]);
+  adminApi.getWarehouses.mockResolvedValue([{ id: 'wh-1' }, { id: 'wh-2' }]);
   adminApi.getAuditLogs.mockResolvedValue({ content: [] });
   adminApi.getRevenueItems.mockResolvedValue({
     content: [
@@ -88,39 +103,21 @@ beforeEach(() => {
     totalElements: 1,
     totalPages: 1,
   });
-  adminApi.getFundReconciliation.mockResolvedValue({
-    status: 'BALANCED',
-    difference: 0,
-    fundBalance: 3000000,
-    ledgerBalance: 3000000,
-    memberWalletBalance: 2000000,
-    memberLedgerBalance: 2000000,
-    memberDifference: 0,
-    ledgerNetTotal: 0,
-    unmatchedEntries: 0,
-    unbalancedPairs: 0,
-    checkedAt: '2026-11-11T10:00:00Z',
-  });
-  adminApi.getFundLedger.mockResolvedValue({
-    content: [
-      {
-        id: 'tx-1',
-        transactionNo: 'FTX-500',
-        type: 'COMMISSION_REVENUE',
-        amount: 100000,
-        balanceAfter: 3000000,
-        status: 'SUCCESS',
-        note: 'Thu hoa hồng',
-        createdAt: '2026-11-11T09:00:00Z',
-        relatedAccount: null,
-        referenceTransaction: null,
-      },
+  adminApi.getRevenueTrend.mockResolvedValue({
+    granularity: 'day',
+    from: '2026-11-01',
+    to: '2026-11-11',
+    total: 125000,
+    points: [
+      { label: '2026-11-10', periodStart: '2026-11-10', periodEnd: '2026-11-10', amount: 50000 },
+      { label: '2026-11-11', periodStart: '2026-11-11', periodEnd: '2026-11-11', amount: 75000 },
     ],
-    page: 0,
-    size: 10,
-    totalElements: 1,
-    totalPages: 1,
   });
+  // Mặc định: chưa có số liệu kỳ trước để so sánh % (các test riêng cho tính năng này tự đặt lại)
+  adminApi.getRevenueTrendTotal.mockResolvedValue(0);
+  adminApi.getAccountGrowthTotal.mockResolvedValue(0);
+  adminApi.getFundReconciliation.mockResolvedValue({ status: 'BALANCED' });
+  adminApi.getFundLedger.mockResolvedValue({ content: [], page: 0, size: 10, totalElements: 0, totalPages: 0 });
   adminApi.getAccountGrowth.mockResolvedValue({
     granularity: 'day',
     from: '2026-10-13',
@@ -141,20 +138,82 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('Admin dashboard API semantics', () => {
-  it.each([
-    [1000000, '12.5%'],
-    [0, '0.0%'],
-  ])('shows the revenue ratio for completed-order amount %s', async (revenue, ratio) => {
-    adminApi.getDashboard.mockResolvedValue({ ...dashboard, revenue });
+describe('Admin dashboard structure', () => {
+  it('has three tabs - Doanh thu, Người dùng, Kho - and opens on Doanh thu', async () => {
     mountDashboard();
-    expect(
-      await screen.findByText(`${ratio} Tỷ lệ doanh thu nền tảng / tổng tiền đơn hoàn thành`)
-    ).toBeInTheDocument();
-    expect(screen.getByText('Hoa hồng và phí rút hàng đã thu, chưa trừ chi đền bù')).toBeVisible();
+
+    expect(screen.getAllByRole('tab').map((t) => t.textContent.trim())).toEqual([
+      'payments' + 'Doanh thu',
+      'group' + 'Người dùng',
+      'warehouse' + 'Kho',
+    ]);
+    expect(tab(/Doanh thu/)).toHaveAttribute('aria-selected', 'true');
+    expect(tab(/Người dùng/)).toHaveAttribute('aria-selected', 'false');
+    expect(tab(/Kho/)).toHaveAttribute('aria-selected', 'false');
+    await screen.findByText('Tiền đang giữ hộ');
+  });
+});
+
+describe('Admin dashboard - tab Doanh thu', () => {
+  it('shows exactly two summary cards: platform revenue and held-order money', async () => {
+    mountDashboard();
+
+    const revenueCard = (await screen.findByText('Doanh thu nền tảng')).closest('div.rounded-2xl');
+    expect(within(revenueCard).getByText(/125\.000/)).toBeInTheDocument();
+    expect(within(revenueCard).getByText('Hoa hồng và phí rút hàng đã thu, chưa trừ chi đền bù')).toBeVisible();
+    const heldCard = screen.getByText('Tiền đang giữ hộ').closest('div.rounded-2xl');
+    expect(within(heldCard).getByText(/4\.500\.000/)).toBeInTheDocument();
   });
 
-  it('syncs unified period filter across dashboard API, tabs, and Excel export', async () => {
+  it('shows no explanatory sentence, revenue-ratio line or order-count line around the cards', async () => {
+    mountDashboard();
+    await screen.findByText('Tiền đang giữ hộ');
+    await screen.findByText('Bàn gỗ');
+
+    expect(screen.queryByText(/được lọc theo khoảng thời gian đang chọn/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/luôn là số hiện tại/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Tỷ lệ doanh thu nền tảng/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/đơn đang xử lý/)).not.toBeInTheDocument();
+    // Hai thẻ không còn dòng chân thẻ (đường kẻ + biểu tượng + số liệu phụ)
+    for (const label of ['Doanh thu nền tảng', 'Tiền đang giữ hộ']) {
+      const card = screen.getByText(label).closest('div.rounded-2xl');
+      expect(card.querySelector('.border-t')).toBeNull();
+    }
+  });
+
+  it('no longer shows revenue breakdown, fund balance, orders-paid card, or the ledger here', async () => {
+    mountDashboard();
+    await screen.findByText('Tiền đang giữ hộ');
+    await screen.findByText('Bàn gỗ');
+
+    expect(screen.queryByText('Cơ Cấu Doanh Thu Nền Tảng')).not.toBeInTheDocument();
+    expect(screen.queryByText('Số dư quỹ nền tảng')).not.toBeInTheDocument();
+    expect(screen.queryByText('Tổng đơn đã thanh toán')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Nhật Ký Ghi Sổ Kép/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Đối soát: Khớp')).not.toBeInTheDocument();
+    expect(screen.queryByText('Tồn Kho Trong Kho Hàng')).not.toBeInTheDocument();
+    // Bảng món đã bán chỉ còn bảng, không còn 3 thẻ tóm tắt theo kỳ
+    expect(screen.queryByText('Báo Cáo Doanh Thu Nền Tảng Theo Kỳ Kí Gửi')).not.toBeInTheDocument();
+    expect(screen.queryByText('Kỳ 1 (1–30 ngày · 10%)')).not.toBeInTheDocument();
+    expect(adminApi.getFundLedger).not.toHaveBeenCalled();
+    expect(adminApi.getFundReconciliation).not.toHaveBeenCalled();
+  });
+
+  it('renders the revenue trend chart and the sold-items table', async () => {
+    mountDashboard();
+
+    expect(await screen.findByText('Doanh thu nền tảng theo thời gian')).toBeInTheDocument();
+    expect(await screen.findByText('Danh Sách Món Đã Bán Theo Kỳ')).toBeInTheDocument();
+    expect(await screen.findByText('Bàn gỗ')).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: /2026-11-11: 75\.000/ })).toBeInTheDocument();
+    expect(adminApi.getRevenueTrend).toHaveBeenLastCalledWith({
+      from: '2026-11-01',
+      to: '2026-11-11',
+      granularity: 'day',
+    });
+  });
+
+  it('top filter drives the cards, the sold-items table and Excel export', async () => {
     mountDashboard();
     const period = screen.getByRole('combobox', { name: 'Khoảng thời gian' });
     expect(period).toHaveValue('MONTH');
@@ -178,35 +237,85 @@ describe('Admin dashboard API semantics', () => {
         to: '2026-11-11',
       })
     );
-
-    fireEvent.click(screen.getByRole('button', { name: /Báo cáo doanh thu theo kỳ/ }));
-    expect(await screen.findByText('Bàn gỗ')).toBeInTheDocument();
-    expect(adminApi.getRevenueItems).toHaveBeenLastCalledWith({
-      from: '2026-11-09',
-      to: '2026-11-11',
-      term: undefined,
-      page: 0,
-      size: 20,
-    });
-    expect(screen.getByRole('combobox', { name: 'Khoảng thời gian' })).toHaveValue('WEEK');
+    await waitFor(() =>
+      expect(adminApi.getRevenueItems).toHaveBeenLastCalledWith({
+        from: '2026-11-09',
+        to: '2026-11-11',
+        term: undefined,
+        page: 0,
+        size: 20,
+      })
+    );
 
     fireEvent.click(screen.getByRole('button', { name: /Xuất báo cáo Excel/ }));
     await waitFor(() =>
       expect(adminApi.exportDashboard).toHaveBeenLastCalledWith('2026-11-09', '2026-11-11')
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Hoạt động & Tăng trưởng/ }));
+    // "Toàn thời gian": không gửi from/to
     fireEvent.change(period, { target: { value: 'ALL' } });
     await waitFor(() =>
-      expect(adminApi.getDashboard).toHaveBeenLastCalledWith({
-        from: undefined,
-        to: undefined,
-      })
+      expect(adminApi.getDashboard).toHaveBeenLastCalledWith({ from: undefined, to: undefined })
     );
     fireEvent.click(screen.getByRole('button', { name: /Xuất báo cáo Excel/ }));
     await waitFor(() =>
       expect(adminApi.exportDashboard).toHaveBeenLastCalledWith('1970-01-01', '2026-11-11')
     );
+
+    // Một năm cụ thể (2025) cũng đi cùng một đường: thẻ, bảng và xuất Excel
+    fireEvent.change(period, { target: { value: 'YEAR_PICK' } });
+    fireEvent.change(screen.getByLabelText('Chọn năm'), { target: { value: '2025' } });
+    await waitFor(() =>
+      expect(adminApi.getDashboard).toHaveBeenLastCalledWith({ from: '2025-01-01', to: '2025-12-31' })
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Xuất báo cáo Excel/ }));
+    await waitFor(() =>
+      expect(adminApi.exportDashboard).toHaveBeenLastCalledWith('2025-01-01', '2025-12-31')
+    );
+  });
+
+  it('keeps the chart filter separate from the top filter', async () => {
+    mountDashboard();
+    const top = screen.getByRole('combobox', { name: 'Khoảng thời gian' });
+    const chart = await screen.findByRole('combobox', { name: 'Khoảng thời gian biểu đồ' });
+    await screen.findByRole('img', { name: /2026-11-11: 75\.000/ });
+    const chartCalls = adminApi.getRevenueTrend.mock.calls.length;
+    const dashboardCalls = adminApi.getDashboard.mock.calls.length;
+
+    // Đổi bộ lọc ở đầu trang: thẻ + bảng đổi, biểu đồ KHÔNG gọi lại
+    fireEvent.change(top, { target: { value: 'WEEK' } });
+    await waitFor(() => expect(adminApi.getDashboard).toHaveBeenCalledTimes(dashboardCalls + 1));
+    expect(adminApi.getRevenueTrend).toHaveBeenCalledTimes(chartCalls);
+    expect(chart).toHaveValue('MONTH');
+
+    // Đổi bộ lọc của biểu đồ: biểu đồ đổi, thẻ + bảng KHÔNG gọi lại
+    const itemCalls = adminApi.getRevenueItems.mock.calls.length;
+    fireEvent.change(chart, { target: { value: 'YEAR' } });
+    await waitFor(() =>
+      expect(adminApi.getRevenueTrend).toHaveBeenLastCalledWith({
+        from: '2026-01-01',
+        to: '2026-11-11',
+        granularity: 'month',
+      })
+    );
+    expect(adminApi.getDashboard).toHaveBeenCalledTimes(dashboardCalls + 1);
+    expect(adminApi.getRevenueItems).toHaveBeenCalledTimes(itemCalls);
+    expect(top).toHaveValue('WEEK');
+  });
+
+  it('keeps the chosen period when switching to another tab and back', async () => {
+    mountDashboard();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Khoảng thời gian' }), {
+      target: { value: 'WEEK' },
+    });
+
+    fireEvent.click(tab(/Người dùng/));
+    // Bộ lọc thời gian và nút xuất chỉ thuộc tab Doanh thu
+    expect(screen.queryByRole('combobox', { name: 'Khoảng thời gian' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Xuất báo cáo Excel/ })).not.toBeInTheDocument();
+
+    fireEvent.click(tab(/Doanh thu/));
+    expect(screen.getByRole('combobox', { name: 'Khoảng thời gian' })).toHaveValue('WEEK');
   });
 
   it.each([
@@ -235,6 +344,7 @@ describe('Admin dashboard API semantics', () => {
   it('validates custom date range from > to and prevents invalid API calls', async () => {
     mountDashboard();
     await waitFor(() => expect(adminApi.getDashboard).toHaveBeenCalledTimes(1));
+    await screen.findByText('Bàn gỗ');
 
     fireEvent.change(screen.getByRole('combobox', { name: 'Khoảng thời gian' }), {
       target: { value: 'CUSTOM' },
@@ -242,16 +352,15 @@ describe('Admin dashboard API semantics', () => {
 
     const fromInput = screen.getByLabelText('Từ ngày');
     const toInput = screen.getByLabelText('Đến ngày');
-    const ledgerCallsBeforeInvalid = adminApi.getFundLedger.mock.calls.length;
+    const trendCalls = adminApi.getRevenueTrend.mock.calls.length;
+    const itemCalls = adminApi.getRevenueItems.mock.calls.length;
     fireEvent.change(fromInput, { target: { value: '2026-11-15' } });
     fireEvent.change(toInput, { target: { value: '2026-11-10' } });
 
     expect(await screen.findByText(/Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc/)).toBeInTheDocument();
     expect(adminApi.getDashboard).toHaveBeenCalledTimes(1);
-    expect(adminApi.getFundLedger).toHaveBeenCalledTimes(ledgerCallsBeforeInvalid);
-
-    fireEvent.click(screen.getByRole('button', { name: /Báo cáo doanh thu theo kỳ/ }));
-    expect(adminApi.getRevenueItems).not.toHaveBeenCalled();
+    expect(adminApi.getRevenueTrend).toHaveBeenCalledTimes(trendCalls);
+    expect(adminApi.getRevenueItems).toHaveBeenCalledTimes(itemCalls);
 
     fireEvent.click(screen.getByRole('button', { name: /Xuất báo cáo Excel/ }));
     expect(adminApi.exportDashboard).not.toHaveBeenCalled();
@@ -263,6 +372,45 @@ describe('Admin dashboard API semantics', () => {
         to: '2026-11-10',
       })
     );
+    await waitFor(() =>
+      expect(adminApi.getRevenueItems).toHaveBeenLastCalledWith({
+        from: '2026-11-05',
+        to: '2026-11-10',
+        term: undefined,
+        page: 0,
+        size: 20,
+      })
+    );
+  });
+
+  describe('comparison with the previous period (platform revenue card only)', () => {
+    it('shows the % badge on "Doanh thu nền tảng" but never on "Tiền đang giữ hộ"', async () => {
+      adminApi.getRevenueTrendTotal.mockResolvedValue(100000);
+      mountDashboard();
+
+      const revenueCard = (await screen.findByText('Doanh thu nền tảng')).closest('div.rounded-2xl');
+      // Doanh thu tháng này = 125.000, kỳ trước (tháng 10, cùng đến ngày 11) = 100.000 -> +25%
+      expect(adminApi.getRevenueTrendTotal).toHaveBeenCalledWith({ from: '2026-10-01', to: '2026-10-11' });
+      expect(await within(revenueCard).findByText('+25.0% so với tháng trước')).toBeInTheDocument();
+
+      const heldCard = screen.getByText('Tiền đang giữ hộ').closest('div.rounded-2xl');
+      expect(within(heldCard).queryByText(/so với/)).not.toBeInTheDocument();
+    });
+
+    it('follows the top filter, not the chart\'s own filter', async () => {
+      adminApi.getRevenueTrendTotal.mockResolvedValue(100000);
+      mountDashboard();
+      const top = screen.getByRole('combobox', { name: 'Khoảng thời gian' });
+      const revenueCard = (await screen.findByText('Doanh thu nền tảng')).closest('div.rounded-2xl');
+      await within(revenueCard).findByText('+25.0% so với tháng trước');
+
+      fireEvent.change(top, { target: { value: 'YEAR' } });
+      // "Năm nay" -> kỳ trước là năm 2025, cùng tháng-ngày (bộ lọc của biểu đồ bên dưới vẫn không đổi)
+      await waitFor(() =>
+        expect(adminApi.getRevenueTrendTotal).toHaveBeenLastCalledWith({ from: '2025-01-01', to: '2025-11-11' })
+      );
+      expect(await within(revenueCard).findByText('+25.0% so với năm trước')).toBeInTheDocument();
+    });
   });
 
   it('prevents duplicate exports while pending and reports failures', async () => {
@@ -292,29 +440,222 @@ describe('Admin dashboard API semantics', () => {
     );
     expect(button).toBeEnabled();
   });
+});
 
-  it('renders revenue breakdown, stock by term, and double-entry ledger on fund tab', async () => {
+describe('Admin dashboard - tab Người dùng', () => {
+  it('shows the role donut with the total in the middle and a per-role legend', async () => {
     mountDashboard();
+    fireEvent.click(tab(/Người dùng/));
 
-    expect(await screen.findByText('Cơ Cấu Doanh Thu Nền Tảng')).toBeInTheDocument();
-    expect(screen.getByText(/Chi đền bù hàng xuống cấp/)).toBeInTheDocument();
+    await screen.findByRole('button', { name: /2026-11-11: 3 tài khoản/ });
+    const heading = screen.getByRole('heading', { name: 'Tài khoản theo vai trò' });
+    const card = heading.closest('.lg\\:col-span-5');
+    // Tổng = 12 Member + 3 tổ chức + 2 Moderator (không gồm Admin)
+    expect(within(card).getByRole('img', { name: 'Biểu đồ tài khoản theo vai trò' })).toBeInTheDocument();
+    expect(within(card).getByText('17')).toBeInTheDocument();
+    expect(within(card).getByText('Tổng tài khoản')).toBeInTheDocument();
+    // Chú giải: tên nhóm, số lượng và tỷ lệ (12/17 = 71%, 3/17 = 18%, 2/17 = 12%)
+    expect(within(card).getByText('Member').parentElement.parentElement).toHaveTextContent('1271%');
+    expect(within(card).getByText('Tổ chức').parentElement.parentElement).toHaveTextContent('318%');
+    expect(within(card).getByText('Moderator').parentElement.parentElement).toHaveTextContent('212%');
+  });
+
+  it('no longer repeats the "Member, tổ chức và Moderator" captions around the charts', async () => {
+    mountDashboard();
+    fireEvent.click(tab(/Người dùng/));
+    await screen.findByRole('button', { name: /2026-11-11: 3 tài khoản/ });
+
+    // Dòng mô tả của biểu đồ tăng trưởng và của bảng hoạt động cũng không còn
+    expect(screen.queryByText(/tài khoản mới từ/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Ghi nhận các thao tác kiểm duyệt/)).not.toBeInTheDocument();
+    expect(screen.getByText('Hoạt động gần đây')).toBeInTheDocument();
+    expect(screen.queryByText('Member, tổ chức và Moderator')).not.toBeInTheDocument();
+    expect(screen.queryByText('Phân bổ ba nhóm Member, tổ chức và Moderator')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Tổng số gồm Member, tổ chức và Moderator/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/thuộc ba nhóm Member, tổ chức và Moderator/)).not.toBeInTheDocument();
+  });
+
+  it('gives the growth chart the same kind of filter as the revenue tab, with its own state', async () => {
+    mountDashboard();
+    fireEvent.click(tab(/Người dùng/));
+
+    const growth = await screen.findByRole('combobox', { name: 'Khoảng thời gian tăng trưởng' });
+    expect(growth).toHaveValue('LAST30');
+    expect(screen.getByLabelText('Lọc vai trò tăng trưởng')).toBeInTheDocument();
+    // Cùng bộ lựa chọn với khối doanh thu (trừ "Toàn thời gian" vì API tăng trưởng chỉ có tối đa 366 kỳ)
+    expect([...growth.querySelectorAll('option')].map((o) => o.value)).toEqual([
+      'TODAY', 'WEEK', 'MONTH', 'LAST30', 'YEAR', 'DAY', 'WEEK_PICK', 'MONTH_PICK', 'YEAR_PICK', 'CUSTOM',
+    ]);
+
+    fireEvent.change(growth, { target: { value: 'MONTH_PICK' } });
+    fireEvent.change(screen.getByLabelText('Chọn tháng tăng trưởng'), { target: { value: '2026-09' } });
+    await waitFor(() =>
+      expect(adminApi.getAccountGrowth).toHaveBeenLastCalledWith({
+        from: '2026-09-01',
+        to: '2026-09-30',
+        granularity: 'day',
+        role: undefined,
+      })
+    );
+    // Bộ lọc của tab Doanh thu không bị đổi
+    fireEvent.click(tab(/Doanh thu/));
+    expect(screen.getByRole('combobox', { name: 'Khoảng thời gian' })).toHaveValue('MONTH');
+  });
+
+  it('shows three account cards and leaves the warehouse count to the Kho tab', async () => {
+    mountDashboard();
+    fireEvent.click(tab(/Người dùng/));
+
+    expect(await screen.findByText('Tổng số Member')).toBeInTheDocument();
+    expect(screen.getByText('Tổ chức đối tác')).toBeInTheDocument();
+    expect(screen.getByText('Nhân viên Moderator')).toBeInTheDocument();
+    expect(screen.queryByText('Điểm kho ký gửi')).not.toBeInTheDocument();
+    expect(adminApi.getWarehouses).not.toHaveBeenCalled();
+  });
+});
+
+describe('Admin dashboard - tab Kho', () => {
+  async function openWarehouseTab() {
+    mountDashboard();
+    fireEvent.click(tab(/Kho/));
+    await screen.findByText('Tồn kho theo trạng thái');
+  }
+
+  it('loads current (unfiltered) numbers, not the revenue period', async () => {
+    await openWarehouseTab();
+    await waitFor(() => expect(screen.getByTestId('stock-status-ON_SALE')).toBeInTheDocument());
+    expect(screen.queryByText(/không đổi theo bộ lọc thời gian/)).not.toBeInTheDocument();
+
+    expect(adminApi.getDashboard).toHaveBeenLastCalledWith();
+    expect(adminApi.getWarehouses).toHaveBeenCalled();
+    // Không có bộ lọc thời gian ở tab này
+    expect(screen.queryByRole('combobox', { name: 'Khoảng thời gian' })).not.toBeInTheDocument();
+  });
+
+  it('shows stock by every status in two groups with counts and percentages', async () => {
+    await openWarehouseTab();
+    await waitFor(() => expect(screen.getByTestId('stock-status-ON_SALE')).toBeInTheDocument());
+
+    expect(screen.getByText('Đang kinh doanh')).toBeInTheDocument();
+    expect(screen.getByText('Cần xử lý')).toBeInTheDocument();
+
+    const expected = {
+      ON_SALE: ['Đang bán', '15 món', '63%'],
+      RESERVED: ['Đang giữ chỗ', '2 món', '8%'],
+      WAREHOUSE: ['Chờ Member quyết định', '3 món', '13%'],
+      UNCLAIMED: ['Không ai nhận', '1 món', '4%'],
+      RETURNED: ['Hàng trả về', '2 món', '8%'],
+      PLATFORM_OWNED: ['Thuộc nền tảng', '1 món', '4%'],
+    };
+    for (const [code, [label, count, pct]] of Object.entries(expected)) {
+      const row = screen.getByTestId(`stock-status-${code}`);
+      expect(within(row).getByText(label)).toBeInTheDocument();
+      expect(row.textContent).toContain(count);
+      expect(row.textContent).toContain(pct);
+    }
+
+    // Tổng từng nhóm: 15 + 2 = 17 và 3 + 1 + 2 + 1 = 7
+    const trading = screen.getByText('Đang kinh doanh').closest('div.space-y-3');
+    expect(within(trading).getByText('17 món')).toBeInTheDocument();
+    const attention = screen.getByText('Cần xử lý').closest('div.space-y-3');
+    expect(within(attention).getByText('7 món')).toBeInTheDocument();
+  });
+
+  it('draws a donut of stock by status whose legend dots match the list', async () => {
+    await openWarehouseTab();
+    await waitFor(() => expect(screen.getByTestId('stock-status-ON_SALE')).toBeInTheDocument());
+
+    const donut = screen.getByRole('img', { name: 'Biểu đồ tồn kho theo trạng thái' });
+    expect(within(donut.parentElement).getByText('24')).toBeInTheDocument();
+    expect(within(donut.parentElement).getByText('món trong kho')).toBeInTheDocument();
+    // Một lát cho mỗi trạng thái đang có hàng, cùng màu với chấm ở danh sách
+    const slices = donut.querySelectorAll('circle[stroke]:not([stroke="#E9F0E5"])');
+    expect([...slices].map((c) => c.querySelector('title').textContent)).toEqual([
+      'Đang bán: 15',
+      'Đang giữ chỗ: 2',
+      'Chờ Member quyết định: 3',
+      'Không ai nhận: 1',
+      'Hàng trả về: 2',
+      'Thuộc nền tảng: 1',
+    ]);
+    const dot = screen.getByTestId('stock-status-ON_SALE').querySelector('span.rounded-full');
+    expect(dot.style.backgroundColor).toBe('rgb(0, 107, 44)');
+    expect(slices[0].getAttribute('stroke')).toBe('#006B2C');
+  });
+
+  it('draws a column chart of stock by consignment term', async () => {
+    await openWarehouseTab();
+
+    const columns = await screen.findByRole('img', { name: 'Biểu đồ tồn kho theo kỳ ký gửi' });
+    expect(within(columns.parentElement).getByText('12')).toBeInTheDocument();
+    expect(columns.querySelectorAll('rect.chart-bar')).toHaveLength(3);
+  });
+
+  it('shows warehouse count, overdue tasks, service rating, and stock by term', async () => {
+    await openWarehouseTab();
+
+    expect(await screen.findByText('Điểm kho ký gửi')).toBeInTheDocument();
+    const warehouseCard = screen.getByText('Điểm kho ký gửi').closest('div.flex');
+    await waitFor(() => expect(within(warehouseCard).getByText('2')).toBeInTheDocument());
+    expect(screen.getByText('1 việc')).toBeInTheDocument();
+    expect(screen.getByText('5 ★')).toBeInTheDocument();
     expect(screen.getByText(/Kỳ 1: 12 món/)).toBeInTheDocument();
     expect(screen.getByText(/Kỳ 2: 8 món/)).toBeInTheDocument();
     expect(screen.getByText(/Kỳ 3: 4 món/)).toBeInTheDocument();
-    expect(await screen.findByText('Đối soát: Khớp')).toBeInTheDocument();
-    expect(screen.getByText('FTX-500')).toBeInTheDocument();
+    // Dòng chữ cứng cũ về quy tắc 90 ngày không còn
+    expect(screen.queryByText(/Gỡ khỏi sàn & gửi thông báo/)).not.toBeInTheDocument();
   });
 
-  it('totals only the three displayed account roles and loads growth chart on activities tab', async () => {
+  it('lists an unknown stock status under "Cần xử lý" instead of dropping it', async () => {
+    adminApi.getDashboard.mockResolvedValue({
+      ...dashboard,
+      inventoryCount: 26,
+      stockByStatus: { ...dashboard.stockByStatus, NEW_STATE: 2 },
+    });
+    await openWarehouseTab();
+
+    const row = await screen.findByTestId('stock-status-NEW_STATE');
+    expect(row.textContent).toContain('NEW_STATE');
+    expect(row.textContent).toContain('2 món');
+  });
+
+  it('explains when the server has no per-status numbers yet', async () => {
+    const { stockByStatus: _omit, ...withoutStatus } = dashboard;
+    adminApi.getDashboard.mockResolvedValue(withoutStatus);
     mountDashboard();
-    fireEvent.click(screen.getByRole('button', { name: /Hoạt động & Tăng trưởng/ }));
+    fireEvent.click(tab(/Kho/));
+
     expect(
-      await screen.findByText('Tổng cộng 17 tài khoản thuộc ba nhóm Member, tổ chức và Moderator.')
+      await screen.findByText('Máy chủ chưa trả số liệu tồn kho theo trạng thái.')
     ).toBeInTheDocument();
-    expect(await screen.findByText(/5 tài khoản mới/)).toBeInTheDocument();
-    const heading = screen.getByRole('heading', { name: 'Tài khoản theo vai trò' });
-    const chart = heading.closest('.lg\\:col-span-5');
-    expect(within(chart).getByText('17')).toBeInTheDocument();
-    expect(within(chart).getByText('Member, tổ chức và Moderator')).toBeInTheDocument();
+  });
+
+  it('shows an empty state when the warehouse holds nothing', async () => {
+    adminApi.getDashboard.mockResolvedValue({
+      ...dashboard,
+      inventoryCount: 0,
+      stockByStatus: { ON_SALE: 0, RESERVED: 0, WAREHOUSE: 0, UNCLAIMED: 0, RETURNED: 0, PLATFORM_OWNED: 0 },
+      term1StockCount: 0,
+      term2StockCount: 0,
+      term3StockCount: 0,
+    });
+    mountDashboard();
+    fireEvent.click(tab(/Kho/));
+
+    expect(await screen.findByText('Kho hàng hiện chưa có sản phẩm tồn')).toBeInTheDocument();
+  });
+
+  it('shows an error with retry when the dashboard request fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminApi.getDashboard
+      .mockResolvedValueOnce(dashboard) // lần mở trang (tab Doanh thu)
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce(dashboard);
+    mountDashboard();
+    fireEvent.click(tab(/Kho/));
+
+    expect(await screen.findByText('Không thể tải số liệu kho hàng.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }));
+    expect(await screen.findByTestId('stock-status-ON_SALE')).toBeInTheDocument();
   });
 });
