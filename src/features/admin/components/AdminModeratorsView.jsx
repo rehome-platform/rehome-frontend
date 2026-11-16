@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import adminApi from '../services/adminApi';
+import { Button } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 
 /**
@@ -234,16 +235,19 @@ export default function AdminModeratorsView({ onLogAction }) {
           </p>
         </div>
 
-        <button
+        <Button
+          type="button"
+          variant="primary"
+          size="md"
           onClick={() => {
             setFormErrors({});
             setIsCreateModalOpen(true);
           }}
-          className="px-4 py-2.5 bg-[#006B2C] hover:bg-[#005523] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm shrink-0"
+          className="gap-1.5 shrink-0"
         >
           <span className="material-symbols-outlined text-base">person_add</span>
           <span>Tạo tài khoản Moderator</span>
-        </button>
+        </Button>
       </div>
 
       {/* Action Toast */}
@@ -311,12 +315,15 @@ export default function AdminModeratorsView({ onLogAction }) {
             error
           </span>
           <p className="text-xs font-semibold text-[#DC2626]">{error}</p>
-          <button
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
             onClick={loadModerators}
-            className="mt-4 px-4 py-2 bg-[#F6F9F4] border border-[#DDE5D9] text-xs font-medium rounded-xl hover:bg-[#E9F0E5]"
+            className="mt-4"
           >
             Thử lại
-          </button>
+          </Button>
         </div>
       ) : moderators.length === 0 ? (
         <div className="bg-white rounded-2xl border border-[#DDE5D9] p-12 text-center flex flex-col items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
@@ -438,7 +445,7 @@ export default function AdminModeratorsView({ onLogAction }) {
                             onClick={() =>
                               setOpenActionId(openActionId === modId ? null : modId)
                             }
-                            className="p-1 rounded-lg text-[#717971] hover:text-[#191C19] hover:bg-[#E9F0E5] transition-colors"
+                            className="p-1 rounded-xl text-[#717971] hover:text-[#191C19] hover:bg-[#E9F0E5] transition-colors"
                           >
                             <span className="material-symbols-outlined text-lg">
                               more_vert

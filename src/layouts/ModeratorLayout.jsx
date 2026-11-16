@@ -7,7 +7,7 @@ import { NotificationBell } from '../components/notification/index.js';
  * Layout chuyên biệt dành cho Nhân viên Điểm kí gửi / Kiểm duyệt viên (Moderator)
  * Thao tác nghiệp vụ tại điểm kí gửi tập trung ReHome
  */
-export default function ModeratorLayout({ children, apiColors = false }) {
+export default function ModeratorLayout({ children, apiColors = true }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();

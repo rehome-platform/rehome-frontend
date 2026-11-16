@@ -138,8 +138,8 @@ export default function CategoryBrandPage() {
       actions={
         <Button
           variant="primary"
+          size="md"
           onClick={() => setEditor({ kind, item: null })}
-          className="text-xs py-2 px-3.5 font-semibold"
         >
           + Thêm {isCategory ? 'danh mục mới' : 'thương hiệu mới'}
         </Button>

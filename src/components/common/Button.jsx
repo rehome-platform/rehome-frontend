@@ -1,17 +1,98 @@
-import React from 'react';
+import React, { useRef, useCallback } from 'react';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 
-export default function Button({
-  children,
-  variant = 'primary', // 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost'
-  size = 'md', // 'sm' | 'md' | 'lg'
-  disabled = false,
-  loading = false,
-  type = 'button',
-  className = '',
-  onClick,
-  ...props
-}) {
-  const baseStyles = 'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.99]';
+gsap.registerPlugin(useGSAP);
+
+const Button = React.forwardRef(function Button(
+  {
+    children,
+    variant = 'primary', // 'primary' | 'secondary' | 'outline' | 'warning' | 'accent' | 'danger' | 'ghost'
+    size = 'md', // 'sm' | 'md' | 'lg'
+    disabled = false,
+    loading = false,
+    type = 'button',
+    className = '',
+    onClick,
+    onPointerDown,
+    onPointerUp,
+    onPointerLeave,
+    ...props
+  },
+  forwardedRef
+) {
+  const buttonRef = useRef(null);
+  const spinnerRef = useRef(null);
+  const isDisabled = disabled || loading;
+
+  const setRefs = useCallback(
+    (node) => {
+      buttonRef.current = node;
+      if (typeof forwardedRef === 'function') {
+        forwardedRef(node);
+      } else if (forwardedRef) {
+        forwardedRef.current = node;
+      }
+    },
+    [forwardedRef]
+  );
+
+  const { contextSafe } = useGSAP(
+    () => {
+      if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+        return undefined;
+      }
+      const mm = gsap.matchMedia();
+      mm.add('(prefers-reduced-motion: no-preference)', () => {
+        if (loading && spinnerRef.current) {
+          gsap.fromTo(
+            spinnerRef.current,
+            { scale: 0.6, opacity: 0 },
+            { scale: 1, opacity: 1, duration: 0.18, ease: 'back.out(1.7)', clearProps: 'transform,opacity' }
+          );
+        }
+      });
+      return () => mm.revert();
+    },
+    { scope: buttonRef, dependencies: [loading] }
+  );
+
+  const prefersAnimatedMotion = () =>
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
+
+  const handlePointerDown = contextSafe((event) => {
+    if (!isDisabled && buttonRef.current && prefersAnimatedMotion()) {
+      gsap.to(buttonRef.current, {
+        scale: 0.97,
+        duration: 0.12,
+        ease: 'power2.out',
+        overwrite: 'auto',
+      });
+    }
+    onPointerDown?.(event);
+  });
+
+  const handlePointerReset = contextSafe((event) => {
+    if (buttonRef.current && prefersAnimatedMotion()) {
+      gsap.to(buttonRef.current, {
+        scale: 1,
+        duration: 0.16,
+        ease: 'power2.out',
+        overwrite: 'auto',
+        clearProps: 'transform',
+      });
+    }
+    if (event?.type === 'pointerup') {
+      onPointerUp?.(event);
+    } else if (event?.type === 'pointerleave') {
+      onPointerLeave?.(event);
+    }
+  });
+
+  const baseStyles =
+    'inline-flex items-center justify-center font-semibold rounded-xl transition-[background-color,border-color,color,box-shadow,opacity] duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed select-none';
 
   const variants = {
     primary: 'bg-[#006B2C] text-white hover:bg-[#005523] hover:text-white focus:ring-[#006B2C]/30 shadow-sm hover:shadow',
@@ -31,16 +112,26 @@ export default function Button({
 
   return (
     <button
+      ref={setRefs}
       type={type}
-      disabled={disabled || loading}
+      disabled={isDisabled}
       className={`${baseStyles} ${variants[variant] || variants.primary} ${sizes[size] || sizes.md} ${className}`}
       onClick={onClick}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerReset}
+      onPointerLeave={handlePointerReset}
       {...props}
     >
       {loading ? (
-        <span className="inline-block w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+        <span
+          ref={spinnerRef}
+          aria-hidden="true"
+          className="inline-block w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin"
+        />
       ) : null}
       {children}
     </button>
   );
-}
+});
+
+export default Button;

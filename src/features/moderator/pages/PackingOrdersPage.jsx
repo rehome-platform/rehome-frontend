@@ -133,6 +133,8 @@ export function PackingDetail({ orderId, onChanged }) {
               <PackingShipmentPanel
                 order={model.order}
                 onOpenPrintModal={() => model.setPrintModalOpen(true)}
+                onHandover={model.handoverGhn}
+                handoverLoading={model.handoverLoading}
               />
             )}
           </div>

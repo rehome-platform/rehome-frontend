@@ -272,9 +272,11 @@ export default function AdminDashboardPage() {
           )}
 
           <Button
+            variant="accent"
+            size="sm"
             onClick={handleExportExcel}
             loading={exporting}
-            className="bg-[#00685F] hover:bg-[#005049] text-white text-xs shrink-0 rounded-xl px-4 py-2 shadow-xs"
+            className="shrink-0"
           >
             <span className="material-symbols-outlined text-[18px] mr-1.5">file_download</span>
             Xuất báo cáo Excel

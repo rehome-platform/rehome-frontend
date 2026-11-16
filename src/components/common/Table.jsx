@@ -8,7 +8,7 @@ export default function Table({
   loading = false,
 }) {
   return (
-    <div className="w-full overflow-x-auto rounded-lg border border-outline-variant bg-surface-container-lowest">
+    <div className="w-full overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-lowest">
       <table className="w-full text-left text-sm text-on-surface">
         <thead className="bg-surface-container text-xs font-semibold uppercase text-outline">
           <tr>

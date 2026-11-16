@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import Header from '../../../components/header.jsx';
 import Badge from '../../../components/common/Badge.jsx';
+import { Button } from '../../../components/common/index.js';
 import authService from '../services/auth.service.js';
 import { validatePhone, validatePassword, validateConfirmPassword } from '../../../utils/validators.js';
 import '../styles/profile-password.css';
@@ -78,7 +79,7 @@ export default function ProfilePage() {
     };
   }, []);
 
-  // Xử lý lưu hồ sơ qua PATCH /members/me
+  // Xử lý lưu hồ sơ qua PATCH /members/me (Member) hoặc PUT /api/auth/me (Admin/Moderator)
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     setProfileSuccessMsg('');
@@ -107,7 +108,7 @@ export default function ProfilePage() {
       setProfileSuccessMsg('Cập nhật thông tin hồ sơ trên máy chủ thành công!');
       setTimeout(() => setProfileSuccessMsg(''), 4000);
     } catch (err) {
-      setProfileErrorMsg(err.message || 'Không thể cập nhật hồ sơ lúc này.');
+      setProfileErrorMsg(err?.response?.data?.message || err?.message || 'Không thể cập nhật hồ sơ lúc này.');
     } finally {
       setIsSavingProfile(false);
     }
@@ -171,14 +172,16 @@ export default function ProfilePage() {
             </h1>
           </div>
 
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={logout}
-            className="self-start sm:self-auto px-4 py-2 text-xs font-bold text-[#D92D20] bg-white border border-[#DDE5D9] hover:bg-[#FFF5F5] hover:border-[#D92D20]/40 rounded-xl transition-colors flex items-center gap-2 shadow-xs"
+            className="self-start sm:self-auto text-[#D92D20] hover:bg-[#FFF5F5] hover:border-[#D92D20]/40 hover:text-[#D92D20] gap-2 shadow-xs"
           >
             <span className="material-symbols-outlined text-base">logout</span>
             <span>Đăng xuất phiên</span>
-          </button>
+          </Button>
         </div>
 
         {/* Grid Layout: User summary card on left, details on right */}
@@ -457,24 +460,24 @@ function ProfileEditor({ user, profile }) {
         </div>
 
         <div className="pt-4 flex justify-end">
-          <button
+          <Button
             type="submit"
             id="btn-save-profile"
+            variant="primary"
+            size="md"
+            loading={isSavingProfile}
             disabled={isSavingProfile}
-            className="px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-[#006B2C] hover:bg-[#005523] active:scale-[0.99] transition-all flex items-center gap-2 shadow-sm disabled:opacity-50"
+            className="gap-2"
           >
             {isSavingProfile ? (
-              <>
-                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                <span>Đang lưu...</span>
-              </>
+              <span>Đang lưu...</span>
             ) : (
               <>
                 <span className="material-symbols-outlined text-base">save</span>
                 <span>Lưu thông tin hồ sơ</span>
               </>
             )}
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -607,24 +610,24 @@ function PasswordForm({ password }) {
         <PasswordFields password={password} />
 
         <div className="pt-4 flex justify-end">
-          <button
+          <Button
             type="submit"
             id="btn-submit-change-pass"
+            variant="primary"
+            size="md"
+            loading={isChangingPass}
             disabled={isChangingPass}
-            className="px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-[#006B2C] hover:bg-[#005523] active:scale-[0.99] transition-all flex items-center gap-2 shadow-sm disabled:opacity-50"
+            className="gap-2"
           >
             {isChangingPass ? (
-              <>
-                <span aria-hidden="true" className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                <span>Đang cập nhật mật khẩu...</span>
-              </>
+              <span>Đang cập nhật mật khẩu...</span>
             ) : (
               <>
                 <span className="material-symbols-outlined text-base">lock_reset</span>
                 <span>Cập nhật mật khẩu mới</span>
               </>
             )}
-          </button>
+          </Button>
         </div>
       </form>
     </div>
