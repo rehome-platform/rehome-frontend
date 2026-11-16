@@ -99,7 +99,7 @@ export default function Modal({
             <button
               type="button"
               onClick={onClose}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-[#717971] hover:text-[#191C19] hover:bg-[#EBF1E8] transition-colors"
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-[#717971] hover:text-[#191C19] hover:bg-[#EBF1E8] transition-colors"
               aria-label="Đóng"
             >
               ✕

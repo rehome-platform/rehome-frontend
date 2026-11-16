@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
+import { Button } from '../../../components/common/index.js';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { warehouseInboxService } from '../services/warehouseInboxApi.js';
 import { useToast } from '../../../context/ToastContext.jsx';
@@ -425,13 +426,15 @@ export default function WarehouseInboxPage() {
               {!loading && error && (
                 <div className="p-6 text-center text-xs text-error space-y-3">
                   <div className="font-semibold">{error}</div>
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={fetchConversations}
-                    className="px-3.5 py-1.5 rounded-xl border border-error text-error hover:bg-error-light text-xs font-medium transition-colors cursor-pointer"
+                    className="border-error text-error hover:bg-error-light hover:text-error"
                   >
                     Tải lại
-                  </button>
+                  </Button>
                 </div>
               )}
               {!loading && !error && filteredConversations.length === 0 && (
@@ -658,14 +661,16 @@ export default function WarehouseInboxPage() {
                   onChange={handleImageSelect}
                   className="hidden"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="md"
+                  loading={uploadingImage}
                   disabled={uploadingImage}
                   onClick={() => fileInputRef.current?.click()}
-                  className="text-xs font-semibold px-3 py-2 border border-neutral rounded-xl bg-surface hover:bg-background text-text cursor-pointer disabled:opacity-50 transition-colors"
                 >
                   {uploadingImage ? 'Đang tải…' : 'Ảnh'}
-                </button>
+                </Button>
                 <input
                   type="text"
                   value={inputText}
@@ -673,13 +678,15 @@ export default function WarehouseInboxPage() {
                   placeholder="Nhập câu trả lời…"
                   className="flex-1 text-xs p-2.5 border border-neutral rounded-xl text-text focus:outline-none focus:border-primary"
                 />
-                <button
+                <Button
                   type="submit"
+                  variant="primary"
+                  size="md"
+                  loading={sending}
                   disabled={(!inputText.trim() && pendingImages.length === 0) || sending || uploadingImage}
-                  className="text-xs font-bold px-5 py-2.5 bg-primary text-white rounded-xl hover:bg-primary-hover shadow-sm disabled:opacity-50 transition-colors cursor-pointer"
                 >
                   {sending ? 'Đang gửi…' : 'Gửi'}
-                </button>
+                </Button>
               </form>
             </div>
           ) : (

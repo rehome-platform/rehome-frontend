@@ -364,13 +364,13 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-[#F8FAF8] border-b border-[#E2E8E0] text-[11px] uppercase font-bold text-[#717971] tracking-wider">
-                <th className="py-3.5 px-4">Tổ chức / Đối tượng bị đề xuất</th>
-                <th className="py-3.5 px-4">Moderator đề xuất</th>
-                <th className="py-3.5 px-4">Lý do đề xuất & Số báo cáo</th>
-                <th className="py-3.5 px-4">Thời gian</th>
-                <th className="py-3.5 px-4">Trạng thái</th>
-                <th className="py-3.5 px-4 text-right">Quyết định của Admin</th>
+              <tr className="bg-[#F8FAF8] border-b border-[#E2E8E0] text-[11px] font-bold text-[#717971] tracking-wider">
+                <th className="py-3.5 px-4 whitespace-nowrap">Tổ chức / Đối tượng bị đề xuất</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Moderator đề xuất</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Lý do đề xuất & Số báo cáo</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Thời gian</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Trạng thái</th>
+                <th className="py-3.5 px-4 text-right whitespace-nowrap">Quyết định của Admin</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E2E8E0]">
@@ -466,30 +466,33 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
                     {/* Thao tác */}
                     <td className="py-3.5 px-4 text-right whitespace-nowrap">
                       <div className="inline-flex items-center justify-end gap-2">
-                        <button
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="sm"
                           onClick={() => handleInspectProposal(item)}
-                          className="px-3 py-1.5 rounded-xl border border-[#E2E8E0] bg-white hover:bg-[#F0F5EE] text-[#191C19] font-semibold text-xs transition-colors cursor-pointer"
                         >
                           Lịch sử & Chi tiết
-                        </button>
+                        </Button>
 
                         {item.status === 'PENDING' && (
                           <>
-                            <button
+                            <Button
                               type="button"
+                              variant="danger"
+                              size="sm"
                               onClick={() => handleOpenBanModal(item)}
-                              className="px-3 py-1.5 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white font-bold text-xs shadow-2xs transition-colors cursor-pointer"
                             >
                               Khóa tài khoản
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                               type="button"
+                              variant="secondary"
+                              size="sm"
                               onClick={() => handleDismissProposal(item)}
-                              className="px-3 py-1.5 rounded-xl border border-[#E2E8E0] bg-[#F8FAF8] hover:bg-[#E2E8E0]/60 text-[#717971] font-semibold text-xs transition-colors cursor-pointer"
                             >
                               Bỏ qua
-                            </button>
+                            </Button>
                           </>
                         )}
                       </div>

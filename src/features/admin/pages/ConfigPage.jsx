@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.jsx';
+import { useToast } from '../../../context/ToastContext.jsx';
 import { Input, Button } from '../../../components/common/index.js';
 import {
   DEFAULT_SYSTEM_CONFIGS,
@@ -17,6 +18,7 @@ import adminApi from '../services/adminApi';
 export default function ConfigPage() {
   const { user } = useAuth();
   const { onLogAction } = useOutletContext() || {};
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState('consignment');
   const [configs, setConfigs] = useState(DEFAULT_SYSTEM_CONFIGS);
   const [specs, setSpecs] = useState({});
@@ -135,6 +137,7 @@ export default function ConfigPage() {
       // Confirm effective values instead of persisting a browser-only snapshot.
       await fetchBackendConfigs();
       setSavedSuccess(true);
+      toast.success('Đã lưu cấu hình tham số hệ thống thành công!');
 
       if (onLogAction) {
         onLogAction({
@@ -146,7 +149,9 @@ export default function ConfigPage() {
       }
 
     } catch (err) {
-      setErrorMessage(err.response?.data?.message || err.message || 'Lỗi khi cập nhật cấu hình tham số.');
+      const errMsg = err.response?.data?.message || err.message || 'Lỗi khi cập nhật cấu hình tham số.';
+      setErrorMessage(errMsg);
+      toast.error(`Cập nhật cấu hình thất bại: ${errMsg}`);
     } finally {
       setSaving(false);
     }
@@ -168,7 +173,7 @@ export default function ConfigPage() {
           form="config-form"
           loading={saving}
           disabled={loading || !loaded}
-          className="bg-[#006B2C] hover:bg-[#005221] text-white shrink-0 shadow-sm"
+          className="bg-[#006B2C] hover:bg-[#005523] text-white shrink-0 shadow-sm rounded-xl"
         >
           <span className="material-symbols-outlined text-sm mr-1.5">save</span>
           Lưu thay đổi tham số
@@ -190,7 +195,7 @@ export default function ConfigPage() {
         <div role="alert" className="p-4 bg-[#FFF5F5] border border-[#DC2626]/20 text-[#DC2626] rounded-2xl text-xs font-semibold flex items-center space-x-2 shadow-sm animate-fade-in">
           <span className="material-symbols-outlined text-lg">error</span>
           <span>{errorMessage}</span>
-          {!loaded && !loading && <Button size="sm" variant="outline" onClick={loadBackendConfigs}>Thử lại</Button>}
+          {!loaded && !loading && <Button size="sm" variant="outline" className="rounded-xl" onClick={loadBackendConfigs}>Thử lại</Button>}
         </div>
       )}
 

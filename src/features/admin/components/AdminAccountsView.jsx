@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
+import AdminPeriodFilter from './AdminPeriodFilter.jsx';
 
 /**
  * View Quản lý Tài khoản ReHome
@@ -8,135 +10,24 @@ import React, { useState } from 'react';
  * - Màn hình Empty State khi tìm kiếm không ra kết quả
  * - Side Drawer trượt "Chi tiết tài khoản" với dòng thời gian lịch sử khóa/mở khóa
  * - Modal "Khóa tài khoản này?" với đếm ký tự (0/300) và xác thực lý do
+ * - 100% Real Live API data - hoàn toàn không sử dụng mock data
  */
-// Dữ liệu người dùng mẫu chuẩn từ Stitch
-const initialAccounts = [
-  {
-    id: 'USR-101',
-    code: '849102',
-    name: 'Lê Hoàng Nam',
-    initials: 'LN',
-    email: 'nam.le@gmail.com',
-    phone: '0903 112 458',
-    role: 'Member',
-    createdAt: '12/06/2026',
-    status: 'LOCKED', // Bị khóa
-    history: [
-      {
-        date: '02/10/2026 14:20',
-        action: 'Khóa',
-        actor: 'Trần Minh Quân',
-        reason: 'Đăng bình luận xúc phạm nhiều lần trên các bài đăng quyên góp.',
-      },
-      {
-        date: '18/08/2026 09:10',
-        action: 'Mở khóa',
-        actor: 'Trần Minh Quân',
-        reason: 'Người dùng đã cam kết không tái phạm quy định cộng đồng.',
-      },
-    ],
-  },
-  {
-    id: 'USR-102',
-    code: '849103',
-    name: 'Nguyễn Thị Mai',
-    initials: 'NM',
-    email: 'mai.nguyen@gmail.com',
-    phone: '0918 245 771',
-    role: 'Member',
-    createdAt: '03/05/2026',
-    status: 'ACTIVE',
-    history: [
-      {
-        date: '30/09/2026 17:30',
-        action: 'Mở khóa',
-        actor: 'Trần Minh Quân',
-        reason: 'Hoàn tất xác minh khiếu nại biên nhận ký gửi.',
-      },
-    ],
-  },
-  {
-    id: 'USR-103',
-    code: '849104',
-    name: 'Quỹ Hy Vọng Xanh',
-    initials: 'HX',
-    email: 'lienhe@hyvongxanh.org.vn',
-    phone: '028 3822 6858',
-    role: 'Organizer',
-    createdAt: '20/04/2026',
-    status: 'ACTIVE',
-    history: [],
-  },
-  {
-    id: 'USR-104',
-    code: '849105',
-    name: 'Mái Ấm Hướng Dương',
-    initials: 'HD',
-    email: 'contact@huongduong.org.vn',
-    phone: '028 3844 1200',
-    role: 'Organizer',
-    createdAt: '02/07/2026',
-    status: 'ACTIVE',
-    history: [],
-  },
-  {
-    id: 'USR-105',
-    code: 'MOD-1042',
-    name: 'Phạm Thu Hà',
-    initials: 'TH',
-    email: 'ha.pham@rehome.vn',
-    phone: '0977 340 126',
-    role: 'Moderator',
-    createdAt: '15/03/2026',
-    status: 'ACTIVE',
-    history: [],
-  },
-  {
-    id: 'USR-106',
-    code: 'MOD-1070',
-    name: 'Đỗ Quang Huy',
-    initials: 'QH',
-    email: 'huy.do@rehome.vn',
-    phone: '0986 554 902',
-    role: 'Moderator',
-    createdAt: '01/10/2026',
-    status: 'ACTIVE',
-    history: [],
-  },
-  {
-    id: 'USR-107',
-    code: '849108',
-    name: 'Trần Bảo Ngọc',
-    initials: 'BN',
-    email: 'ngoc.tran@gmail.com',
-    phone: '0935 778 214',
-    role: 'Member',
-    createdAt: '28/09/2026',
-    status: 'ACTIVE',
-    history: [],
-  },
-  {
-    id: 'USR-108',
-    code: '849109',
-    name: 'Võ Minh Khang',
-    initials: 'MK',
-    email: 'khang.vo@gmail.com',
-    phone: '0909 661 337',
-    role: 'Member',
-    createdAt: '25/09/2026',
-    status: 'ACTIVE',
-    history: [],
-  },
-];
 
 export default function AdminAccountsView({
   onLogAction,
   remoteAccounts,
   onBanAccount,
   onUnbanAccount,
+  page = 0,
+  onPageChange,
+  totalElements,
+  totalPages = 1,
+  accountsLoading = false,
+  dateFilter,
+  dateError,
 }) {
   const [accounts, setAccounts] = useState(
-    Array.isArray(remoteAccounts) ? remoteAccounts : initialAccounts
+    Array.isArray(remoteAccounts) ? remoteAccounts : []
   );
 
   if (typeof React.useEffect === 'function') {
@@ -158,6 +49,10 @@ export default function AdminAccountsView({
   const [lockError, setLockError] = useState('');
   const [openActionMenuId, setOpenActionMenuId] = useState(null);
 
+  // Loading mutation states chống spam click
+  const [isLocking, setIsLocking] = useState(false);
+  const [unlockingId, setUnlockingId] = useState(null);
+
   // Bộ lọc dữ liệu
   const filteredAccounts = accounts.filter((acc) => {
     const matchSearch =
@@ -178,6 +73,7 @@ export default function AdminAccountsView({
     setSearchKeyword('');
     setSelectedRole('ALL');
     setSelectedStatus('ALL');
+    dateFilter?.setPeriod('ALL');
   };
 
   const updateAccountStatus = (account, status, historyEntry) => {
@@ -200,41 +96,66 @@ export default function AdminAccountsView({
     }
   };
 
-  // Xác nhận khóa tài khoản
-  const handleConfirmLock = () => {
+  // Xác nhận khóa tài khoản với cờ loading chống spam
+  const handleConfirmLock = async () => {
     if (!lockReason.trim()) {
       setLockError('Vui lòng nhập lý do khóa');
       return;
     }
+    if (isLocking) return;
 
-    if (onBanAccount && lockModalAccount) {
-      onBanAccount(lockModalAccount.id, lockReason.trim());
+    const actor = currentUser?.fullName || currentUser?.name || 'Admin';
+    const nowStr = new Date().toLocaleString('vi-VN');
+
+    try {
+      setIsLocking(true);
+      if (onBanAccount && lockModalAccount) {
+        await onBanAccount(lockModalAccount.id, lockReason.trim());
+      }
+
+      updateAccountStatus(lockModalAccount, 'LOCKED', {
+        date: nowStr,
+        action: 'Khóa',
+        actor,
+        reason: lockReason.trim(),
+      });
+
+      setLockModalAccount(null);
+      setLockReason('');
+      setLockError('');
+    } catch (err) {
+      console.warn('Lỗi khi khóa tài khoản trong view:', err);
+      if (err?.response?.data?.message) {
+        setLockError(err.response.data.message);
+      }
+    } finally {
+      setIsLocking(false);
     }
-
-    updateAccountStatus(lockModalAccount, 'LOCKED', {
-      date: '09/10/2026 14:00',
-      action: 'Khóa',
-      actor: 'Trần Minh Quân',
-      reason: lockReason.trim(),
-    });
-
-    setLockModalAccount(null);
-    setLockReason('');
-    setLockError('');
   };
 
-  // Mở khóa tài khoản
-  const handleUnlockAccount = (account) => {
-    if (onUnbanAccount && account) {
-      onUnbanAccount(account.id);
-    }
+  // Mở khóa tài khoản với cờ loading chống spam
+  const handleUnlockAccount = async (account) => {
+    if (!account || unlockingId === account.id) return;
+    const actor = currentUser?.fullName || currentUser?.name || 'Admin';
+    const nowStr = new Date().toLocaleString('vi-VN');
 
-    updateAccountStatus(account, 'ACTIVE', {
-      date: '09/10/2026 14:05',
-      action: 'Mở khóa',
-      actor: 'Trần Minh Quân',
-      reason: 'Mở khóa theo yêu cầu sau khi rà soát tuân thủ.',
-    });
+    try {
+      setUnlockingId(account.id);
+      if (onUnbanAccount) {
+        await onUnbanAccount(account.id);
+      }
+
+      updateAccountStatus(account, 'ACTIVE', {
+        date: nowStr,
+        action: 'Mở khóa',
+        actor,
+        reason: 'Mở khóa theo yêu cầu sau khi rà soát tuân thủ.',
+      });
+    } catch (err) {
+      console.warn('Lỗi khi mở khóa tài khoản trong view:', err);
+    } finally {
+      setUnlockingId(null);
+    }
   };
 
   return (
@@ -245,17 +166,24 @@ export default function AdminAccountsView({
           <h1 className="text-2xl font-bold text-[#191C19] font-heading">
             Tài khoản
           </h1>
-          <p className="text-xs text-[#717971] mt-0.5">
-            Xem và khóa, mở khóa tài khoản người dùng trên ReHome.
-          </p>
         </div>
       </div>
+
+      {dateError && (
+        <div
+          role="alert"
+          className="px-4 py-2.5 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-xs font-semibold text-[#B91C1C]"
+        >
+          {dateError}
+        </div>
+      )}
 
       {/* Filter Bar */}
       <AccountsFilters
         searchKeyword={searchKeyword} setSearchKeyword={setSearchKeyword}
         selectedRole={selectedRole} setSelectedRole={setSelectedRole}
         selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus} handleResetFilter={handleResetFilter}
+        dateFilter={dateFilter}
       />
 
       {/* Main Table or Empty State */}
@@ -268,24 +196,36 @@ export default function AdminAccountsView({
           filteredAccounts={filteredAccounts} openActionMenuId={openActionMenuId} setOpenActionMenuId={setOpenActionMenuId}
           setDrawerAccount={setDrawerAccount} setLockModalAccount={setLockModalAccount}
           setLockReason={setLockReason} setLockError={setLockError} handleUnlockAccount={handleUnlockAccount}
+          page={page} onPageChange={onPageChange}
+          totalElements={totalElements ?? accounts.length} totalPages={totalPages}
+          accountsLoading={accountsLoading}
         />
       )}
 
       {/* Side Drawer: Chi tiết tài khoản (Trượt từ phải sang) */}
       {drawerAccount && (
         <AccountDetailsDrawer
-          drawerAccount={drawerAccount} setDrawerAccount={setDrawerAccount}
-          setLockModalAccount={setLockModalAccount} setLockReason={setLockReason}
-          setLockError={setLockError} handleUnlockAccount={handleUnlockAccount}
+          drawerAccount={drawerAccount}
+          setDrawerAccount={setDrawerAccount}
+          setLockModalAccount={setLockModalAccount}
+          setLockReason={setLockReason}
+          setLockError={setLockError}
+          handleUnlockAccount={handleUnlockAccount}
+          unlockingId={unlockingId}
         />
       )}
 
       {/* Modal: Khóa tài khoản này? (Pixel Perfect theo Stitch) */}
       {lockModalAccount && (
         <LockAccountModal
-          lockModalAccount={lockModalAccount} lockReason={lockReason} lockError={lockError}
-          setLockModalAccount={setLockModalAccount} setLockReason={setLockReason}
-          setLockError={setLockError} handleConfirmLock={handleConfirmLock}
+          lockModalAccount={lockModalAccount}
+          lockReason={lockReason}
+          lockError={lockError}
+          isLocking={isLocking}
+          setLockModalAccount={setLockModalAccount}
+          setLockReason={setLockReason}
+          setLockError={setLockError}
+          handleConfirmLock={handleConfirmLock}
         />
       )}
     </div>
@@ -296,18 +236,66 @@ function withAccountStatus(account, status, historyEntry) {
   return { ...account, status, history: [historyEntry, ...account.history] };
 }
 
+// Menu "Tùy chọn" được đẩy ra document.body bằng Portal và định vị theo toạ độ thật của nút bấm
+// (position: fixed). Lý do: ô này nằm trong bảng có overflow-x-auto (để cuộn ngang) - cứ đặt
+// `position: absolute` bên trong bảng thì trình duyệt coi overflow-x-auto cũng cắt luôn theo
+// chiều dọc, nên menu của các dòng gần cuối bảng bị cắt mất, không thấy hết được các lựa chọn.
 function AccountActions({
   acc, openActionMenuId, setOpenActionMenuId, setDrawerAccount,
   setLockModalAccount, setLockReason, setLockError, handleUnlockAccount,
+  unlockingId,
 }) {
+  const isOpen = openActionMenuId === acc.id;
+  const buttonRef = useRef(null);
+  const menuRef = useRef(null);
+  const [menuPos, setMenuPos] = useState(null);
+
+  const close = () => setOpenActionMenuId(null);
+
+  useLayoutEffect(() => {
+    if (!isOpen || !buttonRef.current) {
+      setMenuPos(null);
+      return;
+    }
+    const updatePosition = () => {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    };
+    updatePosition();
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    // Cuộn trang hoặc đổi cỡ cửa sổ thì toạ độ nút không còn đúng nữa - đóng menu cho đơn giản,
+    // thay vì phải tính lại vị trí liên tục.
+    const handleOutsideOrEscape = (e) => {
+      if (e.type === 'keydown' && e.key !== 'Escape') return;
+      if (
+        e.type === 'mousedown' &&
+        (buttonRef.current?.contains(e.target) || menuRef.current?.contains(e.target))
+      ) {
+        return;
+      }
+      close();
+    };
+    document.addEventListener('mousedown', handleOutsideOrEscape);
+    document.addEventListener('keydown', handleOutsideOrEscape);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideOrEscape);
+      document.removeEventListener('keydown', handleOutsideOrEscape);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
   return (
     <div className="inline-block relative">
       <button
-        onClick={() =>
-          setOpenActionMenuId(
-            openActionMenuId === acc.id ? null : acc.id
-          )
-        }
+        ref={buttonRef}
+        onClick={() => setOpenActionMenuId(isOpen ? null : acc.id)}
         className="p-1 rounded-lg text-[#717971] hover:text-[#191C19] hover:bg-[#E9F0E5] transition-colors"
         title="Tùy chọn"
       >
@@ -316,15 +304,16 @@ function AccountActions({
         </span>
       </button>
 
-      {openActionMenuId === acc.id && (
+      {isOpen && menuPos && createPortal(
         <div
-          className="absolute right-0 mt-1 w-36 bg-white rounded-xl border border-[#DDE5D9] shadow-lg py-1.5 z-30 text-left animate-fadeIn"
-          onMouseLeave={() => setOpenActionMenuId(null)}
+          ref={menuRef}
+          style={{ position: 'fixed', top: menuPos.top, right: menuPos.right }}
+          className="w-36 bg-white rounded-xl border border-[#DDE5D9] shadow-lg py-1.5 z-50 text-left animate-fadeIn"
         >
           <button
             onClick={() => {
               setDrawerAccount(acc);
-              setOpenActionMenuId(null);
+              close();
             }}
             className="w-full px-3 py-1.5 text-xs text-[#414942] hover:bg-[#F6F9F4] flex items-center gap-2"
           >
@@ -340,7 +329,7 @@ function AccountActions({
                 setLockModalAccount(acc);
                 setLockReason('');
                 setLockError('');
-                setOpenActionMenuId(null);
+                close();
               }}
               className="w-full px-3 py-1.5 text-xs text-[#DC2626] hover:bg-[#FEE2E2]/50 flex items-center gap-2 font-medium"
             >
@@ -353,17 +342,23 @@ function AccountActions({
             <button
               onClick={() => {
                 handleUnlockAccount(acc);
-                setOpenActionMenuId(null);
+                close();
               }}
-              className="w-full px-3 py-1.5 text-xs text-[#006B2C] hover:bg-[#E8F5E9] flex items-center gap-2 font-medium"
+              disabled={unlockingId === acc.id}
+              className="w-full px-3 py-1.5 text-xs text-[#006B2C] hover:bg-[#E8F5E9] flex items-center gap-2 font-medium disabled:opacity-50"
             >
-              <span className="material-symbols-outlined text-base">
-                lock_open
-              </span>
-              <span>Mở khóa</span>
+              {unlockingId === acc.id ? (
+                <span className="w-3.5 h-3.5 border-2 border-[#006B2C] border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <span className="material-symbols-outlined text-base">
+                  lock_open
+                </span>
+              )}
+              <span>{unlockingId === acc.id ? 'Đang mở...' : 'Mở khóa'}</span>
             </button>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -372,17 +367,18 @@ function AccountActions({
 function AccountRow({
   acc, openActionMenuId, setOpenActionMenuId, setDrawerAccount,
   setLockModalAccount, setLockReason, setLockError, handleUnlockAccount,
+  unlockingId,
 }) {
   return (
     <tr
       key={acc.id}
       className="hover:bg-[#F6F9F4]/70 transition-colors"
     >
-      {/* Name & Avatar */}
+      {/* Name */}
       <td className="py-3.5 px-6 whitespace-nowrap">
         <div className="flex items-center gap-3">
           <div
-            className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs ${
+            className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
               acc.role === 'Member'
                 ? 'bg-[#E8F5E9] text-[#006B2C]'
                 : acc.role === 'Organizer'
@@ -392,10 +388,7 @@ function AccountRow({
           >
             {acc.initials}
           </div>
-          <div>
-            <p className="font-bold text-[#191C19]">{acc.name}</p>
-            <p className="text-[10px] text-[#717971]">#{acc.code}</p>
-          </div>
+          <p className="font-bold text-[#191C19]">{acc.name}</p>
         </div>
       </td>
 
@@ -412,7 +405,7 @@ function AccountRow({
       {/* Role */}
       <td className="py-3.5 px-6 whitespace-nowrap">
         <span
-          className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-bold ${
+          className={`inline-block px-2.5 py-1 rounded-xl text-[10px] font-bold ${
             acc.role === 'Member'
               ? 'bg-[#E8F5E9] text-[#006B2C]'
               : acc.role === 'Organizer'
@@ -450,36 +443,37 @@ function AccountRow({
           acc={acc} openActionMenuId={openActionMenuId} setOpenActionMenuId={setOpenActionMenuId}
           setDrawerAccount={setDrawerAccount} setLockModalAccount={setLockModalAccount}
           setLockReason={setLockReason} setLockError={setLockError} handleUnlockAccount={handleUnlockAccount}
+          unlockingId={unlockingId}
         />
       </td>
     </tr>
   );
 }
 
-function AccountsPagination({ count }) {
+function AccountsPagination({ count, page, onPageChange, totalElements, totalPages }) {
+  const currentPage = page ?? 0;
   return (
     <div className="p-4 border-t border-[#DDE5D9] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#717971]">
       <span>
-        Hiển thị 1 - {count} trong tổng số 2.498 tài khoản
+        Trang <strong className="text-[#191C19]">{currentPage + 1}</strong> / {Math.max(totalPages || 1, 1)}
+        {' · '}
+        Tổng số <strong className="text-[#191C19]">{(totalElements ?? count).toLocaleString('vi-VN')}</strong> tài khoản
       </span>
       <div className="flex items-center gap-1 font-medium">
-        <button className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4]">
+        <button
+          type="button"
+          onClick={() => onPageChange?.(Math.max(0, currentPage - 1))}
+          disabled={currentPage <= 0}
+          className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4] disabled:opacity-40 disabled:hover:bg-transparent"
+        >
           Trước
         </button>
-        <button className="px-2.5 py-1 rounded-lg bg-[#006B2C] text-white font-bold">
-          1
-        </button>
-        <button className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4]">
-          2
-        </button>
-        <button className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4]">
-          3
-        </button>
-        <span className="px-1 text-[#717971]">...</span>
-        <button className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4]">
-          313
-        </button>
-        <button className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4]">
+        <button
+          type="button"
+          onClick={() => onPageChange?.(currentPage + 1)}
+          disabled={currentPage + 1 >= (totalPages || 1)}
+          className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] hover:bg-[#F6F9F4] disabled:opacity-40 disabled:hover:bg-transparent"
+        >
           Sau
         </button>
       </div>
@@ -511,45 +505,63 @@ function AccountsEmptyState({ handleResetFilter }) {
 }
 
 function AccountsTable({
-  filteredAccounts, openActionMenuId, setOpenActionMenuId, setDrawerAccount,
-  setLockModalAccount, setLockReason, setLockError, handleUnlockAccount,
+  filteredAccounts,
+  openActionMenuId, setOpenActionMenuId, setDrawerAccount,
+  setLockModalAccount, setLockReason, setLockError, handleUnlockAccount, unlockingId,
+  page, onPageChange, totalElements, totalPages, accountsLoading,
 }) {
   return (
     <div className="bg-white rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs">
-          <thead className="bg-[#F6F9F4] text-[#717971] uppercase tracking-wider font-semibold border-b border-[#DDE5D9]">
+          <thead className="bg-[#F6F9F4] text-[#717971] tracking-wider font-semibold border-b border-[#DDE5D9]">
             <tr>
-              <th className="py-3 px-6">Tài khoản</th>
-              <th className="py-3 px-6">Email</th>
-              <th className="py-3 px-6">Số điện thoại</th>
-              <th className="py-3 px-6">Vai trò</th>
-              <th className="py-3 px-6">Ngày tạo</th>
-              <th className="py-3 px-6">Trạng thái</th>
-              <th className="py-3 px-4 text-center">Thao tác</th>
+              <th className="py-3 px-6 whitespace-nowrap">Họ tên</th>
+              <th className="py-3 px-6 whitespace-nowrap">Email</th>
+              <th className="py-3 px-6 whitespace-nowrap">Số điện thoại</th>
+              <th className="py-3 px-6 whitespace-nowrap">Vai trò</th>
+              <th className="py-3 px-6 whitespace-nowrap">Ngày tạo</th>
+              <th className="py-3 px-6 whitespace-nowrap">Trạng thái</th>
+              <th className="py-3 px-4 text-center whitespace-nowrap">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#DDE5D9]">
             {filteredAccounts.map((acc) => (
               <AccountRow
-                key={acc.id} acc={acc} openActionMenuId={openActionMenuId} setOpenActionMenuId={setOpenActionMenuId}
-                setDrawerAccount={setDrawerAccount} setLockModalAccount={setLockModalAccount}
-                setLockReason={setLockReason} setLockError={setLockError} handleUnlockAccount={handleUnlockAccount}
+                key={acc.id}
+                acc={acc}
+                openActionMenuId={openActionMenuId}
+                setOpenActionMenuId={setOpenActionMenuId}
+                setDrawerAccount={setDrawerAccount}
+                setLockModalAccount={setLockModalAccount}
+                setLockReason={setLockReason}
+                setLockError={setLockError}
+                handleUnlockAccount={handleUnlockAccount}
+                unlockingId={unlockingId}
               />
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* Pagination bar matching Stitch */}
-      <AccountsPagination count={filteredAccounts.length} />
+      {/* Phân trang thật theo API 135: Trước/Sau tải đúng trang đó từ server; số liệu không viết cứng */}
+      <AccountsPagination
+        count={filteredAccounts.length}
+        page={page}
+        onPageChange={onPageChange}
+        totalElements={totalElements}
+        totalPages={totalPages}
+      />
+      {accountsLoading && (
+        <div className="px-4 pb-3 text-[11px] text-[#717971]">Đang tải trang kế tiếp...</div>
+      )}
     </div>
   );
 }
 
 function AccountsFilters({
   searchKeyword, setSearchKeyword, selectedRole, setSelectedRole,
-  selectedStatus, setSelectedStatus, handleResetFilter,
+  selectedStatus, setSelectedStatus, handleResetFilter, dateFilter,
 }) {
   return (
     <div className="bg-white p-4 rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
@@ -590,7 +602,10 @@ function AccountsFilters({
           <option value="LOCKED">Bị khóa</option>
         </select>
 
-        {(searchKeyword || selectedRole !== 'ALL' || selectedStatus !== 'ALL') && (
+        {/* Lọc theo ngày tạo tài khoản */}
+        {dateFilter && <AdminPeriodFilter filter={dateFilter} name="tài khoản" label="Ngày tạo" />}
+
+        {(searchKeyword || selectedRole !== 'ALL' || selectedStatus !== 'ALL' || (dateFilter && dateFilter.period !== 'ALL')) && (
           <button
             onClick={handleResetFilter}
             className="px-3 py-2.5 text-xs font-semibold text-[#006B2C] hover:text-[#005523] hover:bg-[#E8F5E9] rounded-xl transition-colors flex items-center gap-1"
@@ -696,7 +711,7 @@ function AccountHistory({ history }) {
 
 function AccountDetailsDrawer({
   drawerAccount, setDrawerAccount, setLockModalAccount,
-  setLockReason, setLockError, handleUnlockAccount,
+  setLockReason, setLockError, handleUnlockAccount, unlockingId,
 }) {
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -713,7 +728,7 @@ function AccountDetailsDrawer({
             </h3>
             <button
               onClick={() => setDrawerAccount(null)}
-              className="p-1.5 rounded-lg text-[#717971] hover:text-[#191C19] hover:bg-[#F6F9F4]"
+              className="p-1.5 rounded-xl text-[#717971] hover:text-[#191C19] hover:bg-[#F6F9F4]"
             >
               <span className="material-symbols-outlined text-xl">close</span>
             </button>
@@ -767,10 +782,15 @@ function AccountDetailsDrawer({
             ) : (
               <button
                 onClick={() => handleUnlockAccount(drawerAccount)}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-[#006B2C] text-white hover:bg-[#005523] transition-colors flex items-center justify-center gap-2 shadow-sm"
+                disabled={unlockingId === drawerAccount.id}
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-[#006B2C] text-white hover:bg-[#005523] transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
               >
-                <span className="material-symbols-outlined text-base">lock_open</span>
-                <span>Mở khóa tài khoản</span>
+                {unlockingId === drawerAccount.id ? (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <span className="material-symbols-outlined text-base">lock_open</span>
+                )}
+                <span>{unlockingId === drawerAccount.id ? 'Đang mở khóa...' : 'Mở khóa tài khoản'}</span>
               </button>
             )}
           </div>
@@ -781,8 +801,8 @@ function AccountDetailsDrawer({
 }
 
 function LockAccountModal({
-  lockModalAccount, lockReason, lockError, setLockModalAccount,
-  setLockReason, setLockError, handleConfirmLock,
+  lockModalAccount, lockReason, lockError, isLocking,
+  setLockModalAccount, setLockReason, setLockError, handleConfirmLock,
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
@@ -872,16 +892,27 @@ function LockAccountModal({
         <div className="flex items-center justify-end gap-2.5 pt-2">
           <button
             onClick={() => setLockModalAccount(null)}
-            className="px-4 py-2 text-xs font-semibold text-[#414942] hover:bg-[#F6F9F4] rounded-xl transition-colors border border-[#DDE5D9]"
+            disabled={isLocking}
+            className="px-4 py-2 text-xs font-semibold text-[#414942] hover:bg-[#F6F9F4] rounded-xl transition-colors border border-[#DDE5D9] disabled:opacity-50"
           >
             Hủy
           </button>
           <button
             onClick={handleConfirmLock}
-            className="px-4 py-2 text-xs font-semibold bg-[#DC2626] text-white hover:bg-[#B91C1C] rounded-xl transition-colors flex items-center gap-1.5 shadow-sm"
+            disabled={isLocking}
+            className="px-4 py-2 text-xs font-semibold bg-[#DC2626] text-white hover:bg-[#B91C1C] rounded-xl transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50"
           >
-            <span className="material-symbols-outlined text-base">lock</span>
-            <span>Xác nhận khóa</span>
+            {isLocking ? (
+              <div className="flex items-center gap-1.5">
+                <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Đang khóa...</span>
+              </div>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-base">lock</span>
+                <span>Xác nhận khóa</span>
+              </>
+            )}
           </button>
         </div>
       </div>

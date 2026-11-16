@@ -122,7 +122,8 @@ rehome-frontend/
 
 | Trang / Component | Mã UC / Function (Review 1) | Nghiệp vụ chi tiết |
 | :--- | :--- | :--- |
-| **`AdminDashboardPage.jsx`** | UC-88, UC-89, Mục 7 & 8 | **Dashboard Quỹ nền tảng & Sổ kép:** Theo dõi dòng tiền đối ứng giữa Ví Member và Quỹ ReHome (Tiền đang giữ - Holding Fund, Doanh thu hoa hồng 3 kỳ 10%-15%-20%, Số dư thực tế), xuất báo cáo Excel. |
+| **`AdminDashboardPage.jsx`** | UC-88, UC-89, Mục 7 & 8 | **Tổng quan điều hành (3 tab):** *Doanh thu* (doanh thu nền tảng, tiền đang giữ hộ, biểu đồ doanh thu theo thời gian, danh sách món đã bán theo kỳ, xuất báo cáo Excel), *Người dùng* (số tài khoản, tăng trưởng, hoạt động gần đây), *Kho* (tồn kho theo trạng thái / kỳ, tác vụ quá hạn, đánh giá dịch vụ kho). |
+| **`AdminFundLedgerPage.jsx`** | Mục 7 & 8 | **Sổ quỹ & Đối soát:** Nhật ký ghi sổ kép giữa Ví Member và Quỹ ReHome, kết quả đối soát quỹ. |
 | **`AdminAccountsView.jsx`** | UC-76 → UC-78 | **Quản lý tài khoản:** Tra cứu hồ sơ Member & Tổ chức từ thiện; thực thi khóa/mở khóa tài khoản có hành vi gian lận. |
 | **`AdminModeratorsView.jsx`** | UC-79 → UC-81 | **Quản lý nhân viên kho:** Tạo tài khoản nhân sự và điều chuyển/phân bổ Moderator vào từng chi nhánh kho cụ thể. |
 | **`AdminWarehousesView.jsx`** | UC-82 → UC-85 | **Mạng lưới kho chi nhánh:** Thêm mới, chỉnh sửa thông tin kho; tích hợp guardrail **chặn ẩn/xóa kho khi vẫn còn hàng tồn kho**. |
@@ -176,7 +177,8 @@ Toàn bộ tham số vận hành được quản lý tập trung tại `src/conf
 | `/moderator/reports` | Moderator | `ViolationReportsPage` | Xử lý báo cáo vi phạm bài đăng/bình luận |
 | `/moderator/categories` | Moderator | `CategoryBrandPage` | Quản lý danh mục (slot thử đồ AI) & thương hiệu |
 | `/moderator/inbox` | Moderator | `WarehouseInboxPage` | Hộp thư hỗ trợ trao đổi với khách hàng |
-| `/admin` | Admin | `AdminDashboardPage` | Dashboard Quỹ nền tảng & Sổ kép đối ứng |
+| `/admin` | Admin | `AdminDashboardPage` | Tổng quan điều hành: Doanh thu · Người dùng · Kho |
+| `/admin/fund-ledger` | Admin | `AdminFundLedgerPage` | Sổ quỹ & Đối soát (sổ ghi kép) |
 | `/admin/system` | Admin | `Redirect → /admin/users` | Cổng điều hành chung các phân hệ quản trị |
 | `/admin/users` | Admin | `AdminAccountsPage` | Quản lý tài khoản người dùng & tổ chức |
 | `/admin/moderators` | Admin | `AdminModeratorsPage` | Phân bổ Moderator theo chi nhánh kho |

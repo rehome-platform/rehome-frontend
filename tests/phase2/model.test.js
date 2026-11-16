@@ -31,11 +31,12 @@ describe('Phase 2 boundary rules', () => {
     expect(unwrap({ status: 200, data: { data: false } })).toBe(false);
     expect(unwrap({ status: 200, data: { result: [] } })).toEqual([]);
   });
-  it.each(['0', '-1', '1.5', '1e3', 'Infinity', '9007199254740992'])(
+  it.each(['0', '-1', '1', '500', '999', '1.5', '1e3', 'Infinity', '9007199254740992'])(
     'rejects invalid VND %s',
     (value) => expect(validMoney(value)).toBe(false),
   );
-  it('accepts integer VND and gates stock-in on server confirmation and existing SKU', () => {
+  it('accepts integer VND >= 1000 and gates stock-in on server confirmation and existing SKU', () => {
+    expect(validMoney('1000')).toBe(true);
     expect(validMoney('250000')).toBe(true);
     expect(canStockIn({ confirmedAt: null })).toBe(false);
     expect(canStockIn({ confirmedAt: '2026-10-18', productSku: 'SKU' })).toBe(false);
@@ -116,6 +117,8 @@ describe('Phase 2 boundary rules', () => {
   it('validates canCompleteInspection conditions accurately', () => {
     const checklist6 = { 0: true, 1: true, 2: true, 3: true, 4: true, 5: true };
     expect(canCompleteInspection({ checklist: checklist6, totalRequired: 6, price: '850000', term: '30', conditionNote: 'Hàng tốt' })).toBe(true);
+    expect(canCompleteInspection({ checklist: checklist6, totalRequired: 6, price: '1000', term: '30', conditionNote: 'Hàng tốt' })).toBe(true);
+    expect(canCompleteInspection({ checklist: checklist6, totalRequired: 6, price: '999', term: '30', conditionNote: 'Hàng tốt' })).toBe(false);
     expect(canCompleteInspection({ checklist: { ...checklist6, 5: false }, totalRequired: 6, price: '850000', term: '30', conditionNote: 'Hàng tốt' })).toBe(false);
     expect(canCompleteInspection({ checklist: checklist6, totalRequired: 6, price: '0', term: '30', conditionNote: 'Hàng tốt' })).toBe(false);
     expect(canCompleteInspection({ checklist: checklist6, totalRequired: 6, price: '-100', term: '30', conditionNote: 'Hàng tốt' })).toBe(false);

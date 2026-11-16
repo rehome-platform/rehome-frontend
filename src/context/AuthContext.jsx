@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import {
+import baseApi, {
   getUser,
   saveUser,
   getToken,
@@ -76,16 +76,29 @@ export const AuthProvider = ({ children }) => {
   const updateProfile = async (profileData) => {
     setLoading(true);
     try {
-      // Đối với Moderator/Staff và Admin trên Web: Backend chỉ hỗ trợ PATCH /members/me cho MEMBER.
-      // Nếu user hiện tại không phải Member, cập nhật phiên làm việc cục bộ mà không gọi /members/me để tránh 403.
+      // Đối với Moderator/Staff và Admin (hoặc vai trò không có endpoint riêng): gọi PUT /api/auth/me
       if (user && !isMemberRole(user.role || user.authorities)) {
-        const currentUser = user;
+        const targetName = (profileData?.fullName || profileData?.name || '').trim();
+        const targetPhone = (profileData?.phone || '').trim();
+        const targetAvatar = (profileData?.avatarUrl || profileData?.avatar || '').trim();
+        const payload = {
+          ...(targetName ? { fullName: targetName } : {}),
+          ...(profileData?.phone !== undefined ? { phone: targetPhone } : {}),
+          ...(targetAvatar ? { avatarUrl: targetAvatar } : {}),
+        };
+        const res = await baseApi.put('/api/auth/me', payload);
+        const raw = res?.data?.data ?? res?.data ?? {};
+        const resolvedName = raw.fullName || raw.name || targetName || user.fullName || user.name;
+        const resolvedPhone = raw.phone !== undefined ? raw.phone : (profileData?.phone !== undefined ? targetPhone : user.phone);
+        const resolvedAvatar = raw.avatarUrl || targetAvatar || user.avatarUrl || user.avatar || '';
         const updated = {
-          ...currentUser,
-          ...profileData,
-          name: profileData.fullName || profileData.name || currentUser.name,
-          fullName: profileData.fullName || profileData.name || currentUser.fullName,
-          phone: profileData.phone !== undefined ? profileData.phone : currentUser.phone,
+          ...user,
+          ...raw,
+          name: resolvedName,
+          fullName: resolvedName,
+          phone: resolvedPhone,
+          avatar: resolvedAvatar,
+          avatarUrl: resolvedAvatar,
         };
         saveUser(updated);
         setUser(updated);

@@ -38,6 +38,7 @@ import {
 import AdminLayout from '../layouts/AdminLayout.jsx';
 import {
   AdminDashboardPage,
+  AdminFundLedgerPage,
   AdminAccountsPage,
   AdminModeratorsPage,
   AdminBanProposalsPage,
@@ -140,6 +141,14 @@ export default function AppRouter() {
         }
       />
       <Route
+        path="/moderator/consignments/queue"
+        element={
+          <PrivateRoute roles={['moderator', 'staff']}>
+            <ConsignmentQueuePage />
+          </PrivateRoute>
+        }
+      />
+      <Route
         path="/moderator/consignments/print-queue"
         element={
           <PrivateRoute roles={['moderator', 'staff']}>
@@ -235,6 +244,7 @@ export default function AppRouter() {
         }
       >
         <Route index element={<AdminDashboardPage />} />
+        <Route path="fund-ledger" element={<AdminFundLedgerPage />} />
         <Route path="users" element={<AdminAccountsPage />} />
         <Route path="moderators" element={<AdminModeratorsPage />} />
         <Route path="ban-proposals" element={<AdminBanProposalsPage />} />

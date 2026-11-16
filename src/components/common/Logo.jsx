@@ -2,8 +2,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-const GREEN = '#286B35';
-const ORANGE = '#F5B642';
+const GREEN = '#006B2C';
+const ORANGE = '#FEA619';
 
 export default function Logo({
   size = 'md',
@@ -137,7 +137,7 @@ export default function Logo({
             `}
             style={{
               color: GREEN,
-              fontFamily: 'Arial, Helvetica, sans-serif',
+              fontFamily: 'var(--font-system)',
             }}
           >
             ReHome

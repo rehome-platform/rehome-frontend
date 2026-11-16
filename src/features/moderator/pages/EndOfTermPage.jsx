@@ -165,7 +165,7 @@ export default function EndOfTermPage() {
 
   return (
     <Page
-      apiColors={false}
+      apiColors={true}
       title="Xử lý hàng cuối kỳ & Vô thừa nhận"
       subtitle="Quản lý sản phẩm quá hạn nhận lại, xác nhận chuyển giao từ thiện cho đối tác và hỗ trợ bàn giao tại quầy."
       actions={

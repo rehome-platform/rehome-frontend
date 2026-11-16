@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext.jsx';
+import { useToast } from '../../../context/ToastContext.jsx';
 import AdminAccountsView from '../components/AdminAccountsView.jsx';
 import adminApi from '../services/adminApi.js';
+import useAdminPeriod from '../hooks/useAdminPeriod.js';
 
 const DISMISSED_PROPOSALS_STORAGE_KEY = 'rehome_admin_dismissed_ban_proposals';
+const PAGE_SIZE = 50;
 
 function getDismissedProposalIds() {
   try {
@@ -27,20 +31,55 @@ function saveDismissedProposalIds(ids) {
  */
 export default function AdminAccountsPage() {
   const { onLogAction } = useOutletContext() || {};
+  const { user } = useAuth();
+  const toast = useToast();
   const [remoteAccounts, setRemoteAccounts] = useState([]);
   const [banProposals, setBanProposals] = useState([]);
   const [dismissedIds, setDismissedIds] = useState(() => getDismissedProposalIds());
   const [processingProposalId, setProcessingProposalId] = useState(null);
 
+  // Phân trang thật theo API 135 (BE trả totalElements/totalPages đúng tổng số tài khoản, không phải
+  // số viết cứng từ bản thiết kế mẫu); đổi trang thì tải lại đúng trang đó từ server.
+  const [page, setPage] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [accountsLoading, setAccountsLoading] = useState(true);
+
+  // Lọc theo ngày tạo tài khoản; mặc định "Toàn thời gian" để không ẩn tài khoản cũ khi mới vào trang.
+  const dateFilter = useAdminPeriod('ALL');
+  const { activeRange: dateRange, dateError } = dateFilter;
+
+  // Đổi khoảng ngày thì quay về trang đầu, giống các trang có phân trang + bộ lọc thời gian khác
+  useEffect(() => {
+    setPage(0);
+  }, [dateRange.apiFrom, dateRange.apiTo]);
+
   const fetchAccountsAndProposals = useCallback(async () => {
+    if (dateError) {
+      setAccountsLoading(false);
+      return;
+    }
+
     let rawAccounts = [];
     let rawLogs = [];
+    let pageTotalElements = 0;
+    let pageTotalPages = 1;
 
     try {
-      const res = await adminApi.getAccounts({ page: 0, size: 50 });
+      setAccountsLoading(true);
+      const res = await adminApi.getAccounts({
+        page,
+        size: PAGE_SIZE,
+        from: dateRange.apiFrom,
+        to: dateRange.apiTo,
+      });
       rawAccounts = Array.isArray(res) ? res : res?.content || res?.result?.content || [];
+      pageTotalElements = res?.totalElements ?? rawAccounts.length;
+      pageTotalPages = res?.totalPages ?? 1;
     } catch (err) {
       console.warn('Lỗi gọi API accounts:', err);
+    } finally {
+      setAccountsLoading(false);
     }
 
     try {
@@ -133,6 +172,8 @@ export default function AdminAccountsPage() {
     });
 
     setRemoteAccounts(mappedAccounts);
+    setTotalElements(pageTotalElements);
+    setTotalPages(pageTotalPages);
 
     // Lọc danh sách các đề xuất khóa từ Moderator (VIOLATION_RESOLVE_PROPOSE_BAN)
     const proposals = rawLogs
@@ -161,7 +202,7 @@ export default function AdminAccountsPage() {
       });
 
     setBanProposals(proposals);
-  }, []);
+  }, [page, dateRange.apiFrom, dateRange.apiTo, dateError]);
 
   useEffect(() => {
     fetchAccountsAndProposals();
@@ -170,18 +211,26 @@ export default function AdminAccountsPage() {
   const handleBanAccount = async (accountId, reason) => {
     try {
       await adminApi.banAccount(accountId, reason);
+      toast.success('Đã khóa tài khoản thành công.');
       await fetchAccountsAndProposals();
     } catch (err) {
       console.warn('Lỗi khi khóa tài khoản:', err);
+      const msg = err.response?.data?.message || err.message || 'Không thể khóa tài khoản.';
+      toast.error(`Khóa tài khoản thất bại: ${msg}`);
+      throw err;
     }
   };
 
   const handleUnbanAccount = async (accountId) => {
     try {
       await adminApi.unbanAccount(accountId);
+      toast.success('Đã mở khóa tài khoản thành công.');
       await fetchAccountsAndProposals();
     } catch (err) {
       console.warn('Lỗi khi mở khóa tài khoản:', err);
+      const msg = err.response?.data?.message || err.message || 'Không thể mở khóa tài khoản.';
+      toast.error(`Mở khóa thất bại: ${msg}`);
+      throw err;
     }
   };
 
@@ -194,10 +243,11 @@ export default function AdminAccountsPage() {
       const nextDismissed = [...dismissedIds, proposal.id];
       setDismissedIds(nextDismissed);
       saveDismissedProposalIds(nextDismissed);
+      toast.success(`Đã khóa tài khoản "${proposal.targetName}" theo đề xuất.`);
       if (onLogAction) {
         onLogAction({
           time: new Date().toLocaleString('vi-VN'),
-          user: 'Admin',
+          user: user?.fullName || 'Admin',
           role: 'Admin',
           action: `Khóa tài khoản Tổ chức "${proposal.targetName}" theo đề xuất PROPOSE_BAN`,
         });
@@ -205,6 +255,8 @@ export default function AdminAccountsPage() {
       await fetchAccountsAndProposals();
     } catch (err) {
       console.warn('Lỗi khi khóa tài khoản theo đề xuất:', err);
+      const msg = err.response?.data?.message || err.message || 'Không thể khóa tài khoản theo đề xuất.';
+      toast.error(`Khóa tài khoản thất bại: ${msg}`);
     } finally {
       setProcessingProposalId(null);
     }
@@ -306,6 +358,13 @@ export default function AdminAccountsPage() {
         remoteAccounts={remoteAccounts}
         onBanAccount={handleBanAccount}
         onUnbanAccount={handleUnbanAccount}
+        page={page}
+        onPageChange={setPage}
+        totalElements={totalElements}
+        totalPages={totalPages}
+        accountsLoading={accountsLoading}
+        dateFilter={dateFilter}
+        dateError={dateError}
       />
     </div>
   );

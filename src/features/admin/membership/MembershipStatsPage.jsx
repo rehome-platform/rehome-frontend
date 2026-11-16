@@ -171,7 +171,7 @@ export default function MembershipStatsPage() {
                 type="date"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
-                className="px-3 py-1.5 text-sm rounded-lg border border-[#E2E8E0] text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+                className="px-3 py-1.5 text-sm rounded-xl border border-[#E2E8E0] text-[#191C19] focus:outline-none focus:border-[#006B2C]"
               />
             </div>
             <div>
@@ -183,7 +183,7 @@ export default function MembershipStatsPage() {
                 type="date"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
-                className="px-3 py-1.5 text-sm rounded-lg border border-[#E2E8E0] text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+                className="px-3 py-1.5 text-sm rounded-xl border border-[#E2E8E0] text-[#191C19] focus:outline-none focus:border-[#006B2C]"
               />
             </div>
             <Button
@@ -243,9 +243,9 @@ export default function MembershipStatsPage() {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-[#E2E8E0] text-xs text-[#717971]">
                 <tr>
-                  <th className="py-2">Hạng</th>
-                  <th className="py-2 text-right">Số lượt</th>
-                  <th className="py-2 text-right">Doanh thu</th>
+                  <th className="py-2 whitespace-nowrap">Hạng</th>
+                  <th className="py-2 text-right whitespace-nowrap">Số lượt</th>
+                  <th className="py-2 text-right whitespace-nowrap">Doanh thu</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8E0]">
@@ -275,8 +275,8 @@ export default function MembershipStatsPage() {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-[#E2E8E0] text-xs text-[#717971]">
                 <tr>
-                  <th className="py-2">Tháng</th>
-                  <th className="py-2 text-right">Doanh thu</th>
+                  <th className="py-2 whitespace-nowrap">Tháng</th>
+                  <th className="py-2 text-right whitespace-nowrap">Doanh thu</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8E0]">
@@ -312,12 +312,12 @@ export default function MembershipStatsPage() {
           <table className="w-full text-left text-sm">
             <thead className="bg-[#F6F9F4] border-b border-[#E2E8E0] text-xs font-semibold text-[#5B6776]">
               <tr>
-                <th className="py-2.5 px-3">Mẫu voucher</th>
-                <th className="py-2.5 px-3 text-right">Đã phát</th>
-                <th className="py-2.5 px-3 text-right">Đã dùng</th>
-                <th className="py-2.5 px-3 text-right">Hết hạn</th>
-                <th className="py-2.5 px-3 text-right">Tỷ lệ dùng</th>
-                <th className="py-2.5 px-3 text-right">Tổng tiền đã chi</th>
+                <th className="py-2.5 px-3 whitespace-nowrap">Mẫu voucher</th>
+                <th className="py-2.5 px-3 text-right whitespace-nowrap">Đã phát</th>
+                <th className="py-2.5 px-3 text-right whitespace-nowrap">Đã dùng</th>
+                <th className="py-2.5 px-3 text-right whitespace-nowrap">Hết hạn</th>
+                <th className="py-2.5 px-3 text-right whitespace-nowrap">Tỷ lệ dùng</th>
+                <th className="py-2.5 px-3 text-right whitespace-nowrap">Tổng tiền đã chi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E2E8E0]">
@@ -386,7 +386,7 @@ export default function MembershipStatsPage() {
                 placeholder="Nhập số tiền (VNĐ)..."
                 value={aiCostInput}
                 onChange={handleAiCostChange}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-[#E2E8E0] text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+                className="w-full px-3 py-2 text-sm rounded-xl border border-[#E2E8E0] text-[#191C19] focus:outline-none focus:border-[#006B2C]"
               />
               {aiCostInput !== '' && (
                 <Button

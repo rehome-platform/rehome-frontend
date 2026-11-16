@@ -736,8 +736,9 @@ export function ReturnInspectionVerdict({
   handleSaveInspection,
   handleFlagCounterfeit,
   handleOpenDegradedCase,
+  handleReleaseReturn,
+  releasingReturn = false,
 }) {
-  const toast = useToast();
   return (
     <div className="lg:col-span-6 space-y-4 font-sans">
       {/* Cảnh báo kiểm định viên */}
@@ -753,10 +754,11 @@ export function ReturnInspectionVerdict({
           </div>
           <button
             type="button"
-            onClick={() => toast.info('Đã chuyển ca kiểm tra cho Moderator khác trong ca trực.')}
-            className="shrink-0 text-xs font-semibold px-3 py-1.5 border border-neutral rounded-xl bg-surface hover:bg-background text-text transition-colors"
+            disabled={releasingReturn || !selectedItem?.id}
+            onClick={() => handleReleaseReturn?.()}
+            className="shrink-0 text-xs font-semibold px-3 py-1.5 border border-neutral rounded-xl bg-surface hover:bg-background text-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Chuyển cho<br />người khác
+            {releasingReturn ? 'Đang chuyển...' : <>Chuyển cho<br />người khác</>}
           </button>
         </div>
       )}

@@ -223,7 +223,7 @@ export default function NotificationDropdown({ onClose, userRole, className = ''
             type="button"
             disabled={loadingMore}
             onClick={() => loadMoreNotifications && loadMoreNotifications()}
-            className="w-full py-1.5 px-3 text-xs font-semibold text-[#006B2C] hover:bg-[#E8F5E9] disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+            className="w-full py-1.5 px-3 text-xs font-semibold text-[#006B2C] hover:bg-[#E8F5E9] disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors"
           >
             {loadingMore ? 'Đang tải...' : 'Tải thêm'}
           </button>

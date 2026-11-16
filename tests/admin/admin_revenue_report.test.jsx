@@ -82,6 +82,26 @@ describe('AdminRevenueReportView', () => {
     });
   });
 
+  it('hides the title and per-term summary cards but keeps the sold items table when showSummary is false', async () => {
+    render(
+      <AdminRevenueReportView
+        from="2026-11-01"
+        to="2026-11-11"
+        dashboardData={dashboardData}
+        showSummary={false}
+      />
+    );
+
+    expect(await screen.findByText('Ghế gỗ sồi')).toBeInTheDocument();
+    expect(screen.getByText('Danh Sách Món Đã Bán Theo Kỳ')).toBeInTheDocument();
+    expect(screen.queryByText('Báo Cáo Doanh Thu Nền Tảng Theo Kỳ Kí Gửi')).not.toBeInTheDocument();
+    expect(screen.queryByText('Hoa hồng thu được')).not.toBeInTheDocument();
+    expect(screen.queryByText(/13\.13%|13,13%/)).not.toBeInTheDocument();
+    // Ô lọc kỳ không còn gắn cứng tỷ lệ hoa hồng 10/15/20%
+    const termOptions = screen.getAllByRole('option').map((o) => o.textContent);
+    expect(termOptions).toEqual(['Tất cả kỳ', 'Kỳ 1', 'Kỳ 2', 'Kỳ 3']);
+  });
+
   it('filters by term, paginates, resets page on date change, and handles API errors with retry', async () => {
     adminApi.getRevenueItems
       .mockResolvedValueOnce(pageOne)

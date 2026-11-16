@@ -63,6 +63,7 @@ function harness(overrides = {}, user = defaultUser) {
     '../../../context/AuthContext.jsx': { useAuth: () => auth },
     '../../../components/header.jsx': { __esModule: true, default: 'Header' },
     '../../../components/common/Badge.jsx': { __esModule: true, default: 'Badge' },
+    '../../../components/common/index.js': { Button: 'button' },
     '../services/auth.service.js': { __esModule: true, default: { getCurrentUser() {
       calls.loads++;
       return overrides.getCurrentUser?.() ?? Promise.resolve(null);

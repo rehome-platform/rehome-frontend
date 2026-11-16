@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import adminApi from '../services/adminApi';
 import AdminAccountGrowthChart from './AdminAccountGrowthChart.jsx';
+import AdminDonutChart from './AdminDonutChart.jsx';
 
 /**
  * View Tổng quan Dashboard Quản trị ReHome
  * Kết nối Real Data với backend Spring Boot:
- * - Thống kê số lượng thực tế: Member, Tổ chức, Moderator, Kho hàng
+ * - Thống kê số lượng thực tế: Member, Tổ chức, Moderator (số điểm kho nằm ở tab Kho)
  * - Biểu đồ tăng trưởng tài khoản từ GET /api/admin/accounts/growth
  * - Biểu đồ tròn Donut động theo tỷ lệ thực tế
  * - Bảng "Hoạt động gần đây" kết nối trực tiếp với Nhật ký kiểm soát (Audit Log - API 149)
@@ -18,7 +19,6 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
     memberCount: 0,
     orgCount: 0,
     moderatorCount: 0,
-    warehouseCount: 0,
     totalAccounts: 0,
   });
 
@@ -32,19 +32,16 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
     try {
       setIsLoading(true);
 
-      const [membersRes, orgsRes, modsRes, whRes, auditRes] = await Promise.allSettled([
+      const [membersRes, orgsRes, modsRes, auditRes] = await Promise.allSettled([
         adminApi.getAccounts({ role: 'MEMBER', size: 1 }),
         adminApi.getAccounts({ role: 'ORGANIZATION', size: 1 }),
         adminApi.getModerators({ size: 1 }),
-        adminApi.getWarehouses(),
         adminApi.getAuditLogs({ size: 6 }),
       ]);
 
       const memberCount = membersRes.status === 'fulfilled' ? (membersRes.value?.totalElements ?? (Array.isArray(membersRes.value) ? membersRes.value.length : 0)) : 0;
       const orgCount = orgsRes.status === 'fulfilled' ? (orgsRes.value?.totalElements ?? (Array.isArray(orgsRes.value) ? orgsRes.value.length : 0)) : 0;
       const moderatorCount = modsRes.status === 'fulfilled' ? (modsRes.value?.totalElements ?? (Array.isArray(modsRes.value) ? modsRes.value.length : 0)) : 0;
-      const warehouseList = whRes.status === 'fulfilled' ? (Array.isArray(whRes.value) ? whRes.value : whRes.value?.content || []) : [];
-      const warehouseCount = warehouseList.length;
 
       const totalAccounts = memberCount + orgCount + moderatorCount;
 
@@ -52,7 +49,6 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
         memberCount,
         orgCount,
         moderatorCount,
-        warehouseCount,
         totalAccounts,
       });
 
@@ -89,28 +85,15 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
       iconBg: 'bg-[#E8F8F5]',
       iconColor: 'text-[#00873A]',
     },
-    {
-      title: 'Điểm kho ký gửi',
-      value: stats.warehouseCount.toLocaleString('vi-VN'),
-      icon: 'warehouse',
-      iconBg: 'bg-[#FFF3E0]',
-      iconColor: 'text-[#FEA619]',
-    },
   ];
 
-  // Tính toán tỷ lệ Donut Chart động
-  const total = Math.max(stats.totalAccounts, 1);
-  const memberPct = stats.memberCount / total;
-  const orgPct = stats.orgCount / total;
-  const modPct = stats.moderatorCount / total;
-
-  const circumference = 2 * Math.PI * 38; // ~238.76
-  const memberDash = (memberPct * circumference).toFixed(1);
-  const orgDash = (orgPct * circumference).toFixed(1);
-  const modDash = (modPct * circumference).toFixed(1);
-
-  const orgOffset = -(memberPct * circumference);
-  const modOffset = -((memberPct + orgPct) * circumference);
+  // Các lát của biểu đồ tròn "Tài khoản theo vai trò"
+  const roleSegments = [
+    { key: 'member', label: 'Member', value: stats.memberCount, color: '#006B2C' },
+    { key: 'organization', label: 'Tổ chức', value: stats.orgCount, color: '#FEA619' },
+    { key: 'moderator', label: 'Moderator', value: stats.moderatorCount, color: '#00685F' },
+  ];
+  const totalForPct = Math.max(stats.totalAccounts, 1);
 
   const getRoleBadge = (role) => {
     switch (role) {
@@ -127,12 +110,13 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
 
   return (
     <div className="space-y-6">
-      {/* 4 Thẻ chỉ số tổng quan */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 3 Thẻ chỉ số tổng quan */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {statCards.map((card, idx) => (
           <div
             key={idx}
-            className="bg-white p-5 rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex items-center justify-between hover:border-[#006B2C]/40 transition-all duration-200"
+            className="chart-fade-up bg-white p-5 rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex items-center justify-between hover:border-[#006B2C]/40 transition-all duration-200"
+            style={{ '--i': idx }}
           >
             <div>
               <p className="text-xs font-medium text-[#717971]">{card.title}</p>
@@ -154,115 +138,43 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
       {/* 2 Khối trực quan trung tâm */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Biểu đồ Tài khoản mới theo chu kỳ (7 cột / 12) */}
-        <AdminAccountGrowthChart
-          footerNote={`Tổng cộng ${stats.totalAccounts} tài khoản thuộc ba nhóm Member, tổ chức và Moderator.`}
-        />
+        <AdminAccountGrowthChart />
 
         {/* Biểu đồ Tròn Donut: Tài khoản theo vai trò (5 cột / 12) */}
-        <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between">
-          <div>
-            <h3 className="text-base font-bold text-[#191C19] font-heading">
-              Tài khoản theo vai trò
-            </h3>
-            <p className="text-xs text-[#717971] mt-0.5">
-              Phân bổ ba nhóm Member, tổ chức và Moderator
-            </p>
-          </div>
+        <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col">
+          <h3 className="text-base font-bold text-[#191C19] font-heading">
+            Tài khoản theo vai trò
+          </h3>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 my-4">
-            {/* Donut Chart SVG */}
-            <div className="relative w-36 h-36 shrink-0">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                {/* Background Ring */}
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="38"
-                  fill="transparent"
-                  stroke="#E9F0E5"
-                  strokeWidth="12"
-                />
-                {/* Member */}
-                {stats.memberCount > 0 && (
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="38"
-                    fill="transparent"
-                    stroke="#006B2C"
-                    strokeWidth="12"
-                    strokeDasharray={`${memberDash} ${circumference}`}
-                    strokeDashoffset="0"
-                  />
-                )}
-                {/* Organization */}
-                {stats.orgCount > 0 && (
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="38"
-                    fill="transparent"
-                    stroke="#FEA619"
-                    strokeWidth="12"
-                    strokeDasharray={`${orgDash} ${circumference}`}
-                    strokeDashoffset={orgOffset}
-                  />
-                )}
-                {/* Moderator */}
-                {stats.moderatorCount > 0 && (
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="38"
-                    fill="transparent"
-                    stroke="#00685F"
-                    strokeWidth="12"
-                    strokeDasharray={`${modDash} ${circumference}`}
-                    strokeDashoffset={modOffset}
-                  />
-                )}
-              </svg>
-              {/* Center Total Count */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="text-lg font-black text-[#191C19] font-heading leading-tight">
-                  {stats.totalAccounts}
-                </span>
-                <span className="text-[10px] text-[#717971] font-medium leading-tight max-w-24">
-                  Member, tổ chức và Moderator
-                </span>
-              </div>
+          <div className="flex-1 flex flex-col items-center justify-center gap-6 py-4">
+            <AdminDonutChart
+              className="w-56 h-56 sm:w-64 sm:h-64"
+              segments={roleSegments}
+              centerValue={stats.totalAccounts}
+              centerLabel="Tổng tài khoản"
+              ariaLabel="Biểu đồ tài khoản theo vai trò"
+            />
+
+            {/* Chú giải */}
+            <div className="grid grid-cols-3 gap-3 w-full max-w-sm">
+              {roleSegments.map((seg) => (
+                <div
+                  key={seg.key}
+                  className="rounded-xl border border-[#DDE5D9] bg-[#F6F9F4] px-2 py-2.5 text-center"
+                >
+                  <span className="flex items-center justify-center gap-1.5 text-xs font-medium text-[#414942]">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: seg.color }}></span>
+                    {seg.label}
+                  </span>
+                  <span className="block mt-1 text-lg font-extrabold text-[#191C19] font-heading leading-none">
+                    {seg.value}
+                  </span>
+                  <span className="block mt-0.5 text-[11px] text-[#717971]">
+                    {Math.round((seg.value / totalForPct) * 100)}%
+                  </span>
+                </div>
+              ))}
             </div>
-
-            {/* Legend */}
-            <div className="space-y-3 text-xs w-full sm:w-auto">
-              <div className="flex items-center justify-between sm:justify-start gap-3">
-                <span className="flex items-center gap-2 text-[#414942]">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#006B2C]"></span>
-                  <span className="font-medium">Member</span>
-                </span>
-                <span className="font-bold text-[#191C19]">{stats.memberCount}</span>
-              </div>
-
-              <div className="flex items-center justify-between sm:justify-start gap-3">
-                <span className="flex items-center gap-2 text-[#414942]">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#FEA619]"></span>
-                  <span className="font-medium">Tổ chức</span>
-                </span>
-                <span className="font-bold text-[#191C19]">{stats.orgCount}</span>
-              </div>
-
-              <div className="flex items-center justify-between sm:justify-start gap-3">
-                <span className="flex items-center gap-2 text-[#414942]">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#00685F]"></span>
-                  <span className="font-medium">Moderator</span>
-                </span>
-                <span className="font-bold text-[#191C19]">{stats.moderatorCount}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-3 border-t border-[#DDE5D9] text-[11px] text-[#717971] text-center">
-            Tổng số gồm Member, tổ chức và Moderator, không bao gồm Admin.
           </div>
         </div>
       </div>
@@ -274,9 +186,6 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
             <h3 className="text-base font-bold text-[#191C19] font-heading">
               Hoạt động gần đây
             </h3>
-            <p className="text-xs text-[#717971] mt-0.5">
-              Ghi nhận các thao tác kiểm duyệt và quản trị mới nhất từ Audit Log
-            </p>
           </div>
           <button
             onClick={onNavigateToAudit}
@@ -294,11 +203,11 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#F6F9F4] text-[#717971] uppercase tracking-wider font-semibold border-b border-[#DDE5D9]">
+              <thead className="bg-[#F6F9F4] text-[#717971] tracking-wider font-semibold border-b border-[#DDE5D9]">
                 <tr>
-                  <th className="py-3 px-6">Thời gian</th>
-                  <th className="py-3 px-6">Người thực hiện</th>
-                  <th className="py-3 px-6">Hành động & Đối tượng</th>
+                  <th className="py-3 px-6 whitespace-nowrap">Thời gian</th>
+                  <th className="py-3 px-6 whitespace-nowrap">Người thực hiện</th>
+                  <th className="py-3 px-6 whitespace-nowrap">Hành động & Đối tượng</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#DDE5D9]">

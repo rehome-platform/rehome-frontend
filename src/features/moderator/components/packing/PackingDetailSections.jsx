@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { safeDocumentUrl } from "../../models/warehouseModel.js";
 import { warehouseDateTime } from "../../models/warehouseTime.js";
 import Button from "../../../../components/common/Button.jsx";
@@ -102,8 +102,34 @@ export function PackingRecipientPanel({ order, scanLogs }) {
   );
 }
 
-export function PackingShipmentPanel({ order, onOpenPrintModal }) {
+export function PackingShipmentPanel({ order, onOpenPrintModal, onHandover, handoverLoading = false }) {
   const toast = useToast();
+  const [handedOver, setHandedOver] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const isHandedOver =
+    handedOver ||
+    ['SHIPPING', 'DELIVERED', 'COMPLETED'].includes(order?.status) ||
+    Boolean(order?.handedOverAt);
+  const isBusy = handoverLoading || submitting;
+
+  const handleHandover = async () => {
+    if (isHandedOver || isBusy || !onHandover) return;
+    setSubmitting(true);
+    try {
+      const ok = await onHandover();
+      if (ok !== false) {
+        setHandedOver(true);
+        toast.success('Đã xác nhận bàn giao hàng cho shipper GHN!');
+      } else {
+        toast.error('Không thể xác nhận bàn giao cho GHN. Vui lòng thử lại.');
+      }
+    } catch (err) {
+      toast.error(err?.message || 'Không thể xác nhận bàn giao cho GHN. Vui lòng thử lại.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="rounded-2xl border-2 border-[#006B2C] bg-white p-5 space-y-4 shadow-sm animate-in fade-in duration-200">
       <div>
@@ -138,10 +164,12 @@ export function PackingShipmentPanel({ order, onOpenPrintModal }) {
         </p>
         <Button
           variant="outline"
-          className="text-xs font-bold py-2 border-[#2b2b2b] text-[#006B2C] hover:bg-[#F0F5EE]"
-          onClick={() => toast.success('Đã xác nhận bàn giao hàng cho shipper GHN!')}
+          disabled={isHandedOver || isBusy}
+          loading={isBusy}
+          className="text-xs font-bold py-2 border-[#2b2b2b] text-[#006B2C] hover:bg-[#F0F5EE] disabled:opacity-60 disabled:cursor-not-allowed"
+          onClick={handleHandover}
         >
-          ✓ Đã bàn giao cho GHN
+          {isBusy ? 'Đang xác nhận...' : '✓ Đã bàn giao cho GHN'}
         </Button>
       </div>
     </div>

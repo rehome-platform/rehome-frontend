@@ -24,15 +24,38 @@ export const adminApi = {
     return unwrap(res);
   },
 
-  async exportDashboard(from, to) {
+  // sections: mảng khối cần xuất ('REVENUE' | 'USERS' | 'WAREHOUSE'), bỏ trống = xuất cả ba (BE mặc định).
+  // Bảng "Món đã bán" luôn có trong file, không phụ thuộc sections.
+  async exportDashboard(from, to, sections) {
     const params = {};
     if (from) params.from = from;
     if (to) params.to = to;
+    if (sections && sections.length) params.sections = sections.join(',');
     const res = await baseApi.get(API_ENDPOINTS.ADMIN.EXPORT_EXCEL, {
       params,
       responseType: 'blob',
     });
     return res.data;
+  },
+
+  // Doanh thu nền tảng theo ngày/tuần/tháng (granularity: day | week | month)
+  async getRevenueTrend({ from, to, granularity = 'day' } = {}) {
+    const params = { granularity };
+    if (from) params.from = from;
+    if (to) params.to = to;
+    const res = await baseApi.get(API_ENDPOINTS.ADMIN.REVENUE_TREND, { params });
+    return unwrap(res);
+  },
+
+  // Chỉ lấy tổng doanh thu nền tảng của một khoảng (dùng để so sánh % với kỳ trước ở ComparisonBadge).
+  // Tách riêng khỏi getRevenueTrend để không lẫn vào chuỗi gọi mà biểu đồ đang theo dõi; cùng endpoint,
+  // chỉ khác granularity cố định 'month' để điểm dữ liệu trả về luôn ít, không bao giờ vượt giới hạn 366 kỳ.
+  async getRevenueTrendTotal({ from, to } = {}) {
+    const params = { granularity: 'month' };
+    if (from) params.from = from;
+    if (to) params.to = to;
+    const res = await baseApi.get(API_ENDPOINTS.ADMIN.REVENUE_TREND, { params });
+    return unwrap(res)?.total ?? 0;
   },
 
   async getRevenueItems({ from, to, term, page = 0, size = 20 } = {}) {
@@ -73,12 +96,28 @@ export const adminApi = {
     return unwrap(res);
   },
 
+  // Chỉ lấy tổng số tài khoản mới của một khoảng (so sánh % với kỳ trước ở ComparisonBadge) - xem ghi chú
+  // getRevenueTrendTotal, lý do tách riêng và tại sao granularity cố định 'month' đều giống nhau.
+  async getAccountGrowthTotal({ from, to, role } = {}) {
+    const params = { granularity: 'month' };
+    if (from) params.from = from;
+    if (to) params.to = to;
+    if (role && role !== 'ALL') {
+      params.role = role;
+    }
+    const res = await baseApi.get(API_ENDPOINTS.ADMIN.ACCOUNTS_GROWTH, { params });
+    return unwrap(res)?.total ?? 0;
+  },
+
   // 2. Quản lý Tài khoản (Member, Moderator, Organization)
-  async getAccounts({ search, role, status, page = 0, size = 20 } = {}) {
+  // from/to lọc theo ngày tạo tài khoản (yyyy-MM-dd, gồm cả ngày to)
+  async getAccounts({ search, role, status, from, to, page = 0, size = 20 } = {}) {
     const params = { page, size };
     if (search && search.trim()) params.search = search.trim();
     if (role && role !== 'ALL') params.role = role;
     if (status && status !== 'ALL') params.status = status;
+    if (from) params.from = from;
+    if (to) params.to = to;
 
     const res = await baseApi.get(API_ENDPOINTS.ADMIN.ACCOUNTS, { params });
     return unwrap(res);

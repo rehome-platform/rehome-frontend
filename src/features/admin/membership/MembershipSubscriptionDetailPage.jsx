@@ -282,11 +282,11 @@ export default function MembershipSubscriptionDetailPage() {
               <table className="w-full text-left text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-[#E2E8E0] text-xs text-[#5B6776]">
-                    <th className="py-2 pr-3">Mã GD</th>
-                    <th className="py-2 pr-3">Phương thức</th>
-                    <th className="py-2 pr-3 text-right">Số tiền</th>
-                    <th className="py-2 pr-3">Trạng thái</th>
-                    <th className="py-2">Thời gian</th>
+                    <th className="py-2 pr-3 whitespace-nowrap">Mã GD</th>
+                    <th className="py-2 pr-3 whitespace-nowrap">Phương thức</th>
+                    <th className="py-2 pr-3 text-right whitespace-nowrap">Số tiền</th>
+                    <th className="py-2 pr-3 whitespace-nowrap">Trạng thái</th>
+                    <th className="py-2 whitespace-nowrap">Thời gian</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8E0]">
@@ -314,10 +314,10 @@ export default function MembershipSubscriptionDetailPage() {
               <table className="w-full text-left text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-[#E2E8E0] text-xs text-[#5B6776]">
-                    <th className="py-2 pr-3">Mã voucher</th>
-                    <th className="py-2 pr-3">Tên voucher</th>
-                    <th className="py-2 pr-3">Trạng thái</th>
-                    <th className="py-2">Đơn hàng đã dùng</th>
+                    <th className="py-2 pr-3 whitespace-nowrap">Mã voucher</th>
+                    <th className="py-2 pr-3 whitespace-nowrap">Tên voucher</th>
+                    <th className="py-2 pr-3 whitespace-nowrap">Trạng thái</th>
+                    <th className="py-2 whitespace-nowrap">Đơn hàng đã dùng</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8E0]">

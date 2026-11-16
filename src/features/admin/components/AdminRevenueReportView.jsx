@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Button } from '../../../components/common/index.js';
 import { formatCurrencyVND, formatDateTime } from '../../../utils/formatters.js';
 import adminApi from '../services/adminApi.js';
 import { validateDateRange } from '../utils/adminDateUtils.js';
@@ -14,8 +15,9 @@ function formatRatePercent(rate) {
 /**
  * Báo cáo doanh thu theo kỳ ký gửi & danh sách món đã bán (GET /api/admin/revenue/items).
  * Nhận { from, to, dashboardData } đồng bộ từ AdminDashboardPage.
+ * showSummary=false chỉ giữ bảng món đã bán (bỏ tiêu đề và 3 thẻ tóm tắt hoa hồng theo kỳ).
  */
-export default function AdminRevenueReportView({ from, to, dashboardData = {} }) {
+export default function AdminRevenueReportView({ from, to, dashboardData = {}, showSummary = true }) {
   const [term, setTerm] = useState('ALL');
   const [page, setPage] = useState(0);
   const [itemsPage, setItemsPage] = useState({
@@ -109,37 +111,41 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {} })
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-extrabold text-[#191C19] font-heading">
-            Báo Cáo Doanh Thu Nền Tảng Theo Kỳ Kí Gửi
-          </h2>
-          <p className="text-xs text-[#717971] mt-0.5">
-            Doanh thu hoa hồng được chốt lũy tiến (10% - 15% - 20%) cho các đơn hoàn thành ({dashboardData.totalSoldItemsCount || 0} món · Biên nền tảng {dashboardData.netProfitMarginPercent || 0}%)
-          </p>
-        </div>
-      </div>
-
-      {/* Tóm tắt doanh thu & hoa hồng theo 3 kỳ */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {termCards.map((card) => (
-          <div
-            key={card.label}
-            className="bg-white p-5 rounded-2xl border border-[#E2E8E0] shadow-xs space-y-2"
-          >
-            <p className="text-xs font-bold text-[#414942]">{card.label}</p>
+      {showSummary && (
+        <>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <p className="text-[11px] text-[#717971]">Hoa hồng thu được</p>
-              <p className={`text-xl font-black font-heading ${card.accent}`}>
-                {formatCurrencyVND(card.commission)}
+              <h2 className="text-xl font-extrabold text-[#191C19] font-heading">
+                Báo Cáo Doanh Thu Nền Tảng Theo Kỳ Kí Gửi
+              </h2>
+              <p className="text-xs text-[#717971] mt-0.5">
+                Doanh thu hoa hồng được chốt lũy tiến (10% - 15% - 20%) cho các đơn hoàn thành ({dashboardData.totalSoldItemsCount || 0} món · Biên nền tảng {dashboardData.netProfitMarginPercent || 0}%)
               </p>
             </div>
-            <p className="text-[11px] text-[#717971] pt-2 border-t border-[#F0F4EE]">
-              Doanh thu bán hàng hóa: <strong className="text-[#191C19]">{formatCurrencyVND(card.sales)}</strong>
-            </p>
           </div>
-        ))}
-      </div>
+
+          {/* Tóm tắt doanh thu & hoa hồng theo 3 kỳ */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {termCards.map((card) => (
+              <div
+                key={card.label}
+                className="bg-white p-5 rounded-2xl border border-[#E2E8E0] shadow-xs space-y-2"
+              >
+                <p className="text-xs font-bold text-[#414942]">{card.label}</p>
+                <div>
+                  <p className="text-[11px] text-[#717971]">Hoa hồng thu được</p>
+                  <p className={`text-xl font-black font-heading ${card.accent}`}>
+                    {formatCurrencyVND(card.commission)}
+                  </p>
+                </div>
+                <p className="text-[11px] text-[#717971] pt-2 border-t border-[#F0F4EE]">
+                  Doanh thu bán hàng hóa: <strong className="text-[#191C19]">{formatCurrencyVND(card.sales)}</strong>
+                </p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Bảng danh sách món đã bán */}
       <div className="bg-white rounded-2xl border border-[#E2E8E0] shadow-xs p-6 space-y-4">
@@ -168,9 +174,9 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {} })
               className="rounded-xl border border-[#E2E8E0] bg-white px-3 py-2 text-xs font-medium text-[#191C19] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30"
             >
               <option value="ALL">Tất cả kỳ</option>
-              <option value="1">Kỳ 1 (10%)</option>
-              <option value="2">Kỳ 2 (15%)</option>
-              <option value="3">Kỳ 3 (20%)</option>
+              <option value="1">Kỳ 1</option>
+              <option value="2">Kỳ 2</option>
+              <option value="3">Kỳ 3</option>
             </select>
           </div>
         </div>
@@ -182,13 +188,14 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {} })
         ) : error ? (
           <div className="p-6 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-center space-y-2">
             <p className="text-xs font-semibold text-[#B91C1C]">{error}</p>
-            <button
+            <Button
               type="button"
+              variant="primary"
+              size="sm"
               onClick={() => loadItems(currentPage, term)}
-              className="px-3 py-1.5 rounded-lg bg-[#006B2C] text-white text-xs font-semibold"
             >
               Thử lại
-            </button>
+            </Button>
           </div>
         ) : itemsPage.content.length === 0 ? (
           <div className="p-10 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center space-y-2">
@@ -204,14 +211,14 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {} })
           <>
             <div className="overflow-x-auto rounded-xl border border-[#E2E8E0]">
               <table className="w-full text-left text-xs min-w-[720px]">
-                <thead className="bg-[#F8FAF8] text-[#717971] uppercase tracking-wider font-semibold border-b border-[#E2E8E0]">
+                <thead className="bg-[#F8FAF8] text-[#717971] tracking-wider font-semibold border-b border-[#E2E8E0]">
                   <tr>
-                    <th className="py-3 px-4">Sản phẩm</th>
-                    <th className="py-3 px-4">Đơn hàng</th>
-                    <th className="py-3 px-4 text-right">Giá bán</th>
-                    <th className="py-3 px-4 text-center">Kỳ áp dụng</th>
-                    <th className="py-3 px-4 text-right">Hoa hồng</th>
-                    <th className="py-3 px-4">Ngày hoàn thành</th>
+                    <th className="py-3 px-4 whitespace-nowrap">Sản phẩm</th>
+                    <th className="py-3 px-4 whitespace-nowrap">Đơn hàng</th>
+                    <th className="py-3 px-4 text-right whitespace-nowrap">Giá bán</th>
+                    <th className="py-3 px-4 text-center whitespace-nowrap">Kỳ áp dụng</th>
+                    <th className="py-3 px-4 text-right whitespace-nowrap">Hoa hồng</th>
+                    <th className="py-3 px-4 whitespace-nowrap">Ngày hoàn thành</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8E0]">

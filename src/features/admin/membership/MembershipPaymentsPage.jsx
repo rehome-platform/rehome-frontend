@@ -146,7 +146,7 @@ export default function MembershipPaymentsPage() {
               type="date"
               value={from}
               onChange={handleFilterChange(setFrom)}
-              className="px-3 py-1.5 text-sm rounded-lg border border-[#E2E8E0] text-[#191C19]"
+              className="px-3 py-1.5 text-sm rounded-xl border border-[#E2E8E0] text-[#191C19]"
             />
           </div>
 
@@ -159,7 +159,7 @@ export default function MembershipPaymentsPage() {
               type="date"
               value={to}
               onChange={handleFilterChange(setTo)}
-              className="px-3 py-1.5 text-sm rounded-lg border border-[#E2E8E0] text-[#191C19]"
+              className="px-3 py-1.5 text-sm rounded-xl border border-[#E2E8E0] text-[#191C19]"
             />
           </div>
 
@@ -171,7 +171,7 @@ export default function MembershipPaymentsPage() {
               id="pay-tier"
               value={tier}
               onChange={handleFilterChange(setTier)}
-              className="px-3 py-1.5 text-sm rounded-lg border border-[#E2E8E0] bg-white text-[#191C19]"
+              className="px-3 py-1.5 text-sm rounded-xl border border-[#E2E8E0] bg-white text-[#191C19]"
             >
               <option value="">Tất cả hạng</option>
               {PAID_TIERS.map((t) => (
@@ -190,7 +190,7 @@ export default function MembershipPaymentsPage() {
               id="pay-method"
               value={method}
               onChange={handleFilterChange(setMethod)}
-              className="px-3 py-1.5 text-sm rounded-lg border border-[#E2E8E0] bg-white text-[#191C19]"
+              className="px-3 py-1.5 text-sm rounded-xl border border-[#E2E8E0] bg-white text-[#191C19]"
             >
               <option value="">Tất cả phương thức</option>
               {MEMBERSHIP_PAYMENT_METHODS.map((m) => (
@@ -249,14 +249,14 @@ export default function MembershipPaymentsPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-[#F6F9F4] border-b border-[#E2E8E0] text-xs font-semibold text-[#5B6776]">
-                <th className="py-3 px-4">Thành viên</th>
-                <th className="py-3 px-4">Subscription</th>
-                <th className="py-3 px-4">Hạng</th>
-                <th className="py-3 px-4 text-right">Số tiền thực</th>
-                <th className="py-3 px-4">Phương thức</th>
-                <th className="py-3 px-4">Trạng thái</th>
-                <th className="py-3 px-4">Ngày tạo</th>
-                <th className="py-3 px-4">Ngày thanh toán</th>
+                <th className="py-3 px-4 whitespace-nowrap">Thành viên</th>
+                <th className="py-3 px-4 whitespace-nowrap">Subscription</th>
+                <th className="py-3 px-4 whitespace-nowrap">Hạng</th>
+                <th className="py-3 px-4 text-right whitespace-nowrap">Số tiền thực</th>
+                <th className="py-3 px-4 whitespace-nowrap">Phương thức</th>
+                <th className="py-3 px-4 whitespace-nowrap">Trạng thái</th>
+                <th className="py-3 px-4 whitespace-nowrap">Ngày tạo</th>
+                <th className="py-3 px-4 whitespace-nowrap">Ngày thanh toán</th>
               </tr>
             </thead>
             <tbody

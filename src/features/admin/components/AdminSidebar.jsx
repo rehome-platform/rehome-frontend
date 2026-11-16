@@ -33,9 +33,15 @@ export default function AdminSidebar({
     {
       id: 'overview',
       path: '/admin',
-      label: 'Tổng quan & Quỹ nền tảng',
+      label: 'Tổng quan',
       icon: 'dashboard',
       exact: true,
+    },
+    {
+      id: 'fund-ledger',
+      path: '/admin/fund-ledger',
+      label: 'Sổ quỹ & Đối soát',
+      icon: 'account_balance_wallet',
     },
     {
       id: 'accounts',
@@ -187,7 +193,7 @@ export default function AdminSidebar({
             {menuItems.map(renderMenuItem)}
 
             <div className="pt-3 mt-3 border-t border-[#E2E8E0]">
-              <p className="px-3.5 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-[#717971]">
+              <p className="px-3.5 pb-1.5 text-[10px] font-bold tracking-wider text-[#717971] whitespace-nowrap">
                 Gói VIP &amp; Voucher
               </p>
               <div className="space-y-1.5">
@@ -212,7 +218,7 @@ export default function AdminSidebar({
             <button
               onClick={() => logout && logout()}
               title="Đăng xuất"
-              className="p-1.5 text-[#717971] hover:text-[#BA1A1A] hover:bg-white rounded-lg transition-colors shrink-0"
+              className="p-1.5 text-[#717971] hover:text-[#BA1A1A] hover:bg-white rounded-xl transition-colors shrink-0"
             >
               <span className="material-symbols-outlined text-[18px]">logout</span>
             </button>
