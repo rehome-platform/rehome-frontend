@@ -40,7 +40,7 @@ export default function AdminSidebar({
     {
       id: 'fund-ledger',
       path: '/admin/fund-ledger',
-      label: 'Giao dịch',
+      label: 'Sổ quỹ & Đối soát',
       icon: 'account_balance_wallet',
     },
     {

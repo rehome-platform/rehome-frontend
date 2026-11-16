@@ -53,10 +53,6 @@ export default function AdminAccountsView({
   const [isLocking, setIsLocking] = useState(false);
   const [unlockingId, setUnlockingId] = useState(null);
 
-  // Phân trang
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
-
   // Bộ lọc dữ liệu
   const filteredAccounts = accounts.filter((acc) => {
     const matchSearch =
@@ -72,20 +68,6 @@ export default function AdminAccountsView({
 
     return matchSearch && matchRole && matchStatus;
   });
-
-  const totalPages = Math.max(1, Math.ceil(filteredAccounts.length / pageSize));
-
-  // Reset trang về 1 khi đổi bộ lọc
-  if (typeof React.useEffect === 'function') {
-    React.useEffect(() => {
-      setCurrentPage(1);
-    }, [searchKeyword, selectedRole, selectedStatus]);
-  }
-
-  const paginatedAccounts = filteredAccounts.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
 
   const handleResetFilter = () => {
     setSearchKeyword('');
@@ -523,9 +505,9 @@ function AccountsEmptyState({ handleResetFilter }) {
 }
 
 function AccountsTable({
-  filteredAccounts, totalCount, currentPage, totalPages, pageSize, onPageChange,
+  filteredAccounts,
   openActionMenuId, setOpenActionMenuId, setDrawerAccount,
-  setLockModalAccount, setLockReason, setLockError, handleUnlockAccount,
+  setLockModalAccount, setLockReason, setLockError, handleUnlockAccount, unlockingId,
   page, onPageChange, totalElements, totalPages, accountsLoading,
 }) {
   return (
