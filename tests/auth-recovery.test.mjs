@@ -1,4 +1,4 @@
-﻿import { test } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
@@ -41,6 +41,7 @@ function harness(query = '', reset = false, overrides = {}) {
         useSearchParams: () => [new URLSearchParams(query)],
       };
       if (name.includes('Logo')) return { default: 'logo', __esModule: true };
+      if (name.includes('common')) return { Button: 'button' };
       if (name.includes('auth.service')) return { authService: api };
       if (name.includes('validators')) return validators;
       throw Error(name);

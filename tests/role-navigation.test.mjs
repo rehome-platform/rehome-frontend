@@ -12,8 +12,10 @@ function harness(file, role = 'admin', authenticated = true) {
   let cursor = 0;
   let logouts = 0;
   const navigations = [];
-  const auth = { user: { role, email: 'test@example.com' }, isAuthenticated: authenticated, loading: false,
-    logout: async () => { logouts++; auth.user = null; auth.isAuthenticated = false; } };
+  const auth = {
+    user: { role, email: 'test@example.com' }, isAuthenticated: authenticated, loading: false,
+    logout: async () => { logouts++; auth.user = null; auth.isAuthenticated = false; }
+  };
   const React = {
     createElement: (type, props, ...children) => ({ type, props: { ...props, children: children.flat(Infinity) } }),
     useState(initial) {
@@ -21,7 +23,7 @@ function harness(file, role = 'admin', authenticated = true) {
       if (!(i in state)) state[i] = typeof initial === 'function' ? initial() : initial;
       return [state[i], value => { state[i] = typeof value === 'function' ? value(state[i]) : value; }];
     },
-    useRef: initial => ({ current: initial }), useEffect() {},
+    useRef: initial => ({ current: initial }), useEffect() { },
   };
   const module = { exports: {} };
   const source = readFileSync(new URL('../src/' + file, import.meta.url), 'utf8');
@@ -29,8 +31,10 @@ function harness(file, role = 'admin', authenticated = true) {
     module, exports: module.exports,
     require(name) {
       if (name === 'react') return React;
-      if (name === 'react-router-dom') return { Link: 'Link', Navigate: 'Navigate', Route: 'Route', Routes: 'Routes',
-        useLocation: () => ({ pathname: '/admin' }), useNavigate: () => path => navigations.push(path) };
+      if (name === 'react-router-dom') return {
+        Link: 'Link', Navigate: 'Navigate', Route: 'Route', Routes: 'Routes',
+        useLocation: () => ({ pathname: '/admin' }), useNavigate: () => path => navigations.push(path)
+      };
       if (name.includes('AuthContext')) return { useAuth: () => auth };
       if (name.includes('NotificationContext')) return { useNotification: () => ({ unreadCount: 0 }) };
       if (name.includes('role.config')) return roleConfig;
@@ -113,7 +117,7 @@ function routeConfigs() {
 
 test('TC-B-004/005/007/008: Actual route configuration and guard preserve explicit role policy', () => {
   const routes = routeConfigs().filter(n => n.props.path?.startsWith('/admin') || n.props.path?.startsWith('/moderator'));
-  assert.equal(routes.length, 20);
+  assert.equal(routes.length, 21);
   for (const route of routes) {
     const roles = route.props.element.props.roles;
     for (const role of ['admin', 'staff', 'moderator']) {
