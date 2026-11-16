@@ -122,19 +122,16 @@ baseApi.interceptors.response.use(
 
     const isAuthRoute = isCredentialExchange(originalRequest.url);
 
-    if (error.response?.status === 401 && originalRequest.noReplay) {
-      removeTokens();
-      window.dispatchEvent(new CustomEvent('auth:expired'));
-      return Promise.reject(error);
-    }
-
-    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute && !originalRequest.noReplay) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute) {
       originalRequest._retry = true;
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
+            if (originalRequest.noReplay) {
+              return Promise.reject(error);
+            }
             originalRequest.headers.Authorization = `Bearer ${token}`;
             return baseApi(originalRequest);
           })
@@ -145,9 +142,6 @@ baseApi.interceptors.response.use(
       if (!refreshToken) {
         removeTokens();
         window.dispatchEvent(new CustomEvent("auth:expired"));
-        if (window.location.pathname !== "/login") {
-          window.location.href = "/login";
-        }
         return Promise.reject(error);
       }
 
@@ -173,6 +167,9 @@ baseApi.interceptors.response.use(
             })
           );
           processQueue(null, newAccessToken);
+          if (originalRequest.noReplay) {
+            return Promise.reject(error);
+          }
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           return baseApi(originalRequest);
         } else {
@@ -182,9 +179,6 @@ baseApi.interceptors.response.use(
         processQueue(refreshErr, null);
         removeTokens();
         window.dispatchEvent(new CustomEvent("auth:expired"));
-        if (window.location.pathname !== "/login") {
-          window.location.href = "/login";
-        }
         return Promise.reject(refreshErr);
       } finally {
         isRefreshing = false;

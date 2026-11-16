@@ -141,7 +141,7 @@ export function ConsignmentInspectionForm({ price, term, conditionNote, allCheck
               e.preventDefault();
             }
           }}
-          error={errors.agreedPrice || (price && !validMoney(price) ? 'Số nguyên dương hợp lệ.' : null)}
+          error={errors.agreedPrice || (price && !validMoney(price) ? (/^\d+$/.test(String(price)) && Number(price) < 1000 ? 'Giá tối thiểu phải từ 1.000đ' : 'Số nguyên dương hợp lệ.') : null)}
           placeholder="VD: 850000"
         />
         <Field label="Độ dài kỳ ký gửi">
