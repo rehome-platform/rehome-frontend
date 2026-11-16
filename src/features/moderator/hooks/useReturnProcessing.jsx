@@ -32,6 +32,7 @@ export function useReturnProcessing() {
 
   // In-flight mutation lock (F13)
   const resolvingRef = useRef(false);
+  const [releasingReturn, setReleasingReturn] = useState(false);
 
   // TH-02 Reject Modal
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
@@ -495,6 +496,22 @@ export function useReturnProcessing() {
     }
   };
 
+  const handleReleaseReturn = async () => {
+    if (!selectedItem?.id || releasingReturn || resolvingRef.current) return;
+    setReleasingReturn(true);
+    try {
+      await returnService.release(selectedItem.id);
+      notify('success', 'Đã chuyển ca kiểm tra cho Moderator khác trong ca trực.');
+      setViewMode('QUEUE');
+      setSelectedItem(null);
+      await fetchReturns();
+    } catch (err) {
+      notify('error', err?.message || 'Không thể chuyển ca kiểm tra. Vui lòng thử lại.');
+    } finally {
+      setReleasingReturn(false);
+    }
+  };
+
   return {
     ...evidenceProps,
     evidenceReady,
@@ -548,6 +565,8 @@ export function useReturnProcessing() {
     handleSendTwoOptions,
     // Lost
     handleMarkLost,
+    handleReleaseReturn,
+    releasingReturn,
     sections: {
       ReturnQueueTabs: { setActiveTab, activeTab, tabCounts },
       ReturnQueueTable: {
@@ -580,6 +599,8 @@ export function useReturnProcessing() {
         handleSaveInspection,
         handleFlagCounterfeit,
         handleOpenDegradedCase,
+        handleReleaseReturn,
+        releasingReturn,
       },
       ReturnRejectDialog: {
         isRejectModalOpen,

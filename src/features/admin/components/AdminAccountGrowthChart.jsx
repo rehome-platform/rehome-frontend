@@ -170,7 +170,7 @@ export default function AdminAccountGrowthChart({ footerNote }) {
                 key={opt.value}
                 type="button"
                 onClick={() => setGranularity(opt.value)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                className={`px-2.5 py-1 rounded-xl text-xs font-semibold transition-colors ${
                   granularity === opt.value
                     ? 'bg-[#006B2C] text-white'
                     : 'text-[#414942] hover:text-[#006B2C]'
@@ -202,28 +202,28 @@ export default function AdminAccountGrowthChart({ footerNote }) {
           <button
             type="button"
             onClick={() => applyQuickDays(7)}
-            className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] bg-[#F6F9F4] hover:bg-[#E9F0E5] text-[11px] font-medium text-[#414942]"
+            className="px-2.5 py-1 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4] hover:bg-[#E9F0E5] text-[11px] font-medium text-[#414942] transition-colors"
           >
             7 ngày
           </button>
           <button
             type="button"
             onClick={() => applyQuickDays(30)}
-            className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] bg-[#F6F9F4] hover:bg-[#E9F0E5] text-[11px] font-medium text-[#414942]"
+            className="px-2.5 py-1 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4] hover:bg-[#E9F0E5] text-[11px] font-medium text-[#414942] transition-colors"
           >
             30 ngày
           </button>
           <button
             type="button"
             onClick={() => applyQuickDays(90)}
-            className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] bg-[#F6F9F4] hover:bg-[#E9F0E5] text-[11px] font-medium text-[#414942]"
+            className="px-2.5 py-1 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4] hover:bg-[#E9F0E5] text-[11px] font-medium text-[#414942] transition-colors"
           >
             90 ngày
           </button>
           <button
             type="button"
             onClick={apply12Months}
-            className="px-2.5 py-1 rounded-lg border border-[#DDE5D9] bg-[#F6F9F4] hover:bg-[#E9F0E5] text-[11px] font-medium text-[#414942]"
+            className="px-2.5 py-1 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4] hover:bg-[#E9F0E5] text-[11px] font-medium text-[#414942] transition-colors"
           >
             12 tháng
           </button>
@@ -237,7 +237,7 @@ export default function AdminAccountGrowthChart({ footerNote }) {
               aria-label="Từ ngày tăng trưởng"
               value={from}
               onChange={(e) => setFrom(e.target.value)}
-              className="px-2 py-1 rounded-lg border border-[#DDE5D9] text-xs text-[#191C19]"
+              className="px-2 py-1 rounded-xl border border-[#DDE5D9] text-xs text-[#191C19]"
             />
           </label>
           <label className="flex items-center gap-1 text-[11px] text-[#717971]">
@@ -247,7 +247,7 @@ export default function AdminAccountGrowthChart({ footerNote }) {
               aria-label="Đến ngày tăng trưởng"
               value={to}
               onChange={(e) => setTo(e.target.value)}
-              className="px-2 py-1 rounded-lg border border-[#DDE5D9] text-xs text-[#191C19]"
+              className="px-2 py-1 rounded-xl border border-[#DDE5D9] text-xs text-[#191C19]"
             />
           </label>
         </div>
@@ -260,7 +260,7 @@ export default function AdminAccountGrowthChart({ footerNote }) {
           <button
             type="button"
             onClick={() => fetchGrowth(from, to, granularity, role)}
-            className="px-3 py-1.5 rounded-lg bg-[#006B2C] text-white text-xs font-semibold"
+            className="px-3 py-1.5 rounded-xl bg-[#006B2C] hover:bg-[#005523] text-white text-xs font-semibold transition-colors"
           >
             Thử lại
           </button>

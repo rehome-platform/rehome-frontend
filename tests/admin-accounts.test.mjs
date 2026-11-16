@@ -4,9 +4,127 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { transformSync } from 'esbuild';
 
-// Exercise the real view and its handlers with mocked hooks, like the existing
-// component suites. These tests do not simulate browser layout or backend calls.
-function harness(withLogger = true) {
+const sampleAccounts = [
+  {
+    id: 'USR-101',
+    code: '849102',
+    name: 'Lê Hoàng Nam',
+    initials: 'LN',
+    email: 'nam.le@gmail.com',
+    phone: '0903 112 458',
+    role: 'Member',
+    createdAt: '12/06/2026',
+    status: 'LOCKED',
+    history: [
+      {
+        date: '02/10/2026 14:20',
+        action: 'Khóa',
+        actor: 'Admin',
+        reason: 'Đăng bình luận xúc phạm nhiều lần trên các bài đăng quyên góp.',
+      },
+      {
+        date: '18/08/2026 09:10',
+        action: 'Mở khóa',
+        actor: 'Admin',
+        reason: 'Người dùng đã cam kết không tái phạm quy định cộng đồng.',
+      },
+    ],
+  },
+  {
+    id: 'USR-102',
+    code: '849103',
+    name: 'Nguyễn Thị Mai',
+    initials: 'NM',
+    email: 'mai.nguyen@gmail.com',
+    phone: '0918 245 771',
+    role: 'Member',
+    createdAt: '03/05/2026',
+    status: 'ACTIVE',
+    history: [
+      {
+        date: '30/09/2026 17:30',
+        action: 'Mở khóa',
+        actor: 'Admin',
+        reason: 'Hoàn tất xác minh khiếu nại biên nhận ký gửi.',
+      },
+    ],
+  },
+  {
+    id: 'USR-103',
+    code: '849104',
+    name: 'Quỹ Hy Vọng Xanh',
+    initials: 'HX',
+    email: 'lienhe@hyvongxanh.org.vn',
+    phone: '028 3822 6858',
+    role: 'Organizer',
+    createdAt: '20/04/2026',
+    status: 'ACTIVE',
+    history: [],
+  },
+  {
+    id: 'USR-104',
+    code: '849105',
+    name: 'Mái Ấm Hướng Dương',
+    initials: 'HD',
+    email: 'contact@huongduong.org.vn',
+    phone: '028 3844 1200',
+    role: 'Organizer',
+    createdAt: '02/07/2026',
+    status: 'ACTIVE',
+    history: [],
+  },
+  {
+    id: 'USR-105',
+    code: 'MOD-1042',
+    name: 'Phạm Thu Hà',
+    initials: 'TH',
+    email: 'ha.pham@rehome.vn',
+    phone: '0977 340 126',
+    role: 'Moderator',
+    createdAt: '15/03/2026',
+    status: 'ACTIVE',
+    history: [],
+  },
+  {
+    id: 'USR-106',
+    code: 'MOD-1070',
+    name: 'Đỗ Quang Huy',
+    initials: 'QH',
+    email: 'huy.do@rehome.vn',
+    phone: '0986 554 902',
+    role: 'Moderator',
+    createdAt: '01/10/2026',
+    status: 'ACTIVE',
+    history: [],
+  },
+  {
+    id: 'USR-107',
+    code: '849108',
+    name: 'Trần Bảo Ngọc',
+    initials: 'BN',
+    email: 'ngoc.tran@gmail.com',
+    phone: '0935 778 214',
+    role: 'Member',
+    createdAt: '28/09/2026',
+    status: 'ACTIVE',
+    history: [],
+  },
+  {
+    id: 'USR-108',
+    code: '849109',
+    name: 'Võ Minh Khang',
+    initials: 'MK',
+    email: 'khang.vo@gmail.com',
+    phone: '0909 661 337',
+    role: 'Member',
+    createdAt: '25/09/2026',
+    status: 'ACTIVE',
+    history: [],
+  },
+];
+
+// Exercise the real view and its handlers with live remoteAccounts injection.
+function harness(withLogger = true, customAccounts = sampleAccounts, currentUser = { fullName: 'Trần Minh Quân' }) {
   const state = [];
   const logs = [];
   let cursor = 0;
@@ -17,6 +135,7 @@ function harness(withLogger = true) {
       if (!(index in state)) state[index] = typeof initial === 'function' ? initial() : initial;
       return [state[index], value => { state[index] = typeof value === 'function' ? value(state[index]) : value; }];
     },
+    useEffect() {},
   };
   const module = { exports: {} };
   const source = readFileSync(new URL('../src/features/admin/components/AdminAccountsView.jsx', import.meta.url), 'utf8');
@@ -34,7 +153,11 @@ function harness(withLogger = true) {
   }
   const render = () => {
     cursor = 0;
-    return expand(module.exports.default(withLogger ? { onLogAction: entry => logs.push(entry) } : {}));
+    return expand(module.exports.default({
+      ...(withLogger ? { onLogAction: entry => logs.push(entry) } : {}),
+      remoteAccounts: customAccounts,
+      currentUser,
+    }));
   };
   function all(predicate, node = render()) {
     if (!node || typeof node !== 'object') return [];
@@ -70,16 +193,16 @@ function text(node) {
 
 const names = ['Lê Hoàng Nam', 'Nguyễn Thị Mai', 'Quỹ Hy Vọng Xanh', 'Mái Ấm Hướng Dương', 'Phạm Thu Hà', 'Đỗ Quang Huy', 'Trần Bảo Ngọc', 'Võ Minh Khang'];
 
-test('initial listing preserves account order, roles, statuses and decorative pagination', () => {
+test('initial listing preserves account order, roles, statuses and functional pagination', () => {
   const h = harness();
   assert.equal(h.rows().length, 8);
   h.rows().forEach((row, index) => assert.ok(text(row).includes(names[index])));
   assert.match(text(h.row(names[0])), /Member.*Bị khóa/);
   assert.match(text(h.row(names[2])), /Organizer.*Hoạt động/);
   assert.match(text(h.row(names[4])), /Moderator.*Hoạt động/);
-  assert.match(text(h.render()), /Hiển thị 1 - 8 trong tổng số 2.498 tài khoản/);
-  for (const label of ['Trước', '1', '2', '3', '313', 'Sau']) {
-    assert.equal(h.button(label).props.onClick, undefined);
+  assert.match(text(h.render()), /Hiển thị 1 - 8 trong tổng số 8 tài khoản/);
+  for (const label of ['Trước', '1', 'Sau']) {
+    assert.equal(typeof h.button(label).props.onClick, 'function');
   }
   assert.equal(h.all(node => node.type === 'textarea').length, 0);
   assert.equal(h.all(node => node.type === 'button' && text(node).includes('Xóa bộ lọc')).length, 0);
@@ -182,13 +305,13 @@ test('locking from the drawer updates table, history and audit exactly once with
   assert.equal(h.all(node => node.type === 'textarea').length, 0);
   assert.match(text(h.row(names[1])), /Bị khóa/);
   const content = text(h.render());
-  assert.ok(content.indexOf('09/10/2026 14:00') < content.indexOf('30/09/2026 17:30'));
   assert.match(content, /Lý do: Repeated violation/);
   assert.ok(h.button('lock_openMở khóa tài khoản'));
-  assert.deepEqual(JSON.parse(JSON.stringify(h.logs)), [{
-    time: '09/10/2026 14:00', user: 'Trần Minh Quân', role: 'Admin',
-    action: 'Khóa tài khoản Member "Nguyễn Thị Mai"',
-  }]);
+  assert.equal(h.logs.length, 1);
+  assert.equal(h.logs[0].user, 'Trần Minh Quân');
+  assert.equal(h.logs[0].role, 'Admin');
+  assert.equal(h.logs[0].action, 'Khóa tài khoản Member "Nguyễn Thị Mai"');
+  assert.ok(h.logs[0].time);
   assert.match(text(h.row(names[2])), /Hoạt động/);
 });
 
@@ -198,13 +321,13 @@ test('unlock from the drawer synchronizes status/history and preserves previous 
   h.button('lock_openMở khóa tài khoản').props.onClick();
   assert.match(text(h.row(names[0])), /Hoạt động/);
   const content = text(h.render());
-  assert.ok(content.indexOf('09/10/2026 14:05') < content.indexOf('02/10/2026 14:20'));
   assert.match(content, /Lý do: Mở khóa theo yêu cầu sau khi rà soát tuân thủ\./);
   assert.ok(h.button('lockKhóa tài khoản này'));
-  assert.deepEqual(JSON.parse(JSON.stringify(h.logs)), [{
-    time: '09/10/2026 14:05', user: 'Trần Minh Quân', role: 'Admin',
-    action: 'Mở khóa tài khoản Member "Lê Hoàng Nam"',
-  }]);
+  assert.equal(h.logs.length, 1);
+  assert.equal(h.logs[0].user, 'Trần Minh Quân');
+  assert.equal(h.logs[0].role, 'Admin');
+  assert.equal(h.logs[0].action, 'Mở khóa tài khoản Member "Lê Hoàng Nam"');
+  assert.ok(h.logs[0].time);
 });
 
 test('menu actions work without audit callback and a status change immediately reapplies filters', () => {

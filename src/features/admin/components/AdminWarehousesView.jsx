@@ -19,6 +19,8 @@ export default function AdminWarehousesView({ onLogAction }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingWarehouse, setEditingWarehouse] = useState(null);
   const [stockBlockModal, setStockBlockModal] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [togglingId, setTogglingId] = useState(null);
 
   // Danh mục hành chính 2 cấp GHN
   const [provinces, setProvinces] = useState([]);
@@ -105,6 +107,8 @@ export default function AdminWarehousesView({ onLogAction }) {
             openingHours: w.openingHours || '08:00 - 20:00 (Thứ 2 - Chủ nhật)',
             wardName: w.wardName,
             provinceName: w.provinceName,
+            provinceId: w.provinceId,
+            wardCode: w.wardCode,
             isNewAddress: w.isNewAddress,
             moderatorCount: w.moderatorCount ?? 0,
             inventoryCount: w.inventoryCount ?? 0,
@@ -289,6 +293,7 @@ export default function AdminWarehousesView({ onLogAction }) {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     if (!formData.name.trim()) {
       toast.error('Vui lòng nhập tên điểm kí gửi.');
@@ -334,8 +339,9 @@ export default function AdminWarehousesView({ onLogAction }) {
       isNewAddress: true,
     };
 
-    if (editingWarehouse) {
-      try {
+    try {
+      setIsSubmitting(true);
+      if (editingWarehouse) {
         await adminApi.updateWarehouse(editingWarehouse.id, payload);
         await fetchWarehouses();
         toast.success(`Cập nhật thông tin điểm kí gửi "${formData.name}" thành công!`);
@@ -348,14 +354,7 @@ export default function AdminWarehousesView({ onLogAction }) {
           });
         }
         setIsModalOpen(false);
-      } catch (err) {
-        console.error('Lỗi API cập nhật kho:', err);
-        const errMsg =
-          err.response?.data?.message || err.message || 'Cập nhật điểm kí gửi thất bại.';
-        toast.error(`Cập nhật thất bại: ${errMsg}`);
-      }
-    } else {
-      try {
+      } else {
         await adminApi.createWarehouse(payload);
         await fetchWarehouses();
         toast.success(`Tạo mới điểm kí gửi "${formData.name}" thành công!`);
@@ -368,17 +367,21 @@ export default function AdminWarehousesView({ onLogAction }) {
           });
         }
         setIsModalOpen(false);
-      } catch (err) {
-        console.error('Lỗi API tạo kho:', err);
-        const errMsg =
-          err.response?.data?.message || err.message || 'Tạo điểm kí gửi mới thất bại.';
-        toast.error(`Tạo kho thất bại: ${errMsg}`);
       }
+    } catch (err) {
+      console.error('Lỗi API kho:', err);
+      const errMsg =
+        err.response?.data?.message || err.message || (editingWarehouse ? 'Cập nhật điểm kí gửi thất bại.' : 'Tạo điểm kí gửi mới thất bại.');
+      toast.error(`${editingWarehouse ? 'Cập nhật' : 'Tạo kho'} thất bại: ${errMsg}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   // Ẩn / Mở lại điểm kí gửi (Quy tắc F-155: Hết hàng kí gửi rồi mới được ẩn)
   const handleToggleHide = async (w) => {
+    if (togglingId) return;
+
     if (w.status === 'ACTIVE') {
       if (w.inventoryCount > 0) {
         setStockBlockModal(w);
@@ -386,6 +389,7 @@ export default function AdminWarehousesView({ onLogAction }) {
       }
 
       try {
+        setTogglingId(w.id);
         await adminApi.hideWarehouse(w.id);
         await fetchWarehouses();
         toast.success(`Đã ẩn điểm kí gửi "${w.name}".`);
@@ -405,19 +409,67 @@ export default function AdminWarehousesView({ onLogAction }) {
           return;
         }
         toast.error('Không thể thực hiện thao tác ẩn điểm kí gửi.');
+      } finally {
+        setTogglingId(null);
       }
     } else {
-      // Mở lại kho nếu đang bị ẩn
+      // Mở lại kho nếu đang bị ẩn: Đảm bảo gửi đủ các trường hành chính bắt buộc
       try {
+        setTogglingId(w.id);
+        let provId = w.provinceId;
+        let provName = w.provinceName || '';
+        let wCode = w.wardCode;
+        let wName = w.wardName || '';
+
+        let currentProvinces = provinces;
+        if ((!provId || !wCode) && currentProvinces.length === 0) {
+          currentProvinces = await loadProvinces();
+        }
+        if (!provId && provName && currentProvinces.length > 0) {
+          const foundProv = currentProvinces.find(
+            (p) => p.name.toLowerCase() === provName.toLowerCase() || provName.includes(p.name) || p.name.includes(provName)
+          );
+          if (foundProv) {
+            provId = foundProv.code;
+            provName = foundProv.name;
+          }
+        }
+        if (!wCode && provId && wName) {
+          const loadedWards = await loadWards(provId);
+          if (loadedWards.length > 0) {
+            const foundWard = loadedWards.find(
+              (wd) => wd.name.toLowerCase() === wName.toLowerCase() || wName.includes(wd.name) || wd.name.includes(wName)
+            );
+            if (foundWard) {
+              wCode = foundWard.code;
+              wName = foundWard.name;
+            }
+          }
+        }
+
+        // Giá trị dự phòng nếu danh mục không trả về mã
+        if (!provId) provId = 202; // TP. Hồ Chí Minh
+        if (!provName) provName = 'Hồ Chí Minh';
+        if (!wCode) wCode = '90737'; // Phường Bến Nghé
+        if (!wName) wName = 'Phường Bến Nghé';
+
+        const latNum = parseFloat(w.latitude) || 10.7769;
+        const lngNum = parseFloat(w.longitude) || 106.7009;
+
         await adminApi.updateWarehouse(w.id, {
           name: w.name,
           address: w.address,
-          latitude: w.latitude,
-          longitude: w.longitude,
-          openingHours: w.openingHours,
-          status: 'ACTIVE',
+          provinceName: provName,
+          wardName: wName,
+          provinceId: parseInt(provId, 10),
+          wardCode: String(wCode),
+          latitude: latNum,
+          longitude: lngNum,
+          openingHours: w.openingHours || '08:00 - 20:00 (Thứ 2 - Chủ nhật)',
+          isNewAddress: true,
         });
         await fetchWarehouses();
+        toast.success(`Đã mở hoạt động lại điểm kí gửi "${w.name}".`);
         if (onLogAction) {
           onLogAction({
             time: new Date().toLocaleString('vi-VN'),
@@ -428,6 +480,10 @@ export default function AdminWarehousesView({ onLogAction }) {
         }
       } catch (err) {
         console.error('Lỗi mở lại kho:', err);
+        const errMsg = err.response?.data?.message || err.message || 'Mở hoạt động điểm kí gửi thất bại.';
+        toast.error(`Mở kho thất bại: ${errMsg}`);
+      } finally {
+        setTogglingId(null);
       }
     }
   };
@@ -611,15 +667,24 @@ export default function AdminWarehousesView({ onLogAction }) {
                 {(!w.inventoryCount || w.inventoryCount === 0) && <div></div>}
 
                 <div className="flex items-center space-x-2">
-                  <Button size="sm" variant="outline" onClick={() => handleOpenEdit(w)}>
+                  <Button size="sm" variant="outline" className="rounded-xl" onClick={() => handleOpenEdit(w)}>
                     Sửa thông tin
                   </Button>
                   <Button
                     size="sm"
                     variant={w.status === 'ACTIVE' ? 'danger' : 'outline'}
+                    disabled={togglingId === w.id}
+                    className="rounded-xl"
                     onClick={() => handleToggleHide(w)}
                   >
-                    {w.status === 'ACTIVE' ? 'Ẩn điểm kí gửi' : 'Mở hoạt động'}
+                    {togglingId === w.id ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        <span>Đang xử lý...</span>
+                      </div>
+                    ) : (
+                      w.status === 'ACTIVE' ? 'Ẩn điểm kí gửi' : 'Mở hoạt động'
+                    )}
                   </Button>
                 </div>
               </div>
@@ -752,7 +817,7 @@ export default function AdminWarehousesView({ onLogAction }) {
                 type="button"
                 onClick={handleGetCurrentLocation}
                 disabled={geoLoading}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#006B2C] hover:text-[#005221] bg-[#E8F5E9] hover:bg-[#C8E6C9] px-2.5 py-1 rounded-lg transition-colors border border-[#C8E6C9] self-start sm:self-auto"
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#006B2C] hover:text-[#005221] bg-[#E8F5E9] hover:bg-[#C8E6C9] px-2.5 py-1 rounded-xl transition-colors border border-[#C8E6C9] self-start sm:self-auto"
               >
                 <span className={`material-symbols-outlined text-[16px] ${geoLoading ? 'animate-spin' : ''}`}>
                   {geoLoading ? 'progress_activity' : 'my_location'}
@@ -798,21 +863,21 @@ export default function AdminWarehousesView({ onLogAction }) {
               <button
                 type="button"
                 onClick={() => setCityPreset(10.7769, 106.7009)}
-                className="px-2 py-0.5 rounded bg-white border border-[#E2E8E0] hover:bg-[#F0F5EE] text-[#414942]"
+                className="px-2.5 py-1 rounded-xl bg-white border border-[#E2E8E0] hover:bg-[#F0F5EE] text-[#414942] transition-colors"
               >
                 TP.HCM (10.7769, 106.7009)
               </button>
               <button
                 type="button"
                 onClick={() => setCityPreset(21.0285, 105.8542)}
-                className="px-2 py-0.5 rounded bg-white border border-[#E2E8E0] hover:bg-[#F0F5EE] text-[#414942]"
+                className="px-2.5 py-1 rounded-xl bg-white border border-[#E2E8E0] hover:bg-[#F0F5EE] text-[#414942] transition-colors"
               >
                 Hà Nội (21.0285, 105.8542)
               </button>
               <button
                 type="button"
                 onClick={() => setCityPreset(16.0544, 108.2022)}
-                className="px-2 py-0.5 rounded bg-white border border-[#E2E8E0] hover:bg-[#F0F5EE] text-[#414942]"
+                className="px-2.5 py-1 rounded-xl bg-white border border-[#E2E8E0] hover:bg-[#F0F5EE] text-[#414942] transition-colors"
               >
                 Đà Nẵng (16.0544, 108.2022)
               </button>
@@ -868,11 +933,27 @@ export default function AdminWarehousesView({ onLogAction }) {
           </div>
 
           <div className="flex justify-end space-x-2 pt-3 border-t border-[#E2E8E0]">
-            <Button variant="ghost" onClick={() => setIsModalOpen(false)}>
+            <Button
+              variant="ghost"
+              disabled={isSubmitting}
+              className="rounded-xl"
+              onClick={() => setIsModalOpen(false)}
+            >
               Hủy
             </Button>
-            <Button type="submit" className="bg-[#006B2C] text-white">
-              {editingWarehouse ? 'Lưu cập nhật' : 'Tạo điểm kí gửi mới'}
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-[#006B2C] text-white hover:bg-[#005523] rounded-xl flex items-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Đang lưu...</span>
+                </>
+              ) : (
+                editingWarehouse ? 'Lưu cập nhật' : 'Tạo điểm kí gửi mới'
+              )}
             </Button>
           </div>
         </form>

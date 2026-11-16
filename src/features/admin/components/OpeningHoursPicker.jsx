@@ -91,7 +91,7 @@ export default function OpeningHoursPicker({ value, onChange }) {
               type="time"
               value={openTime}
               onChange={handleOpenTimeChange}
-              className="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+              className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
             />
           </div>
         </div>
@@ -102,7 +102,7 @@ export default function OpeningHoursPicker({ value, onChange }) {
               type="time"
               value={closeTime}
               onChange={handleCloseTimeChange}
-              className="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+              className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
             />
           </div>
         </div>
@@ -114,7 +114,7 @@ export default function OpeningHoursPicker({ value, onChange }) {
         <button
           type="button"
           onClick={() => applyPreset('ALL')}
-          className={`px-2 py-1 text-[11px] font-medium rounded-md border transition-colors ${
+          className={`px-2 py-1 text-[11px] font-medium rounded-xl border transition-colors ${
             selectedDays.length === 7
               ? 'bg-[#006B2C] text-white border-[#006B2C]'
               : 'bg-white text-[#414942] border-[#E2E8E0] hover:bg-[#F0F5EE]'
@@ -125,7 +125,7 @@ export default function OpeningHoursPicker({ value, onChange }) {
         <button
           type="button"
           onClick={() => applyPreset('MON_SAT')}
-          className={`px-2 py-1 text-[11px] font-medium rounded-md border transition-colors ${
+          className={`px-2 py-1 text-[11px] font-medium rounded-xl border transition-colors ${
             selectedDays.length === 6 && !selectedDays.includes('Chủ nhật')
               ? 'bg-[#006B2C] text-white border-[#006B2C]'
               : 'bg-white text-[#414942] border-[#E2E8E0] hover:bg-[#F0F5EE]'
@@ -136,7 +136,7 @@ export default function OpeningHoursPicker({ value, onChange }) {
         <button
           type="button"
           onClick={() => applyPreset('MON_FRI')}
-          className={`px-2 py-1 text-[11px] font-medium rounded-md border transition-colors ${
+          className={`px-2 py-1 text-[11px] font-medium rounded-xl border transition-colors ${
             selectedDays.length === 5 &&
             !selectedDays.includes('Thứ 7') &&
             !selectedDays.includes('Chủ nhật')
@@ -159,7 +159,7 @@ export default function OpeningHoursPicker({ value, onChange }) {
                 key={day}
                 type="button"
                 onClick={() => toggleDay(day)}
-                className={`py-1.5 text-center text-xs font-semibold rounded-lg border transition-all ${
+                className={`py-1.5 text-center text-xs font-semibold rounded-xl border transition-all ${
                   isSelected
                     ? 'bg-[#006B2C] text-white border-[#006B2C] shadow-xs'
                     : 'bg-white text-[#717971] border-[#E2E8E0] hover:border-[#006B2C]/50'

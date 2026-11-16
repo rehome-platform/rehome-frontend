@@ -316,7 +316,7 @@ export default function DonationsPage() {
                     setCampaignPage(0);
                     setSelectedCampaignId('');
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
                     campaignView === 'ACTIVE'
                       ? 'bg-[#006B2C] text-white'
                       : 'text-textSecondary hover:text-text'
@@ -333,7 +333,7 @@ export default function DonationsPage() {
                     setCampaignPage(0);
                     setSelectedCampaignId('');
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
                     campaignView === 'HISTORY'
                       ? 'bg-[#006B2C] text-white'
                       : 'text-textSecondary hover:text-text'

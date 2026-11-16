@@ -459,6 +459,23 @@ export const returnService = {
     if (!item) throw new Phase2Error('Chưa tải được biên bản hàng xuống cấp. Vui lòng thử lại để tải biên bản; không cần chốt hoàn tiền lại.', 404);
     return returnService.getDegradedCase(item.id, options);
   },
+
+  /**
+   * Nhả / chuyển ca kiểm tra yêu cầu trả hàng cho Moderator khác
+   * POST /return-requests/{id}/release
+   */
+  release: async (retId, options = {}) => {
+    if (isFixtureMode) return { id: retId, released: true };
+
+    const res = await callBackend(
+      {
+        method: 'post',
+        url: `/return-requests/${encodeURIComponent(retId)}/release`,
+      },
+      { signal: options?.signal }
+    );
+    return res?.data || res;
+  },
 };
 
 export default returnService;

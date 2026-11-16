@@ -146,7 +146,7 @@ export default function MembershipPaymentsPage() {
               type="date"
               value={from}
               onChange={handleFilterChange(setFrom)}
-              className="px-3 py-1.5 text-sm rounded-lg border border-[#E2E8E0] text-[#191C19]"
+              className="px-3 py-1.5 text-sm rounded-xl border border-[#E2E8E0] text-[#191C19]"
             />
           </div>
 
@@ -159,7 +159,7 @@ export default function MembershipPaymentsPage() {
               type="date"
               value={to}
               onChange={handleFilterChange(setTo)}
-              className="px-3 py-1.5 text-sm rounded-lg border border-[#E2E8E0] text-[#191C19]"
+              className="px-3 py-1.5 text-sm rounded-xl border border-[#E2E8E0] text-[#191C19]"
             />
           </div>
 
@@ -171,7 +171,7 @@ export default function MembershipPaymentsPage() {
               id="pay-tier"
               value={tier}
               onChange={handleFilterChange(setTier)}
-              className="px-3 py-1.5 text-sm rounded-lg border border-[#E2E8E0] bg-white text-[#191C19]"
+              className="px-3 py-1.5 text-sm rounded-xl border border-[#E2E8E0] bg-white text-[#191C19]"
             >
               <option value="">Tất cả hạng</option>
               {PAID_TIERS.map((t) => (
@@ -190,7 +190,7 @@ export default function MembershipPaymentsPage() {
               id="pay-method"
               value={method}
               onChange={handleFilterChange(setMethod)}
-              className="px-3 py-1.5 text-sm rounded-lg border border-[#E2E8E0] bg-white text-[#191C19]"
+              className="px-3 py-1.5 text-sm rounded-xl border border-[#E2E8E0] bg-white text-[#191C19]"
             >
               <option value="">Tất cả phương thức</option>
               {MEMBERSHIP_PAYMENT_METHODS.map((m) => (

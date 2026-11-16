@@ -137,7 +137,8 @@ export default function CatalogEditor({ kind, item, slots = [], onClose, onSaved
           <Button
             type="button"
             variant="outline"
-            className="flex-1 py-2.5 text-xs font-semibold"
+            size="md"
+            className="flex-1"
             onClick={onClose}
             disabled={mutation.busy}
           >
@@ -145,7 +146,9 @@ export default function CatalogEditor({ kind, item, slots = [], onClose, onSaved
           </Button>
           <Button
             type="submit"
-            className="flex-1 py-2.5 bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs"
+            variant="primary"
+            size="md"
+            className="flex-1"
             loading={mutation.busy}
             disabled={!name.trim() || (isCategory && !slot)}
           >

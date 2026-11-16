@@ -212,7 +212,7 @@ export default function AdminSidebar({
             <button
               onClick={() => logout && logout()}
               title="Đăng xuất"
-              className="p-1.5 text-[#717971] hover:text-[#BA1A1A] hover:bg-white rounded-lg transition-colors shrink-0"
+              className="p-1.5 text-[#717971] hover:text-[#BA1A1A] hover:bg-white rounded-xl transition-colors shrink-0"
             >
               <span className="material-symbols-outlined text-[18px]">logout</span>
             </button>

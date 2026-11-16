@@ -9,7 +9,7 @@ import { ownsClaim } from "../models/warehouseModel.js";
 import { withdrawalCounterLink } from '../models/queueModel.js';
 import { Page, Pager, ResourceState } from "../components/WarehouseUi.jsx";
 
-function getQueueLinkTarget(item, typeParam) {
+export function getQueueLinkTarget(item, typeParam) {
   const type = item?.type || typeParam;
   const refId = item.refId || item.id || '';
   if (type === 'PACKING') {
@@ -19,9 +19,10 @@ function getQueueLinkTarget(item, typeParam) {
     if (item?.status === 'PENDING_APPROVAL') return null;
     return withdrawalCounterLink(item);
   }
-  if (type === 'DONATION_PICKUP') {
+  if (type === 'DONATION_PICKUP' || type === 'DONATION_PREP') {
     const params = new URLSearchParams();
-    if (refId) params.set('donationId', refId);
+    const donationId = item.donationId || refId;
+    if (donationId) params.set('donationId', donationId);
     if (item.campaignId) params.set('campaignId', item.campaignId);
     const query = params.toString();
     return query ? `/moderator/donations?${query}` : '/moderator/donations';

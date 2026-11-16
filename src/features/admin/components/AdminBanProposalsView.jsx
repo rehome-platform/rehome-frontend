@@ -466,30 +466,33 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
                     {/* Thao tác */}
                     <td className="py-3.5 px-4 text-right whitespace-nowrap">
                       <div className="inline-flex items-center justify-end gap-2">
-                        <button
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="sm"
                           onClick={() => handleInspectProposal(item)}
-                          className="px-3 py-1.5 rounded-xl border border-[#E2E8E0] bg-white hover:bg-[#F0F5EE] text-[#191C19] font-semibold text-xs transition-colors cursor-pointer"
                         >
                           Lịch sử & Chi tiết
-                        </button>
+                        </Button>
 
                         {item.status === 'PENDING' && (
                           <>
-                            <button
+                            <Button
                               type="button"
+                              variant="danger"
+                              size="sm"
                               onClick={() => handleOpenBanModal(item)}
-                              className="px-3 py-1.5 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white font-bold text-xs shadow-2xs transition-colors cursor-pointer"
                             >
                               Khóa tài khoản
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                               type="button"
+                              variant="secondary"
+                              size="sm"
                               onClick={() => handleDismissProposal(item)}
-                              className="px-3 py-1.5 rounded-xl border border-[#E2E8E0] bg-[#F8FAF8] hover:bg-[#E2E8E0]/60 text-[#717971] font-semibold text-xs transition-colors cursor-pointer"
                             >
                               Bỏ qua
-                            </button>
+                            </Button>
                           </>
                         )}
                       </div>

@@ -70,26 +70,67 @@ describe('JWT interceptors with backend response envelopes', () => {
     expect(getRefreshToken()).toBe('retained-refresh');
   });
 
-  it('rejects a noReplay mutation once without refreshing and expires the session', async () => {
+  it('attempts token refresh on 401 for a noReplay mutation without replaying or expiring the session when refresh succeeds', async () => {
     saveToken('expired-access');
     saveRefreshToken('previous-refresh');
     const expired = vi.fn();
-    const refresh = vi.fn(() => HttpResponse.json({ result: { accessToken: 'unexpected' } }));
+    const refreshed = vi.fn();
     let writes = 0;
+    let refreshes = 0;
     window.addEventListener('auth:expired', expired);
+    window.addEventListener('auth:token_refreshed', refreshed);
     server.use(
       http.post(`${API_BASE_URL}/jwt-mutation-test`, ({ request }) => {
         writes++;
         expect(request.headers.get('Authorization')).toBe('Bearer expired-access');
         return new HttpResponse(null, { status: 401 });
       }),
-      http.post(refreshUrl, refresh),
+      http.post(refreshUrl, async ({ request }) => {
+        refreshes++;
+        expect(await request.json()).toEqual({ refreshToken: 'previous-refresh' });
+        return HttpResponse.json({
+          result: { accessToken: 'renewed-access', refreshToken: 'rotated-refresh' },
+          isSuccess: true,
+        });
+      }),
     );
     try {
       await expect(baseApi.post('/jwt-mutation-test', {}, { noReplay: true }))
         .rejects.toMatchObject({ response: { status: 401 } });
       expect(writes).toBe(1);
-      expect(refresh).not.toHaveBeenCalled();
+      expect(refreshes).toBe(1);
+      expect(refreshed).toHaveBeenCalledOnce();
+      expect(expired).not.toHaveBeenCalled();
+      expect(getToken()).toBe('renewed-access');
+      expect(getRefreshToken()).toBe('rotated-refresh');
+    } finally {
+      window.removeEventListener('auth:expired', expired);
+      window.removeEventListener('auth:token_refreshed', refreshed);
+    }
+  });
+
+  it('expires the session when token refresh fails for a noReplay mutation', async () => {
+    saveToken('expired-access');
+    saveRefreshToken('expired-refresh');
+    const expired = vi.fn();
+    let writes = 0;
+    let refreshes = 0;
+    window.addEventListener('auth:expired', expired);
+    server.use(
+      http.post(`${API_BASE_URL}/jwt-mutation-test`, () => {
+        writes++;
+        return new HttpResponse(null, { status: 401 });
+      }),
+      http.post(refreshUrl, () => {
+        refreshes++;
+        return new HttpResponse(null, { status: 401 });
+      }),
+    );
+    try {
+      await expect(baseApi.post('/jwt-mutation-test', {}, { noReplay: true }))
+        .rejects.toMatchObject({ response: { status: 401 } });
+      expect(writes).toBe(1);
+      expect(refreshes).toBe(1);
       expect(expired).toHaveBeenCalledOnce();
       expect(getToken()).toBeNull();
       expect(getRefreshToken()).toBeNull();

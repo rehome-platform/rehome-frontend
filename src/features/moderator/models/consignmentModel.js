@@ -1,5 +1,7 @@
+export const MIN_CONSIGNMENT_PRICE = 1000;
+
 export function validMoney(value) {
-  return /^\d+$/.test(String(value)) && Number.isSafeInteger(Number(value)) && Number(value) > 0;
+  return /^\d+$/.test(String(value)) && Number.isSafeInteger(Number(value)) && Number(value) >= MIN_CONSIGNMENT_PRICE;
 }
 
 export function extractReceiptId(receipt) {
