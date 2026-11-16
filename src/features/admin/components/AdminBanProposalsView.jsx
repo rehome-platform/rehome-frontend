@@ -364,13 +364,13 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-[#F8FAF8] border-b border-[#E2E8E0] text-[11px] uppercase font-bold text-[#717971] tracking-wider">
-                <th className="py-3.5 px-4">Tổ chức / Đối tượng bị đề xuất</th>
-                <th className="py-3.5 px-4">Moderator đề xuất</th>
-                <th className="py-3.5 px-4">Lý do đề xuất & Số báo cáo</th>
-                <th className="py-3.5 px-4">Thời gian</th>
-                <th className="py-3.5 px-4">Trạng thái</th>
-                <th className="py-3.5 px-4 text-right">Quyết định của Admin</th>
+              <tr className="bg-[#F8FAF8] border-b border-[#E2E8E0] text-[11px] font-bold text-[#717971] tracking-wider">
+                <th className="py-3.5 px-4 whitespace-nowrap">Tổ chức / Đối tượng bị đề xuất</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Moderator đề xuất</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Lý do đề xuất & Số báo cáo</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Thời gian</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Trạng thái</th>
+                <th className="py-3.5 px-4 text-right whitespace-nowrap">Quyết định của Admin</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E2E8E0]">

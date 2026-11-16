@@ -1,18 +1,17 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrencyVND } from '../../../utils/formatters.js';
-import { Button, Badge } from '../../../components/common/index.js';
+import { Button } from '../../../components/common/index.js';
 import adminApi from '../services/adminApi.js';
 import AdminOverviewView from '../components/AdminOverviewView.jsx';
-import AdminRevenueBreakdownCard from '../components/AdminRevenueBreakdownCard.jsx';
-import AdminFundLedgerSection from '../components/AdminFundLedgerSection.jsx';
 import AdminRevenueReportView from '../components/AdminRevenueReportView.jsx';
-import {
-  getPeriodDateRange,
-  getVietnamToday,
-  validateDateRange,
-} from '../utils/adminDateUtils.js';
-import { useToast } from '../../../context/ToastContext.jsx';
+import AdminRevenueTrendChart from '../components/AdminRevenueTrendChart.jsx';
+import AdminWarehouseOverview from '../components/AdminWarehouseOverview.jsx';
+import AdminPeriodFilter from '../components/AdminPeriodFilter.jsx';
+import AdminExportExcelModal from '../components/AdminExportExcelModal.jsx';
+import ComparisonBadge from '../components/ComparisonBadge.jsx';
+import useAdminPeriod from '../hooks/useAdminPeriod.js';
+import usePreviousTotal from '../hooks/usePreviousTotal.js';
 
 const DEFAULT_DASHBOARD = {
   revenue: 0,
@@ -25,6 +24,8 @@ const DEFAULT_DASHBOARD = {
   withdrawalFeeRevenue: 0,
   compensationExpense: 0,
   fundBalance: 0,
+  heldOrderAmount: 0,
+  heldOrderCount: 0,
   overdueTaskCount: 0,
   term1SalesRevenue: 0,
   term1Commission: 0,
@@ -39,41 +40,42 @@ const DEFAULT_DASHBOARD = {
   netProfitMarginPercent: 0,
 };
 
+const TABS = [
+  { id: 'revenue', label: 'Doanh thu', icon: 'payments' },
+  { id: 'users', label: 'Người dùng', icon: 'group' },
+  { id: 'warehouse', label: 'Kho', icon: 'warehouse' },
+];
+
 /**
- * Trang Dashboard Điều Hành & Quỹ Nền Tảng ReHome (Admin)
- * Dùng chung một bộ lọc thời gian cho toàn bộ Dashboard, Báo cáo theo kỳ, Sổ quỹ và Xuất Excel.
+ * Trang Tổng quan điều hành (Admin), 3 tab:
+ * - Doanh thu: doanh thu nền tảng, tiền đang giữ hộ, biểu đồ theo thời gian, danh sách món đã bán.
+ *   Nút Xuất Excel mở hộp thoại riêng (AdminExportExcelModal): bộ lọc thời gian độc lập + tick khối cần xuất.
+ * - Người dùng: số tài khoản, tăng trưởng, hoạt động gần đây.
+ * - Kho: tồn kho theo trạng thái / kỳ, tác vụ quá hạn, đánh giá dịch vụ kho.
+ * Giao dịch (quỹ nền tảng ↔ ví Member) nằm ở trang riêng (/admin/fund-ledger).
  */
 export default function AdminDashboardPage() {
-  const toast = useToast();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState('fund');
-  const [exporting, setExporting] = useState(false);
+  const [activeTab, setActiveTab] = useState('revenue');
+  const [exportModalOpen, setExportModalOpen] = useState(false);
 
-  const initialMonth = useMemo(() => getPeriodDateRange('MONTH'), []);
-  const [period, setPeriod] = useState('MONTH'); // 'TODAY' | 'WEEK' | 'MONTH' | 'ALL' | 'CUSTOM'
-  const [customFrom, setCustomFrom] = useState(initialMonth.exportFrom);
-  const [customTo, setCustomTo] = useState(initialMonth.exportTo);
+  const filter = useAdminPeriod('MONTH');
+  const { activeRange, dateError, previousRange, previousPeriodLabel } = filter;
+
+  const fetchPreviousPlatformRevenue = useCallback(
+    (range) => adminApi.getRevenueTrendTotal({ from: range.apiFrom, to: range.apiTo }),
+    []
+  );
+  const { previousTotal: previousPlatformRevenue, loadingPrevious: loadingPreviousRevenue } = usePreviousTotal(
+    fetchPreviousPlatformRevenue,
+    previousRange
+  );
 
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(DEFAULT_DASHBOARD);
 
   const dashSeqRef = useRef(0);
-
-  const dateError = period === 'CUSTOM' ? validateDateRange(customFrom, customTo) : null;
-
-  const activeRange = useMemo(() => {
-    if (period !== 'CUSTOM') {
-      return getPeriodDateRange(period);
-    }
-    const today = getVietnamToday();
-    return {
-      apiFrom: customFrom || undefined,
-      apiTo: customTo || undefined,
-      exportFrom: customFrom || '1970-01-01',
-      exportTo: customTo || today,
-    };
-  }, [period, customFrom, customTo]);
 
   useEffect(() => {
     if (dateError) return;
@@ -103,224 +105,92 @@ export default function AdminDashboardPage() {
     loadData();
   }, [activeRange.apiFrom, activeRange.apiTo, dateError]);
 
-  const platformRevenueRatio =
-    dashboardData.revenue > 0
-      ? ((dashboardData.platformRevenue / dashboardData.revenue) * 100).toFixed(1)
-      : '0.0';
-
-  const fundMetrics = [
+  const revenueMetrics = [
     {
-      label: 'Tiền đang giữ hộ',
-      value: dashboardData.walletBalanceHeld || 0,
-      description: 'Tiền bán được tổng giá của sản phẩm đang giữ hộ cho Member (chờ đối soát rút ví)',
-      icon: 'lock_clock',
-      iconBg: 'bg-[#FFF3E0]',
-      iconColor: 'text-[#D97706]',
-      badge: 'Tiền giữ hộ Member',
-    },
-    {
-      label: 'Doanh thu hiện có',
+      label: 'Doanh thu nền tảng',
       value: dashboardData.platformRevenue || 0,
       description: 'Hoa hồng và phí rút hàng đã thu, chưa trừ chi đền bù',
       icon: 'trending_up',
       iconBg: 'bg-[#E8F5E9]',
       iconColor: 'text-[#006B2C]',
-      badge: 'Doanh thu nền tảng',
-      extraInfo: `${platformRevenueRatio}% Tỷ lệ doanh thu nền tảng / tổng tiền đơn hoàn thành`,
+      badge: 'Theo khoảng thời gian đã chọn',
+      // "Tiền đang giữ hộ" là số dư hiện tại (không lọc theo kỳ) nên không có "kỳ trước" để so sánh
+      comparison: previousPeriodLabel && {
+        previous: previousPlatformRevenue,
+        loading: loadingPreviousRevenue,
+        label: previousPeriodLabel,
+      },
     },
     {
-      label: 'Số dư quỹ nền tảng',
-      value: dashboardData.fundBalance || 0,
-      description: 'Tiền thực tế trong tài khoản hệ thống (Tiền giữ + Doanh thu)',
-      icon: 'account_balance',
-      iconBg: 'bg-[#E0F2F1]',
-      iconColor: 'text-[#00685F]',
-      badge: 'Cổng thanh toán',
+      label: 'Tiền đang giữ hộ',
+      value: dashboardData.heldOrderAmount || 0,
+      description: 'Người mua đã thanh toán nhưng đơn chưa hoàn tất, nền tảng chưa trả cho người bán',
+      icon: 'lock_clock',
+      iconBg: 'bg-[#FFF3E0]',
+      iconColor: 'text-[#D97706]',
+      badge: 'Số hiện tại',
+      comparison: null,
     },
-    {
-      label: 'Tổng đơn đã thanh toán',
-      value: `${dashboardData.ordersCount || 0} đơn`,
-      description: 'Bao gồm đơn đang xử lý, đang giao, đã giao, hoàn thành và trả hàng',
-      icon: 'local_shipping',
-      iconBg: 'bg-[#EDE7F6]',
-      iconColor: 'text-[#673AB7]',
-      badge: 'Vận hành kho',
-    },
-  ];
-
-  const handleExportExcel = async () => {
-    if (dateError) {
-      toast.error(dateError);
-      return;
-    }
-
-    try {
-      setExporting(true);
-      const { exportFrom, exportTo } = activeRange;
-      const blob = await adminApi.exportDashboard(exportFrom, exportTo);
-
-      const url = window.URL.createObjectURL(new Blob([blob]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `dashboard_report_${exportFrom}_${exportTo}.xlsx`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Lỗi xuất báo cáo Excel:', err);
-      toast.error('Không thể kết nối API xuất báo cáo Excel. Vui lòng kiểm tra lại quyền Admin hoặc kết nối mạng.');
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const totalStock = dashboardData.inventoryCount || 0;
-  const termStocks = [
-    { label: 'Kỳ 1', count: Number(dashboardData.term1StockCount || 0), color: 'bg-[#006B2C]' },
-    { label: 'Kỳ 2', count: Number(dashboardData.term2StockCount || 0), color: 'bg-[#00685F]' },
-    { label: 'Kỳ 3', count: Number(dashboardData.term3StockCount || 0), color: 'bg-[#FEA619]' },
   ];
 
   return (
     <div className="min-w-0 space-y-6">
-      {/* Tab Switcher + Bộ lọc thời gian dùng chung + Xuất Excel */}
+      {/* Tab Switcher + (tab Doanh thu) Bộ lọc thời gian & Xuất Excel */}
       <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4 border-b border-[#E2E8E0] pb-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setActiveTab('fund')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${
-              activeTab === 'fund'
-                ? 'bg-[#006B2C] text-white shadow-sm'
-                : 'bg-white border border-[#E2E8E0] text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
-            <span>Quỹ nền tảng &amp; Doanh thu</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('revenue_report')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${
-              activeTab === 'revenue_report'
-                ? 'bg-[#006B2C] text-white shadow-sm'
-                : 'bg-white border border-[#E2E8E0] text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[18px]">table_chart</span>
-            <span>Báo cáo doanh thu theo kỳ</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('activities')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${
-              activeTab === 'activities'
-                ? 'bg-[#006B2C] text-white shadow-sm'
-                : 'bg-white border border-[#E2E8E0] text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[18px]">insights</span>
-            <span>Hoạt động &amp; Tăng trưởng hệ thống</span>
-          </button>
-        </div>
-
-        {/* Bộ lọc thời gian dùng chung & nút xuất báo cáo Excel */}
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1 text-xs text-[#414942]">
-            <span>Khoảng thời gian</span>
-            <select
-              aria-label="Khoảng thời gian"
-              value={period}
-              onChange={(event) => setPeriod(event.target.value)}
-              disabled={exporting}
-              className="rounded-xl border border-[#E2E8E0] bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30 disabled:opacity-50"
+        <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Các mục tổng quan">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${
+                activeTab === tab.id
+                  ? 'bg-[#006B2C] text-white shadow-sm'
+                  : 'bg-white border border-[#E2E8E0] text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
+              }`}
             >
-              <option value="TODAY">Hôm nay</option>
-              <option value="WEEK">Tuần này</option>
-              <option value="MONTH">Tháng này</option>
-              <option value="ALL">Toàn thời gian</option>
-              <option value="CUSTOM">Tùy chọn ngày</option>
-            </select>
-          </label>
-
-          {period === 'CUSTOM' && (
-            <>
-              <label className="flex flex-col gap-1 text-xs text-[#414942]">
-                <span>Từ ngày</span>
-                <input
-                  type="date"
-                  aria-label="Từ ngày"
-                  value={customFrom}
-                  onChange={(e) => setCustomFrom(e.target.value)}
-                  className="rounded-xl border border-[#E2E8E0] bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-[#414942]">
-                <span>Đến ngày</span>
-                <input
-                  type="date"
-                  aria-label="Đến ngày"
-                  value={customTo}
-                  onChange={(e) => setCustomTo(e.target.value)}
-                  className="rounded-xl border border-[#E2E8E0] bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30"
-                />
-              </label>
-            </>
-          )}
-
-          <Button
-            variant="accent"
-            size="sm"
-            onClick={handleExportExcel}
-            loading={exporting}
-            className="shrink-0"
-          >
-            <span className="material-symbols-outlined text-[18px] mr-1.5">file_download</span>
-            Xuất báo cáo Excel
-          </Button>
+              <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
+              <span>{tab.label}</span>
+            </button>
+          ))}
         </div>
+
+        {activeTab === 'revenue' && (
+          <AdminPeriodFilter filter={filter}>
+            <Button
+              onClick={() => setExportModalOpen(true)}
+              className="bg-[#00685F] hover:bg-[#005049] text-white text-xs shrink-0 rounded-xl px-4 py-2 shadow-xs"
+            >
+              <span className="material-symbols-outlined text-[18px] mr-1.5">file_download</span>
+              Xuất báo cáo Excel
+            </Button>
+          </AdminPeriodFilter>
+        )}
       </div>
 
-      {dateError && (
-        <div
-          role="alert"
-          className="px-4 py-2.5 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-xs font-semibold text-[#B91C1C]"
-        >
-          {dateError}
-        </div>
-      )}
+      <AdminExportExcelModal isOpen={exportModalOpen} onClose={() => setExportModalOpen(false)} />
 
-      <p className="text-xs text-[#717971]">
-        Doanh thu, số đơn, điểm đánh giá và cơ cấu nguồn thu được lọc theo khoảng thời gian đang chọn (giờ Việt Nam);
-        {' '}tồn kho, số dư ví, quỹ nền tảng và việc quá hạn luôn là số liệu hiện tại.
-      </p>
-
-      {/* Tab Hoạt động & Tăng trưởng */}
-      {activeTab === 'activities' && (
-        <AdminOverviewView onNavigateToAudit={() => navigate('/admin/audit-logs')} />
-      )}
-
-      {/* Tab Báo cáo doanh thu chi tiết theo kỳ */}
-      {activeTab === 'revenue_report' && (
-        <AdminRevenueReportView
-          from={activeRange.apiFrom}
-          to={activeRange.apiTo}
-          dashboardData={dashboardData}
-        />
-      )}
-
-      {/* Tab Quỹ & Doanh thu Chính */}
-      {activeTab === 'fund' && (
+      {/* Tab Doanh thu */}
+      {activeTab === 'revenue' && (
         <div className="space-y-6">
-          {/* 4 Thẻ Quỹ & Dòng tiền */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {fundMetrics.map((m, idx) => (
+          {dateError && (
+            <div
+              role="alert"
+              className="px-4 py-2.5 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-xs font-semibold text-[#B91C1C]"
+            >
+              {dateError}
+            </div>
+          )}
+
+          {/* 2 thẻ: Doanh thu nền tảng & Tiền đang giữ hộ */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {revenueMetrics.map((m, idx) => (
               <div
-                key={idx}
-                className="bg-white p-5 rounded-2xl border border-[#E2E8E0] shadow-xs flex flex-col justify-between hover:border-[#006B2C]/40 transition-all duration-200"
+                key={m.label}
+                className="chart-fade-up bg-white p-5 rounded-2xl border border-[#E2E8E0] shadow-xs flex flex-col justify-between hover:border-[#006B2C]/40 transition-all duration-200"
+                style={{ '--i': idx }}
               >
                 <div>
                   <div className="flex items-center justify-between mb-3">
@@ -335,111 +205,45 @@ export default function AdminDashboardPage() {
                   </div>
                   <p className="text-xs font-medium text-[#717971]">{m.label}</p>
                   <p className="text-2xl font-black font-heading text-[#191C19] mt-1 tracking-tight">
-                    {loading ? '...' : typeof m.value === 'number' ? formatCurrencyVND(m.value) : m.value}
+                    {loading ? '...' : formatCurrencyVND(m.value)}
                   </p>
+                  {m.comparison && !loading && (
+                    <div className="mt-1.5">
+                      <ComparisonBadge
+                        current={m.value}
+                        previous={m.comparison.previous}
+                        loading={m.comparison.loading}
+                        label={m.comparison.label}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <p className="text-[11px] text-[#717971] mt-3">{m.description}</p>
-                {m.extraInfo && (
-                  <div className="mt-3 pt-2.5 border-t border-[#F0F5EE] flex items-center gap-1.5 text-xs font-bold text-[#006B2C]">
-                    <span className="material-symbols-outlined text-[16px]">trending_up</span>
-                    <span>{m.extraInfo}</span>
-                  </div>
-                )}
               </div>
             ))}
           </div>
 
-          {/* 2 Khối Trung tâm: Cơ cấu Doanh thu & Thống kê Tồn kho theo kỳ */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <AdminRevenueBreakdownCard
-              dashboardData={dashboardData}
-              onViewDetail={() => setActiveTab('revenue_report')}
-            />
+          {/* Biểu đồ doanh thu theo thời gian (có bộ lọc riêng, không phụ thuộc bộ lọc ở đầu trang) */}
+          <AdminRevenueTrendChart />
 
-            {/* Thống kê sản phẩm đang tồn kho trong mỗi kỳ (5 cột) */}
-            <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-[#E2E8E0] shadow-xs flex flex-col justify-between">
-              <div className="border-b border-[#E2E8E0] pb-3 mb-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-bold text-[#191C19] font-heading">
-                    Tồn Kho Trong Kho Hàng
-                  </h3>
-                  <Badge variant="outline">Tổng: {totalStock} món</Badge>
-                </div>
-                <p className="text-xs text-[#717971] mt-0.5">
-                  Số lượng sản phẩm thực tế đang lưu tại hệ thống kho theo kỳ hiện tại
-                </p>
-              </div>
-
-              {totalStock === 0 ? (
-                <div className="p-8 my-auto rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center flex flex-col items-center justify-center">
-                  <div className="w-12 h-12 rounded-xl bg-[#E0F2F1] text-[#00685F] flex items-center justify-center mb-2">
-                    <span className="material-symbols-outlined text-2xl">inventory_2</span>
-                  </div>
-                  <h4 className="text-xs font-bold text-[#191C19]">
-                    Kho hàng hiện chưa có sản phẩm tồn
-                  </h4>
-                  <p className="text-[11px] text-[#717971] mt-0.5">
-                    Số liệu sẽ cập nhật khi có sản phẩm được nhập kho.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="p-3.5 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#191C19]">Phân bổ tồn kho theo kỳ</span>
-                      <span className="text-xs font-extrabold text-[#006B2C]">{totalStock} món</span>
-                    </div>
-
-                    <div className="space-y-2">
-                      {termStocks.map((t) => {
-                        const pct = totalStock > 0 ? Math.round((t.count / totalStock) * 100) : 0;
-                        return (
-                          <div key={t.label} className="space-y-1">
-                            <div className="flex items-center justify-between text-[11px]">
-                              <span className="font-semibold text-[#414942]">
-                                {t.label}: {t.count} món
-                              </span>
-                              <span className="text-[#717971]">{pct}%</span>
-                            </div>
-                            <div className="w-full h-1.5 bg-[#E2E8E0] rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${t.color}`}
-                                style={{ width: `${Math.min(100, pct)}%` }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] flex items-center justify-between text-xs">
-                    <span className="text-[#414942]">Đánh giá dịch vụ kho:</span>
-                    <span className="font-bold text-[#006B2C]">
-                      {dashboardData.avgServiceRating ? `${dashboardData.avgServiceRating} ★` : 'Chưa có đánh giá'}
-                    </span>
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] flex items-center justify-between text-xs">
-                    <span className="text-[#414942]">Tác vụ quá hạn cần xử lý:</span>
-                    <span className={`font-bold ${dashboardData.overdueTaskCount > 0 ? 'text-[#DC2626]' : 'text-[#006B2C]'}`}>
-                      {dashboardData.overdueTaskCount || 0} việc
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-4 pt-3 border-t border-[#E2E8E0] text-[11px] text-[#717971] flex items-center justify-between">
-                <span>Hết 90 ngày: Gỡ khỏi sàn &amp; gửi thông báo 30 ngày</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Nhật ký ghi sổ kép & đối soát quỹ nền tảng */}
-          <AdminFundLedgerSection from={activeRange.apiFrom} to={activeRange.apiTo} />
+          {/* Danh sách món đã bán theo kỳ */}
+          <AdminRevenueReportView
+            from={activeRange.apiFrom}
+            to={activeRange.apiTo}
+            dashboardData={dashboardData}
+            showSummary={false}
+          />
         </div>
       )}
+
+      {/* Tab Người dùng */}
+      {activeTab === 'users' && (
+        <AdminOverviewView onNavigateToAudit={() => navigate('/admin/audit-logs')} />
+      )}
+
+      {/* Tab Kho */}
+      {activeTab === 'warehouse' && <AdminWarehouseOverview />}
     </div>
   );
 }

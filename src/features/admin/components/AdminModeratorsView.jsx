@@ -357,15 +357,15 @@ export default function AdminModeratorsView({ onLogAction }) {
         <div className="bg-white rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#F6F9F4] text-[#717971] uppercase tracking-wider font-semibold border-b border-[#DDE5D9]">
+              <thead className="bg-[#F6F9F4] text-[#717971] tracking-wider font-semibold border-b border-[#DDE5D9]">
                 <tr>
-                  <th className="py-3 px-6">Họ tên & Mã nhân viên</th>
-                  <th className="py-3 px-6">Email</th>
-                  <th className="py-3 px-6">Số điện thoại</th>
-                  <th className="py-3 px-6">Kho phụ trách</th>
-                  <th className="py-3 px-6">Ngày tạo</th>
-                  <th className="py-3 px-6">Trạng thái</th>
-                  <th className="py-3 px-4 text-center">Thao tác</th>
+                  <th className="py-3 px-6 whitespace-nowrap">Họ tên & Mã nhân viên</th>
+                  <th className="py-3 px-6 whitespace-nowrap">Email</th>
+                  <th className="py-3 px-6 whitespace-nowrap">Số điện thoại</th>
+                  <th className="py-3 px-6 whitespace-nowrap">Kho phụ trách</th>
+                  <th className="py-3 px-6 whitespace-nowrap">Ngày tạo</th>
+                  <th className="py-3 px-6 whitespace-nowrap">Trạng thái</th>
+                  <th className="py-3 px-4 text-center whitespace-nowrap">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#DDE5D9]">

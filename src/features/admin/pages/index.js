@@ -1,4 +1,5 @@
 export { default as AdminDashboardPage } from './AdminDashboardPage.jsx';
+export { default as AdminFundLedgerPage } from './AdminFundLedgerPage.jsx';
 export { default as AdminAccountsPage } from './AdminAccountsPage.jsx';
 export { default as AdminModeratorsPage } from './AdminModeratorsPage.jsx';
 export { default as AdminBanProposalsPage } from './AdminBanProposalsPage.jsx';

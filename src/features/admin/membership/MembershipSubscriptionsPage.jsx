@@ -225,15 +225,15 @@ export default function MembershipSubscriptionsPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-[#F6F9F4] border-b border-[#E2E8E0] text-xs font-semibold text-[#5B6776]">
-                <th className="py-3 px-4">Thành viên</th>
-                <th className="py-3 px-4">Hạng</th>
-                <th className="py-3 px-4">Trạng thái</th>
-                <th className="py-3 px-4">Chu kỳ</th>
-                <th className="py-3 px-4 text-right">Giá đã trả</th>
-                <th className="py-3 px-4">Bắt đầu</th>
-                <th className="py-3 px-4">Hết hạn</th>
-                <th className="py-3 px-4">Còn lại</th>
-                <th className="py-3 px-4">Nguồn</th>
+                <th className="py-3 px-4 whitespace-nowrap">Thành viên</th>
+                <th className="py-3 px-4 whitespace-nowrap">Hạng</th>
+                <th className="py-3 px-4 whitespace-nowrap">Trạng thái</th>
+                <th className="py-3 px-4 whitespace-nowrap">Chu kỳ</th>
+                <th className="py-3 px-4 text-right whitespace-nowrap">Giá đã trả</th>
+                <th className="py-3 px-4 whitespace-nowrap">Bắt đầu</th>
+                <th className="py-3 px-4 whitespace-nowrap">Hết hạn</th>
+                <th className="py-3 px-4 whitespace-nowrap">Còn lại</th>
+                <th className="py-3 px-4 whitespace-nowrap">Nguồn</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E2E8E0] text-sm text-[#1F2A37]">
