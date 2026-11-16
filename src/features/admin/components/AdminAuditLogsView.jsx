@@ -228,6 +228,20 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
     return matchSearch && matchTargetType && matchAction;
   });
 
+  // Phân trang thực tế
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(filteredLogs.length / pageSize));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedTargetType, selectedActionType, fromDate, toDate]);
+
+  const paginatedLogs = filteredLogs.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
   const handleResetFilter = () => {
     setSearchTerm('');
     setSelectedTargetType('ALL');
@@ -343,19 +357,19 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
             <div className="flex items-center gap-1 text-[11px]">
               <button
                 onClick={() => setQuickRange(0)}
-                className="px-2 py-1 rounded-lg border border-[#E2E8E0] hover:bg-[#F8FAF8] text-[#414942]"
+                className="px-2.5 py-1 rounded-xl border border-[#E2E8E0] hover:bg-[#F8FAF8] text-[#414942] transition-colors"
               >
                 Hôm nay
               </button>
               <button
                 onClick={() => setQuickRange(7)}
-                className="px-2 py-1 rounded-lg border border-[#E2E8E0] hover:bg-[#F8FAF8] text-[#414942]"
+                className="px-2.5 py-1 rounded-xl border border-[#E2E8E0] hover:bg-[#F8FAF8] text-[#414942] transition-colors"
               >
                 7 ngày
               </button>
               <button
                 onClick={() => setQuickRange(30)}
-                className="px-2 py-1 rounded-lg border border-[#E2E8E0] hover:bg-[#F8FAF8] text-[#414942]"
+                className="px-2.5 py-1 rounded-xl border border-[#E2E8E0] hover:bg-[#F8FAF8] text-[#414942] transition-colors"
               >
                 30 ngày
               </button>
@@ -474,7 +488,7 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8E0]">
-                {filteredLogs.map((log) => {
+                {paginatedLogs.map((log) => {
                   const isExpanded = expandedLogId === log.id;
                   return (
                     <React.Fragment key={log.id}>
@@ -566,15 +580,45 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
             </table>
           </div>
 
-          {/* Pagination bar */}
+          {/* Pagination bar với bộ điều khiển phân trang thực tế */}
           <div className="p-4 border-t border-[#E2E8E0] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#717971]">
-            <span>Hiển thị {filteredLogs.length} bản ghi nhật ký</span>
+            <span>
+              Hiển thị {filteredLogs.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredLogs.length)} trong tổng số {filteredLogs.length} bản ghi nhật ký
+            </span>
             <div className="flex items-center gap-1 font-medium">
-              <button className="px-2.5 py-1 rounded-lg border border-[#E2E8E0] hover:bg-[#F8FAF8]">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+                className={`px-2.5 py-1 rounded-xl border border-[#E2E8E0] transition-colors ${
+                  currentPage <= 1
+                    ? 'opacity-40 cursor-not-allowed bg-gray-50'
+                    : 'hover:bg-[#F8FAF8]'
+                }`}
+              >
                 Trước
               </button>
-              <button className="px-2.5 py-1 rounded-lg bg-[#006B2C] text-white font-bold">1</button>
-              <button className="px-2.5 py-1 rounded-lg border border-[#E2E8E0] hover:bg-[#F8FAF8]">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setCurrentPage(p)}
+                  className={`px-2.5 py-1 rounded-xl text-xs transition-colors ${
+                    currentPage === p
+                      ? 'bg-[#006B2C] text-white font-bold'
+                      : 'border border-[#E2E8E0] hover:bg-[#F8FAF8] text-[#414942]'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className={`px-2.5 py-1 rounded-xl border border-[#E2E8E0] transition-colors ${
+                  currentPage >= totalPages
+                    ? 'opacity-40 cursor-not-allowed bg-gray-50'
+                    : 'hover:bg-[#F8FAF8]'
+                }`}
+              >
                 Sau
               </button>
             </div>

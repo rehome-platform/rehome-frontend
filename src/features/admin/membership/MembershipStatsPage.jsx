@@ -171,7 +171,7 @@ export default function MembershipStatsPage() {
                 type="date"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
-                className="px-3 py-1.5 text-sm rounded-lg border border-[#E2E8E0] text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+                className="px-3 py-1.5 text-sm rounded-xl border border-[#E2E8E0] text-[#191C19] focus:outline-none focus:border-[#006B2C]"
               />
             </div>
             <div>
@@ -183,7 +183,7 @@ export default function MembershipStatsPage() {
                 type="date"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
-                className="px-3 py-1.5 text-sm rounded-lg border border-[#E2E8E0] text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+                className="px-3 py-1.5 text-sm rounded-xl border border-[#E2E8E0] text-[#191C19] focus:outline-none focus:border-[#006B2C]"
               />
             </div>
             <Button
@@ -386,7 +386,7 @@ export default function MembershipStatsPage() {
                 placeholder="Nhập số tiền (VNĐ)..."
                 value={aiCostInput}
                 onChange={handleAiCostChange}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-[#E2E8E0] text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+                className="w-full px-3 py-2 text-sm rounded-xl border border-[#E2E8E0] text-[#191C19] focus:outline-none focus:border-[#006B2C]"
               />
               {aiCostInput !== '' && (
                 <Button

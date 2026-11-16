@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import Logo from '../../../components/common/Logo.jsx';
+import { Button } from '../../../components/common/index.js';
 import { authService } from '../services/auth.service.js';
 import { validateEmail, validatePassword, validateConfirmPassword } from '../../../utils/validators.js';
 
@@ -120,9 +121,9 @@ export default function PasswordRecovery({ reset = false }) {
                   value={email} onChange={(event) => { setEmail(event.target.value); setError(''); }} className={inputClass} />
               </>
             )}
-            <button type="submit" disabled={loading} className="w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-[#006B2C] hover:bg-[#005523] disabled:opacity-50">
+            <Button type="submit" variant="primary" size="lg" loading={loading} disabled={loading} className="w-full">
               {loading ? 'Đang xử lý...' : reset ? 'Đặt lại mật khẩu' : 'Gửi liên kết đặt lại mật khẩu'}
-            </button>
+            </Button>
           </form>
         )}
         {reset && !success && <Link to="/forgot-password" className="block mt-6 text-sm font-semibold text-[#006B2C] hover:underline">Yêu cầu liên kết mới</Link>}

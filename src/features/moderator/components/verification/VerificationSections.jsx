@@ -1,6 +1,171 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import { Button, Badge, Modal } from "../../../../components/common/index.js";
 import { useToast } from "../../../../context/ToastContext.jsx";
+import baseApi from "../../../../services/baseApi.js";
+import { API_BASE_URL } from "../../../../configs/api.config.js";
+
+gsap.registerPlugin(useGSAP);
+
+function resolveLegalChangeDocUrl(change) {
+  if (!change) return null;
+  const direct =
+    change.documentUrl ||
+    change.fileUrl ||
+    change.legalFileUrl ||
+    change.attachmentUrl ||
+    change.documents?.[0]?.url ||
+    change.documents?.[0]?.fileUrl;
+  if (direct) return direct;
+
+  const orgId = change.organizationId || change.orgId;
+  const fileKey = change.fileName || change.legalFileName || change.documentId || change.fileId || change.requestId || change.id;
+  if (orgId && fileKey) {
+    return `/api/organizations/${encodeURIComponent(orgId)}/legal-files/${encodeURIComponent(fileKey)}`;
+  }
+  return null;
+}
+
+function isProtectedLegalUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  if (url.startsWith('blob:') || url.startsWith('data:')) return false;
+  if (url.startsWith('/') || url.startsWith('api/')) return true;
+  if (url.includes('/legal-files/') || url.includes('/api/organizations/')) return true;
+  if (API_BASE_URL && url.startsWith(API_BASE_URL)) return true;
+  return false;
+}
+
+function LegalDocumentPreviewModal({ doc, onClose }) {
+  const containerRef = useRef(null);
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [isPdf, setIsPdf] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useGSAP(
+    () => {
+      if (!doc || !containerRef.current) return;
+      if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+      const mm = gsap.matchMedia();
+      mm.add('(prefers-reduced-motion: no-preference)', () => {
+        gsap.fromTo(
+          containerRef.current,
+          { autoAlpha: 0, y: 10 },
+          { autoAlpha: 1, y: 0, duration: 0.25, ease: 'power2.out', clearProps: 'transform,opacity,visibility' }
+        );
+      });
+      return () => mm.revert();
+    },
+    { dependencies: [doc], scope: containerRef, revertOnUpdate: true }
+  );
+
+  useEffect(() => {
+    if (!doc?.url) {
+      setBlobUrl(null);
+      setIsPdf(false);
+      setError(false);
+      setLoading(false);
+      return;
+    }
+
+    let active = true;
+    let createdObjectUrl = null;
+    const lowerUrl = String(doc.url).toLowerCase();
+    const likelyPdf = lowerUrl.endsWith('.pdf') || lowerUrl.includes('.pdf');
+
+    if (!isProtectedLegalUrl(doc.url)) {
+      setBlobUrl(doc.url);
+      setIsPdf(likelyPdf);
+      setError(false);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(false);
+
+    baseApi
+      .get(doc.url, { responseType: 'blob' })
+      .then(async (res) => {
+        if (!active) return;
+        const blob = res.data;
+        const contentType = (res.headers?.['content-type'] || blob?.type || '').toLowerCase();
+        if (contentType.includes('application/json')) {
+          setError(true);
+          return;
+        }
+        setIsPdf(contentType.includes('application/pdf') || likelyPdf);
+        createdObjectUrl = URL.createObjectURL(blob);
+        setBlobUrl(createdObjectUrl);
+      })
+      .catch(() => {
+        if (active) setError(true);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+      if (createdObjectUrl) {
+        URL.revokeObjectURL(createdObjectUrl);
+      }
+    };
+  }, [doc?.url, reloadKey]);
+
+  if (!doc) return null;
+
+  return (
+    <Modal isOpen={!!doc} onClose={onClose} title={doc.title || 'Tài liệu pháp lý đính kèm'} size="xl">
+      <div ref={containerRef} className="space-y-4 text-xs font-sans">
+        {loading ? (
+          <div className="w-full h-72 flex flex-col items-center justify-center rounded-xl border border-neutral bg-background text-textSecondary gap-3">
+            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <span className="font-medium">Đang tải tài liệu bảo mật...</span>
+          </div>
+        ) : error || !blobUrl ? (
+          <div className="w-full min-h-56 flex flex-col items-center justify-center rounded-xl border border-neutral bg-background text-textSecondary p-6 text-center gap-3">
+            <span className="font-bold text-sm text-text">Không thể hiển thị tài liệu</span>
+            <span className="text-[12px] text-textSecondary max-w-sm">
+              Tệp không tồn tại, phiên làm việc hết hạn hoặc định dạng không được hỗ trợ.
+            </span>
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="px-4 py-1.5 text-xs font-semibold rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors"
+            >
+              Thử tải lại
+            </button>
+          </div>
+        ) : isPdf ? (
+          <div className="w-full h-[520px] rounded-xl overflow-hidden border border-neutral bg-neutral-light">
+            <iframe
+              src={`${blobUrl}#toolbar=1&navpanes=0`}
+              title={doc.title || 'Tài liệu PDF'}
+              className="w-full h-full border-0"
+            />
+          </div>
+        ) : (
+          <div className="flex items-center justify-center rounded-xl border border-neutral bg-background overflow-hidden min-h-[280px] max-h-[520px]">
+            <img
+              src={blobUrl}
+              alt={doc.title || 'Tài liệu pháp lý'}
+              className="w-full max-h-[480px] object-contain rounded-xl"
+              onError={() => setError(true)}
+            />
+          </div>
+        )}
+        <div className="flex justify-end pt-2 border-t border-neutral">
+          <Button variant="outline" onClick={onClose} className="rounded-xl">
+            Đóng
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
 
 export function VerificationRejectDialog({ isRejectModalOpen, setIsRejectModalOpen, rejectReason, setRejectReason, handleConfirmReject }) {
   return (
@@ -373,6 +538,7 @@ export function VerificationDocuments({ selectedOrg, setViewingDoc }) {
 export function VerificationLegalChanges({ legalChanges = [], handleApproveLegalChange, handleRejectLegalChange }) {
   const toast = useToast();
   const [selectedChangeModal, setSelectedChangeModal] = React.useState(null);
+  const [previewDoc, setPreviewDoc] = React.useState(null);
 
   return (
     <div className="bg-surface border border-neutral rounded-2xl overflow-hidden shadow-sm">
@@ -531,7 +697,17 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
                 </div>
                 <button
                   type="button"
-                  onClick={() => toast.info('Mở xem tài liệu pháp lý đính kèm')}
+                  onClick={() => {
+                    const url = resolveLegalChangeDocUrl(selectedChangeModal);
+                    if (!url) {
+                      toast.warn('Chưa có đường dẫn tài liệu pháp lý đính kèm.');
+                      return;
+                    }
+                    setPreviewDoc({
+                      title: `Tài liệu pháp lý · ${selectedChangeModal.orgName || selectedChangeModal.name || 'Tổ chức'}`,
+                      url,
+                    });
+                  }}
                   className="px-2.5 py-1 text-xs border border-primary text-primary font-bold rounded-xl hover:bg-primary hover:text-white transition-colors"
                 >
                   Xem tài liệu
@@ -577,6 +753,8 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
           </div>
         </Modal>
       )}
+
+      <LegalDocumentPreviewModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />
     </div>
   );
 }

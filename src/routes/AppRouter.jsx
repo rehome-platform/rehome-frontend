@@ -141,6 +141,14 @@ export default function AppRouter() {
         }
       />
       <Route
+        path="/moderator/consignments/queue"
+        element={
+          <PrivateRoute roles={['moderator', 'staff']}>
+            <ConsignmentQueuePage />
+          </PrivateRoute>
+        }
+      />
+      <Route
         path="/moderator/consignments/print-queue"
         element={
           <PrivateRoute roles={['moderator', 'staff']}>

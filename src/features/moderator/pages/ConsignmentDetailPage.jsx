@@ -14,15 +14,39 @@ import {
   ConsignmentPhotoViewer,
   ConsignmentProgress,
 } from '../components/consignment/ConsignmentDetailSections.jsx';
-import React from "react";
+import React, { useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import Button from '../../../components/common/Button.jsx';
+import Modal from '../../../components/common/Modal.jsx';
+
+gsap.registerPlugin(useGSAP);
 
 import { Page, ResourceState } from "../components/WarehouseUi.jsx";
 import ReceiptPanel from '../components/ReceiptPanel.jsx';
 
 export default function ConsignmentDetailPage() {
   const model = useConsignmentDetail();
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const returnModalRef = useRef(null);
+
+  useGSAP(
+    () => {
+      if (!returnModalOpen || !returnModalRef.current) return;
+      if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+      const mm = gsap.matchMedia();
+      mm.add('(prefers-reduced-motion: no-preference)', () => {
+        gsap.fromTo(
+          returnModalRef.current,
+          { autoAlpha: 0, y: 8 },
+          { autoAlpha: 1, y: 0, duration: 0.2, ease: 'power2.out', clearProps: 'transform,opacity,visibility' }
+        );
+      });
+      return () => mm.revert();
+    },
+    { dependencies: [returnModalOpen], scope: returnModalRef, revertOnUpdate: true }
+  );
 
   React.useEffect(() => {
     if (model.form) {
@@ -161,7 +185,10 @@ export default function ConsignmentDetailPage() {
 
               {/* Nút Bắt đầu kiểm định (KD-03) */}
               {model.allowed('START_INSPECTION') && model.identified && (
-                <ConsignmentStartPanel {...model.sections.ConsignmentStartPanel} />
+                <ConsignmentStartPanel
+                  {...model.sections.ConsignmentStartPanel}
+                  onOpenReturn={() => setReturnModalOpen(true)}
+                />
               )}
 
               {/* ================= THAO TÁC 3: CHECKLIST KIỂM ĐỊNH & CHỐT GIÁ (KD-04, KD-05) ================= */}
@@ -178,6 +205,18 @@ export default function ConsignmentDetailPage() {
 
         </div>
       )}
+      <Modal
+        isOpen={returnModalOpen}
+        onClose={() => setReturnModalOpen(false)}
+        title="Trả đồ tại chỗ"
+      >
+        <div ref={returnModalRef}>
+          <ConsignmentReturnPanel
+            {...model.sections.ConsignmentReturnPanel}
+            onClose={() => setReturnModalOpen(false)}
+          />
+        </div>
+      </Modal>
     </Page>
   );
 }

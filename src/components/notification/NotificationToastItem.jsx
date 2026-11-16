@@ -154,7 +154,7 @@ export default function NotificationToastItem({ toast, onDismiss, userRole }) {
           type="button"
           aria-label="Đóng"
           onClick={handleCloseClick}
-          className="text-[#586776] hover:text-[#1F2A37] hover:bg-[#F0F5EE] p-1 rounded-lg transition-colors shrink-0 -mr-1 -mt-1"
+          className="text-[#586776] hover:text-[#1F2A37] hover:bg-[#F0F5EE] p-1 rounded-xl transition-colors shrink-0 -mr-1 -mt-1"
         >
           <span className="material-symbols-outlined text-lg leading-none">close</span>
         </button>

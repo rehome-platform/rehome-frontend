@@ -5,11 +5,11 @@ import { usePhase2, useResource } from "./warehouseHooks.jsx";
 import { packingService } from "../services/packingApi.js";
 import { canPack, canShip } from "../models/packingModel.js";
 import { operationReady } from "../config/packingContract.js";
-import { packingMockApi } from "../services/packingMockApi.js";
 
 export function usePackingDetail({ orderId, onChanged }) {
   const { scope, signal } = usePhase2();
   const alive = useRef(true);
+
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const readEpoch = useRef(0);
   const resource = useResource(async options => {
@@ -31,6 +31,7 @@ export function usePackingDetail({ orderId, onChanged }) {
   const [wrongItemModalOpen, setWrongItemModalOpen] = useState(false);
   const [wrongItem, setWrongItem] = useState(null);
   const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [handoverLoading, setHandoverLoading] = useState(false);
 
   const lock = useRef(false);
   const input = useRef(null);
@@ -67,9 +68,16 @@ export function usePackingDetail({ orderId, onChanged }) {
             const wrongDetail = result?.wrongItem
               ? {
                   ...result.wrongItem,
-                  brand: result.wrongItem.brand || result.wrongItem.brandName,
+                  productId: result.wrongItem.productId || result.wrongItem.sku || code,
+                  brand: result.wrongItem.brand || result.wrongItem.brandName || '',
                 }
-              : packingMockApi.findWrongItemInfo(code);
+              : {
+                  productId: code,
+                  name: result?.productName || 'Sản phẩm không thuộc đơn',
+                  brand: result?.brandName || result?.brand || '',
+                  size: result?.size || '',
+                  belongsToOrderNo: result?.belongsToOrderNo || '',
+                };
             setWrongItem(wrongDetail);
             setWrongItemModalOpen(true);
           }
@@ -109,6 +117,28 @@ export function usePackingDetail({ orderId, onChanged }) {
     }
   };
 
+  const handoverGhn = async () => {
+    if (handoverLoading || lock.current || !order) return false;
+    if (['SHIPPING', 'DELIVERED', 'COMPLETED'].includes(order.status)) return false;
+    lock.current = true;
+    setHandoverLoading(true);
+    try {
+      let ok = false;
+      await resource.mutate(options => packingService.handoverOrder(orderId, options), {
+        onSuccess: () => {
+          ok = true;
+          changed();
+        },
+      });
+      return ok;
+    } finally {
+      lock.current = false;
+      if (alive.current && !signal.aborted) {
+        setHandoverLoading(false);
+      }
+    }
+  };
+
   useEffect(() => {
     if (!lock.current && order?.readEpoch === readEpoch.current &&
         (order.ghnTrackingCode || order.shipmentOutcome === 'NOT_CREATED')) setUncertain(false);
@@ -138,6 +168,8 @@ export function usePackingDetail({ orderId, onChanged }) {
     setCamera,
     message,
     create,
+    handoverGhn,
+    handoverLoading,
 
     scanLogs,
 

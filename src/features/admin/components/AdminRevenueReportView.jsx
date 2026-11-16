@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Button } from '../../../components/common/index.js';
 import { formatCurrencyVND, formatDateTime } from '../../../utils/formatters.js';
 import adminApi from '../services/adminApi.js';
 import { validateDateRange } from '../utils/adminDateUtils.js';
@@ -187,13 +188,14 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {}, s
         ) : error ? (
           <div className="p-6 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-center space-y-2">
             <p className="text-xs font-semibold text-[#B91C1C]">{error}</p>
-            <button
+            <Button
               type="button"
+              variant="primary"
+              size="sm"
               onClick={() => loadItems(currentPage, term)}
-              className="px-3 py-1.5 rounded-lg bg-[#006B2C] text-white text-xs font-semibold"
             >
               Thử lại
-            </button>
+            </Button>
           </div>
         ) : itemsPage.content.length === 0 ? (
           <div className="p-10 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center space-y-2">

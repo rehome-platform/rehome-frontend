@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Badge, Button, Modal, Table } from '../../../components/common/index.js';
+import { useToast } from '../../../context/ToastContext.jsx';
 import { membershipAdminApi } from '../services/membershipAdminApi.js';
 import { VOUCHER_TYPE_LABELS } from './membershipConstants.js';
 import VoucherTemplateModal from './VoucherTemplateModal.jsx';
@@ -25,6 +26,7 @@ function formatDiscountDisplay(row) {
 }
 
 export default function VoucherTemplatesPage() {
+  const toast = useToast();
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -82,14 +84,16 @@ export default function VoucherTemplatesPage() {
     setDeactivateError('');
     try {
       await membershipAdminApi.deactivateVoucherTemplate(deactivateTarget.id);
+      toast.success(`Đã ngừng phát mẫu voucher "${deactivateTarget.name}".`);
       setDeactivateTarget(null);
       await loadTemplates();
     } catch (err) {
-      setDeactivateError(
+      const msg =
         err?.response?.data?.message ||
-          err?.message ||
-          'Không thể ngừng phát mẫu voucher.'
-      );
+        err?.message ||
+        'Không thể ngừng phát mẫu voucher.';
+      setDeactivateError(msg);
+      toast.error(`Ngừng phát thất bại: ${msg}`);
     } finally {
       deactivatingRef.current = false;
       setDeactivating(false);

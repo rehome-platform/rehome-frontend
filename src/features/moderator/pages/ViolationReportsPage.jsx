@@ -306,7 +306,7 @@ export default function ViolationReportsPage() {
                     key={opt.value}
                     type="button"
                     onClick={() => setStatusFilter(opt.value)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
                       statusFilter === opt.value
                         ? 'bg-primary text-white shadow-xs'
                         : 'text-textSecondary hover:text-text hover:bg-surface'

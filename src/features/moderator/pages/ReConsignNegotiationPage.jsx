@@ -7,7 +7,7 @@ import { inventoryService } from '../services/inventoryApi.js';
 import { endTermService } from '../services/endTermApi.js';
 import { pricingForProduct } from '../services/endTermPricingApi.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
-import { resolveInventoryTermAndRates } from '../models/warehouseModel.js';
+import { resolveInventoryTermAndRates, validMoney } from '../models/warehouseModel.js';
 import { readProposals, rememberProposal, forgetProposal, proposalForProduct } from '../services/reconsignProposalStore.js';
 import { Page, Card, ResourceState, Status, money } from '../components/WarehouseUi.jsx';
 
@@ -53,14 +53,17 @@ function Negotiation({ sku }) {
     if (proposal?.receiptId) setReceiptId(proposal.receiptId);
   }, [product, request, confirmed, proposal, submitted]);
 
+  const isPriceValid = validMoney(proposedPrice);
+  const priceError = proposedPrice !== '' && !isPriceValid ? 'Giá tối thiểu phải từ 1.000đ' : null;
+
   const send = async event => {
     event.preventDefault();
     if (!eligible || resource.busy) return;
-    const price = Number(proposedPrice);
-    if (!Number.isSafeInteger(price) || price <= 0) {
-      setFeedback('Vui lòng nhập giá đề xuất hợp lệ.');
+    if (!validMoney(proposedPrice)) {
+      setFeedback('Giá tối thiểu phải từ 1.000đ');
       return;
     }
+    const price = Number(proposedPrice);
     await resource.mutate(async options => {
       const { floorPricePercent } = resolveInventoryTermAndRates(product);
       const result = await endTermService.proposeReConsignPrice(request.decisionId, {
@@ -120,6 +123,11 @@ function Negotiation({ sku }) {
                 disabled={!eligible || resource.busy}
                 onChange={event => { dirty.current = true; setProposedPrice(event.target.value.replace(/\D/g, '')); }}
                 className="w-full text-2xl font-mono p-3 rounded-xl border border-neutral disabled:bg-background" />
+              {priceError && (
+                <p role="alert" className="mt-1.5 text-xs font-medium text-[#C62828]">
+                  {priceError}
+                </p>
+              )}
             </div>
             <div>
               <label htmlFor="reconsign-moderator-note" className="block font-semibold mb-2">Ghi chú của Moderator gửi Member</label>
@@ -127,7 +135,7 @@ function Negotiation({ sku }) {
                 onChange={event => setModeratorNote(event.target.value)} className="w-full p-3 rounded-xl border border-neutral disabled:bg-background" />
             </div>
             {waiting ? <p className="text-sm text-textSecondary">Đang chờ Member phản hồi qua app. Web tự kiểm tra trạng thái mỗi 30 giây.</p>
-              : <Button type="submit" loading={resource.busy} disabled={!eligible || resource.busy}>Gửi đề xuất giá mới cho Member</Button>}
+              : <Button type="submit" loading={resource.busy} disabled={!eligible || resource.busy || !isPriceValid}>Gửi đề xuất giá mới cho Member</Button>}
           </form>
           {receiptId && <Button variant="outline" onClick={() => setShowReceipt(true)}>Xem biên nhận ký gửi lại</Button>}
         </Card>}

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext.jsx';
+import { useToast } from '../../../context/ToastContext.jsx';
 import AdminAccountsView from '../components/AdminAccountsView.jsx';
 import adminApi from '../services/adminApi.js';
 import useAdminPeriod from '../hooks/useAdminPeriod.js';
@@ -29,6 +31,8 @@ function saveDismissedProposalIds(ids) {
  */
 export default function AdminAccountsPage() {
   const { onLogAction } = useOutletContext() || {};
+  const { user } = useAuth();
+  const toast = useToast();
   const [remoteAccounts, setRemoteAccounts] = useState([]);
   const [banProposals, setBanProposals] = useState([]);
   const [dismissedIds, setDismissedIds] = useState(() => getDismissedProposalIds());
@@ -207,18 +211,26 @@ export default function AdminAccountsPage() {
   const handleBanAccount = async (accountId, reason) => {
     try {
       await adminApi.banAccount(accountId, reason);
+      toast.success('Đã khóa tài khoản thành công.');
       await fetchAccountsAndProposals();
     } catch (err) {
       console.warn('Lỗi khi khóa tài khoản:', err);
+      const msg = err.response?.data?.message || err.message || 'Không thể khóa tài khoản.';
+      toast.error(`Khóa tài khoản thất bại: ${msg}`);
+      throw err;
     }
   };
 
   const handleUnbanAccount = async (accountId) => {
     try {
       await adminApi.unbanAccount(accountId);
+      toast.success('Đã mở khóa tài khoản thành công.');
       await fetchAccountsAndProposals();
     } catch (err) {
       console.warn('Lỗi khi mở khóa tài khoản:', err);
+      const msg = err.response?.data?.message || err.message || 'Không thể mở khóa tài khoản.';
+      toast.error(`Mở khóa thất bại: ${msg}`);
+      throw err;
     }
   };
 
@@ -231,10 +243,11 @@ export default function AdminAccountsPage() {
       const nextDismissed = [...dismissedIds, proposal.id];
       setDismissedIds(nextDismissed);
       saveDismissedProposalIds(nextDismissed);
+      toast.success(`Đã khóa tài khoản "${proposal.targetName}" theo đề xuất.`);
       if (onLogAction) {
         onLogAction({
           time: new Date().toLocaleString('vi-VN'),
-          user: 'Admin',
+          user: user?.fullName || 'Admin',
           role: 'Admin',
           action: `Khóa tài khoản Tổ chức "${proposal.targetName}" theo đề xuất PROPOSE_BAN`,
         });
@@ -242,6 +255,8 @@ export default function AdminAccountsPage() {
       await fetchAccountsAndProposals();
     } catch (err) {
       console.warn('Lỗi khi khóa tài khoản theo đề xuất:', err);
+      const msg = err.response?.data?.message || err.message || 'Không thể khóa tài khoản theo đề xuất.';
+      toast.error(`Khóa tài khoản thất bại: ${msg}`);
     } finally {
       setProcessingProposalId(null);
     }

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Button, Input, Modal } from '../../../components/common/index.js';
+import { useToast } from '../../../context/ToastContext.jsx';
 import { membershipAdminApi } from '../services/membershipAdminApi.js';
 import {
   PAID_TIERS,
@@ -51,6 +52,7 @@ export default function VoucherTemplateModal({
   template = null,
   onSuccess,
 }) {
+  const toast = useToast();
   const isEdit = Boolean(template?.id);
 
   const [name, setName] = useState('');
@@ -232,17 +234,20 @@ export default function VoucherTemplateModal({
     try {
       if (isEdit) {
         await membershipAdminApi.updateVoucherTemplate(template.id, payload);
+        toast.success(`Cập nhật mẫu voucher "${payload.name}" thành công!`);
       } else {
         await membershipAdminApi.createVoucherTemplate(payload);
+        toast.success(`Tạo mới mẫu voucher "${payload.name}" thành công!`);
       }
       await onSuccess?.();
       onClose?.();
     } catch (err) {
-      setSubmitError(
+      const msg =
         err?.response?.data?.message ||
-          err?.message ||
-          'Không thể lưu mẫu voucher. Vui lòng thử lại.'
-      );
+        err?.message ||
+        'Không thể lưu mẫu voucher. Vui lòng thử lại.';
+      setSubmitError(msg);
+      toast.error(`Lưu mẫu voucher thất bại: ${msg}`);
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
@@ -441,7 +446,7 @@ export default function VoucherTemplateModal({
                       aria-label={`Số lượng / tháng cho ${tier}`}
                       value={rule.quantityPerMonth}
                       onChange={(e) => handleTierQtyChange(tier, e.target.value)}
-                      className="w-20 px-2.5 py-1.5 text-sm bg-white border border-[#DDE5D9] rounded-lg focus:outline-none focus:ring-2 focus:border-[#006B2C] disabled:bg-[#F6F9F4] disabled:text-[#5B6776]"
+                      className="w-20 px-2.5 py-1.5 text-sm bg-white border border-[#DDE5D9] rounded-xl focus:outline-none focus:ring-2 focus:border-[#006B2C] disabled:bg-[#F6F9F4] disabled:text-[#5B6776]"
                     />
                   </div>
                 </div>

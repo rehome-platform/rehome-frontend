@@ -150,13 +150,14 @@ export default function AdminFundLedgerSection({ from, to }) {
       ) : ledgerError ? (
         <div className="p-6 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-center space-y-2">
           <p className="text-xs font-semibold text-[#B91C1C]">{ledgerError}</p>
-          <button
+          <Button
             type="button"
+            variant="primary"
+            size="sm"
             onClick={() => loadLedger(currentPage, typeFilter)}
-            className="px-3 py-1.5 rounded-lg bg-[#006B2C] text-white text-xs font-semibold"
           >
             Thử lại
-          </button>
+          </Button>
         </div>
       ) : ledgerPage.content.length === 0 ? (
         <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center flex flex-col items-center justify-center">

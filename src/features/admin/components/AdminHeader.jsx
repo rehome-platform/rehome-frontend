@@ -75,7 +75,7 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
       <div className="flex items-center gap-3 min-w-0">
         <button
           onClick={onOpenMobile}
-          className="lg:hidden p-1.5 rounded-lg text-[#191C19] hover:bg-[#F0F5EE] hover:text-[#006B2C] transition-colors"
+          className="lg:hidden p-1.5 rounded-xl text-[#191C19] hover:bg-[#F0F5EE] hover:text-[#006B2C] transition-colors"
           title="Mở thanh điều hướng"
           aria-label="Mở menu"
         >

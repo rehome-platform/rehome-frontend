@@ -63,6 +63,7 @@ export async function request(operation, { orderId, data, signal, scope } = {}) 
     if (operation === 'shipment') return packingMockApi.createShipment(orderId, data);
     if (operation === 'label') throw new Phase2Error('Phiếu GHN thật chỉ có trong chế độ API.', 501);
     if (operation === 'handover') return packingMockApi.handover(data);
+    if (operation === 'ghnHandover') return { orderId, status: 'SHIPPING' };
   }
 
   const config = operationConfig(operation);
@@ -136,6 +137,7 @@ export const packingService = {
     request('scan', { ...options, orderId, data: { productId: String(productId || '').trim() } }),
   shipment: (orderId, options) => request('shipment', { ...options, orderId, data: options?.data }),
   label: (orderId, options) => request('label', { ...options, orderId }),
+  handoverOrder: (orderId, options) => request('ghnHandover', { ...options, orderId }),
   handover: (task, identity, options = {}) => {
     const data = handoverPayload(task, identity, options.scope || {});
     if (!data) throw new Phase2Error('Yêu cầu hoặc xác nhận danh tính không còn hợp lệ.', 409);
