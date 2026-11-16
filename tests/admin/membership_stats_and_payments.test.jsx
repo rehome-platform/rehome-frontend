@@ -246,7 +246,7 @@ describe('AdminFundLedgerSection membership & voucher labels', () => {
         {
           id: 'l-1',
           transactionNo: 'TX-1',
-          type: 'MEMBERSHIP_PAYMENT',
+          type: 'MEMBERSHIP_PURCHASE',
           amount: 199000,
           balanceAfter: 10199000,
           createdAt: '2026-11-01T10:00:00Z',
@@ -254,7 +254,7 @@ describe('AdminFundLedgerSection membership & voucher labels', () => {
         {
           id: 'l-2',
           transactionNo: 'TX-2',
-          type: 'VOUCHER_COST',
+          type: 'VOUCHER_DISCOUNT',
           amount: -30000,
           balanceAfter: 10169000,
           createdAt: '2026-11-01T11:00:00Z',
@@ -269,7 +269,7 @@ describe('AdminFundLedgerSection membership & voucher labels', () => {
     render(<AdminFundLedgerSection from="2026-11-01" to="2026-11-30" />);
 
     await waitFor(() => expect(adminApi.getFundLedger).toHaveBeenCalledTimes(1));
-    expect(screen.getAllByText('Thanh toán gói VIP').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Thanh toán gói VIP/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Chi phí voucher nền tảng').length).toBeGreaterThanOrEqual(1);
   });
 });

@@ -213,7 +213,7 @@ describe('Admin dashboard - tab Doanh thu', () => {
     });
   });
 
-  it('top filter drives the cards, the sold-items table and Excel export', async () => {
+  it('top filter drives the cards and the sold-items table', async () => {
     mountDashboard();
     const period = screen.getByRole('combobox', { name: 'Khoảng thời gian' });
     expect(period).toHaveValue('MONTH');
@@ -223,11 +223,6 @@ describe('Admin dashboard - tab Doanh thu', () => {
         from: '2026-11-01',
         to: '2026-11-11',
       })
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: /Xuất báo cáo Excel/ }));
-    await waitFor(() =>
-      expect(adminApi.exportDashboard).toHaveBeenLastCalledWith('2026-11-01', '2026-11-11')
     );
 
     fireEvent.change(period, { target: { value: 'WEEK' } });
@@ -247,30 +242,39 @@ describe('Admin dashboard - tab Doanh thu', () => {
       })
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Xuất báo cáo Excel/ }));
-    await waitFor(() =>
-      expect(adminApi.exportDashboard).toHaveBeenLastCalledWith('2026-11-09', '2026-11-11')
-    );
-
     // "Toàn thời gian": không gửi from/to
     fireEvent.change(period, { target: { value: 'ALL' } });
     await waitFor(() =>
       expect(adminApi.getDashboard).toHaveBeenLastCalledWith({ from: undefined, to: undefined })
     );
-    fireEvent.click(screen.getByRole('button', { name: /Xuất báo cáo Excel/ }));
-    await waitFor(() =>
-      expect(adminApi.exportDashboard).toHaveBeenLastCalledWith('1970-01-01', '2026-11-11')
-    );
 
-    // Một năm cụ thể (2025) cũng đi cùng một đường: thẻ, bảng và xuất Excel
+    // Một năm cụ thể (2025) cũng đi cùng một đường: thẻ và bảng
     fireEvent.change(period, { target: { value: 'YEAR_PICK' } });
     fireEvent.change(screen.getByLabelText('Chọn năm'), { target: { value: '2025' } });
     await waitFor(() =>
       expect(adminApi.getDashboard).toHaveBeenLastCalledWith({ from: '2025-01-01', to: '2025-12-31' })
     );
+  });
+
+  it('Excel export opens a modal with its own independent period filter and ticked sections', async () => {
+    mountDashboard();
+    const topPeriod = screen.getByRole('combobox', { name: 'Khoảng thời gian' });
+    fireEvent.change(topPeriod, { target: { value: 'WEEK' } });
+
     fireEvent.click(screen.getByRole('button', { name: /Xuất báo cáo Excel/ }));
+    const modal = await screen.findByRole('dialog', { name: /Xuất báo cáo Excel/ });
+    const modalPeriod = within(modal).getByRole('combobox', { name: 'Khoảng thời gian xuất Excel' });
+    // Bộ lọc của hộp thoại độc lập với bộ lọc trên trang (mặc định "Tháng này")
+    expect(modalPeriod).toHaveValue('MONTH');
+    expect(topPeriod).toHaveValue('WEEK');
+
+    fireEvent.click(within(modal).getByRole('button', { name: /Xuất Excel/ }));
     await waitFor(() =>
-      expect(adminApi.exportDashboard).toHaveBeenLastCalledWith('2025-01-01', '2025-12-31')
+      expect(adminApi.exportDashboard).toHaveBeenLastCalledWith(
+        '2026-11-01',
+        '2026-11-11',
+        ['REVENUE', 'USERS', 'WAREHOUSE']
+      )
     );
   });
 
@@ -328,15 +332,17 @@ describe('Admin dashboard - tab Doanh thu', () => {
   ])('uses Vietnamese calendar dates at %s for %s export', async (now, period, from, to) => {
     vi.setSystemTime(new Date(now));
     mountDashboard();
-    fireEvent.change(screen.getByRole('combobox', { name: 'Khoảng thời gian' }), {
+    fireEvent.click(screen.getByRole('button', { name: /Xuất báo cáo Excel/ }));
+    const modal = await screen.findByRole('dialog', { name: /Xuất báo cáo Excel/ });
+    fireEvent.change(within(modal).getByRole('combobox', { name: 'Khoảng thời gian xuất Excel' }), {
       target: { value: period },
     });
     let downloadedName;
     HTMLAnchorElement.prototype.click.mockImplementation(function () {
       downloadedName = this.download;
     });
-    fireEvent.click(screen.getByRole('button', { name: /Xuất báo cáo Excel/ }));
-    await waitFor(() => expect(adminApi.exportDashboard).toHaveBeenCalledWith(from, to));
+    fireEvent.click(within(modal).getByRole('button', { name: /Xuất Excel/ }));
+    await waitFor(() => expect(adminApi.exportDashboard).toHaveBeenCalledWith(from, to, expect.any(Array)));
     await waitFor(() => expect(downloadedName).toBe(`dashboard_report_${from}_${to}.xlsx`));
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:dashboard');
   });
@@ -429,7 +435,8 @@ describe('Admin dashboard - tab Doanh thu', () => {
         </ToastContext.Provider>
       </MemoryRouter>
     );
-    const button = screen.getByRole('button', { name: /Xuất báo cáo Excel/ });
+    fireEvent.click(screen.getByRole('button', { name: /Xuất báo cáo Excel/ }));
+    const button = await screen.findByRole('button', { name: /Xuất Excel/ });
     fireEvent.click(button);
     expect(button).toBeDisabled();
     rejectExport(new Error('Network error'));

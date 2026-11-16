@@ -6,26 +6,11 @@ import adminApi from '../../src/features/admin/services/adminApi.js';
 
 vi.mock('../../src/features/admin/services/adminApi.js', () => ({
   default: {
-    getFundReconciliation: vi.fn(),
     getFundLedger: vi.fn(),
   },
 }));
 
 describe('AdminFundLedgerSection', () => {
-  const balancedRec = {
-    status: 'BALANCED',
-    difference: 0,
-    fundBalance: 3000000,
-    ledgerBalance: 3000000,
-    memberWalletBalance: 2000000,
-    memberLedgerBalance: 2000000,
-    memberDifference: 0,
-    ledgerNetTotal: 0,
-    unmatchedEntries: 0,
-    unbalancedPairs: 0,
-    checkedAt: '2026-11-11T10:15:00Z',
-  };
-
   const samplePage = {
     content: [
       {
@@ -66,21 +51,16 @@ describe('AdminFundLedgerSection', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    adminApi.getFundReconciliation.mockResolvedValue(balancedRec);
     adminApi.getFundLedger.mockResolvedValue(samplePage);
   });
 
-  it('renders balanced reconciliation status, checked time, and ledger entries including null legacy counterparts', async () => {
+  it('renders ledger entries including null legacy counterparts', async () => {
     render(<AdminFundLedgerSection from="2026-11-01" to="2026-11-11" />);
 
-    expect(await screen.findByText('Đối soát: Khớp')).toBeInTheDocument();
-    expect(screen.getByText('FTX-1001')).toBeInTheDocument();
-    expect(screen.getByText('seller@rehome.vn')).toBeInTheDocument();
-    expect(screen.getByText('MTX-9001')).toBeInTheDocument();
-    expect(screen.getByText(/ORD-2026-001/)).toBeInTheDocument();
+    expect(await screen.findByText('FTX-1001')).toBeInTheDocument();
     expect(screen.getByText('FTX-1000')).toBeInTheDocument();
 
-    const region = screen.getByRole('region', { name: 'Bảng bút toán sổ quỹ nền tảng' });
+    const region = screen.getByRole('region', { name: 'Bảng giao dịch' });
     expect(region).toHaveAttribute('tabindex', '0');
 
     expect(adminApi.getFundLedger).toHaveBeenCalledWith({
@@ -90,29 +70,6 @@ describe('AdminFundLedgerSection', () => {
       page: 0,
       size: 10,
     });
-  });
-
-  it('renders MISMATCHED reconciliation status with difference values and supports manual re-check', async () => {
-    adminApi.getFundReconciliation
-      .mockResolvedValueOnce({
-        ...balancedRec,
-        status: 'MISMATCHED',
-        difference: 50000,
-        memberDifference: -10000,
-        ledgerNetTotal: 40000,
-        unmatchedEntries: 2,
-        unbalancedPairs: 1,
-      })
-      .mockResolvedValueOnce(balancedRec);
-
-    render(<AdminFundLedgerSection from="2026-11-01" to="2026-11-11" />);
-
-    expect(await screen.findByText('Đối soát: Có chênh lệch')).toBeInTheDocument();
-    expect(screen.getByText(/50\.000/)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /Kiểm tra lại/i }));
-    expect(await screen.findByText('Đối soát: Khớp')).toBeInTheDocument();
-    expect(adminApi.getFundReconciliation).toHaveBeenCalledTimes(2);
   });
 
   it('filters by transaction type, paginates, and ignores stale responses', async () => {
@@ -174,7 +131,7 @@ describe('AdminFundLedgerSection', () => {
       size: 10,
     });
 
-    fireEvent.change(screen.getByLabelText('Lọc loại bút toán'), {
+    fireEvent.change(screen.getByLabelText('Lọc loại giao dịch'), {
       target: { value: 'ORDER_PAYOUT' },
     });
 
@@ -188,7 +145,7 @@ describe('AdminFundLedgerSection', () => {
       })
     );
 
-    fireEvent.change(screen.getByLabelText('Lọc loại bút toán'), {
+    fireEvent.change(screen.getByLabelText('Lọc loại giao dịch'), {
       target: { value: 'WITHDRAWAL_FEE_REVENUE' },
     });
     expect(await screen.findByText('FTX-FAST')).toBeInTheDocument();

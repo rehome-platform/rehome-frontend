@@ -19,7 +19,6 @@ vi.mock('../../src/context/AuthContext.jsx', () => ({
 vi.mock('../../src/features/admin/services/adminApi.js', () => ({
   default: {
     getFundLedger: vi.fn(),
-    getFundReconciliation: vi.fn(),
   },
 }));
 
@@ -27,17 +26,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-11-11T12:00:00Z'));
-  adminApi.getFundReconciliation.mockResolvedValue({
-    status: 'BALANCED',
-    difference: 0,
-    fundBalance: -1753500,
-    memberWalletBalance: 1753500,
-    memberDifference: 0,
-    ledgerNetTotal: 0,
-    unmatchedEntries: 0,
-    unbalancedPairs: 0,
-    checkedAt: '2026-11-11T10:00:00Z',
-  });
   adminApi.getFundLedger.mockResolvedValue({
     content: [
       {
@@ -65,11 +53,9 @@ afterEach(() => {
 });
 
 describe('AdminFundLedgerPage', () => {
-  it('shows the double-entry ledger and reconciliation on its own page', async () => {
+  it('shows the ledger on its own page', async () => {
     render(<AdminFundLedgerPage />);
 
-    expect(screen.getByRole('heading', { name: 'Sổ quỹ & Đối soát' })).toBeInTheDocument();
-    expect(await screen.findByText('Đối soát: Khớp')).toBeInTheDocument();
     expect(await screen.findByText('FTX-500')).toBeInTheDocument();
   });
 
@@ -98,8 +84,6 @@ describe('AdminFundLedgerPage', () => {
         size: 10,
       })
     );
-    // Đối soát luôn là số hiện tại: đổi khoảng thời gian không gọi lại
-    expect(adminApi.getFundReconciliation).toHaveBeenCalledTimes(1);
   });
 
   it('rejects a reversed custom range without calling the ledger API again', async () => {
@@ -159,7 +143,7 @@ describe('Admin navigation for Tổng quan and Sổ quỹ & Đối soát', () =>
 
   it.each([
     ['/admin', 'Tổng quan điều hành'],
-    ['/admin/fund-ledger', 'Sổ quỹ & Đối soát quỹ nền tảng'],
+    ['/admin/fund-ledger', 'Giao dịch'],
   ])('shows header title for %s', (route, title) => {
     render(
       <MemoryRouter initialEntries={[route]}>
