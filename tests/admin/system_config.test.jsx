@@ -163,6 +163,27 @@ describe('Admin system configuration HTTP contract', () => {
     expect(baseApi.put).not.toHaveBeenCalled();
   });
 
+  it('loads and saves the 3 loyalty-point parameters on the points tab', async () => {
+    const pointRows = [
+      { key: 'points_vnd_per_point', value: '10000', type: 'INT', min: 0, max: 10000000 },
+      { key: 'points_cost_per_ai_tryon', value: '10', type: 'INT', min: 0, max: 10000 },
+      { key: 'points_cost_per_live_tryon', value: '20', type: 'INT', min: 0, max: 10000 },
+    ].map(row => ({ ...row, defaultValue: row.value, usingDefault: false }));
+    baseApi.get.mockResolvedValue(response([...fixture(), ...pointRows]));
+    await mount();
+    tab(/6\. Điểm/);
+    expect(screen.getByLabelText(/Số tiền đơn hàng để được 1 điểm/)).toHaveValue(10000);
+    expect(screen.getByLabelText(/Số điểm đổi 1 lượt phối đồ AI/)).toHaveValue(10);
+    expect(screen.getByLabelText(/Số điểm đổi 1 lượt thử đồ AI real-time/)).toHaveValue(20);
+    // 0 là giá trị hợp lệ: tắt tính năng, không phải ô trống
+    fireEvent.change(screen.getByLabelText(/Số điểm đổi 1 lượt thử đồ AI real-time/), { target: { value: '0' } });
+    fireEvent.click(saveButton());
+    await screen.findByText(/Đã đồng bộ tham số/);
+    expect(baseApi.put).toHaveBeenCalledWith('/api/admin/config/points_cost_per_live_tryon', { value: '0' });
+    expect(baseApi.put).toHaveBeenCalledWith('/api/admin/config/points_vnd_per_point', { value: '10000' });
+    expect(baseApi.put).toHaveBeenCalledTimes(28);
+  });
+
   it('keeps keys omitted by the server disabled and does not send them on save', async () => {
     baseApi.get.mockResolvedValue(response(fixture().filter(row => row.key !== 'min_payout_amount')));
     await mount();

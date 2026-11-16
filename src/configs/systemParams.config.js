@@ -49,9 +49,16 @@ export const DEFAULT_SYSTEM_CONFIGS = {
     legalDocsRetentionDays: 30, // Số ngày giữ ảnh giấy tờ CCCD sau khi duyệt (ngày)
     membershipExpiryReminderDays: 3, // Số ngày nhắc trước khi hết hạn gói VIP (ngày)
   },
+
+  // 6. Điểm tích lũy (0 = tắt)
+  points: {
+    vndPerPoint: 10000, // Mỗi bao nhiêu đồng của đơn thì được 1 điểm (0 = tắt tích điểm)
+    costPerAiTryon: 10, // Số điểm đổi 1 lượt phối đồ AI (0 = đóng quy đổi)
+    costPerLiveTryon: 20, // Số điểm đổi 1 lượt thử đồ AI real-time (0 = đóng quy đổi)
+  },
 };
 
-// All 25 UI fields mapped to keys in Backend SystemConfigCatalog.
+// All 28 UI fields mapped to keys in Backend SystemConfigCatalog.
 // Ratios are displayed as percentages but stored as fractions by the API.
 export const SYSTEM_CONFIG_FIELDS = [
   { key: 'term_length_days', group: 'consignment', field: 'termDays' },
@@ -79,6 +86,9 @@ export const SYSTEM_CONFIG_FIELDS = [
   { key: 'overdue_task_hours', group: 'operationsAndCommunity', field: 'taskAutoReleaseHours' },
   { key: 'membership_expiry_reminder_days', group: 'operationsAndCommunity', field: 'membershipExpiryReminderDays' },
   { key: 'voucher_max_ratio_of_commission', group: 'pricingAndCommission', field: 'voucherMaxRatioOfCommission', percent: true },
+  { key: 'points_vnd_per_point', group: 'points', field: 'vndPerPoint' },
+  { key: 'points_cost_per_ai_tryon', group: 'points', field: 'costPerAiTryon' },
+  { key: 'points_cost_per_live_tryon', group: 'points', field: 'costPerLiveTryon' },
 ];
 
 const EFFECTIVE_CONSIGNMENT_CONFIG_KEY = 'rehome_effective_consignment_config';

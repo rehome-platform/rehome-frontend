@@ -38,6 +38,7 @@ export default function ConfigPage() {
     { id: 'wallet', label: '3. Ví & Rút tiền', icon: 'account_balance_wallet' },
     { id: 'orders', label: '4. Đơn & Trả hàng', icon: 'local_shipping' },
     { id: 'operations', label: '5. Vận hành & Cộng đồng', icon: 'warehouse' },
+    { id: 'points', label: '6. Điểm tích lũy', icon: 'stars' },
   ];
 
   useEffect(() => {
@@ -97,6 +98,12 @@ export default function ConfigPage() {
       helperText: !mapping ? 'Chưa áp dụng: backend chưa hỗ trợ chỉnh tham số này.'
         : loaded && !spec ? 'Chưa áp dụng: máy chủ chưa cung cấp tham số này.' : undefined,
     };
+  };
+
+  // Giống getFieldProps nhưng thêm dòng gợi ý dưới ô; thông báo "Chưa áp dụng" (nếu có) vẫn được ưu tiên.
+  const getFieldPropsWithHint = (group, field, hint) => {
+    const props = getFieldProps(group, field);
+    return { ...props, helperText: props.helperText ?? hint };
   };
 
   const handleSave = async (e) => {
@@ -525,6 +532,64 @@ export default function ConfigPage() {
                 onChange={(e) => setConfigs({
                   ...configs,
                   operationsAndCommunity: { ...configs.operationsAndCommunity, membershipExpiryReminderDays: e.target.value }
+                })}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* TAB 6: Điểm tích lũy */}
+        {activeTab === 'points' && (
+          <div className="space-y-5">
+            <div>
+              <h3 className="text-base font-bold text-[#191C19]">Chương Trình Điểm Tích Lũy</h3>
+              <p className="text-xs text-[#717971] mt-0.5">
+                Quy tắc Member tích điểm khi mua hàng và đổi điểm lấy lượt thử đồ AI. Đặt 0 để tắt từng chức năng.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <Input
+                label="Số tiền đơn hàng để được 1 điểm (VNĐ)"
+                type="number"
+                {...getFieldPropsWithHint(
+                  'points',
+                  'vndPerPoint',
+                  'Tính trên số tiền khách thực trả (đã trừ voucher). Đặt 0 để tắt tích điểm.',
+                )}
+                onChange={(e) => setConfigs({
+                  ...configs,
+                  points: { ...configs.points, vndPerPoint: e.target.value }
+                })}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <Input
+                label="Số điểm đổi 1 lượt phối đồ AI"
+                type="number"
+                {...getFieldPropsWithHint(
+                  'points',
+                  'costPerAiTryon',
+                  'Phối đồ AI bằng ảnh tĩnh. Đặt 0 để đóng quy đổi loại này.',
+                )}
+                onChange={(e) => setConfigs({
+                  ...configs,
+                  points: { ...configs.points, costPerAiTryon: e.target.value }
+                })}
+              />
+
+              <Input
+                label="Số điểm đổi 1 lượt thử đồ AI real-time"
+                type="number"
+                {...getFieldPropsWithHint(
+                  'points',
+                  'costPerLiveTryon',
+                  'Thử đồ qua camera, chi phí thật cao hơn. Đặt 0 để đóng quy đổi loại này.',
+                )}
+                onChange={(e) => setConfigs({
+                  ...configs,
+                  points: { ...configs.points, costPerLiveTryon: e.target.value }
                 })}
               />
             </div>
