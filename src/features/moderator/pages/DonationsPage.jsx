@@ -912,8 +912,8 @@ export default function DonationsPage() {
                                           className="w-10 h-10 rounded-lg object-cover border border-neutral flex-shrink-0"
                                         />
                                       )}
-                                      <div className="space-y-0.5">
-                                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-900">
+                                      <div className="space-y-0.5 min-w-0">
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-200 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900 whitespace-nowrap">
                                           Món ký gửi · SKU {row.sku || '—'}
                                         </span>
                                         {row.productName && <p className="font-semibold text-text">{row.productName}</p>}
@@ -1121,9 +1121,9 @@ export default function DonationsPage() {
                                         <span className="font-semibold text-text">{row.donorName || '—'}</span>
                                       )}
                                     </td>
-                                    <td className="py-3 px-3 align-top space-y-1.5">
+                                    <td className="py-3 px-3 align-top space-y-1.5 min-w-[240px]">
                                       {row.isConsignedItem && (
-                                        <div className="flex items-start gap-2">
+                                        <div className="flex items-start gap-2.5">
                                           {row.productPhotoUrl && (
                                             <img
                                               src={row.productPhotoUrl}
@@ -1131,20 +1131,20 @@ export default function DonationsPage() {
                                               className="w-10 h-10 rounded-lg object-cover border border-neutral flex-shrink-0"
                                             />
                                           )}
-                                          <div className="space-y-0.5">
-                                            <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 border border-amber-200 px-2.5 py-0.5 text-[10px] font-bold text-amber-900">
+                                          <div className="space-y-1 min-w-0">
+                                            <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 border border-amber-200 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900 whitespace-nowrap">
                                               <span>Món ký gửi · SKU {row.sku || '—'}</span>
                                               {row.sku && (
                                                 <Link
                                                   to={`/moderator/inventory/${encodeURIComponent(row.sku)}`}
-                                                  className="underline text-[#006B2C]"
+                                                  className="underline text-[#006B2C] font-bold"
                                                 >
                                                   Xem
                                                 </Link>
                                               )}
                                             </div>
                                             {row.productName && (
-                                              <p className="font-semibold text-text">{row.productName}</p>
+                                              <p className="font-semibold text-text leading-snug">{row.productName}</p>
                                             )}
                                           </div>
                                         </div>
@@ -1152,11 +1152,18 @@ export default function DonationsPage() {
                                       {/* Hiển thị ghi chú và ảnh hiện vật (ưu tiên photoUrls, fallback regex note cũ) */}
                                       {(() => {
                                         const { cleanText, photos } = getDonationRowDetails(row);
+                                        const isRedundantConsignedNote =
+                                          row.isConsignedItem &&
+                                          typeof cleanText === 'string' &&
+                                          cleanText.startsWith('Món ký gửi:');
+                                        const displayNote = isRedundantConsignedNote ? '' : cleanText;
 
                                         return (
                                           <div className="space-y-1.5">
-                                            {cleanText && <p className="font-medium text-text">{cleanText}</p>}
-                                            {!cleanText && photos.length === 0 && <p className="text-textSecondary">—</p>}
+                                            {displayNote && <p className="font-medium text-text">{displayNote}</p>}
+                                            {!displayNote && !row.isConsignedItem && photos.length === 0 && (
+                                              <p className="text-textSecondary">—</p>
+                                            )}
                                             {photos.length > 0 && (
                                               <div className="flex flex-wrap gap-1.5 pt-1">
                                                 {photos.map((src, i) => (
