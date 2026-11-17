@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Badge, Modal, Input } from '../../../components/common/index.js';
+import { Button, Badge, Modal, Input, Spinner } from '../../../components/common/index.js';
 import adminApi from '../services/adminApi.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import OpeningHoursPicker from './OpeningHoursPicker.jsx';
@@ -538,9 +538,9 @@ export default function AdminWarehousesView({ onLogAction }) {
       </div>
 
       {/* Loading & Error States */}
-      {loading ? (
-        <div className="bg-white rounded-2xl border border-[#E2E8E0] p-12 text-center space-y-3">
-          <div className="w-8 h-8 border-3 border-[#006B2C] border-t-transparent rounded-full animate-spin mx-auto"></div>
+      {loading && warehouses.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-[#E2E8E0] p-12 text-center flex flex-col items-center justify-center gap-3">
+          <Spinner size="lg" />
           <p className="text-xs font-semibold text-[#717971]">Đang tải danh sách điểm kí gửi từ hệ thống...</p>
         </div>
       ) : apiError ? (
@@ -568,7 +568,11 @@ export default function AdminWarehousesView({ onLogAction }) {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div
+          className={`grid grid-cols-1 md:grid-cols-2 gap-5 transition-opacity duration-150 ${
+            loading ? 'opacity-60 pointer-events-none' : ''
+          }`}
+        >
           {filteredWarehouses.map((w) => (
             <div
               key={w.id}

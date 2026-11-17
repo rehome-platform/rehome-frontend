@@ -91,13 +91,6 @@ export const membershipAdminApi = {
     });
     return unwrap(res);
   },
-
-  async getPayments({ from, to, tier, method, page, size } = {}) {
-    const res = await baseApi.get('/api/admin/membership-payments', {
-      params: cleanParams({ from, to, tier, method, page, size }),
-    });
-    return unwrap(res);
-  },
 };
 
 export default membershipAdminApi;

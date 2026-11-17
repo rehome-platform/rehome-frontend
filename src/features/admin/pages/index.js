@@ -6,10 +6,10 @@ export { default as AdminBanProposalsPage } from './AdminBanProposalsPage.jsx';
 export { default as AdminWarehousesPage } from './AdminWarehousesPage.jsx';
 export { default as ConfigPage } from './ConfigPage.jsx';
 export { default as AdminAuditLogsPage } from './AdminAuditLogsPage.jsx';
+export { default as ViolationWordsPage } from './ViolationWordsPage.jsx';
 export {
   MembershipPlansPage,
   MembershipSubscriptionsPage,
   MembershipSubscriptionDetailPage,
   VoucherTemplatesPage,
-  MembershipPaymentsPage,
 } from '../membership/index.js';

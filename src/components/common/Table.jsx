@@ -1,4 +1,5 @@
 import React from 'react';
+import Spinner from './Spinner.jsx';
 
 export default function Table({
   columns = [],
@@ -7,8 +8,18 @@ export default function Table({
   emptyMessage = "Không có dữ liệu",
   loading = false,
 }) {
+  // Chỉ thay toàn bộ bảng bằng spinner khi CHƯA có dữ liệu (lần tải đầu).
+  // Khi đã có dữ liệu, loading=true (do refetch sau khi thao tác) chỉ làm mờ bảng cũ
+  // thay vì xóa sạch rồi vẽ lại — tránh hiệu ứng "giật/load lại nguyên bảng".
+  const isInitialLoading = loading && data.length === 0;
+  const isBackgroundRefreshing = loading && data.length > 0;
+
   return (
-    <div className="w-full overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-lowest">
+    <div
+      className={`w-full overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-lowest transition-opacity duration-150 ${
+        isBackgroundRefreshing ? 'opacity-60 pointer-events-none' : ''
+      }`}
+    >
       <table className="w-full text-left text-sm text-on-surface">
         <thead className="bg-surface-container text-xs font-semibold text-outline">
           <tr>
@@ -20,11 +31,13 @@ export default function Table({
           </tr>
         </thead>
         <tbody className="divide-y divide-outline-variant">
-          {loading ? (
+          {isInitialLoading ? (
             <tr>
-              <td colSpan={columns.length} className="px-4 py-8 text-center text-outline">
-                <span className="inline-block w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2"></span>
-                Đang tải dữ liệu...
+              <td colSpan={columns.length} className="px-4 py-10 text-center text-outline">
+                <div className="flex flex-col items-center justify-center gap-2">
+                  <Spinner size="lg" />
+                  <span>Đang tải dữ liệu...</span>
+                </div>
               </td>
             </tr>
           ) : data.length === 0 ? (

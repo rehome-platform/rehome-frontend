@@ -4,6 +4,7 @@ import adminApi from '../services/adminApi.js';
 import AdminPeriodFilter from './AdminPeriodFilter.jsx';
 import ComparisonBadge from './ComparisonBadge.jsx';
 import useAdminPeriod from '../hooks/useAdminPeriod.js';
+import { Spinner } from '../../../components/common/index.js';
 import usePreviousTotal from '../hooks/usePreviousTotal.js';
 import { pickTrendGranularity } from '../utils/adminDateUtils.js';
 
@@ -214,8 +215,9 @@ export default function AdminRevenueTrendChart() {
           </button>
         </div>
       ) : loading ? (
-        <div className="h-64 flex items-center justify-center rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-[#717971]">
-          Đang tải biểu đồ doanh thu...
+        <div className="h-64 flex flex-col items-center justify-center gap-3 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-[#717971]">
+          <Spinner size="lg" />
+          <span>Đang tải biểu đồ doanh thu...</span>
         </div>
       ) : !hasRevenue ? (
         <div className="h-64 flex items-center justify-center rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-[#717971] text-center px-4">

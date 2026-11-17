@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Modal } from '../../../components/common/index.js';
+import { Modal, Spinner } from '../../../components/common/index.js';
 import { formatCurrencyVND, formatDateTime } from '../../../utils/formatters.js';
 import adminApi from '../services/adminApi.js';
 import { validateDateRange } from '../utils/adminDateUtils.js';
@@ -143,9 +143,10 @@ export default function AdminFundLedgerSection({ from, to }) {
       </div>
 
       {/* Bảng giao dịch */}
-      {ledgerLoading ? (
-        <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center text-xs text-[#717971]">
-          Đang tải danh sách giao dịch...
+      {ledgerLoading && ledgerPage.content.length === 0 ? (
+        <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center flex flex-col items-center justify-center gap-3 text-xs text-[#717971]">
+          <Spinner size="lg" />
+          <span>Đang tải danh sách giao dịch...</span>
         </div>
       ) : ledgerError ? (
         <div className="p-6 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-center space-y-2">
@@ -177,7 +178,9 @@ export default function AdminFundLedgerSection({ from, to }) {
             role="region"
             aria-label="Bảng giao dịch"
             tabIndex={0}
-            className="overflow-x-auto rounded-xl border border-[#E2E8E0] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30"
+            className={`overflow-x-auto rounded-xl border border-[#E2E8E0] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30 transition-opacity duration-150 ${
+              ledgerLoading ? 'opacity-60 pointer-events-none' : ''
+            }`}
           >
             <table className="w-full text-left text-xs min-w-[920px]">
               <thead className="bg-[#F8FAF8] text-[#717971] font-semibold border-b border-[#E2E8E0]">

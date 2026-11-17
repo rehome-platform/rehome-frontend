@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { useToast } from '../../../context/ToastContext.jsx';
-import { Button } from '../../../components/common/index.js';
+import { Button, Spinner } from '../../../components/common/index.js';
 import {
   DEFAULT_SYSTEM_CONFIGS,
   SYSTEM_CONFIG_FIELDS,
@@ -432,7 +432,12 @@ export default function ConfigPage() {
         </Button>
       </div>
 
-      {loading && <p role="status" className="text-sm text-[#717971]">Đang tải cấu hình từ máy chủ...</p>}
+      {loading && (
+        <p role="status" className="flex items-center gap-2 text-sm text-[#717971]">
+          <Spinner size="sm" />
+          <span>Đang tải cấu hình từ máy chủ...</span>
+        </p>
+      )}
 
       {savedSuccess && (
         <div className="p-4 bg-[#E8F5E9] border border-[#C8E6C9] text-[#006B2C] rounded-2xl text-xs font-semibold flex items-center justify-between shadow-sm animate-fade-in">
