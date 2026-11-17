@@ -52,7 +52,7 @@ export default function AdminSidebar({
     {
       id: 'moderators',
       path: '/admin/moderators',
-      label: 'Quản lý Moderator',
+      label: 'Quản lý Nhân sự',
       icon: 'badge',
     },
     {
@@ -85,26 +85,20 @@ export default function AdminSidebar({
     {
       id: 'membership-plans',
       path: '/admin/membership-plans',
-      label: 'Cấu hình gói VIP',
+      label: 'Cấu hình gói thành viên',
       icon: 'workspace_premium',
     },
     {
       id: 'membership-subscriptions',
       path: '/admin/membership-subscriptions',
-      label: 'Thành viên VIP',
+      label: 'Thành viên',
       icon: 'card_membership',
     },
     {
       id: 'voucher-templates',
       path: '/admin/voucher-templates',
-      label: 'Mẫu voucher',
+      label: 'Quản lý voucher',
       icon: 'confirmation_number',
-    },
-    {
-      id: 'membership-stats',
-      path: '/admin/membership-stats',
-      label: 'Thống kê VIP & Voucher',
-      icon: 'analytics',
     },
     {
       id: 'membership-payments',
@@ -194,7 +188,7 @@ export default function AdminSidebar({
 
             <div className="pt-3 mt-3 border-t border-[#E2E8E0]">
               <p className="px-3.5 pb-1.5 text-[10px] font-bold tracking-wider text-[#717971] whitespace-nowrap">
-                Gói VIP &amp; Voucher
+                Gói Thành Viên &amp; Voucher
               </p>
               <div className="space-y-1.5">
                 {membershipMenuItems.map(renderMenuItem)}

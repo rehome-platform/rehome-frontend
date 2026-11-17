@@ -33,6 +33,7 @@ export default function VoucherTemplatesPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
+  const [detailTemplate, setDetailTemplate] = useState(null);
 
   const [deactivateTarget, setDeactivateTarget] = useState(null);
   const [deactivating, setDeactivating] = useState(false);
@@ -71,6 +72,7 @@ export default function VoucherTemplatesPage() {
   };
 
   const handleOpenDeactivate = (template) => {
+    setModalOpen(false);
     setDeactivateError('');
     deactivatingRef.current = false;
     setDeactivating(false);
@@ -103,47 +105,15 @@ export default function VoucherTemplatesPage() {
   const columns = [
     {
       header: 'Tên',
-      render: (row) => (
-        <div>
-          <p className="font-semibold text-[#191C19]">{row.name}</p>
-          {row.description ? (
-            <p className="text-xs text-[#5B6776] mt-0.5">{row.description}</p>
-          ) : null}
-        </div>
-      ),
+      render: (row) => <span className="font-semibold text-[#191C19]">{row.name}</span>,
     },
     {
       header: 'Loại',
       render: (row) => VOUCHER_TYPE_LABELS[row.type] || row.type,
     },
     {
-      header: 'Mức giảm',
-      render: (row) => (
-        <span className="font-medium text-[#191C19]">{formatDiscountDisplay(row)}</span>
-      ),
-    },
-    {
-      header: 'Đơn tối thiểu',
-      render: (row) => formatVndCompact(row.minOrderAmount),
-    },
-    {
       header: 'Hiệu lực',
       render: (row) => `${row.validDays} ngày`,
-    },
-    {
-      header: 'Phát cho hạng',
-      render: (row) =>
-        Array.isArray(row.tierRules) && row.tierRules.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
-            {row.tierRules.map((rule) => (
-              <Badge key={rule.tier} variant="info" size="sm">
-                {`${rule.tier} ×${rule.quantityPerMonth}`}
-              </Badge>
-            ))}
-          </div>
-        ) : (
-          <span className="text-xs text-[#5B6776]">Chưa gán hạng</span>
-        ),
     },
     {
       header: 'Trạng thái',
@@ -157,18 +127,14 @@ export default function VoucherTemplatesPage() {
       header: 'Thao tác',
       render: (row) => (
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => handleOpenEdit(row)}>
-            Sửa
+          <Button size="sm" variant="outline" onClick={() => setDetailTemplate(row)} className="gap-1">
+            <span className="material-symbols-outlined text-sm">visibility</span>
+            <span>Xem chi tiết</span>
           </Button>
-          {row.active ? (
-            <Button
-              size="sm"
-              variant="danger"
-              onClick={() => handleOpenDeactivate(row)}
-            >
-              Ngừng phát
-            </Button>
-          ) : null}
+          <Button size="sm" variant="outline" onClick={() => handleOpenEdit(row)} className="gap-1">
+            <span className="material-symbols-outlined text-sm">edit</span>
+            <span>Sửa</span>
+          </Button>
         </div>
       ),
     },
@@ -178,13 +144,14 @@ export default function VoucherTemplatesPage() {
     <div className="p-6 bg-white rounded-xl border border-[#E2E8E0] space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-[#191C19]">Quản lý mẫu voucher</h2>
+          <h2 className="text-lg font-bold text-[#191C19]">Quản lý voucher</h2>
           <p className="text-xs text-[#5B6776] mt-0.5">
-            Thiết lập mẫu voucher định kỳ phát cho các hạng thành viên VIP.
+            Thiết lập mẫu voucher định kỳ phát cho các hạng thành viên.
           </p>
         </div>
-        <Button variant="primary" onClick={handleOpenCreate}>
-          Tạo mẫu voucher
+        <Button variant="primary" onClick={handleOpenCreate} className="gap-1.5">
+          <span className="material-symbols-outlined text-base">add</span>
+          <span>Tạo mẫu voucher</span>
         </Button>
       </div>
 
@@ -206,7 +173,66 @@ export default function VoucherTemplatesPage() {
         onClose={() => setModalOpen(false)}
         template={editingTemplate}
         onSuccess={loadTemplates}
+        onDeactivate={handleOpenDeactivate}
       />
+
+      <Modal
+        isOpen={Boolean(detailTemplate)}
+        onClose={() => setDetailTemplate(null)}
+        title={detailTemplate ? `Chi tiết mẫu voucher "${detailTemplate.name}"` : 'Chi tiết mẫu voucher'}
+        size="md"
+      >
+        {detailTemplate && (
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+            <div className="sm:col-span-2 px-3 py-2.5 rounded-xl border border-[#E2E8E0] bg-[#F6F9F4]/40">
+              <dt className="text-[10px] uppercase tracking-wide text-[#5B6776] font-semibold mb-0.5">Mô tả</dt>
+              <dd className="text-[#191C19] font-medium">{detailTemplate.description || '—'}</dd>
+            </div>
+            <div className="px-3 py-2.5 rounded-xl border border-[#E2E8E0] bg-[#F6F9F4]/40">
+              <dt className="text-[10px] uppercase tracking-wide text-[#5B6776] font-semibold mb-0.5">Loại</dt>
+              <dd className="text-[#191C19] font-semibold">
+                {VOUCHER_TYPE_LABELS[detailTemplate.type] || detailTemplate.type}
+              </dd>
+            </div>
+            <div className="px-3 py-2.5 rounded-xl border border-[#E2E8E0] bg-[#F6F9F4]/40">
+              <dt className="text-[10px] uppercase tracking-wide text-[#5B6776] font-semibold mb-0.5">Mức giảm</dt>
+              <dd className="text-[#191C19] font-semibold">{formatDiscountDisplay(detailTemplate)}</dd>
+            </div>
+            <div className="px-3 py-2.5 rounded-xl border border-[#E2E8E0] bg-[#F6F9F4]/40">
+              <dt className="text-[10px] uppercase tracking-wide text-[#5B6776] font-semibold mb-0.5">Đơn tối thiểu</dt>
+              <dd className="text-[#191C19] font-semibold">{formatVndCompact(detailTemplate.minOrderAmount)}</dd>
+            </div>
+            <div className="px-3 py-2.5 rounded-xl border border-[#E2E8E0] bg-[#F6F9F4]/40">
+              <dt className="text-[10px] uppercase tracking-wide text-[#5B6776] font-semibold mb-0.5">Hiệu lực</dt>
+              <dd className="text-[#191C19] font-semibold">{detailTemplate.validDays} ngày</dd>
+            </div>
+            <div className="sm:col-span-2 px-3 py-2.5 rounded-xl border border-[#E2E8E0] bg-[#F6F9F4]/40">
+              <dt className="text-[10px] uppercase tracking-wide text-[#5B6776] font-semibold mb-1">Phát cho hạng</dt>
+              <dd>
+                {Array.isArray(detailTemplate.tierRules) && detailTemplate.tierRules.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {detailTemplate.tierRules.map((rule) => (
+                      <Badge key={rule.tier} variant="info" size="sm">
+                        {`${rule.tier} ×${rule.quantityPerMonth}`}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-xs text-[#5B6776]">Chưa gán hạng</span>
+                )}
+              </dd>
+            </div>
+            <div className="px-3 py-2.5 rounded-xl border border-[#E2E8E0] bg-[#F6F9F4]/40">
+              <dt className="text-[10px] uppercase tracking-wide text-[#5B6776] font-semibold mb-0.5">Trạng thái</dt>
+              <dd>
+                <Badge variant={detailTemplate.active ? 'success' : 'default'}>
+                  {detailTemplate.active ? 'Đang phát' : 'Ngừng phát'}
+                </Badge>
+              </dd>
+            </div>
+          </dl>
+        )}
+      </Modal>
 
       <Modal
         isOpen={Boolean(deactivateTarget)}

@@ -8,7 +8,7 @@ import useAdminPeriod from '../hooks/useAdminPeriod.js';
 const SECTION_OPTIONS = [
   { key: 'revenue', value: 'REVENUE', label: 'Doanh thu', hint: 'Doanh thu nền tảng, hoa hồng và tiền đang giữ hộ theo kỳ' },
   { key: 'users', value: 'USERS', label: 'Người dùng', hint: 'Số tài khoản theo vai trò và tài khoản mới' },
-  { key: 'warehouse', value: 'WAREHOUSE', label: 'Kho', hint: 'Tồn kho theo trạng thái/kỳ, đánh giá dịch vụ, việc quá hạn' },
+  { key: 'warehouse', value: 'WAREHOUSE', label: 'Địa điểm ký gửi', hint: 'Hàng ký gửi theo trạng thái/kỳ, đánh giá dịch vụ, việc quá hạn' },
 ];
 
 /**

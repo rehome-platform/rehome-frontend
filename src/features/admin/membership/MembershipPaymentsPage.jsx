@@ -10,6 +10,7 @@ import {
   PAYMENT_METHOD_LABELS,
   MEMBERSHIP_PAYMENT_METHODS,
 } from './membershipConstants.js';
+import TierBadge from './TierBadge.jsx';
 
 const PAGE_SIZE = 20;
 
@@ -83,7 +84,7 @@ export default function MembershipPaymentsPage() {
         setError(
           err?.response?.data?.message ||
           err?.message ||
-          'Không thể tải lịch sử thanh toán gói VIP.'
+          'Không thể tải lịch sử thanh toán gói thành viên.'
         );
       }
     } finally {
@@ -118,7 +119,7 @@ export default function MembershipPaymentsPage() {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-bold text-[#191C19] font-heading">
-                Lịch sử thanh toán gói VIP
+                Lịch sử thanh toán gói thành viên
               </h2>
               {totalElements > 0 && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-[#E8F5E9] text-[#006B2C]">
@@ -130,8 +131,9 @@ export default function MembershipPaymentsPage() {
               Tra cứu toàn bộ giao dịch thanh toán gói thành viên theo hạng, phương thức và thời gian.
             </p>
           </div>
-          <Button type="button" variant="secondary" size="sm" disabled={loading} onClick={fetchPayments}>
-            {loading ? 'Đang tải...' : 'Làm mới'}
+          <Button type="button" variant="secondary" size="sm" disabled={loading} onClick={fetchPayments} className="gap-1">
+            <span className={`material-symbols-outlined text-sm ${loading ? 'animate-spin' : ''}`}>refresh</span>
+            <span>{loading ? 'Đang tải...' : 'Làm mới'}</span>
           </Button>
         </div>
 
@@ -220,7 +222,7 @@ export default function MembershipPaymentsPage() {
           role="status"
           className="p-4 rounded-xl bg-[#FFFBEB] border border-[#FCD34D] text-sm text-[#92400E]"
         >
-          Chức năng lịch sử thanh toán gói VIP đang chờ backend hoàn tất tích hợp endpoint{' '}
+          Chức năng lịch sử thanh toán gói thành viên đang chờ backend hoàn tất tích hợp endpoint{' '}
           <code className="font-mono font-semibold">/api/admin/membership-payments</code>.
         </div>
       )}
@@ -326,8 +328,12 @@ export default function MembershipPaymentsPage() {
                           '—'
                         )}
                       </td>
-                      <td className="py-3 px-4 font-medium">
-                        {TIER_LABELS[item.tier] || item.tier || '—'}
+                      <td className="py-3 px-4">
+                        {item.tier ? (
+                          <TierBadge tier={item.tier} label={TIER_LABELS[item.tier] || item.tier} />
+                        ) : (
+                          '—'
+                        )}
                       </td>
                       <td className="py-3 px-4 text-right font-semibold tabular-nums">
                         {formatCurrencyVND(item.amount)}

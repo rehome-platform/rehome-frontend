@@ -48,7 +48,7 @@ function TermColumns({ terms }) {
   const barWidth = Math.min(54, slot * 0.58);
 
   return (
-    <svg className="w-full h-auto" viewBox="0 0 300 180" role="img" aria-label="Biểu đồ tồn kho theo kỳ ký gửi">
+    <svg className="w-full h-auto" viewBox="0 0 300 180" role="img" aria-label="Biểu đồ hàng ký gửi theo kỳ">
       <line x1={left} y1={bottom} x2={right} y2={bottom} stroke="#C9D3C5" strokeWidth="1" />
       {terms.map((t, idx) => {
         const h = (t.count / max) * (bottom - top);
@@ -118,7 +118,7 @@ export default function AdminWarehouseOverview() {
     } catch (err) {
       if (reqId === reqSeqRef.current) {
         console.error('Lỗi tải dữ liệu kho hàng:', err);
-        setError('Không thể tải số liệu kho hàng.');
+        setError('Không thể tải số liệu hàng ký gửi.');
       }
     } finally {
       if (reqId === reqSeqRef.current) {
@@ -164,14 +164,14 @@ export default function AdminWarehouseOverview() {
 
   const statCards = [
     {
-      title: 'Tổng tồn kho',
+      title: 'Tổng hàng ký gửi',
       value: `${toCount(data.inventoryCount).toLocaleString('vi-VN')} món`,
       icon: 'inventory_2',
       iconBg: 'bg-[#E0F2F1]',
       iconColor: 'text-[#00685F]',
     },
     {
-      title: 'Điểm kho ký gửi',
+      title: 'Địa điểm ký gửi',
       value: warehouseCount.toLocaleString('vi-VN'),
       icon: 'warehouse',
       iconBg: 'bg-[#FFF3E0]',
@@ -186,7 +186,7 @@ export default function AdminWarehouseOverview() {
       iconColor: overdue > 0 ? 'text-[#DC2626]' : 'text-[#006B2C]',
     },
     {
-      title: 'Đánh giá dịch vụ kho',
+      title: 'Đánh giá dịch vụ ký gửi',
       value: rating ? `${rating} ★` : 'Chưa có đánh giá',
       icon: 'star',
       iconBg: 'bg-[#E8F5E9]',
@@ -258,27 +258,27 @@ export default function AdminWarehouseOverview() {
         {/* Tồn kho theo trạng thái: biểu đồ tròn + danh sách (màu chấm trùng màu lát) */}
         <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-[#E2E8E0] shadow-xs space-y-4">
           <div className="border-b border-[#E2E8E0] pb-3">
-            <h3 className="text-base font-bold text-[#191C19] font-heading">Tồn kho theo trạng thái</h3>
+            <h3 className="text-base font-bold text-[#191C19] font-heading">Hàng ký gửi theo trạng thái</h3>
             <p className="text-xs text-[#717971] mt-0.5">
-              Tổng <strong className="text-[#191C19]">{loading ? '...' : totalStock.toLocaleString('vi-VN')}</strong> món đang nằm trong kho
+              Tổng <strong className="text-[#191C19]">{loading ? '...' : totalStock.toLocaleString('vi-VN')}</strong> món đang được ký gửi
             </p>
           </div>
 
           {loading ? (
             <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center text-xs text-[#717971]">
-              Đang tải tồn kho theo trạng thái...
+              Đang tải hàng ký gửi theo trạng thái...
             </div>
           ) : !stockByStatus ? (
             <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center text-xs text-[#717971]">
-              Máy chủ chưa trả số liệu tồn kho theo trạng thái.
+              Máy chủ chưa trả số liệu hàng ký gửi theo trạng thái.
             </div>
           ) : totalStock === 0 ? (
             <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center flex flex-col items-center">
               <div className="w-12 h-12 rounded-xl bg-[#E0F2F1] text-[#00685F] flex items-center justify-center mb-2">
                 <span className="material-symbols-outlined text-2xl">inventory_2</span>
               </div>
-              <h4 className="text-xs font-bold text-[#191C19]">Kho hàng hiện chưa có sản phẩm tồn</h4>
-              <p className="text-[11px] text-[#717971] mt-0.5">Số liệu sẽ cập nhật khi có sản phẩm được nhập kho.</p>
+              <h4 className="text-xs font-bold text-[#191C19]">Hiện chưa có sản phẩm ký gửi</h4>
+              <p className="text-[11px] text-[#717971] mt-0.5">Số liệu sẽ cập nhật khi có sản phẩm được tiếp nhận.</p>
             </div>
           ) : (
             <div className="flex flex-col md:flex-row items-center gap-6">
@@ -286,8 +286,8 @@ export default function AdminWarehouseOverview() {
                 className="w-48 h-48"
                 segments={donutSegments}
                 centerValue={totalStock.toLocaleString('vi-VN')}
-                centerLabel="món trong kho"
-                ariaLabel="Biểu đồ tồn kho theo trạng thái"
+                centerLabel="món ký gửi"
+                ariaLabel="Biểu đồ hàng ký gửi theo trạng thái"
               />
 
               <div className="flex-1 w-full space-y-4">
@@ -310,13 +310,13 @@ export default function AdminWarehouseOverview() {
         {/* Tồn kho theo kỳ ký gửi */}
         <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-[#E2E8E0] shadow-xs space-y-4">
           <div className="border-b border-[#E2E8E0] pb-3">
-            <h3 className="text-base font-bold text-[#191C19] font-heading">Tồn kho theo kỳ ký gửi</h3>
-            <p className="text-xs text-[#717971] mt-0.5">Số món đang nằm trong kho theo kỳ hiện tại của sản phẩm</p>
+            <h3 className="text-base font-bold text-[#191C19] font-heading">Hàng ký gửi theo kỳ</h3>
+            <p className="text-xs text-[#717971] mt-0.5">Số món đang ký gửi theo kỳ hiện tại của sản phẩm</p>
           </div>
 
           {loading ? (
             <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center text-xs text-[#717971]">
-              Đang tải tồn kho theo kỳ...
+              Đang tải hàng ký gửi theo kỳ...
             </div>
           ) : termTotal === 0 ? (
             <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center text-xs text-[#717971]">

@@ -63,7 +63,7 @@ describe('Admin system configuration HTTP contract', () => {
     expect(baseApi.get).toHaveBeenCalledWith('/api/admin/config');
     expect(screen.getByLabelText(/Độ dài một kỳ/)).toHaveValue(45);
     expect(screen.getByLabelText(/Hạn chọn xử lý cuối kỳ/)).toHaveValue(30);
-    expect(screen.getByLabelText(/Hạn mang đồ đến kho/)).toHaveValue(7);
+    expect(screen.getByLabelText(/Hạn mang đồ đến địa điểm ký gửi/)).toHaveValue(7);
     expect(screen.getByLabelText(/Số form đang chờ tối đa/)).toHaveValue(5);
     tab(/2\. Giá/);
     expect(screen.getByLabelText(/Hoa hồng kỳ 1/)).toHaveValue(12.34);
@@ -79,7 +79,7 @@ describe('Admin system configuration HTTP contract', () => {
     expect(screen.getByLabelText(/Thời hạn tự hoàn thành sau giao/)).toHaveValue(4);
     expect(screen.getByLabelText(/Thời hạn gửi yêu cầu trả hàng/)).toHaveValue(5);
     expect(screen.getByLabelText(/Thời hạn bàn giao hàng trả cho GHN/)).toHaveValue(3);
-    expect(screen.getByLabelText(/Thời hạn đến kho nhận hàng trả/)).toHaveValue(10);
+    expect(screen.getByLabelText(/Thời hạn đến địa điểm ký gửi nhận hàng trả/)).toHaveValue(10);
   });
 
   it('enables all 25 catalog keys across all 5 tabs when returned by backend', async () => {
