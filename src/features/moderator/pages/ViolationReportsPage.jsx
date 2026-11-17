@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 import { Button, Badge } from '../../../components/common/index.js';
+import Spinner from '../../../components/common/Spinner.jsx';
 import { violationReportService } from '../services/violationReportApi.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import { formatDateTime, formatDate } from '../../../utils/formatters.js';
@@ -118,9 +119,17 @@ export default function ViolationReportsPage() {
   const [selectedAction, setSelectedAction] = useState('REMOVE_POST');
   const [actionReason, setActionReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const listCacheRef = useRef({});
 
-  // Tải danh sách báo cáo từ API thật GET /violation-reports
-  const fetchReports = useCallback(async () => {
+  // Tải danh sách báo cáo từ API thật GET /violation-reports (có cache theo tab/filter)
+  const fetchReports = useCallback(async ({ force = false } = {}) => {
+    const cacheKey = `${statusFilter}:${typeFilter}`;
+    if (!force && Array.isArray(listCacheRef.current[cacheKey])) {
+      setReports(listCacheRef.current[cacheKey]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
@@ -129,6 +138,7 @@ export default function ViolationReportsPage() {
         type: typeFilter,
       });
       const list = res?.data || [];
+      listCacheRef.current[cacheKey] = list;
       setReports(list);
 
       // Làm giàu thông tin hiển thị (tên tổ chức & nội dung tóm tắt) cho các dòng trong hàng đợi VP-01
@@ -215,7 +225,7 @@ export default function ViolationReportsPage() {
     setSelectedReport(null);
     setSelectedReportId(null);
     setSearchParams({});
-    fetchReports();
+    fetchReports({ force: true });
   };
 
   // Xác nhận xử lý quyết định vi phạm
@@ -239,9 +249,19 @@ export default function ViolationReportsPage() {
       const label = ACTION_LABEL_MAP[selectedAction] || selectedAction;
       toast.success(`Đã thực thi [${label}] thành công!`);
 
+      // Optimistic UI: cập nhật trực tiếp trạng thái dòng trên bảng và cache, không reload toàn bộ bảng
+      const nextStatus = isDismiss ? 'DISMISSED' : 'RESOLVED';
+      setReports((prev) => {
+        const updated = prev
+          .map((item) => (String(item.id) === String(selectedReport.id) ? { ...item, status: nextStatus } : item))
+          .filter((item) => (statusFilter === 'PENDING' ? String(item.id) !== String(selectedReport.id) : true));
+        listCacheRef.current[`${statusFilter}:${typeFilter}`] = updated;
+        return updated;
+      });
+      setSelectedReport((prev) => (prev ? { ...prev, status: nextStatus } : prev));
+      delete detailsCacheRef.current[selectedReport.id];
       // Tải lại chi tiết để hiển thị kết quả đã xử lý
       await loadDetail(selectedReport.id);
-      fetchReports();
     } catch (err) {
       console.error('Lỗi khi xử lý báo cáo vi phạm:', err);
       toast.error(err?.message || 'Có lỗi xảy ra khi xử lý báo cáo.');
@@ -348,7 +368,7 @@ export default function ViolationReportsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-background border-b border-neutral text-[11px] uppercase font-semibold text-textSecondary tracking-wider">
+                    <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
                       <th className="py-3 px-3.5">Loại đối tượng</th>
                       <th className="py-3 px-3.5">Mã đối tượng (Target ID)</th>
                       <th className="py-3 px-3.5 text-center">Số lượt báo cáo</th>
@@ -362,8 +382,8 @@ export default function ViolationReportsPage() {
                       <tr>
                         <td colSpan="6" className="py-12 text-center text-textSecondary">
                           <div className="flex flex-col items-center justify-center gap-2">
-                            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                            <span>Đang nạp dữ liệu báo cáo vi phạm từ máy chủ...</span>
+                            <Spinner size="md" />
+                            <span>Đang nạp dữ liệu báo cáo vi phạm từ máy chủ…</span>
                           </div>
                         </td>
                       </tr>
