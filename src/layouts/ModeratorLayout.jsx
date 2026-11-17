@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { NotificationBell } from '../components/notification/index.js';
+import Logo from '../components/common/Logo.jsx';
 
 /**
  * Layout chuyên biệt dành cho Nhân viên Điểm kí gửi / Kiểm duyệt viên (Moderator)
@@ -63,19 +64,7 @@ export default function ModeratorLayout({ children, apiColors = true }) {
       <aside className={`${isMobileMenuOpen ? 'flex' : 'hidden'} lg:flex w-72 bg-surface border-r border-neutral flex-col fixed inset-y-0 z-30 shadow-sm`}>
         {/* Brand Header */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-neutral bg-surface">
-          <Link to="/moderator" className="flex items-center space-x-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#006B2C] text-white flex items-center justify-center font-bold font-heading text-lg shadow-sm">
-              R
-            </div>
-            <div>
-              <span className="text-base font-extrabold font-heading text-[#006B2C] tracking-tight block leading-tight">
-                ReHome
-              </span>
-              <span className="text-[10px] font-medium uppercase tracking-wider text-textSecondary block leading-tight">
-                Bảng điều khiển điểm kí gửi
-              </span>
-            </div>
-          </Link>
+          <Logo size="sm" to="/moderator" subtitle="Bảng điều khiển điểm kí gửi" />
         </div>
 
         {/* Navigation list */}
@@ -86,11 +75,10 @@ export default function ModeratorLayout({ children, apiColors = true }) {
               to={item.to}
               aria-current={item.active ? 'page' : undefined}
               onClick={() => setIsMobileMenuOpen(false)}
-              className={`flex items-center ${item.subItem ? 'pl-7 pr-3 py-2 text-[11px]' : 'px-3.5 py-2.5 text-xs'} rounded-xl font-semibold transition-all duration-150 ${
-                item.active
+              className={`flex items-center ${item.subItem ? 'pl-7 pr-3 py-2 text-[11px]' : 'px-3.5 py-2.5 text-xs'} rounded-xl font-semibold transition-all duration-150 ${item.active
                   ? 'bg-[#006B2C] text-white shadow-sm'
                   : 'text-text hover:bg-[#F6F9F4] hover:text-[#006B2C]'
-              }`}
+                }`}
             >
               <span aria-hidden="true" className={`material-symbols-outlined ${item.subItem ? 'text-[18px] mr-2.5' : 'text-[20px] mr-3'} ${item.active ? 'text-white' : 'text-textSecondary'}`}>
                 {item.icon}
