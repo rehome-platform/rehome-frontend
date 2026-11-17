@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatCurrencyVND } from '../../../utils/formatters.js';
 import { Button } from '../../../components/common/index.js';
 import adminApi from '../services/adminApi.js';
+import membershipAdminApi from '../services/membershipAdminApi.js';
 import AdminOverviewView from '../components/AdminOverviewView.jsx';
 import AdminRevenueReportView from '../components/AdminRevenueReportView.jsx';
 import AdminRevenueTrendChart from '../components/AdminRevenueTrendChart.jsx';
@@ -10,8 +11,10 @@ import AdminWarehouseOverview from '../components/AdminWarehouseOverview.jsx';
 import AdminPeriodFilter from '../components/AdminPeriodFilter.jsx';
 import AdminExportExcelModal from '../components/AdminExportExcelModal.jsx';
 import ComparisonBadge from '../components/ComparisonBadge.jsx';
+import AdminDonutChart from '../components/AdminDonutChart.jsx';
 import useAdminPeriod from '../hooks/useAdminPeriod.js';
 import usePreviousTotal from '../hooks/usePreviousTotal.js';
+import { PAID_TIERS, TIER_SHORT_LABELS, TIER_HEX_COLOR } from '../membership/membershipConstants.js';
 
 const DEFAULT_DASHBOARD = {
   revenue: 0,
@@ -43,7 +46,7 @@ const DEFAULT_DASHBOARD = {
 const TABS = [
   { id: 'revenue', label: 'Doanh thu', icon: 'payments' },
   { id: 'users', label: 'Người dùng', icon: 'group' },
-  { id: 'warehouse', label: 'Kho', icon: 'warehouse' },
+  { id: 'warehouse', label: 'Địa điểm ký gửi', icon: 'warehouse' },
 ];
 
 /**
@@ -72,8 +75,26 @@ export default function AdminDashboardPage() {
     previousRange
   );
 
+  const fetchPreviousMembershipRevenue = useCallback(
+    (range) =>
+      membershipAdminApi
+        .getMembershipStats({ from: range.apiFrom, to: range.apiTo })
+        .then((res) => Number(res?.totalRevenue ?? 0)),
+    []
+  );
+  const { previousTotal: previousMembershipRevenue, loadingPrevious: loadingPreviousMembershipRevenue } =
+    usePreviousTotal(fetchPreviousMembershipRevenue, previousRange);
+
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(DEFAULT_DASHBOARD);
+
+  const [membershipStats, setMembershipStats] = useState(null);
+  const [membershipLoading, setMembershipLoading] = useState(true);
+  const membershipSeqRef = useRef(0);
+
+  // Số thành viên đang hoạt động theo hạng (Bạc/Vàng/Kim cương) - số hiện tại, không theo khoảng thời gian lọc
+  const [tierCounts, setTierCounts] = useState(null);
+  const [tierCountsLoading, setTierCountsLoading] = useState(true);
 
   const dashSeqRef = useRef(0);
 
@@ -104,6 +125,72 @@ export default function AdminDashboardPage() {
 
     loadData();
   }, [activeRange.apiFrom, activeRange.apiTo, dateError]);
+
+  // Tóm tắt gói thành viên & voucher cho tab Doanh thu (xem chi tiết đầy đủ ở trang Danh sách thành viên)
+  useEffect(() => {
+    if (dateError) return;
+    const reqId = ++membershipSeqRef.current;
+    const loadMembershipStats = async () => {
+      try {
+        setMembershipLoading(true);
+        const res = await membershipAdminApi.getMembershipStats({
+          from: activeRange.apiFrom,
+          to: activeRange.apiTo,
+        });
+        if (reqId === membershipSeqRef.current) {
+          setMembershipStats(res || {});
+        }
+      } catch (err) {
+        if (reqId === membershipSeqRef.current) {
+          console.error('Lỗi tải thống kê gói thành viên:', err);
+          setMembershipStats(null);
+        }
+      } finally {
+        if (reqId === membershipSeqRef.current) {
+          setMembershipLoading(false);
+        }
+      }
+    };
+    loadMembershipStats();
+  }, [activeRange.apiFrom, activeRange.apiTo, dateError]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadTierCounts = async () => {
+      try {
+        setTierCountsLoading(true);
+        const plans = await membershipAdminApi.getPlans();
+        if (cancelled) return;
+        const list = Array.isArray(plans) ? plans : [];
+        const counts = {};
+        for (const tier of PAID_TIERS) {
+          const plan = list.find((p) => p.tier === tier);
+          counts[tier] = Number(plan?.activeSubscriberCount ?? 0);
+        }
+        setTierCounts(counts);
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Lỗi tải số thành viên theo hạng:', err);
+          setTierCounts(null);
+        }
+      } finally {
+        if (!cancelled) setTierCountsLoading(false);
+      }
+    };
+    loadTierCounts();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const membershipRevenue = Number(membershipStats?.totalRevenue ?? 0);
+  const tierSegments = PAID_TIERS.map((tier) => ({
+    key: tier,
+    label: TIER_SHORT_LABELS[tier] || tier,
+    value: tierCounts?.[tier] ?? 0,
+    color: TIER_HEX_COLOR[tier],
+  }));
+  const totalTierMembers = tierSegments.reduce((sum, s) => sum + s.value, 0);
 
   const revenueMetrics = [
     {
@@ -222,6 +309,75 @@ export default function AdminDashboardPage() {
                 <p className="text-[11px] text-[#717971] mt-3">{m.description}</p>
               </div>
             ))}
+          </div>
+
+          {/* Tóm tắt gói thành viên: thẻ doanh thu nổi bật bên trái + biểu đồ tròn theo hạng bên phải */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div className="chart-fade-up bg-white p-5 rounded-2xl border border-[#E2E8E0] shadow-xs flex flex-col justify-between hover:border-[#006B2C]/40 transition-all duration-200">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-[#F8FAF8] text-[#414942] border border-[#E2E8E0]">
+                    Theo khoảng thời gian đã chọn
+                  </span>
+                  <div className="w-10 h-10 rounded-xl bg-[#E0F2F1] text-[#00685F] flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[22px]">card_membership</span>
+                  </div>
+                </div>
+                <p className="text-xs font-medium text-[#717971]">Doanh thu gói thành viên</p>
+                <p className="text-2xl font-black font-heading text-[#191C19] mt-1 tracking-tight">
+                  {membershipLoading ? '...' : formatCurrencyVND(membershipRevenue)}
+                </p>
+                {previousPeriodLabel && !membershipLoading && (
+                  <div className="mt-1.5">
+                    <ComparisonBadge
+                      current={membershipRevenue}
+                      previous={previousMembershipRevenue}
+                      loading={loadingPreviousMembershipRevenue}
+                      label={previousPeriodLabel}
+                    />
+                  </div>
+                )}
+              </div>
+              <p className="text-[11px] text-[#717971] mt-3">
+                Tổng tiền thu được từ bán gói thành viên trong khoảng thời gian đã chọn.
+              </p>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-[#E2E8E0] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col">
+              <h3 className="text-base font-bold text-[#191C19] font-heading">Gói thành viên</h3>
+
+              <div className="flex-1 flex flex-col items-center justify-center gap-5 py-2">
+                <AdminDonutChart
+                  segments={tierSegments}
+                  centerValue={tierCountsLoading ? '...' : totalTierMembers}
+                  centerLabel="Thành viên gói"
+                  className="w-48 h-48 sm:w-52 sm:h-52"
+                  ariaLabel="Biểu đồ thành viên theo hạng gói"
+                />
+
+                <div className="grid grid-cols-3 gap-3 w-full max-w-sm">
+                  {tierSegments.map((s) => (
+                    <div
+                      key={s.key}
+                      className="rounded-xl border border-[#DDE5D9] bg-[#F6F9F4] px-2 py-2.5 text-center"
+                    >
+                      <span className="flex items-center justify-center gap-1.5 text-xs font-medium text-[#414942]">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }}></span>
+                        {s.label}
+                      </span>
+                      <span className="block mt-1 text-lg font-extrabold text-[#191C19] font-heading leading-none">
+                        {tierCountsLoading ? '...' : s.value}
+                      </span>
+                      <span className="block mt-0.5 text-[11px] text-[#717971]">
+                        {tierCountsLoading
+                          ? '...'
+                          : `${Math.round((s.value / Math.max(1, totalTierMembers)) * 100)}%`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Biểu đồ doanh thu theo thời gian (có bộ lọc riêng, không phụ thuộc bộ lọc ở đầu trang) */}

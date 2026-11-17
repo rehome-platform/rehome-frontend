@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, Table } from '../../../components/common/index.js';
+import { Badge, Button, Modal, Table } from '../../../components/common/index.js';
 import { formatCurrencyVND } from '../../../utils/formatters.js';
 import { membershipAdminApi } from '../services/membershipAdminApi.js';
 import { TIER_LABELS, TIER_ORDER, formatQuotaValue } from './membershipConstants.js';
 import PlanEditModal from './PlanEditModal.jsx';
+import TierBadge from './TierBadge.jsx';
 
 function sortPlansByTierOrder(list) {
   const items = Array.isArray(list) ? [...list] : [];
@@ -22,6 +23,7 @@ export default function MembershipPlansPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editingPlan, setEditingPlan] = useState(null);
+  const [detailPlan, setDetailPlan] = useState(null);
 
   const loadPlans = useCallback(async () => {
     setLoading(true);
@@ -43,16 +45,7 @@ export default function MembershipPlansPage() {
   const columns = [
     {
       header: 'Hạng',
-      render: (row) => (
-        <div>
-          <div className="font-bold text-[#191C19]">{row.tier}</div>
-          <div className="text-xs text-[#5B6776]">{TIER_LABELS[row.tier] || row.tier}</div>
-        </div>
-      ),
-    },
-    {
-      header: 'Tên',
-      render: (row) => <span className="font-medium text-[#191C19]">{row.name}</span>,
+      render: (row) => <TierBadge tier={row.tier} label={TIER_LABELS[row.tier] || row.tier} />,
     },
     {
       header: 'Giá/tháng',
@@ -67,30 +60,6 @@ export default function MembershipPlansPage() {
         row.tier === 'FREE' || row.pricePerYear === null || row.pricePerYear === undefined
           ? '—'
           : formatCurrencyVND(row.pricePerYear),
-    },
-    {
-      header: 'RT/ngày',
-      render: (row) => formatQuotaValue(row.liveTryonPerDay),
-    },
-    {
-      header: 'Giây/lượt',
-      render: (row) => formatQuotaValue(row.liveTryonMaxSeconds),
-    },
-    {
-      header: 'Phối đồ/ngày',
-      render: (row) => formatQuotaValue(row.aiTryonPerDay),
-    },
-    {
-      header: 'Nổi bật',
-      render: (row) => (
-        <Badge variant={row.featuredListing ? 'success' : 'default'} size="sm">
-          {row.featuredListing ? 'Có' : 'Không'}
-        </Badge>
-      ),
-    },
-    {
-      header: 'Form ký gửi',
-      render: (row) => formatQuotaValue(row.maxPendingConsignmentForms),
     },
     {
       header: 'Đang bán',
@@ -117,14 +86,28 @@ export default function MembershipPlansPage() {
     {
       header: 'Thao tác',
       render: (row) => (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setEditingPlan(row)}
-          aria-label={`Sửa gói ${row.tier}`}
-        >
-          ✏️ Sửa
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setDetailPlan(row)}
+            aria-label={`Xem chi tiết gói ${row.tier}`}
+            className="gap-1"
+          >
+            <span className="material-symbols-outlined text-sm">visibility</span>
+            <span>Xem chi tiết</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setEditingPlan(row)}
+            aria-label={`Sửa gói ${row.tier}`}
+            className="gap-1"
+          >
+            <span className="material-symbols-outlined text-sm">edit</span>
+            <span>Sửa</span>
+          </Button>
+        </div>
       ),
     },
   ];
@@ -134,17 +117,8 @@ export default function MembershipPlansPage() {
       <div className="p-6 bg-white rounded-xl border border-[#E2E8E0] space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-[#191C19]">Cấu hình gói thành viên VIP</h2>
-            <p className="text-xs text-[#5B6776] mt-0.5">
-              Quản lý giá và hạn mức quyền lợi cho 4 hạng thành viên cố định.
-            </p>
+            <h2 className="text-lg font-bold text-[#191C19]">Cấu hình gói thành viên</h2>
           </div>
-          <Link
-            to="/admin/voucher-templates"
-            className="text-sm font-semibold text-[#006B2C] hover:underline"
-          >
-            Cấu hình voucher của các hạng →
-          </Link>
         </div>
 
         {error && (
@@ -171,6 +145,52 @@ export default function MembershipPlansPage() {
         onClose={() => setEditingPlan(null)}
         onSuccess={loadPlans}
       />
+
+      <Modal
+        isOpen={Boolean(detailPlan)}
+        onClose={() => setDetailPlan(null)}
+        title={detailPlan ? `Chi tiết gói ${TIER_LABELS[detailPlan.tier] || detailPlan.tier}` : 'Chi tiết gói'}
+        size="md"
+      >
+        {detailPlan && (
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+            {[
+              { label: 'Tên gói', value: detailPlan.name || '—' },
+              {
+                label: 'Giá/tháng',
+                value:
+                  detailPlan.tier === 'FREE' || detailPlan.pricePerMonth == null
+                    ? '—'
+                    : formatCurrencyVND(detailPlan.pricePerMonth),
+              },
+              {
+                label: 'Giá/năm',
+                value:
+                  detailPlan.tier === 'FREE' || detailPlan.pricePerYear == null
+                    ? '—'
+                    : formatCurrencyVND(detailPlan.pricePerYear),
+              },
+              { label: 'Live try-on / ngày', value: formatQuotaValue(detailPlan.liveTryonPerDay) },
+              { label: 'Giây / lượt live try-on', value: formatQuotaValue(detailPlan.liveTryonMaxSeconds) },
+              { label: 'Phối đồ AI / ngày', value: formatQuotaValue(detailPlan.aiTryonPerDay) },
+              { label: 'Form ký gửi chờ duyệt tối đa', value: formatQuotaValue(detailPlan.maxPendingConsignmentForms) },
+              { label: 'Tin nổi bật', value: detailPlan.featuredListing ? 'Có' : 'Không' },
+              {
+                label: 'Trạng thái bán',
+                value: detailPlan.tier === 'FREE' ? '—' : detailPlan.active ? 'Đang bán' : 'Ngưng bán',
+              },
+              { label: 'Đang sử dụng', value: `${detailPlan.activeSubscriberCount ?? 0} thành viên` },
+            ].map((r) => (
+              <div key={r.label} className="px-3 py-2.5 rounded-xl border border-[#E2E8E0] bg-[#F6F9F4]/40">
+                <dt className="text-[10px] uppercase tracking-wide text-[#5B6776] font-semibold mb-0.5">
+                  {r.label}
+                </dt>
+                <dd className="text-[#191C19] font-semibold">{r.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </Modal>
     </div>
   );
 }

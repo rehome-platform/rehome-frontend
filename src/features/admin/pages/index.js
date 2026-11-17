@@ -11,6 +11,5 @@ export {
   MembershipSubscriptionsPage,
   MembershipSubscriptionDetailPage,
   VoucherTemplatesPage,
-  MembershipStatsPage,
   MembershipPaymentsPage,
 } from '../membership/index.js';
