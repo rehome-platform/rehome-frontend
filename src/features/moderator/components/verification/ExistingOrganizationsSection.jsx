@@ -213,7 +213,7 @@ export function ExistingOrganizationsSection({
                       {/* Cột 2: Loại hình & MST */}
                       <td className="py-3 px-3">
                         <div className="space-y-0.5">
-                          <span className="inline-block px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold">
+                          <span className="inline-block px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold whitespace-nowrap">
                             {orgType}
                           </span>
                           <div className="text-[11px] font-mono text-textSecondary">
@@ -266,7 +266,7 @@ export function ExistingOrganizationsSection({
 
                       {/* Cột 6: Trạng thái */}
                       <td className="py-3 px-3">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7]">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7] whitespace-nowrap">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#006B2C]" />
                           Đang hoạt động
                         </span>

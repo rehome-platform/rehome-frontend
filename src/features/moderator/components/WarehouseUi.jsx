@@ -93,7 +93,7 @@ const statusLabels = {
 };
 export function Status({ children }) {
   return (
-    <span className="inline-block rounded-full bg-background px-3 py-1 text-xs font-semibold text-accent border border-neutral">
+    <span className="inline-block rounded-full bg-background px-3 py-1 text-xs font-semibold text-accent border border-neutral whitespace-nowrap">
       {statusLabels[children] || children || '—'}
     </span>
   );

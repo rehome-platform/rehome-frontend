@@ -943,7 +943,7 @@ export default function DonationsPage() {
                                   )}
                                 </td>
                                 <td className="py-3 px-3 align-top">
-                                  <span className="inline-block rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-[10px] font-bold text-amber-900">
+                                  <span className="inline-block rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-[10px] font-bold text-amber-900 whitespace-nowrap">
                                     Tạm giữ
                                   </span>
                                 </td>
@@ -1132,19 +1132,20 @@ export default function DonationsPage() {
                                             />
                                           )}
                                           <div className="space-y-1 min-w-0">
-                                            <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 border border-amber-200 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900 whitespace-nowrap">
+                                            <div className="inline-flex items-center rounded-full bg-amber-100 border border-amber-200 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900 whitespace-nowrap">
                                               <span>Món ký gửi · SKU {row.sku || '—'}</span>
-                                              {row.sku && (
-                                                <Link
-                                                  to={`/moderator/inventory/${encodeURIComponent(row.sku)}`}
-                                                  className="underline text-[#006B2C] font-bold"
-                                                >
-                                                  Xem
-                                                </Link>
-                                              )}
                                             </div>
                                             {row.productName && (
-                                              <p className="font-semibold text-text leading-snug">{row.productName}</p>
+                                              row.sku ? (
+                                                <Link
+                                                  to={`/moderator/inventory/${encodeURIComponent(row.sku)}`}
+                                                  className="block font-semibold text-[#006B2C] hover:underline leading-snug"
+                                                >
+                                                  {row.productName}
+                                                </Link>
+                                              ) : (
+                                                <p className="font-semibold text-text leading-snug">{row.productName}</p>
+                                              )
                                             )}
                                           </div>
                                         </div>
@@ -1193,7 +1194,7 @@ export default function DonationsPage() {
                                     </td>
                                     <td className="py-3 px-3 align-top">
                                       {row.status === 'ON_HOLD' ? (
-                                        <span className="inline-block rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-[10px] font-bold text-amber-900">
+                                        <span className="inline-block rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-[10px] font-bold text-amber-900 whitespace-nowrap">
                                           Tạm giữ
                                         </span>
                                       ) : isPending ? (

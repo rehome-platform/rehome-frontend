@@ -50,7 +50,7 @@ export default function ConsignmentListPage() {
           setLastConsignment(parsed);
         }
       }
-    } catch {}
+    } catch { }
   }, []);
 
   const handleTabChange = (key) => {
@@ -93,104 +93,104 @@ export default function ConsignmentListPage() {
     >
 
       <WarehouseHistoryTabs type="INSPECTION">
-      {/* THẺ GHIM ĐƠN VỪA THAO TÁC GẦN ĐÂY */}
-      {lastConsignment && (
-        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl text-xs text-[#92400E] shadow-sm">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-bold text-[#D97706]">📌 Đơn vừa mở gần đây:</span>
-            <span className="font-semibold text-[#191C19]">{lastConsignment.name}</span>
-            <span className="text-[#717971]">({lastConsignment.formId})</span>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FEA619] text-[#191C19]">
-              {lastConsignment.status}
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            {lastConsignment.status && lastConsignment.status !== currentStatus && (
-              <button
-                type="button"
-                onClick={() => handleTabChange(lastConsignment.status)}
-                className="text-xs text-[#5B6776] underline hover:text-[#191C19]"
+        {/* THẺ GHIM ĐƠN VỪA THAO TÁC GẦN ĐÂY */}
+        {lastConsignment && (
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl text-xs text-[#92400E] shadow-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-bold text-[#D97706]">📌 Đơn vừa mở gần đây:</span>
+              <span className="font-semibold text-[#191C19]">{lastConsignment.name}</span>
+              <span className="text-[#717971]">({lastConsignment.formId})</span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FEA619] text-[#191C19]">
+                {lastConsignment.status}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              {lastConsignment.status && lastConsignment.status !== currentStatus && (
+                <button
+                  type="button"
+                  onClick={() => handleTabChange(lastConsignment.status)}
+                  className="text-xs text-[#5B6776] underline hover:text-[#191C19]"
+                >
+                  Mở tab {TABS.find((t) => t.key === lastConsignment.status)?.label || lastConsignment.status}
+                </button>
+              )}
+              <Link
+                to={`/moderator/consignments/${encodeURIComponent(lastConsignment.formId)}`}
+                className="font-bold text-[#006B2C] hover:underline flex items-center gap-1"
               >
-                Mở tab {TABS.find((t) => t.key === lastConsignment.status)?.label || lastConsignment.status}
-              </button>
-            )}
-            <Link
-              to={`/moderator/consignments/${encodeURIComponent(lastConsignment.formId)}`}
-              className="font-bold text-[#006B2C] hover:underline flex items-center gap-1"
-            >
-              Tiếp tục kiểm định →
-            </Link>
+                Tiếp tục kiểm định →
+              </Link>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* 1. THANH SUBTABS TRẠNG THÁI (KD-01-DanhSachForm.dc.html) */}
-      <div role="tablist" aria-label="Trạng thái form ký gửi" className="flex flex-wrap gap-2">
-        {TABS.map((tab) => {
-          const isSelected = currentStatus === tab.key;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              role="tab"
-              aria-selected={isSelected}
-              onClick={() => handleTabChange(tab.key)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${isSelected
+        {/* 1. THANH SUBTABS TRẠNG THÁI (KD-01-DanhSachForm.dc.html) */}
+        <div role="tablist" aria-label="Trạng thái form ký gửi" className="flex flex-wrap gap-2">
+          {TABS.map((tab) => {
+            const isSelected = currentStatus === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                role="tab"
+                aria-selected={isSelected}
+                onClick={() => handleTabChange(tab.key)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${isSelected
                   ? 'border-[#006B2C] bg-[#006B2C] text-white shadow-sm'
                   : 'border-neutral bg-white text-textSecondary hover:bg-[#F6F9F4]'
-                }`}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
+                  }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
 
-      {/* 2. KHUNG LƯU Ý HƯỚNG DẪN DUYỆT TRÊN ẢNH (KD-01) */}
-      <div className="p-3.5 rounded-xl border border-neutral bg-[#F6F9F4] text-xs text-text leading-relaxed shadow-sm">
-        <strong>Ở bước này bạn duyệt trên ảnh, chưa thấy hàng thật.</strong> Duyệt nghĩa là mời Member mang sản phẩm đến kho trong thời hạn được thông báo, chưa phải cam kết nhận hàng. Kiểm định thật diễn ra tại quầy.
-      </div>
+        {/* 2. KHUNG LƯU Ý HƯỚNG DẪN DUYỆT TRÊN ẢNH (KD-01) */}
+        <div className="p-3.5 rounded-xl border border-neutral bg-[#F6F9F4] text-xs text-text leading-relaxed shadow-sm">
+          <strong>Ở bước này bạn duyệt trên ảnh, chưa thấy hàng thật.</strong> Duyệt nghĩa là mời Member mang sản phẩm đến kho trong thời hạn được thông báo, chưa phải cam kết nhận hàng. Kiểm định thật diễn ra tại quầy.
+        </div>
 
-      <ResourceState resource={resource} empty={!rawItems.length} />
+        <ResourceState resource={resource} empty={!rawItems.length} />
 
-      {/* 3. BẢNG DANH SÁCH FORM KÝ GỬI (KD-01) */}
-      {!!rawItems.length && (
-        <div className="rounded-2xl border border-neutral bg-surface overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[850px] text-left text-xs">
-              <thead>
-                <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
-                  <th className="py-2.5 px-3.5 w-16">Ảnh</th>
-                  <th className="py-2.5 px-3">Mã form</th>
-                  <th className="py-2.5 px-3">Sản phẩm</th>
-                  <th className="py-2.5 px-3">Thương hiệu</th>
-                  <th className="py-2.5 px-3">Member</th>
-                  <th className="py-2.5 px-3">Giá mong muốn</th>
-                  <th className="py-2.5 px-3">Gửi lúc</th>
-                  <th className="py-2.5 px-3 text-right">Hành động</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral">
-                {rawItems.map((form) => {
-                  const formId = form.formId || form.id || form.refId;
-                  const isMine = form.claimedBy === scope.userId;
-                  const firstPhoto = form.photos?.[0]?.url || form.photos?.[0] || form.coverPhoto;
+        {/* 3. BẢNG DANH SÁCH FORM KÝ GỬI (KD-01) */}
+        {!!rawItems.length && (
+          <div className="rounded-2xl border border-neutral bg-surface overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[850px] text-left text-xs">
+                <thead>
+                  <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
+                    <th className="py-2.5 px-3.5 w-16">Ảnh</th>
+                    <th className="py-2.5 px-3">Mã form</th>
+                    <th className="py-2.5 px-3">Sản phẩm</th>
+                    <th className="py-2.5 px-3">Thương hiệu</th>
+                    <th className="py-2.5 px-3">Member</th>
+                    <th className="py-2.5 px-3">Giá mong muốn</th>
+                    <th className="py-2.5 px-3">Gửi lúc</th>
+                    <th className="py-2.5 px-3 text-right">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral">
+                  {rawItems.map((form) => {
+                    const formId = form.formId || form.id || form.refId;
+                    const isMine = form.claimedBy === scope.userId;
+                    const firstPhoto = form.photos?.[0]?.url || form.photos?.[0] || form.coverPhoto;
 
-                  return (
-                    <tr key={formId} className="hover:bg-[#F6F9F4] transition-colors">
-                      <td className="py-3 px-3.5">
-                        <div className="w-13 h-13 w-[52px] h-[52px] rounded-xl border border-neutral bg-[#F6F9F4] overflow-hidden flex items-center justify-center shrink-0">
-                          {firstPhoto ? (
-                            <img src={firstPhoto} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="text-[10px] text-textSecondary">RH</span>
-                          )}
-                        </div>
-                      </td>
+                    return (
+                      <tr key={formId} className="hover:bg-[#F6F9F4] transition-colors">
+                        <td className="py-3 px-3.5">
+                          <div className="w-13 h-13 w-[52px] h-[52px] rounded-xl border border-neutral bg-[#F6F9F4] overflow-hidden flex items-center justify-center shrink-0">
+                            {firstPhoto ? (
+                              <img src={firstPhoto} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-[10px] text-textSecondary">RH</span>
+                            )}
+                          </div>
+                        </td>
                       <td className="py-3 px-3 font-semibold text-text">
                         <div>{formId}</div>
                         {isMine && (
-                          <span className="inline-block mt-0.5 text-[9px] font-bold text-[#006B2C] bg-[#006B2C]/10 px-2 py-0.5 rounded-full">
+                          <span className="inline-block mt-0.5 text-[9px] font-bold text-[#006B2C] bg-[#006B2C]/10 px-2 py-0.5 rounded-full whitespace-nowrap">
                             Bạn đang nhận việc này
                           </span>
                         )}
@@ -222,17 +222,17 @@ export default function ConsignmentListPage() {
                         </Link>
                       </td>
                     </tr>
-                  );
+                );
                 })}
               </tbody>
             </table>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {totalPages > 1 && (
-        <Pager page={page} totalPages={totalPages} onChange={handlePageChange} />
-      )}
+        {totalPages > 1 && (
+          <Pager page={page} totalPages={totalPages} onChange={handlePageChange} />
+        )}
       </WarehouseHistoryTabs>
     </Page>
   );
