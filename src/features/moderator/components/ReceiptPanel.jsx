@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
+import Spinner from '../../../components/common/Spinner.jsx';
 import { consignmentService } from '../services/warehouseApi.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
 import { canStockIn } from '../models/warehouseModel.js';
@@ -75,7 +76,7 @@ export default function ReceiptPanel({ receiptId, form, allowStockIn = false, on
             <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr] items-start">
               {/* CỘT TRÁI: SPINNER CHỜ XÁC NHẬN */}
               <div className="rounded-2xl border-2 border-[#2b2b2b] bg-white p-6 flex flex-col items-center justify-center text-center space-y-4 shadow-sm">
-                <div className="w-16 h-16 rounded-full border-4 border-[#2b2b2b] border-t-transparent animate-spin mx-auto my-2" />
+                <Spinner size="lg" color="#2b2b2b" className="mx-auto my-2" />
                 <div>
                   <h3 className="text-lg font-bold text-[#191C19]">
                     Đang chờ khách xác nhận biên nhận

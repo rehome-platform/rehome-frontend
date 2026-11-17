@@ -159,7 +159,7 @@ export default function ConsignmentListPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[850px] text-left text-xs">
               <thead>
-                <tr className="bg-background border-b border-neutral text-[10px] uppercase font-bold tracking-wider text-textSecondary">
+                <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
                   <th className="py-2.5 px-3.5 w-16">Ảnh</th>
                   <th className="py-2.5 px-3">Mã form</th>
                   <th className="py-2.5 px-3">Sản phẩm</th>

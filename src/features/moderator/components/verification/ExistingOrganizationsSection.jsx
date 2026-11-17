@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Modal, Button } from '../../../../components/common/index.js';
+import Spinner from '../../../../components/common/Spinner.jsx';
 import { orgVerificationService } from '../../services/orgVerificationApi.js';
 
 export function ExistingOrganizationsSection({
@@ -116,7 +117,7 @@ export function ExistingOrganizationsSection({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-background border-b border-neutral text-[11px] uppercase font-bold text-textSecondary tracking-wider">
+              <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
                 <th className="py-3 px-3.5">Tổ chức</th>
                 <th className="py-3 px-3">Loại hình & MST</th>
                 <th className="py-3 px-3">Phạm vi</th>
@@ -131,7 +132,7 @@ export function ExistingOrganizationsSection({
                 <tr>
                   <td colSpan="7" className="py-12 text-center text-textSecondary">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <Spinner size="md" />
                       <span className="text-xs">Đang tải danh sách tổ chức hiện hữu...</span>
                     </div>
                   </td>

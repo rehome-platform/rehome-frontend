@@ -3,6 +3,7 @@ import '../styles/apiColors.css';
 import { Link } from 'react-router-dom';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 import Button from '../../../components/common/Button.jsx';
+import Spinner from '../../../components/common/Spinner.jsx';
 import { safeDocumentUrl } from '../models/warehouseModel.js';
 import { isFixtureMode } from '../config/warehouseContract.js';
 
@@ -100,7 +101,12 @@ export function Status({ children }) {
 export function ResourceState({ resource, empty = false, children }) {
   return (
     <>
-      {resource.loading && <p role="status">Đang tải dữ liệu…</p>}
+      {resource.loading && (
+        <div role="status" className="flex items-center gap-2.5 py-3 text-sm text-textSecondary">
+          <Spinner size="sm" />
+          <span>Đang tải dữ liệu…</span>
+        </div>
+      )}
       {resource.error && (
         <div role="alert" className="rounded-xl bg-red-50 p-4 text-error space-y-2">
           <p>
