@@ -127,6 +127,11 @@ function normalizeDonation(d) {
     recordedBy: d.recordedBy || d.moderatorCode || d.recordedByName || null,
     handedOverToOrganizationName: d.handedOverToOrganizationName || d.organizationName || null,
     status: d.status || 'PENDING_PICKUP',
+    heldAt: d.heldAt || null,
+    holdReason: d.holdReason || null,
+    reassignedFromCampaignId: d.reassignedFromCampaignId || null,
+    reassignedFromCampaignTitle: d.reassignedFromCampaignTitle || null,
+    reassignedAt: d.reassignedAt || null,
   };
 }
 
@@ -258,6 +263,24 @@ export const donationService = {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.HANDOVER_DONATIONS(warehouseId),
         data: { donationIds, organizationId, campaignId },
+      },
+      { signal: options?.signal },
+    );
+  },
+
+  reassignDonations: async (warehouseId, { donationIds, campaignId } = {}, options = {}) => {
+    if (!warehouseId) throw new Phase2Error('Chưa xác định được điểm ký gửi.', 400);
+    if (!Array.isArray(donationIds) || !donationIds.length) {
+      throw new Phase2Error('Vui lòng chọn ít nhất một lượt quyên góp đang tạm giữ để chuyển.', 400);
+    }
+    if (!campaignId) {
+      throw new Phase2Error('Vui lòng chọn chiến dịch tiếp nhận mới.', 400);
+    }
+    return callBackend(
+      {
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.REASSIGN_DONATIONS(warehouseId),
+        data: { donationIds, campaignId },
       },
       { signal: options?.signal },
     );

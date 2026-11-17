@@ -9,13 +9,39 @@ import { useResource } from '../hooks/warehouseHooks.jsx';
 import { normalizeError } from '../models/warehouseModel.js';
 import { Page, Card, ResourceState, date } from '../components/WarehouseUi.jsx';
 
+function extractNoteDetails(note) {
+  const noteText = note || '';
+  const imgRegex = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
+  const photos = [];
+  let match;
+  while ((match = imgRegex.exec(noteText)) !== null) {
+    photos.push(match[2]);
+  }
+  const cleanText = noteText.replace(imgRegex, '').replace(/Ảnh hiện vật:\s*/g, '').trim();
+  return { cleanText, photos };
+}
+
+function formatHeldDuration(heldAt) {
+  if (!heldAt) return '';
+  const ms = Date.now() - new Date(heldAt).getTime();
+  if (Number.isNaN(ms) || ms < 0) return '';
+  const hours = Math.floor(ms / (1000 * 60 * 60));
+  if (hours < 1) return 'Dưới 1 giờ';
+  if (hours < 24) return `${hours} giờ trước`;
+  const days = Math.floor(hours / 24);
+  const remHours = hours % 24;
+  return remHours > 0 ? `${days} ngày ${remHours} giờ trước` : `${days} ngày trước`;
+}
+
 export default function DonationsPage() {
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const focusedDonationId = searchParams.get('donationId') || '';
   const initialCampaignFilter = searchParams.get('campaignId') || '';
   const initialDonorName = searchParams.get('donorName') || '';
+  const initialDonationTab = searchParams.get('tab') === 'ON_HOLD' ? 'ON_HOLD' : 'LIST';
 
+  const [donationTab, setDonationTab] = useState(initialDonationTab);
   const [campaignView, setCampaignView] = useState('ACTIVE');
   const [campaignSearch, setCampaignSearch] = useState('');
   const [campaignPage, setCampaignPage] = useState(0);
@@ -47,6 +73,13 @@ export default function DonationsPage() {
   const [handoverError, setHandoverError] = useState(null);
   const [handingOver, setHandingOver] = useState(false);
 
+  // Chọn các lượt tạm giữ (ON_HOLD) để chuyển sang chiến dịch khác
+  const [selectedOnHoldIds, setSelectedOnHoldIds] = useState([]);
+  const [reassignModalOpen, setReassignModalOpen] = useState(false);
+  const [reassignCampaignId, setReassignCampaignId] = useState('');
+  const [reassignError, setReassignError] = useState(null);
+  const [reassigning, setReassigning] = useState(false);
+
   const warehouses = useResource((options) => donationService.myWarehouses(options), []);
   const warehouse = Array.isArray(warehouses.data) ? warehouses.data[0] : null;
   const warehouseId = warehouse?.id || null;
@@ -77,6 +110,24 @@ export default function DonationsPage() {
     { enabled: Boolean(warehouseId) },
   );
 
+  const onHoldDonationsResource = useResource(
+    (options) =>
+      warehouseId
+        ? donationService.listDonations(warehouseId, { status: 'ON_HOLD' }, options)
+        : Promise.resolve([]),
+    [warehouseId],
+    { enabled: Boolean(warehouseId) },
+  );
+
+  const activeCampaignsForReassignResource = useResource(
+    (options) =>
+      warehouseId
+        ? donationService.warehouseCampaigns(warehouseId, { view: 'ACTIVE', page: 0, size: 50 }, options)
+        : Promise.resolve({ items: [] }),
+    [warehouseId],
+    { enabled: Boolean(warehouseId) && reassignModalOpen },
+  );
+
   const campaignsPageData = campaignsResource.data || {};
   const campaigns = useMemo(
     () =>
@@ -92,6 +143,20 @@ export default function DonationsPage() {
     () => (Array.isArray(donationsResource.data) ? donationsResource.data : []),
     [donationsResource.data],
   );
+  const onHoldDonations = useMemo(() => {
+    const raw = Array.isArray(onHoldDonationsResource.data) ? onHoldDonationsResource.data : [];
+    return [...raw].sort((a, b) => {
+      const tA = a.heldAt ? new Date(a.heldAt).getTime() : Number.MAX_SAFE_INTEGER;
+      const tB = b.heldAt ? new Date(b.heldAt).getTime() : Number.MAX_SAFE_INTEGER;
+      return tA - tB;
+    });
+  }, [onHoldDonationsResource.data]);
+
+  const reassignCampaignOptions = useMemo(() => {
+    const raw = activeCampaignsForReassignResource.data;
+    const list = Array.isArray(raw?.items) ? raw.items : Array.isArray(raw) ? raw : [];
+    return list.filter((c) => isCampaignActive(c));
+  }, [activeCampaignsForReassignResource.data]);
 
   const campaignMap = useMemo(() => {
     const map = new Map();
@@ -281,6 +346,44 @@ export default function DonationsPage() {
       }
     } finally {
       setHandingOver(false);
+    }
+  };
+
+  const toggleOnHoldSelect = (rowId) => {
+    setSelectedOnHoldIds((prev) =>
+      prev.includes(rowId) ? prev.filter((id) => id !== rowId) : [...prev, rowId],
+    );
+  };
+
+  const openReassignModal = () => {
+    if (!selectedOnHoldIds.length) return;
+    setReassignError(null);
+    setReassignCampaignId('');
+    setReassignModalOpen(true);
+  };
+
+  const handleConfirmReassign = async () => {
+    const targetCampaignId = reassignCampaignId || (reassignCampaignOptions[0]?.id ? String(reassignCampaignOptions[0].id) : '');
+    if (!warehouseId || !selectedOnHoldIds.length || !targetCampaignId || reassigning) return;
+    setReassignError(null);
+    setReassigning(true);
+    try {
+      await donationService.reassignDonations(warehouseId, {
+        donationIds: selectedOnHoldIds,
+        campaignId: targetCampaignId,
+      });
+      toast.success(`Đã chuyển ${selectedOnHoldIds.length} lượt quyên góp sang chiến dịch mới`);
+      setSelectedOnHoldIds([]);
+      setReassignModalOpen(false);
+      setReassignCampaignId('');
+      onHoldDonationsResource.refresh();
+      donationsResource.refresh();
+    } catch (err) {
+      const normalized = normalizeError(err);
+      const code = err?.code || err?.response?.data?.code;
+      setReassignError(code ? `[${code}] ${normalized.message}` : normalized.message);
+    } finally {
+      setReassigning(false);
     }
   };
 
@@ -648,9 +751,191 @@ export default function DonationsPage() {
             </Card>
           </div>
 
-          {/* CỘT PHẢI: Danh sách lượt quyên góp & Bàn giao cho tổ chức */}
+          {/* CỘT PHẢI: Danh sách lượt quyên góp & Bàn giao / Tạm giữ */}
           <div className="lg:col-span-8 space-y-4">
-            <Card title="Danh sách lượt quyên góp & Bàn giao">
+            <Card
+              title="Danh sách lượt quyên góp & Bàn giao"
+              actions={
+                <div className="flex items-center gap-1.5 rounded-xl bg-[#F0F5EE] p-1">
+                  <button
+                    type="button"
+                    onClick={() => setDonationTab('LIST')}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                      donationTab === 'LIST'
+                        ? 'bg-white text-[#006B2C] shadow-xs'
+                        : 'text-[#5B6776] hover:text-text'
+                    }`}
+                  >
+                    Danh sách & Bàn giao
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDonationTab('ON_HOLD')}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                      donationTab === 'ON_HOLD'
+                        ? 'bg-white text-amber-800 shadow-xs'
+                        : 'text-[#5B6776] hover:text-text'
+                    }`}
+                  >
+                    <span>Tạm giữ</span>
+                    {onHoldDonations.length > 0 && (
+                      <span className="rounded-full bg-amber-100 border border-amber-300 px-1.5 py-0.5 text-[10px] font-extrabold text-amber-900">
+                        {onHoldDonations.length}
+                      </span>
+                    )}
+                  </button>
+                </div>
+              }
+            >
+              {donationTab === 'ON_HOLD' ? (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-neutral text-xs text-textSecondary">
+                    <p>
+                      Các lượt chờ lấy thuộc chiến dịch đã ẩn hoặc tổ chức bị khoá (sắp xếp tạm giữ lâu nhất lên đầu).
+                    </p>
+                    <span>
+                      Tổng tạm giữ: <strong className="text-amber-900">{onHoldDonations.length}</strong> lượt
+                    </span>
+                  </div>
+
+                  {selectedOnHoldIds.length > 0 && (
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs">
+                      <p className="font-bold text-amber-900">
+                        Đã chọn {selectedOnHoldIds.length} lượt tạm giữ để chuyển chiến dịch
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setSelectedOnHoldIds([])}>
+                          Bỏ chọn
+                        </Button>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={openReassignModal}
+                          className="bg-[#006B2C] hover:bg-[#005523] text-white font-bold"
+                        >
+                          Chuyển sang chiến dịch… ({selectedOnHoldIds.length})
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  <ResourceState resource={onHoldDonationsResource} empty={!onHoldDonations.length} />
+
+                  {onHoldDonations.length > 0 && (
+                    <div className="overflow-x-auto rounded-xl border border-neutral">
+                      <table className="w-full min-w-[760px] text-left text-xs">
+                        <thead>
+                          <tr className="bg-background border-b border-neutral text-[10px] uppercase font-bold tracking-wider text-textSecondary">
+                            <th className="py-2.5 px-3 w-10">
+                              <input
+                                type="checkbox"
+                                aria-label="Chọn tất cả lượt tạm giữ"
+                                checked={selectedOnHoldIds.length === onHoldDonations.length && onHoldDonations.length > 0}
+                                onChange={(e) =>
+                                  setSelectedOnHoldIds(
+                                    e.target.checked ? onHoldDonations.map((r) => r.id) : [],
+                                  )
+                                }
+                                className="rounded border-neutral text-[#006B2C] focus:ring-[#006B2C]"
+                              />
+                            </th>
+                            <th className="py-2.5 px-3">Thời gian đã tạm giữ</th>
+                            <th className="py-2.5 px-3">Chiến dịch cũ</th>
+                            <th className="py-2.5 px-3">Lý do tạm giữ</th>
+                            <th className="py-2.5 px-3">Ảnh món / hiện vật</th>
+                            <th className="py-2.5 px-3">Trạng thái</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-neutral">
+                          {onHoldDonations.map((row) => {
+                            const isChecked = selectedOnHoldIds.includes(row.id);
+                            const { cleanText, photos } = extractNoteDetails(row.note);
+                            const elapsed = formatHeldDuration(row.heldAt || row.createdAt);
+                            const isFocused = focusedDonationId && String(row.id) === String(focusedDonationId);
+                            return (
+                              <tr
+                                key={row.id}
+                                className={`transition-colors hover:bg-amber-50/40 ${
+                                  isFocused ? 'bg-[#EBF1E8] ring-2 ring-inset ring-primary' : ''
+                                }`}
+                              >
+                                <td className="py-3 px-3 align-top">
+                                  <input
+                                    type="checkbox"
+                                    aria-label={`Chọn lượt tạm giữ ${row.id}`}
+                                    checked={isChecked}
+                                    onChange={() => toggleOnHoldSelect(row.id)}
+                                    className="rounded border-neutral text-[#006B2C] focus:ring-[#006B2C]"
+                                  />
+                                </td>
+                                <td className="py-3 px-3 align-top whitespace-nowrap">
+                                  <p className="font-semibold text-text text-[11px]">{date(row.heldAt || row.createdAt)}</p>
+                                  {elapsed && <p className="text-[10px] font-bold text-amber-800">{elapsed}</p>}
+                                </td>
+                                <td className="py-3 px-3 align-top">
+                                  <p className="font-semibold text-text">{row.campaignTitle || row.campaignId || '—'}</p>
+                                  {row.organizationName && (
+                                    <p className="text-[11px] text-textSecondary">{row.organizationName}</p>
+                                  )}
+                                </td>
+                                <td className="py-3 px-3 align-top text-text">
+                                  <p className="text-[11px] font-medium">{row.holdReason || 'Chiến dịch tạm ngừng tiếp nhận'}</p>
+                                </td>
+                                <td className="py-3 px-3 align-top space-y-1.5">
+                                  {row.isConsignedItem && (
+                                    <div className="flex items-start gap-2">
+                                      {row.productPhotoUrl && (
+                                        <img
+                                          src={row.productPhotoUrl}
+                                          alt={row.productName || row.sku || 'Món ký gửi'}
+                                          className="w-10 h-10 rounded-lg object-cover border border-neutral flex-shrink-0"
+                                        />
+                                      )}
+                                      <div className="space-y-0.5">
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-900">
+                                          Món ký gửi · SKU {row.sku || '—'}
+                                        </span>
+                                        {row.productName && <p className="font-semibold text-text">{row.productName}</p>}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {cleanText && <p className="text-[11px] text-textSecondary">{cleanText}</p>}
+                                  {photos.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                      {photos.map((src, i) => (
+                                        <a
+                                          key={i}
+                                          href={src}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          title="Xem ảnh hiện vật kích thước lớn"
+                                          className="block"
+                                        >
+                                          <img
+                                            src={src}
+                                            alt={`Hiện vật ${i + 1}`}
+                                            className="w-11 h-11 rounded-lg object-cover border border-[#DDE5D9]"
+                                          />
+                                        </a>
+                                      ))}
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="py-3 px-3 align-top">
+                                  <span className="inline-block rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-[10px] font-bold text-amber-900">
+                                    Tạm giữ
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
               <div className="flex flex-wrap items-center gap-3 pb-3 border-b border-neutral">
                 <select
                   aria-label="Lọc theo chiến dịch"
@@ -845,14 +1130,7 @@ export default function DonationsPage() {
                                       )}
                                       {/* Hiển thị ghi chú và ảnh hiện vật (nếu có nhúng URL) */}
                                       {(() => {
-                                        const noteText = row.note || '';
-                                        const imgRegex = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
-                                        const photos = [];
-                                        let match;
-                                        while ((match = imgRegex.exec(noteText)) !== null) {
-                                          photos.push(match[2]);
-                                        }
-                                        const cleanText = noteText.replace(imgRegex, '').replace(/Ảnh hiện vật:\s*/g, '').trim();
+                                        const { cleanText, photos } = extractNoteDetails(row.note);
 
                                         return (
                                           <div className="space-y-1.5">
@@ -886,10 +1164,21 @@ export default function DonationsPage() {
                                       {row.recordedBy || (row.isConsignedItem ? 'Hệ thống' : '—')}
                                     </td>
                                     <td className="py-3 px-3 align-top">
-                                      {isPending ? (
-                                        <span className="inline-block rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-800">
-                                          Chờ lấy
+                                      {row.status === 'ON_HOLD' ? (
+                                        <span className="inline-block rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-[10px] font-bold text-amber-900">
+                                          Tạm giữ
                                         </span>
+                                      ) : isPending ? (
+                                        <div className="space-y-1">
+                                          <span className="inline-block rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-800">
+                                            Chờ lấy
+                                          </span>
+                                          {row.reassignedFromCampaignTitle && (
+                                            <p className="text-[10px] text-textSecondary">
+                                              Chuyển từ: <strong>{row.reassignedFromCampaignTitle}</strong>
+                                            </p>
+                                          )}
+                                        </div>
                                       ) : (
                                         <div className="space-y-0.5">
                                           <span className="inline-block rounded-full bg-[#E8F5E9] px-2.5 py-0.5 text-[10px] font-bold text-[#006B2C]">
@@ -915,11 +1204,91 @@ export default function DonationsPage() {
                   })}
                 </div>
               )}
+                </>
+              )}
             </Card>
           </div>
         </div>
         </div>
       )}
+
+      <Modal
+        isOpen={reassignModalOpen}
+        onClose={() => !reassigning && setReassignModalOpen(false)}
+        title="Chuyển lượt quyên góp sang chiến dịch khác"
+        size="md"
+      >
+        <div className="space-y-4 text-xs text-textSecondary">
+          <div className="rounded-xl border border-neutral bg-[#F6F9F4] p-3">
+            <p>
+              Số lượt đang chọn: <strong className="text-text">{selectedOnHoldIds.length} lượt tạm giữ</strong>
+            </p>
+            <p className="text-[11px] mt-1">
+              Chỉ hiển thị chiến dịch đang mở, chưa hết hạn và nhận đồ tại điểm ký gửi này.
+            </p>
+          </div>
+
+          {activeCampaignsForReassignResource.loading ? (
+            <p className="text-center py-4 text-textSecondary">Đang tải danh sách chiến dịch phù hợp...</p>
+          ) : reassignCampaignOptions.length === 0 ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-amber-900 font-medium">
+              Chưa có chiến dịch nào phù hợp đang nhận đồ tại điểm ký gửi này — các lượt đã chọn vẫn được tạm giữ.
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+              {reassignCampaignOptions.map((c) => {
+                const selectedVal = reassignCampaignId || String(reassignCampaignOptions[0]?.id || '');
+                const isSelected = String(c.id) === String(selectedVal);
+                return (
+                  <label
+                    key={c.id}
+                    className={`flex items-start gap-2.5 rounded-xl border p-3 cursor-pointer transition-colors ${
+                      isSelected ? 'border-[#006B2C] bg-[#E8F5E9]/60' : 'border-neutral bg-white hover:bg-[#F6F9F4]'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="reassignCampaign"
+                      value={c.id}
+                      checked={isSelected}
+                      onChange={() => setReassignCampaignId(String(c.id))}
+                      className="mt-0.5 text-[#006B2C] focus:ring-[#006B2C]"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-text">{c.title}</p>
+                      <p className="text-[11px] text-textSecondary">
+                        {c.organizationName}
+                        {c.endTime ? ` · Hạn: ${date(c.endTime)}` : ''}
+                      </p>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+
+          {reassignError && (
+            <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+              {reassignError}
+            </div>
+          )}
+
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="outline" disabled={reassigning} onClick={() => setReassignModalOpen(false)}>
+              Đóng
+            </Button>
+            <Button
+              variant="primary"
+              loading={reassigning}
+              disabled={reassigning || activeCampaignsForReassignResource.loading || reassignCampaignOptions.length === 0}
+              onClick={handleConfirmReassign}
+              className="bg-[#006B2C] hover:bg-[#005523] text-white font-bold"
+            >
+              Xác nhận chuyển ({selectedOnHoldIds.length})
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         isOpen={handoverConfirmOpen}
