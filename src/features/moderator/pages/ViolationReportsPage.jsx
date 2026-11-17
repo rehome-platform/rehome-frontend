@@ -450,9 +450,15 @@ export default function ViolationReportsPage() {
                               </span>
                             </td>
 
-                            {/* Lý do báo cáo mẫu */}
-                            <td className="py-3.5 px-3.5 text-textSecondary max-w-xs truncate" title={rep.sampleReason}>
-                              "{rep.sampleReason || 'Không có mô tả chi tiết'}"
+                            {/* Lý do báo cáo mẫu & Lý do đóng (nếu đã xử lý) */}
+                            <td className="py-3.5 px-3.5 text-textSecondary max-w-xs" title={rep.resolutionReason || rep.sampleReason}>
+                              <p className="truncate">"{rep.sampleReason || 'Không có mô tả chi tiết'}"</p>
+                              {(rep.resolutionReason || rep.resolutionNote || rep.status === 'RESOLVED') &&
+                                (rep.resolutionReason || rep.resolutionNote) && (
+                                  <p className="mt-1 inline-block rounded-md bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+                                    Lý do đóng: {rep.resolutionReason || rep.resolutionNote}
+                                  </p>
+                                )}
                             </td>
 
                             {/* Thời gian */}
@@ -786,8 +792,23 @@ export default function ViolationReportsPage() {
                     </div>
 
                     {isResolvedOrDismissed ? (
-                      <div className="p-4 rounded-xl bg-background border border-neutral text-xs text-textSecondary text-center space-y-2">
-                        <span>🔒 Đối tượng này đã được quyết định xử lý xong.</span>
+                      <div className="p-4 rounded-xl bg-background border border-neutral text-xs text-textSecondary space-y-2">
+                        <span className="font-bold text-text block">🔒 Đối tượng này đã được quyết định xử lý xong.</span>
+                        {(selectedReport.resolutionReason || selectedReport.resolutionNote) && (
+                          <p className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-emerald-900 font-semibold">
+                            Lý do xử lý: {selectedReport.resolutionReason || selectedReport.resolutionNote}
+                          </p>
+                        )}
+                        {(selectedReport.resolvedByName || selectedReport.resolvedBy || selectedReport.resolvedAt) && (
+                          <p className="text-[11px] text-textSecondary">
+                            {selectedReport.resolvedByName || selectedReport.resolvedBy
+                              ? `Người xử lý: ${selectedReport.resolvedByName || selectedReport.resolvedBy}`
+                              : ''}
+                            {selectedReport.resolvedAt
+                              ? `${selectedReport.resolvedByName || selectedReport.resolvedBy ? ' · ' : 'Thời điểm: '}${formatDateTime(selectedReport.resolvedAt)}`
+                              : ''}
+                          </p>
+                        )}
                         <p className="text-[11px]">
                           Mọi báo cáo PENDING cùng đối tượng đã được đóng tự động.
                         </p>

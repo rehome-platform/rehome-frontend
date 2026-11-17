@@ -27,6 +27,12 @@ export function getQueueLinkTarget(item, typeParam) {
     const query = params.toString();
     return query ? `/moderator/donations?${query}` : '/moderator/donations';
   }
+  if (type === 'DONATION_REASSIGN') {
+    const donationId = item.donationId || (refId && refId !== item.id ? refId : null);
+    return donationId
+      ? `/moderator/donations?tab=ON_HOLD&donationId=${encodeURIComponent(donationId)}`
+      : '/moderator/donations?tab=ON_HOLD';
+  }
   if (type === 'FORM_REVIEW' || type === 'INSPECTION') {
     return `/moderator/consignments/${encodeURIComponent(item.formId || refId)}`;
   }
