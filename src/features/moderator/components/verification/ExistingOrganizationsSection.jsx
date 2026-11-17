@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Modal, Button } from '../../../../components/common/index.js';
+import Spinner from '../../../../components/common/Spinner.jsx';
 import { orgVerificationService } from '../../services/orgVerificationApi.js';
 
 export function ExistingOrganizationsSection({
@@ -116,7 +117,7 @@ export function ExistingOrganizationsSection({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-background border-b border-neutral text-[11px] uppercase font-bold text-textSecondary tracking-wider">
+              <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
                 <th className="py-3 px-3.5">Tổ chức</th>
                 <th className="py-3 px-3">Loại hình & MST</th>
                 <th className="py-3 px-3">Phạm vi</th>
@@ -131,7 +132,7 @@ export function ExistingOrganizationsSection({
                 <tr>
                   <td colSpan="7" className="py-12 text-center text-textSecondary">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <Spinner size="md" />
                       <span className="text-xs">Đang tải danh sách tổ chức hiện hữu...</span>
                     </div>
                   </td>
@@ -212,7 +213,7 @@ export function ExistingOrganizationsSection({
                       {/* Cột 2: Loại hình & MST */}
                       <td className="py-3 px-3">
                         <div className="space-y-0.5">
-                          <span className="inline-block px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold">
+                          <span className="inline-block px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold whitespace-nowrap">
                             {orgType}
                           </span>
                           <div className="text-[11px] font-mono text-textSecondary">
@@ -265,7 +266,7 @@ export function ExistingOrganizationsSection({
 
                       {/* Cột 6: Trạng thái */}
                       <td className="py-3 px-3">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7]">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7] whitespace-nowrap">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#006B2C]" />
                           Đang hoạt động
                         </span>

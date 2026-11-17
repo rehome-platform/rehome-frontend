@@ -27,6 +27,12 @@ export function getQueueLinkTarget(item, typeParam) {
     const query = params.toString();
     return query ? `/moderator/donations?${query}` : '/moderator/donations';
   }
+  if (type === 'DONATION_REASSIGN') {
+    const donationId = item.donationId || (refId && refId !== item.id ? refId : null);
+    return donationId
+      ? `/moderator/donations?tab=ON_HOLD&donationId=${encodeURIComponent(donationId)}`
+      : '/moderator/donations?tab=ON_HOLD';
+  }
   if (type === 'FORM_REVIEW' || type === 'INSPECTION') {
     return `/moderator/consignments/${encodeURIComponent(item.formId || refId)}`;
   }
@@ -101,7 +107,7 @@ export default function ConsignmentQueuePage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[780px] text-left text-xs">
               <thead>
-                <tr className="bg-background border-b border-neutral text-[10px] uppercase font-bold tracking-wider text-textSecondary">
+                <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
                   <th className="py-2.5 px-4">Loại việc</th>
                   <th className="py-2.5 px-3">Tên</th>
                   <th className="py-2.5 px-3">Đối tượng</th>

@@ -299,7 +299,7 @@ export default function CategoryBrandPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[650px] text-left text-xs">
               <thead>
-                <tr className="bg-[#f4f4f4] border-b border-[#8a8a8a] text-[10px] font-bold uppercase tracking-wider text-[#5f5f5f]">
+                <tr className="bg-[#f4f4f4] border-b border-[#8a8a8a] text-xs font-semibold text-[#5f5f5f] whitespace-nowrap">
                   <th className="py-2.5 px-4">{isCategory ? 'Danh mục' : 'Thương hiệu'}</th>
                   {isCategory && <th className="py-2.5 px-4">Slot thử đồ AI</th>}
                   <th className="py-2.5 px-4">Trạng thái</th>
