@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import adminApi from '../services/adminApi';
-import { Button } from '../../../components/common/index.js';
+import { Button, Spinner } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 
 /**
@@ -298,11 +298,9 @@ export default function AdminModeratorsView({ onLogAction }) {
       </div>
 
       {/* Main Table or Loading / Error / Empty State */}
-      {isLoading ? (
-        <div className="bg-white rounded-2xl border border-[#DDE5D9] p-16 text-center flex flex-col items-center justify-center">
-          <span className="material-symbols-outlined animate-spin text-3xl text-[#006B2C] mb-3">
-            progress_activity
-          </span>
+      {isLoading && moderators.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-[#DDE5D9] p-16 text-center flex flex-col items-center justify-center gap-3">
+          <Spinner size="lg" />
           <p className="text-xs text-[#717971]">Đang đồng bộ dữ liệu Moderator từ hệ thống...</p>
         </div>
       ) : error ? (
@@ -350,7 +348,11 @@ export default function AdminModeratorsView({ onLogAction }) {
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
+        <div
+          className={`bg-white rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden transition-opacity duration-150 ${
+            isLoading ? 'opacity-60 pointer-events-none' : ''
+          }`}
+        >
           <div className="overflow-hidden">
             <table className="w-full table-fixed text-left text-xs">
               <thead className="bg-[#F6F9F4] text-[#717971] tracking-wider font-semibold border-b border-[#DDE5D9]">

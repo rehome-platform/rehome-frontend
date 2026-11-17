@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import adminApi from '../services/adminApi.js';
 import AdminPeriodFilter from './AdminPeriodFilter.jsx';
 import useAdminPeriod from '../hooks/useAdminPeriod.js';
+import { Spinner } from '../../../components/common/index.js';
 
 // Nhãn gọn cho Đối tượng tác động hiển thị trên bảng (chi tiết đầy đủ nằm ở hàng xổ xuống)
 const TARGET_TYPE_LABEL = {
@@ -514,11 +515,9 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
       </div>
 
       {/* Main Table or Empty State */}
-      {loading ? (
-        <div className="bg-white rounded-2xl border border-[#E2E8E0] p-12 text-center flex flex-col items-center justify-center shadow-xs">
-          <span className="material-symbols-outlined text-4xl text-[#006B2C] animate-spin mb-3">
-            progress_activity
-          </span>
+      {loading && logs.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-[#E2E8E0] p-12 text-center flex flex-col items-center justify-center shadow-xs gap-3">
+          <Spinner size="lg" />
           <p className="text-xs text-[#717971]">Đang tải dữ liệu Audit Log từ hệ thống...</p>
         </div>
       ) : filteredLogs.length === 0 ? (
@@ -542,7 +541,11 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
         </div>
       ) : (
         /* Audit Table - gọn, mỗi ô một dòng, chi tiết đầy đủ nằm trong hàng mở rộng */
-        <div className="bg-white rounded-2xl border border-[#E2E8E0] shadow-xs overflow-hidden">
+        <div
+          className={`bg-white rounded-2xl border border-[#E2E8E0] shadow-xs overflow-hidden transition-opacity duration-150 ${
+            loading ? 'opacity-60 pointer-events-none' : ''
+          }`}
+        >
           <div className="overflow-hidden">
             <table className="w-full table-fixed text-left text-xs">
               <thead className="bg-[#F8FAF8] text-[#717971] tracking-wider font-semibold border-b border-[#E2E8E0]">

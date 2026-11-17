@@ -4,6 +4,7 @@ import AdminPeriodFilter from './AdminPeriodFilter.jsx';
 import ComparisonBadge from './ComparisonBadge.jsx';
 import useAdminPeriod from '../hooks/useAdminPeriod.js';
 import usePreviousTotal from '../hooks/usePreviousTotal.js';
+import { Spinner } from '../../../components/common/index.js';
 import { pickTrendGranularity } from '../utils/adminDateUtils.js';
 
 const ROLE_OPTIONS = [
@@ -192,8 +193,9 @@ export default function AdminAccountGrowthChart({ footerNote }) {
           </button>
         </div>
       ) : loading ? (
-        <div className="h-56 flex items-center justify-center rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-[#717971]">
-          Đang tải dữ liệu tăng trưởng tài khoản...
+        <div className="h-56 flex flex-col items-center justify-center gap-3 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-[#717971]">
+          <Spinner size="lg" />
+          <span>Đang tải dữ liệu tăng trưởng tài khoản...</span>
         </div>
       ) : points.length === 0 ? (
         <div className="h-56 flex items-center justify-center rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-[#717971]">

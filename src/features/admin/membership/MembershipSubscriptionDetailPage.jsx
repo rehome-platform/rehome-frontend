@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Badge, Button } from '../../../components/common/index.js';
+import { Badge, Button, Spinner } from '../../../components/common/index.js';
 import { formatCurrencyVND, formatDateTime } from '../../../utils/formatters.js';
 import membershipAdminApi from '../services/membershipAdminApi.js';
 import GrantMembershipModal from './GrantMembershipModal.jsx';
@@ -55,8 +55,9 @@ export default function MembershipSubscriptionDetailPage() {
 
   if (loading && !detail) {
     return (
-      <div className="p-6 bg-white rounded-xl border border-[#E2E8E0] text-sm text-[#5B6776]">
-        Đang tải chi tiết gói thành viên...
+      <div className="p-6 bg-white rounded-xl border border-[#E2E8E0] text-sm text-[#5B6776] flex flex-col items-center justify-center gap-3">
+        <Spinner size="lg" />
+        <span>Đang tải chi tiết gói thành viên...</span>
       </div>
     );
   }

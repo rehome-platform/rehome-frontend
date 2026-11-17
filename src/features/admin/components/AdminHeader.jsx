@@ -42,11 +42,11 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
     if (path.startsWith('/admin/warehouses')) return 'Quản lý Điểm kí gửi ReHome';
     if (path.startsWith('/admin/configs')) return 'Cấu hình Tham số Hệ thống';
     if (path.startsWith('/admin/audit-logs')) return 'Audit log';
+    if (path.startsWith('/admin/violation-words')) return 'Quản lý từ ngữ vi phạm';
     if (path.startsWith('/admin/membership-plans')) return 'Cấu hình gói thành viên';
     if (/^\/admin\/membership-subscriptions\/.+/.test(path)) return 'Chi tiết gói thành viên';
     if (path.startsWith('/admin/membership-subscriptions')) return 'Danh sách thành viên';
     if (path.startsWith('/admin/voucher-templates')) return 'Quản lý voucher';
-    if (path.startsWith('/admin/membership-payments')) return 'Lịch sử thanh toán gói thành viên';
     return 'Tổng quan điều hành';
   };
 

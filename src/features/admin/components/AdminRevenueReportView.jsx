@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Button } from '../../../components/common/index.js';
+import { Button, Spinner } from '../../../components/common/index.js';
 import { formatCurrencyVND, formatDateTime } from '../../../utils/formatters.js';
 import adminApi from '../services/adminApi.js';
 import { validateDateRange } from '../utils/adminDateUtils.js';
@@ -182,8 +182,9 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {}, s
         </div>
 
         {loading ? (
-          <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center text-xs text-[#717971]">
-            Đang tải danh sách món đã bán theo kỳ...
+          <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center flex flex-col items-center justify-center gap-3 text-xs text-[#717971]">
+            <Spinner size="lg" />
+            <span>Đang tải danh sách món đã bán theo kỳ...</span>
           </div>
         ) : error ? (
           <div className="p-6 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-center space-y-2">

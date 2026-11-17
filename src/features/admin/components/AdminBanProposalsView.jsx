@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import adminApi from '../services/adminApi.js';
-import { Badge, Button } from '../../../components/common/index.js';
+import { Badge, Button, Spinner } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import { formatDateTime } from '../../../utils/formatters.js';
 
@@ -345,7 +345,11 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
       </div>
 
       {/* Bảng Danh sách Đề xuất khóa */}
-      <div className="bg-white border border-[#E2E8E0] rounded-2xl overflow-hidden shadow-xs">
+      <div
+        className={`bg-white border border-[#E2E8E0] rounded-2xl overflow-hidden shadow-xs transition-opacity duration-150 ${
+          loading && proposals.length > 0 ? 'opacity-60 pointer-events-none' : ''
+        }`}
+      >
         <div className="overflow-hidden">
           <table className="w-full table-fixed text-left border-collapse text-xs">
             <thead>
@@ -360,18 +364,18 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E2E8E0]">
-              {loading && (
+              {loading && proposals.length === 0 && (
                 <tr>
                   <td colSpan="7" className="py-12 text-center text-[#717971]">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="w-6 h-6 border-2 border-[#006B2C] border-t-transparent rounded-full animate-spin" />
+                      <Spinner size="lg" />
                       <span>Đang tải danh sách đề xuất khóa từ hệ thống...</span>
                     </div>
                   </td>
                 </tr>
               )}
 
-              {!loading && filteredProposals.length === 0 && (
+              {!(loading && proposals.length === 0) && filteredProposals.length === 0 && (
                 <tr>
                   <td colSpan="7" className="py-12 text-center text-[#717971]">
                     <div className="flex flex-col items-center justify-center gap-2">
@@ -386,7 +390,7 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
                 </tr>
               )}
 
-              {!loading &&
+              {!(loading && proposals.length === 0) &&
                 filteredProposals.map((item) => (
                   <tr
                     key={item.id}
@@ -542,8 +546,9 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
                 </div>
 
                 {historyLoading ? (
-                  <div className="p-6 text-center text-xs text-[#717971] bg-[#F8FAF8] rounded-xl border border-[#E2E8E0]">
-                    Đang tải lịch sử vi phạm...
+                  <div className="p-6 text-center flex flex-col items-center justify-center gap-2 text-xs text-[#717971] bg-[#F8FAF8] rounded-xl border border-[#E2E8E0]">
+                    <Spinner size="md" />
+                    <span>Đang tải lịch sử vi phạm...</span>
                   </div>
                 ) : violationHistory.length === 0 ? (
                   <div className="p-4 text-xs text-[#717971] bg-[#F8FAF8] rounded-xl border border-[#E2E8E0]">

@@ -79,6 +79,12 @@ export default function AdminSidebar({
       label: 'Nhật ký kiểm toán (Audit)',
       icon: 'history',
     },
+    {
+      id: 'violation-words',
+      path: '/admin/violation-words',
+      label: 'Quản lý từ ngữ vi phạm',
+      icon: 'block',
+    },
   ];
 
   const membershipMenuItems = [
@@ -99,12 +105,6 @@ export default function AdminSidebar({
       path: '/admin/voucher-templates',
       label: 'Quản lý voucher',
       icon: 'confirmation_number',
-    },
-    {
-      id: 'membership-payments',
-      path: '/admin/membership-payments',
-      label: 'Lịch sử thanh toán gói',
-      icon: 'receipt_long',
     },
   ];
 

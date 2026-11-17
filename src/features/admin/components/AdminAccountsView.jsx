@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import AdminPeriodFilter from './AdminPeriodFilter.jsx';
+import { Spinner } from '../../../components/common/index.js';
 
 /**
  * View Quản lý Tài khoản ReHome
@@ -553,7 +554,10 @@ function AccountsTable({
         totalPages={totalPages}
       />
       {accountsLoading && (
-        <div className="px-4 pb-3 text-[11px] text-[#717971]">Đang tải trang kế tiếp...</div>
+        <div className="px-4 pb-3 flex items-center gap-2 text-[11px] text-[#717971]">
+          <Spinner size="xs" />
+          <span>Đang tải trang kế tiếp...</span>
+        </div>
       )}
     </div>
   );
