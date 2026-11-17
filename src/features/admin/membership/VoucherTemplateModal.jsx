@@ -51,6 +51,7 @@ export default function VoucherTemplateModal({
   onClose,
   template = null,
   onSuccess,
+  onDeactivate,
 }) {
   const toast = useToast();
   const isEdit = Boolean(template?.id);
@@ -458,13 +459,29 @@ export default function VoucherTemplateModal({
           ) : null}
         </div>
 
-        <div className="flex justify-end gap-3 pt-3 border-t border-[#E2E8E0]">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
-            Hủy
-          </Button>
-          <Button type="submit" variant="primary" loading={submitting} disabled={submitting}>
-            Lưu mẫu voucher
-          </Button>
+        <div className="flex items-center justify-between gap-3 pt-3 border-t border-[#E2E8E0]">
+          {isEdit && template?.active ? (
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => onDeactivate?.(template)}
+              disabled={submitting}
+              className="gap-1"
+            >
+              <span className="material-symbols-outlined text-sm">block</span>
+              <span>Ngừng phát</span>
+            </Button>
+          ) : (
+            <span />
+          )}
+          <div className="flex gap-3">
+            <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
+              Hủy
+            </Button>
+            <Button type="submit" variant="primary" loading={submitting} disabled={submitting}>
+              Lưu mẫu voucher
+            </Button>
+          </div>
         </div>
       </form>
     </Modal>

@@ -4,7 +4,7 @@ import { Button } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 
 /**
- * View Quản lý Nhân sự Moderator ReHome
+ * View Quản lý Nhân sự ReHome
  * Kết nối Real Data với backend Spring Boot:
  * - GET /api/admin/moderators: Danh sách Moderator (phân trang, lọc theo kho, tìm kiếm, status)
  * - POST /api/admin/moderators: Tạo mới Moderator gán kho
@@ -24,11 +24,11 @@ export default function AdminModeratorsView({ onLogAction }) {
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [openActionId, setOpenActionId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [changeWarehouseTarget, setChangeWarehouseTarget] = useState(null);
   const [selectedNewWarehouseId, setSelectedNewWarehouseId] = useState('');
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
+  const [detailTarget, setDetailTarget] = useState(null);
 
   // Create Form State
   const [formData, setFormData] = useState({
@@ -105,7 +105,7 @@ export default function AdminModeratorsView({ onLogAction }) {
     }
 
     if (!formData.warehouseId) {
-      errors.warehouseId = 'Vui lòng chọn điểm kho ký gửi trực thuộc';
+      errors.warehouseId = 'Vui lòng chọn địa điểm ký gửi trực thuộc';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -167,7 +167,6 @@ export default function AdminModeratorsView({ onLogAction }) {
       }
 
       showNotification(`Đã ${actionLabel} tài khoản Moderator thành công.`);
-      setOpenActionId(null);
 
       if (onLogAction) {
         onLogAction({
@@ -194,7 +193,7 @@ export default function AdminModeratorsView({ onLogAction }) {
       await adminApi.assignWarehouse(modId, selectedNewWarehouseId);
 
       const targetWarehouse = warehouses.find((w) => w.id === selectedNewWarehouseId);
-      showNotification(`Đã điều chuyển ${changeWarehouseTarget.fullName || changeWarehouseTarget.name} sang kho ${targetWarehouse?.name || ''}`);
+      showNotification(`Đã điều chuyển ${changeWarehouseTarget.fullName || changeWarehouseTarget.name} sang địa điểm ký gửi ${targetWarehouse?.name || ''}`);
       setChangeWarehouseTarget(null);
       setSelectedNewWarehouseId('');
 
@@ -203,13 +202,13 @@ export default function AdminModeratorsView({ onLogAction }) {
           time: new Date().toLocaleString('vi-VN'),
           user: 'Admin',
           role: 'Admin',
-          action: `Chuyển kho công tác cho Moderator "${changeWarehouseTarget.fullName || changeWarehouseTarget.name}" sang ${targetWarehouse?.name || ''}`,
+          action: `Chuyển địa điểm công tác cho Moderator "${changeWarehouseTarget.fullName || changeWarehouseTarget.name}" sang ${targetWarehouse?.name || ''}`,
         });
       }
 
       await loadModerators();
     } catch (err) {
-      toast.error(err.response?.data?.message || err.message || 'Không thể điều chuyển kho cho Moderator');
+      toast.error(err.response?.data?.message || err.message || 'Không thể chuyển địa điểm công tác cho Moderator');
     } finally {
       setIsSubmitting(false);
     }
@@ -228,11 +227,8 @@ export default function AdminModeratorsView({ onLogAction }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#191C19] font-heading">
-            Quản lý Nhân sự Moderator
+            Quản lý Nhân sự
           </h1>
-          <p className="text-xs text-[#717971] mt-0.5">
-            Quản lý danh sách nhân viên kiểm duyệt, phân công chi nhánh kho và kiểm soát trạng thái hoạt động.
-          </p>
         </div>
 
         <Button
@@ -280,7 +276,7 @@ export default function AdminModeratorsView({ onLogAction }) {
             onChange={(e) => setWarehouseFilter(e.target.value)}
             className="px-3 py-2.5 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
           >
-            <option value="ALL">Chi nhánh kho: Tất cả</option>
+            <option value="ALL">Địa điểm ký gửi: Tất cả</option>
             {warehouses.map((w) => (
               <option key={w.id} value={w.id}>
                 {w.name}
@@ -355,17 +351,17 @@ export default function AdminModeratorsView({ onLogAction }) {
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+          <div className="overflow-hidden">
+            <table className="w-full table-fixed text-left text-xs">
               <thead className="bg-[#F6F9F4] text-[#717971] tracking-wider font-semibold border-b border-[#DDE5D9]">
                 <tr>
-                  <th className="py-3 px-6 whitespace-nowrap">Họ tên & Mã nhân viên</th>
-                  <th className="py-3 px-6 whitespace-nowrap">Email</th>
-                  <th className="py-3 px-6 whitespace-nowrap">Số điện thoại</th>
-                  <th className="py-3 px-6 whitespace-nowrap">Kho phụ trách</th>
-                  <th className="py-3 px-6 whitespace-nowrap">Ngày tạo</th>
-                  <th className="py-3 px-6 whitespace-nowrap">Trạng thái</th>
-                  <th className="py-3 px-4 text-center whitespace-nowrap">Thao tác</th>
+                  <th className="py-3 px-4 whitespace-nowrap w-[13%]">Mã nhân viên</th>
+                  <th className="py-3 px-4 whitespace-nowrap w-[18%]">Họ tên</th>
+                  <th className="py-3 px-4 whitespace-nowrap w-[20%]">Email</th>
+                  <th className="py-3 px-4 whitespace-nowrap w-[17%]">Địa điểm phụ trách</th>
+                  <th className="py-3 px-4 whitespace-nowrap w-[10%]">Ngày tạo</th>
+                  <th className="py-3 px-4 whitespace-nowrap w-[9%]">Trạng thái</th>
+                  <th className="py-3 pl-4 pr-8 whitespace-nowrap text-center w-[13%]">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#DDE5D9]">
@@ -373,7 +369,6 @@ export default function AdminModeratorsView({ onLogAction }) {
                   const modId = mod.accountId || mod.id;
                   const modName = mod.fullName || mod.name || 'Moderator';
                   const modCode = mod.moderatorCode || (modId ? `MOD-${modId.substring(0, 8).toUpperCase()}` : 'MOD-N/A');
-                  const initials = getInitials(modName);
                   const isLocked = mod.status === 'BANNED' || mod.status === 'LOCKED';
 
                   return (
@@ -381,50 +376,40 @@ export default function AdminModeratorsView({ onLogAction }) {
                       key={modId}
                       className="hover:bg-[#F6F9F4]/70 transition-colors"
                     >
-                      {/* Name with initials & Code */}
-                      <td className="py-3.5 px-6 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-[#E0F2F1] text-[#00685F] flex items-center justify-center font-bold text-xs shrink-0">
-                            {initials}
-                          </div>
-                          <div>
-                            <p className="font-bold text-[#191C19]">{modName}</p>
-                            <p className="text-[10px] text-[#717971] font-mono">
-                              Mã: {modCode}
-                            </p>
-                          </div>
-                        </div>
+                      {/* Code */}
+                      <td className="py-3.5 px-4 font-mono text-[#414942] whitespace-nowrap overflow-hidden text-ellipsis" title={modCode}>
+                        {modCode}
+                      </td>
+
+                      {/* Name */}
+                      <td className="py-3.5 px-4 font-bold text-[#191C19] whitespace-nowrap overflow-hidden text-ellipsis" title={modName}>
+                        {modName}
                       </td>
 
                       {/* Email */}
-                      <td className="py-3.5 px-6 font-mono text-[#414942] whitespace-nowrap">
+                      <td className="py-3.5 px-4 font-mono text-[#414942] whitespace-nowrap overflow-hidden text-ellipsis" title={mod.email}>
                         {mod.email}
                       </td>
 
-                      {/* Phone */}
-                      <td className="py-3.5 px-6 font-mono text-[#717971] whitespace-nowrap">
-                        {mod.phone || 'Chưa cập nhật'}
-                      </td>
-
                       {/* Warehouse */}
-                      <td className="py-3.5 px-6 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#F6F9F4] text-[#414942] border border-[#DDE5D9]">
-                          <span className="material-symbols-outlined text-sm text-[#006B2C]">
+                      <td className="py-3.5 px-4 whitespace-nowrap overflow-hidden" title={mod.warehouseName || "Chưa gán địa điểm"}>
+                        <span className="inline-flex items-center gap-1.5 max-w-full px-2.5 py-1 rounded-lg text-xs font-medium bg-[#F6F9F4] text-[#414942] border border-[#DDE5D9]">
+                          <span className="material-symbols-outlined text-sm text-[#006B2C] shrink-0">
                             warehouse
                           </span>
-                          <span>{mod.warehouseName || 'Chưa gán kho'}</span>
+                          <span className="truncate">{mod.warehouseName || 'Chưa gán địa điểm'}</span>
                         </span>
                       </td>
 
                       {/* Created Date */}
-                      <td className="py-3.5 px-6 text-[#717971] whitespace-nowrap font-mono">
+                      <td className="py-3.5 px-4 text-[#717971] font-mono whitespace-nowrap">
                         {mod.createdAt
                           ? new Date(mod.createdAt).toLocaleDateString('vi-VN')
                           : '---'}
                       </td>
 
                       {/* Status Badge */}
-                      <td className="py-3.5 px-6 whitespace-nowrap">
+                      <td className="py-3.5 px-4 whitespace-nowrap">
                         {!isLocked ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C]">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#006B2C]"></span>
@@ -438,57 +423,16 @@ export default function AdminModeratorsView({ onLogAction }) {
                         )}
                       </td>
 
-                      {/* Actions Menu */}
-                      <td className="py-3.5 px-4 text-center relative whitespace-nowrap">
-                        <div className="inline-block relative">
-                          <button
-                            onClick={() =>
-                              setOpenActionId(openActionId === modId ? null : modId)
-                            }
-                            className="p-1 rounded-xl text-[#717971] hover:text-[#191C19] hover:bg-[#E9F0E5] transition-colors"
-                          >
-                            <span className="material-symbols-outlined text-lg">
-                              more_vert
-                            </span>
-                          </button>
-
-                          {openActionId === modId && (
-                            <div
-                              className="absolute right-0 mt-1 w-44 bg-white rounded-xl border border-[#DDE5D9] shadow-lg py-1.5 z-30 text-left animate-fadeIn"
-                              onMouseLeave={() => setOpenActionId(null)}
-                            >
-                              <button
-                                onClick={() => {
-                                  setChangeWarehouseTarget(mod);
-                                  setSelectedNewWarehouseId(mod.warehouseId || warehouses[0]?.id || '');
-                                  setOpenActionId(null);
-                                }}
-                                className="w-full px-3 py-1.5 text-xs text-[#414942] hover:bg-[#F6F9F4] flex items-center gap-2"
-                              >
-                                <span className="material-symbols-outlined text-base text-[#00685F]">
-                                  sync_alt
-                                </span>
-                                <span>Chuyển kho công tác</span>
-                              </button>
-
-                              <button
-                                onClick={() => handleToggleStatus(mod)}
-                                className={`w-full px-3 py-1.5 text-xs flex items-center gap-2 font-medium ${
-                                  !isLocked
-                                    ? 'text-[#DC2626] hover:bg-[#FEE2E2]/50'
-                                    : 'text-[#006B2C] hover:bg-[#E8F5E9]'
-                                }`}
-                              >
-                                <span className="material-symbols-outlined text-base">
-                                  {!isLocked ? 'lock' : 'lock_open'}
-                                </span>
-                                <span>
-                                  {!isLocked ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
-                                </span>
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                      {/* Actions */}
+                      <td className="py-3.5 pl-4 pr-8 text-center align-middle whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => setDetailTarget(mod)}
+                          className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 whitespace-nowrap rounded-xl text-xs font-semibold text-[#006B2C] border border-[#006B2C]/30 hover:bg-[#E8F5E9] transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-base">visibility</span>
+                          <span>Xem chi tiết</span>
+                        </button>
                       </td>
                     </tr>
                   );
@@ -497,14 +441,120 @@ export default function AdminModeratorsView({ onLogAction }) {
             </table>
           </div>
 
-          <div className="p-4 border-t border-[#DDE5D9] text-xs text-[#717971] flex items-center justify-between">
+          <div className="p-4 border-t border-[#DDE5D9] text-xs text-[#717971]">
             <span>Hiển thị {moderators.length} Moderator trong toàn hệ thống</span>
-            <span className="text-[11px] text-[#717971]">
-              Dữ liệu được cập nhật từ máy chủ ReHome.
-            </span>
           </div>
         </div>
       )}
+
+      {/* Modal Chi tiết tài khoản Moderator */}
+      {detailTarget && (() => {
+        const dId = detailTarget.accountId || detailTarget.id;
+        const dName = detailTarget.fullName || detailTarget.name || 'Moderator';
+        const dCode = detailTarget.moderatorCode || (dId ? `MOD-${dId.substring(0, 8).toUpperCase()}` : 'MOD-N/A');
+        const dLocked = detailTarget.status === 'BANNED' || detailTarget.status === 'LOCKED';
+        const rows = [
+          { label: 'Mã nhân viên', value: dCode, mono: true },
+          { label: 'Họ và tên', value: dName },
+          { label: 'Email', value: detailTarget.email || '---', mono: true },
+          { label: 'Số điện thoại', value: detailTarget.phone || 'Chưa cập nhật', mono: true },
+          { label: 'Địa điểm phụ trách', value: detailTarget.warehouseName || 'Chưa gán địa điểm' },
+          {
+            label: 'Ngày tạo',
+            value: detailTarget.createdAt ? new Date(detailTarget.createdAt).toLocaleString('vi-VN') : '---',
+            mono: true,
+          },
+          { label: 'ID tài khoản', value: dId || '---', mono: true },
+        ];
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
+            <div className="w-full max-w-2xl bg-white rounded-2xl border border-[#DDE5D9] shadow-2xl p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-[#DDE5D9] pb-3">
+                <h3 className="text-base font-bold text-[#191C19] font-heading">
+                  Chi tiết tài khoản Moderator
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setDetailTarget(null)}
+                  className="p-1 rounded-lg text-[#717971] hover:text-[#191C19] hover:bg-[#F6F9F4]"
+                >
+                  <span className="material-symbols-outlined text-xl">close</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-[#E0F2F1] text-[#00685F] flex items-center justify-center font-bold text-sm shrink-0">
+                  {getInitials(dName)}
+                </div>
+                <div>
+                  <p className="font-bold text-[#191C19] text-sm">{dName}</p>
+                  {!dLocked ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#006B2C]"></span>
+                      <span>Hoạt động</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FEE2E2] text-[#DC2626]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626]"></span>
+                      <span>Bị khóa</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                {rows.map((r) => (
+                  <div key={r.label} className="px-3.5 py-2.5 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]/40">
+                    <dt className="text-[10px] uppercase tracking-wide text-[#717971] font-semibold mb-0.5">{r.label}</dt>
+                    <dd className={`text-[#191C19] break-all ${r.mono ? 'font-mono' : 'font-semibold'}`}>
+                      {r.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-[#DDE5D9]">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChangeWarehouseTarget(detailTarget);
+                      setSelectedNewWarehouseId(detailTarget.warehouseId || warehouses[0]?.id || "");
+                      setDetailTarget(null);
+                    }}
+                    className="px-4 py-2 text-xs font-semibold text-[#00685F] hover:bg-[#E0F2F1] rounded-xl border border-[#00685F]/30 flex items-center gap-1.5"
+                  >
+                    <span className="material-symbols-outlined text-base">sync_alt</span>
+                    <span>Chuyển địa điểm công tác</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await handleToggleStatus(detailTarget);
+                      setDetailTarget(null);
+                    }}
+                    className={`px-4 py-2 text-xs font-semibold rounded-xl border flex items-center gap-1.5 ${
+                      !dLocked
+                        ? "text-[#DC2626] border-[#DC2626]/30 hover:bg-[#FEE2E2]/50"
+                        : "text-[#006B2C] border-[#006B2C]/30 hover:bg-[#E8F5E9]"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-base">{!dLocked ? "lock" : "lock_open"}</span>
+                    <span>{!dLocked ? "Khóa tài khoản" : "Mở khóa tài khoản"}</span>
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDetailTarget(null)}
+                  className="px-4 py-2 text-xs font-semibold bg-[#006B2C] text-white hover:bg-[#005523] rounded-xl shadow-sm"
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Modal Chuyển kho công tác */}
       {changeWarehouseTarget && (
@@ -512,7 +562,7 @@ export default function AdminModeratorsView({ onLogAction }) {
           <div className="w-full max-w-md bg-white rounded-2xl border border-[#DDE5D9] shadow-2xl p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-[#DDE5D9] pb-3">
               <h3 className="text-base font-bold text-[#191C19] font-heading">
-                Chuyển kho cho Moderator
+                Chuyển địa điểm công tác
               </h3>
               <button
                 onClick={() => setChangeWarehouseTarget(null)}
@@ -523,13 +573,13 @@ export default function AdminModeratorsView({ onLogAction }) {
             </div>
 
             <p className="text-xs text-[#414942]">
-              Điều chuyển nhân sự <strong className="text-[#191C19]">{changeWarehouseTarget.fullName || changeWarehouseTarget.name}</strong> sang kho ký gửi mới.
+              Điều chuyển nhân sự <strong className="text-[#191C19]">{changeWarehouseTarget.fullName || changeWarehouseTarget.name}</strong> sang địa điểm ký gửi mới.
             </p>
 
             <form onSubmit={handleChangeWarehouseSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-[#191C19] mb-1">
-                  Chọn chi nhánh kho mới <span className="text-[#DC2626]">*</span>
+                  Chọn địa điểm ký gửi mới <span className="text-[#DC2626]">*</span>
                 </label>
                 <select
                   required
@@ -563,7 +613,7 @@ export default function AdminModeratorsView({ onLogAction }) {
                       progress_activity
                     </span>
                   )}
-                  <span>Xác nhận chuyển kho</span>
+                  <span>Xác nhận chuyển địa điểm</span>
                 </button>
               </div>
             </form>
@@ -686,7 +736,7 @@ export default function AdminModeratorsView({ onLogAction }) {
               {/* Điểm kho phụ trách */}
               <div>
                 <label className="block text-xs font-semibold text-[#191C19] mb-1">
-                  Kho ký gửi phụ trách <span className="text-[#DC2626]">*</span>
+                  Địa điểm ký gửi phụ trách <span className="text-[#DC2626]">*</span>
                 </label>
                 <select
                   required
@@ -701,7 +751,7 @@ export default function AdminModeratorsView({ onLogAction }) {
                       : 'border-[#DDE5D9] bg-white hover:border-[#006B2C]/50 focus:border-[#006B2C]'
                   }`}
                 >
-                  <option value="">-- Chọn điểm kho ký gửi --</option>
+                  <option value="">-- Chọn địa điểm ký gửi --</option>
                   {warehouses.map((w) => (
                     <option key={w.id} value={w.id}>
                       {w.name} - {w.address}

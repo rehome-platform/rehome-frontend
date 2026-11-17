@@ -10,10 +10,10 @@ export default function Table({
   return (
     <div className="w-full overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-lowest">
       <table className="w-full text-left text-sm text-on-surface">
-        <thead className="bg-surface-container text-xs font-semibold uppercase text-outline">
+        <thead className="bg-surface-container text-xs font-semibold text-outline">
           <tr>
             {columns.map((col, idx) => (
-              <th key={idx} className={`px-4 py-3 ${col.className || ''}`}>
+              <th key={idx} className={`px-4 py-3 whitespace-nowrap ${col.className || ''}`}>
                 {col.header}
               </th>
             ))}

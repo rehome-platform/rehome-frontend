@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Badge, Button } from '../../../components/common/index.js';
-import { formatCurrencyVND, formatDate } from '../../../utils/formatters.js';
+import { formatCurrencyVND } from '../../../utils/formatters.js';
 import membershipAdminApi from '../services/membershipAdminApi.js';
 import GrantMembershipModal from './GrantMembershipModal.jsx';
 import {
@@ -9,6 +9,11 @@ import {
   TIER_LABELS,
   SUBSCRIPTION_STATUS_LABELS,
 } from './membershipConstants.js';
+import TierBadge from './TierBadge.jsx';
+
+// Tài khoản demo/seed nội bộ, không phải thành viên thật -> ẩn khỏi danh sách hiển thị cho Admin
+const HIDDEN_MEMBER_EMAILS = ['member8@rehome.com'];
+const HIDDEN_MEMBER_CODES = ['MB000008'];
 
 const BILLING_CYCLE_LABELS = {
   MONTHLY: 'Hàng tháng',
@@ -65,13 +70,24 @@ export default function MembershipSubscriptionsPage() {
       });
       if (seq !== seqRef.current) return;
 
-      const list = Array.isArray(res) ? res : res?.content || [];
+      const rawList = Array.isArray(res) ? res : res?.content || [];
+      // Ẩn tài khoản demo/seed nội bộ khỏi danh sách hiển thị cho Admin
+      const hiddenCount = rawList.filter(
+        (item) =>
+          HIDDEN_MEMBER_EMAILS.includes(item.memberEmail) ||
+          HIDDEN_MEMBER_CODES.includes(item.memberCode)
+      ).length;
+      const list = rawList.filter(
+        (item) =>
+          !HIDDEN_MEMBER_EMAILS.includes(item.memberEmail) &&
+          !HIDDEN_MEMBER_CODES.includes(item.memberCode)
+      );
       setItems(list);
       setTotalPages(res?.totalPages ?? (list.length > 0 ? 1 : 0));
-      setTotalElements(res?.totalElements ?? list.length);
+      setTotalElements(Math.max(0, (res?.totalElements ?? rawList.length) - hiddenCount));
     } catch (err) {
       if (seq !== seqRef.current) return;
-      setError(err?.response?.data?.message || err?.message || 'Không thể tải danh sách thành viên VIP.');
+      setError(err?.response?.data?.message || err?.message || 'Không thể tải danh sách thành viên.');
     } finally {
       if (seq === seqRef.current) {
         setLoading(false);
@@ -113,13 +129,11 @@ export default function MembershipSubscriptionsPage() {
       {/* Header & Action */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-5 rounded-xl border border-[#E2E8E0]">
         <div>
-          <h2 className="text-lg font-bold text-[#191C19]">Danh sách thành viên VIP</h2>
-          <p className="text-xs text-[#5B6776] mt-0.5">
-            Quản lý gói thành viên, theo dõi hạn sử dụng và tặng / gia hạn gói VIP ({totalElements} bản ghi)
-          </p>
+          <h2 className="text-lg font-bold text-[#191C19]">Danh sách thành viên</h2>
         </div>
-        <Button variant="primary" onClick={() => setIsGrantOpen(true)}>
-          Tặng / gia hạn gói
+        <Button variant="primary" onClick={() => setIsGrantOpen(true)} className="gap-1.5">
+          <span className="material-symbols-outlined text-base">card_giftcard</span>
+          <span>Tặng / gia hạn gói</span>
         </Button>
       </div>
 
@@ -230,22 +244,19 @@ export default function MembershipSubscriptionsPage() {
                 <th className="py-3 px-4 whitespace-nowrap">Trạng thái</th>
                 <th className="py-3 px-4 whitespace-nowrap">Chu kỳ</th>
                 <th className="py-3 px-4 text-right whitespace-nowrap">Giá đã trả</th>
-                <th className="py-3 px-4 whitespace-nowrap">Bắt đầu</th>
-                <th className="py-3 px-4 whitespace-nowrap">Hết hạn</th>
                 <th className="py-3 px-4 whitespace-nowrap">Còn lại</th>
-                <th className="py-3 px-4 whitespace-nowrap">Nguồn</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E2E8E0] text-sm text-[#1F2A37]">
               {loading && items.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-10 text-center text-sm text-[#5B6776]">
-                    Đang tải danh sách thành viên VIP...
+                  <td colSpan={6} className="py-10 text-center text-sm text-[#5B6776]">
+                    Đang tải danh sách thành viên...
                   </td>
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-10 text-center text-sm text-[#5B6776]">
+                  <td colSpan={6} className="py-10 text-center text-sm text-[#5B6776]">
                     Không có gói thành viên nào phù hợp.
                   </td>
                 </tr>
@@ -261,14 +272,10 @@ export default function MembershipSubscriptionsPage() {
                       className="hover:bg-[#F6F9F4] cursor-pointer transition-colors"
                     >
                       <td className="py-3 px-4">
-                        <p className="font-semibold text-[#191C19]">{item.memberName || '-'}</p>
-                        <p className="text-xs text-[#5B6776]">{item.memberEmail || '-'}</p>
-                        {item.memberCode && (
-                          <p className="text-[11px] font-mono text-[#5B6776]">{item.memberCode}</p>
-                        )}
+                        <p className="text-[#191C19]">{item.memberEmail || '-'}</p>
                       </td>
-                      <td className="py-3 px-4 font-medium">
-                        {item.tierName || TIER_LABELS[item.tier] || item.tier}
+                      <td className="py-3 px-4">
+                        <TierBadge tier={item.tier} label={item.tierName || TIER_LABELS[item.tier] || item.tier} />
                       </td>
                       <td className="py-3 px-4">
                         <Badge variant={STATUS_VARIANTS[item.status] || 'default'} size="sm">
@@ -281,8 +288,6 @@ export default function MembershipSubscriptionsPage() {
                       <td className="py-3 px-4 text-right font-medium tabular-nums">
                         {formatCurrencyVND(item.pricePaid)}
                       </td>
-                      <td className="py-3 px-4 whitespace-nowrap">{formatDate(item.startedAt)}</td>
-                      <td className="py-3 px-4 whitespace-nowrap">{formatDate(item.expiresAt)}</td>
                       <td className="py-3 px-4 whitespace-nowrap">
                         {hasDays ? (
                           <Badge variant={isExpiringSoon ? 'danger' : 'default'} size="sm">
@@ -291,11 +296,6 @@ export default function MembershipSubscriptionsPage() {
                         ) : (
                           '-'
                         )}
-                      </td>
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <Badge variant={item.grantedByAdmin ? 'info' : 'default'} size="sm">
-                          {item.grantedByAdmin ? 'Admin tặng' : 'Tự mua'}
-                        </Badge>
                       </td>
                     </tr>
                   );

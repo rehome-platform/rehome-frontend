@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { useToast } from '../../../context/ToastContext.jsx';
-import { Input, Button } from '../../../components/common/index.js';
+import { Button } from '../../../components/common/index.js';
 import {
   DEFAULT_SYSTEM_CONFIGS,
   SYSTEM_CONFIG_FIELDS,
@@ -14,34 +14,136 @@ import adminApi from '../services/adminApi';
  * Trang Cấu Hình Tham Số Hệ Thống ReHome
  * GET /api/admin/config is the source of effective values and validation limits.
  * Only fields present in the backend catalog can be saved with PUT /{key}.
+ *
+ * UI: mỗi tham số là một thẻ. Bấm "Sửa" để mở ô nhập, bấm "Xong" để đóng.
+ * Mọi thay đổi chưa lưu được gom lại và cảnh báo ở đầu trang cho tới khi Admin bấm Lưu.
  */
+
+const TABS = [
+  {
+    id: 'consignment',
+    label: '1. Kỳ ký gửi',
+    icon: 'timelapse',
+    title: 'Quy định Vòng Đời & Kỳ Ký Gửi',
+    description: 'Các quy định về thời gian hiệu lực và quyền hạn gia hạn ký gửi của Member.',
+    fields: [
+      { group: 'consignment', field: 'termDays', label: 'Độ dài một kỳ (ngày)' },
+      { group: 'consignment', field: 'maxRenewals', label: 'Số lần gia hạn tối đa' },
+      { group: 'consignment', field: 'freeWithdrawalDays', label: 'Cửa sổ rút hàng miễn phí (ngày)' },
+      { group: 'consignment', field: 'unclaimedDeadlineDays', label: 'Hạn chọn xử lý cuối kỳ (ngày)' },
+      { group: 'consignment', field: 'bringItemDeadlineDays', label: 'Hạn mang đồ đến địa điểm ký gửi sau duyệt (ngày)' },
+      { group: 'consignment', field: 'maxPendingFormsPerMember', label: 'Số form đang chờ tối đa / Member' },
+    ],
+  },
+  {
+    id: 'pricing',
+    label: '2. Giá & Hoa hồng',
+    icon: 'payments',
+    title: 'Tỷ lệ Hoa Hồng Tăng Dần & Giá Sàn',
+    description: 'Chính sách hoa hồng nền tảng và tỷ lệ bảo vệ giá bán tối thiểu.',
+    fields: [
+      { group: 'pricingAndCommission', field: 'commissionTerm1', label: 'Hoa hồng kỳ 1 (%)' },
+      { group: 'pricingAndCommission', field: 'commissionTerm2', label: 'Hoa hồng kỳ 2 (%)' },
+      { group: 'pricingAndCommission', field: 'commissionTerm3', label: 'Hoa hồng kỳ 3 (%)' },
+      { group: 'pricingAndCommission', field: 'floorPricePercent', label: 'Tỷ lệ Giá sàn (% giá chốt)' },
+      { group: 'pricingAndCommission', field: 'maxPriceChangesPerDay', label: 'Số lần đổi giá tối đa / ngày' },
+      { group: 'pricingAndCommission', field: 'withdrawalFee', label: 'Phí rút lại hàng cố định (VNĐ)' },
+      { group: 'pricingAndCommission', field: 'degradedCompensationRate', label: 'Tỷ lệ đền hàng xuống cấp (%)' },
+      { group: 'pricingAndCommission', field: 'voucherMaxRatioOfCommission', label: 'Tỷ lệ giảm giá voucher tối đa / hoa hồng (%)' },
+    ],
+  },
+  {
+    id: 'wallet',
+    label: '3. Ví & Rút tiền',
+    icon: 'account_balance_wallet',
+    title: 'Tham Số Ví Member & Rút Tiền Tự Động',
+    description: 'Các hạn mức giao dịch chuyển khoản về tài khoản ngân hàng của thành viên.',
+    fields: [
+      { group: 'walletAndPayout', field: 'minWithdrawalAmount', label: 'Số tiền rút tối thiểu (VNĐ)' },
+      { group: 'walletAndPayout', field: 'maxWithdrawalsPerDay', label: 'Số lần rút tối đa mỗi ngày' },
+    ],
+  },
+  {
+    id: 'orders',
+    label: '4. Đơn & Trả hàng',
+    icon: 'local_shipping',
+    title: 'Thời Hạn Đơn Hàng & Xử Lý Trả Hàng',
+    description: 'Hạn chót thanh toán, tự động đối soát và cửa sổ đổi trả hàng hóa.',
+    fields: [
+      { group: 'ordersAndReturns', field: 'paymentTimeoutMinutes', label: 'Thời hạn thanh toán đơn (phút)' },
+      { group: 'ordersAndReturns', field: 'autoCompleteDeliveredDays', label: 'Thời hạn tự hoàn thành sau giao (ngày)' },
+      { group: 'ordersAndReturns', field: 'returnRequestWindowDays', label: 'Thời hạn gửi yêu cầu trả hàng (ngày)' },
+      { group: 'ordersAndReturns', field: 'returnHandoverCarrierDays', label: 'Thời hạn bàn giao hàng trả cho GHN (ngày)' },
+      { group: 'ordersAndReturns', field: 'counterPickupDays', label: 'Thời hạn đến địa điểm ký gửi nhận hàng trả / rút (ngày)' },
+    ],
+  },
+  {
+    id: 'operations',
+    label: '5. Vận hành & Cộng đồng',
+    icon: 'warehouse',
+    title: 'Vận Hành Điểm Kí Gửi, Tổ Chức & Cộng Đồng',
+    description: 'Hạn mức chiến dịch gây quỹ và lưu trữ hồ sơ pháp lý.',
+    fields: [
+      { group: 'operationsAndCommunity', field: 'taskAutoReleaseHours', label: 'Thời gian cảnh báo quá hạn việc (giờ)' },
+      { group: 'operationsAndCommunity', field: 'maxConcurrentCampaignsPerOrg', label: 'Số chiến dịch đồng thời / Tổ chức' },
+      { group: 'operationsAndCommunity', field: 'legalDocsRetentionDays', label: 'Số ngày giữ ảnh giấy tờ CCCD sau duyệt (ngày)' },
+      { group: 'operationsAndCommunity', field: 'membershipExpiryReminderDays', label: 'Số ngày nhắc trước khi hết hạn gói VIP (ngày)' },
+    ],
+  },
+  {
+    id: 'points',
+    label: '6. Điểm tích lũy',
+    icon: 'stars',
+    title: 'Chương Trình Điểm Tích Lũy',
+    description: 'Quy tắc Member tích điểm khi mua hàng và đổi điểm lấy lượt thử đồ AI. Đặt 0 để tắt từng chức năng.',
+    fields: [
+      {
+        group: 'points',
+        field: 'vndPerPoint',
+        label: 'Số tiền đơn hàng để được 1 điểm (VNĐ)',
+        hint: 'Tính trên số tiền khách thực trả (đã trừ voucher). Đặt 0 để tắt tích điểm.',
+      },
+      {
+        group: 'points',
+        field: 'costPerAiTryon',
+        label: 'Số điểm đổi 1 lượt phối đồ AI',
+        hint: 'Phối đồ AI bằng ảnh tĩnh. Đặt 0 để đóng quy đổi loại này.',
+      },
+      {
+        group: 'points',
+        field: 'costPerLiveTryon',
+        label: 'Số điểm đổi 1 lượt thử đồ AI real-time',
+        hint: 'Thử đồ qua camera, chi phí thật cao hơn. Đặt 0 để đóng quy đổi loại này.',
+      },
+    ],
+  },
+];
+
+const formatNumber = (value) => {
+  if (value === '' || value == null || !Number.isFinite(Number(value))) return '—';
+  return Number(value).toLocaleString('vi-VN', { maximumFractionDigits: 4 });
+};
+
 export default function ConfigPage() {
   const { user } = useAuth();
   const { onLogAction } = useOutletContext() || {};
   const toast = useToast();
   const [activeTab, setActiveTab] = useState('consignment');
   const [configs, setConfigs] = useState(DEFAULT_SYSTEM_CONFIGS);
+  const [savedConfigs, setSavedConfigs] = useState(DEFAULT_SYSTEM_CONFIGS);
   const [specs, setSpecs] = useState({});
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [editingKeys, setEditingKeys] = useState(() => new Set());
 
   useEffect(() => {
     if (!savedSuccess) return;
     const timer = setTimeout(() => setSavedSuccess(false), 4000);
     return () => clearTimeout(timer);
   }, [savedSuccess]);
-
-  const tabs = [
-    { id: 'consignment', label: '1. Kỳ ký gửi', icon: 'timelapse' },
-    { id: 'pricing', label: '2. Giá & Hoa hồng', icon: 'payments' },
-    { id: 'wallet', label: '3. Ví & Rút tiền', icon: 'account_balance_wallet' },
-    { id: 'orders', label: '4. Đơn & Trả hàng', icon: 'local_shipping' },
-    { id: 'operations', label: '5. Vận hành & Cộng đồng', icon: 'warehouse' },
-    { id: 'points', label: '6. Điểm tích lũy', icon: 'stars' },
-  ];
 
   useEffect(() => {
     loadBackendConfigs();
@@ -67,8 +169,10 @@ export default function ConfigPage() {
     }
     if (!Object.keys(nextSpecs).length) throw new Error('Máy chủ chưa trả về tham số cấu hình được hỗ trợ.');
     setConfigs(updated);
+    setSavedConfigs(JSON.parse(JSON.stringify(updated)));
     setSpecs(nextSpecs);
     setLoaded(true);
+    setEditingKeys(new Set());
     saveEffectiveConsignmentConfig(updated);
   };
 
@@ -86,26 +190,59 @@ export default function ConfigPage() {
     }
   };
 
-  const getFieldProps = (group, field) => {
-    const mapping = SYSTEM_CONFIG_FIELDS.find(item => item.group === group && item.field === field);
-    const spec = mapping && specs[mapping.key];
-    const scale = mapping?.percent ? 100 : 1;
-    return {
-      value: loaded && spec ? configs[group][field] : '',
-      disabled: loading || saving || !loaded || !spec,
-      required: Boolean(spec),
-      min: spec ? Number((Number(spec.min) * scale).toPrecision(15)) : undefined,
-      max: spec ? Number((Number(spec.max) * scale).toPrecision(15)) : undefined,
-      step: spec?.type === 'INT' ? 1 : 'any',
-      helperText: !mapping ? 'Chưa áp dụng: backend chưa hỗ trợ chỉnh tham số này.'
-        : loaded && !spec ? 'Chưa áp dụng: máy chủ chưa cung cấp tham số này.' : undefined,
-    };
+  const getMapping = (group, field) =>
+    SYSTEM_CONFIG_FIELDS.find(item => item.group === group && item.field === field);
+
+  // Danh sách tham số đã sửa nhưng chưa lưu (so với giá trị máy chủ đang áp dụng)
+  const dirtyFields = useMemo(() => {
+    if (!loaded) return [];
+    const result = [];
+    for (const tab of TABS) {
+      for (const f of tab.fields) {
+        const current = String(configs[f.group]?.[f.field] ?? '');
+        const saved = String(savedConfigs[f.group]?.[f.field] ?? '');
+        if (current !== saved) result.push({ ...f, tabId: tab.id, tabLabel: tab.label });
+      }
+    }
+    return result;
+  }, [configs, savedConfigs, loaded]);
+
+  const isDirty = (group, field) =>
+    dirtyFields.some(d => d.group === group && d.field === field);
+
+  const dirtyCountByTab = useMemo(() => {
+    const map = {};
+    for (const d of dirtyFields) map[d.tabId] = (map[d.tabId] || 0) + 1;
+    return map;
+  }, [dirtyFields]);
+
+  const toggleEditing = (key) => {
+    setEditingKeys(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   };
 
-  // Giống getFieldProps nhưng thêm dòng gợi ý dưới ô; thông báo "Chưa áp dụng" (nếu có) vẫn được ưu tiên.
-  const getFieldPropsWithHint = (group, field, hint) => {
-    const props = getFieldProps(group, field);
-    return { ...props, helperText: props.helperText ?? hint };
+  const handleFieldChange = (group, field, value) => {
+    setConfigs(prev => ({
+      ...prev,
+      [group]: { ...prev[group], [field]: value },
+    }));
+  };
+
+  const handleRevertField = (group, field) => {
+    setConfigs(prev => ({
+      ...prev,
+      [group]: { ...prev[group], [field]: savedConfigs[group][field] },
+    }));
+  };
+
+  const handleRevertAll = () => {
+    setConfigs(JSON.parse(JSON.stringify(savedConfigs)));
+    setEditingKeys(new Set());
+    setErrorMessage('');
   };
 
   const handleSave = async (e) => {
@@ -157,6 +294,114 @@ export default function ConfigPage() {
     }
   };
 
+  const currentTab = TABS.find(t => t.id === activeTab) || TABS[0];
+  const hasChanges = dirtyFields.length > 0;
+
+  /** Thẻ hiển thị một tham số: xem giá trị, bấm Sửa để chỉnh */
+  const renderField = ({ group, field, label, hint }) => {
+    const mapping = getMapping(group, field);
+    const spec = mapping && specs[mapping.key];
+    const scale = mapping?.percent ? 100 : 1;
+    const inputId = `config-${group}-${field}`;
+    const editKey = `${group}.${field}`;
+    const editing = editingKeys.has(editKey);
+    const dirty = isDirty(group, field);
+    const unavailable = !mapping || (loaded && !spec);
+    const disabled = loading || saving || !loaded || !spec;
+    const value = loaded && spec ? configs[group][field] : '';
+    const savedValue = loaded && spec ? savedConfigs[group][field] : '';
+    const min = spec ? Number((Number(spec.min) * scale).toPrecision(15)) : undefined;
+    const max = spec ? Number((Number(spec.max) * scale).toPrecision(15)) : undefined;
+    const step = spec?.type === 'INT' ? 1 : 'any';
+    const unavailableText = !mapping
+      ? 'Chưa áp dụng: backend chưa hỗ trợ chỉnh tham số này.'
+      : loaded && !spec ? 'Chưa áp dụng: máy chủ chưa cung cấp tham số này.' : null;
+
+    return (
+      <div
+        key={editKey}
+        className={`rounded-2xl border p-4 flex flex-col gap-2.5 transition-colors ${
+          dirty
+            ? 'border-[#F59E0B] bg-[#FFFBEB]/60'
+            : editing
+            ? 'border-[#006B2C] bg-white shadow-sm'
+            : 'border-[#DDE5D9] bg-[#FBFDFB]'
+        }`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <label htmlFor={inputId} className="text-xs font-semibold text-[#191C19] leading-snug">
+            {label}
+          </label>
+          <div className="flex items-center gap-1 shrink-0">
+            {dirty && !editing && (
+              <button
+                type="button"
+                onClick={() => handleRevertField(group, field)}
+                title="Hoàn tác về giá trị đang áp dụng"
+                className="w-7 h-7 rounded-lg text-[#92400E] hover:bg-[#FDE68A]/60 flex items-center justify-center"
+              >
+                <span className="material-symbols-outlined text-[16px]">undo</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => toggleEditing(editKey)}
+              disabled={disabled}
+              aria-label={editing ? `Xong: ${label}` : `Sửa: ${label}`}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors disabled:opacity-40 ${
+                editing
+                  ? 'bg-[#006B2C] text-white hover:bg-[#005523]'
+                  : 'text-[#006B2C] border border-[#006B2C]/30 hover:bg-[#E8F5E9]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[14px]">{editing ? 'check' : 'edit'}</span>
+              <span>{editing ? 'Xong' : 'Sửa'}</span>
+            </button>
+          </div>
+        </div>
+
+        <input
+          id={inputId}
+          type="number"
+          value={value}
+          readOnly={!editing}
+          disabled={disabled}
+          min={min}
+          max={max}
+          step={step}
+          onChange={(e) => handleFieldChange(group, field, e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              if (editing) toggleEditing(editKey);
+            }
+          }}
+          className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-bold font-mono outline-none transition-all ${
+            editing
+              ? 'border-[#006B2C] bg-white text-[#191C19] focus:ring-2 focus:ring-[#006B2C]/15'
+              : 'border-transparent bg-[#F0F4EE] text-[#191C19] cursor-default'
+          } disabled:bg-[#F5F5F5] disabled:text-[#9E9E9E]`}
+        />
+
+        {(unavailableText || dirty) && (
+          <div className="flex items-center justify-between gap-2 text-[11px] text-[#717971] min-h-[16px]">
+            <span>
+              {unavailableText && <span className="text-[#B45309]">{unavailableText}</span>}
+            </span>
+            {dirty && (
+              <span className="font-semibold text-[#92400E] whitespace-nowrap">
+                Đang áp dụng: {formatNumber(savedValue)}
+              </span>
+            )}
+          </div>
+        )}
+        {hint && !unavailableText && (
+          <p className="text-[11px] text-[#717971] -mt-1">{hint}</p>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -165,7 +410,7 @@ export default function ConfigPage() {
             Cấu Hình Tham Số Hệ Thống ReHome
           </h1>
           <p className="text-xs text-[#717971] mt-0.5">
-            Quy định các tham số cốt lõi về vòng đời ký gửi, tỷ lệ hoa hồng, giá sàn và thời hạn xử lý.
+            Bấm "Sửa" trên tham số cần thay đổi, chỉnh xong bấm "Lưu thay đổi tham số" để áp dụng.
           </p>
         </div>
         <Button
@@ -173,10 +418,17 @@ export default function ConfigPage() {
           form="config-form"
           loading={saving}
           disabled={loading || !loaded}
-          className="bg-[#006B2C] hover:bg-[#005523] text-white shrink-0 shadow-sm rounded-xl"
+          className={`shrink-0 shadow-sm rounded-xl text-white ${
+            hasChanges ? 'bg-[#006B2C] hover:bg-[#005523]' : 'bg-[#006B2C]/70 hover:bg-[#006B2C]'
+          }`}
         >
           <span className="material-symbols-outlined text-sm mr-1.5">save</span>
           Lưu thay đổi tham số
+          {hasChanges && (
+            <span className="ml-2 px-1.5 py-0.5 rounded-full bg-white/25 text-[10px] font-bold">
+              {dirtyFields.length}
+            </span>
+          )}
         </Button>
       </div>
 
@@ -199,10 +451,38 @@ export default function ConfigPage() {
         </div>
       )}
 
+      {/* Cảnh báo thay đổi chưa lưu */}
+      {hasChanges && !saving && (
+        <div className="sticky top-2 z-20 p-3.5 bg-[#FFFBEB] border border-[#F59E0B] text-[#92400E] rounded-2xl text-xs shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
+          <div className="flex items-start gap-2">
+            <span className="material-symbols-outlined text-lg shrink-0">warning</span>
+            <div>
+              <p className="font-bold">
+                Bạn có {dirtyFields.length} tham số đã sửa nhưng chưa lưu.
+              </p>
+              <p className="text-[11px] mt-0.5">
+                {dirtyFields.slice(0, 4).map(d => d.label).join(' · ')}
+                {dirtyFields.length > 4 ? ` · +${dirtyFields.length - 4} tham số khác` : ''}
+                . Bấm "Lưu thay đổi tham số" để áp dụng lên hệ thống.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleRevertAll}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-[#F59E0B]/50 bg-white text-[11px] font-bold text-[#92400E] hover:bg-[#FDE68A]/40 self-start sm:self-auto shrink-0"
+          >
+            <span className="material-symbols-outlined text-[14px]">undo</span>
+            <span>Hoàn tác tất cả</span>
+          </button>
+        </div>
+      )}
+
       {/* Tab selection */}
       <div className="flex border-b border-[#DDE5D9] space-x-2 overflow-x-auto">
-        {tabs.map((tab) => {
+        {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
+          const tabDirty = dirtyCountByTab[tab.id] || 0;
           return (
             <button
               key={tab.id}
@@ -216,6 +496,11 @@ export default function ConfigPage() {
             >
               <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
               <span>{tab.label}</span>
+              {tabDirty > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-[#F59E0B] text-white text-[10px] font-bold">
+                  {tabDirty}
+                </span>
+              )}
             </button>
           );
         })}
@@ -223,383 +508,21 @@ export default function ConfigPage() {
 
       {/* Form container */}
       <form id="config-form" noValidate onSubmit={handleSave} className="bg-white p-6 sm:p-8 rounded-2xl border border-[#DDE5D9] shadow-sm space-y-6">
-        {/* TAB 1: Kỳ ký gửi */}
-        {activeTab === 'consignment' && (
-          <div className="space-y-5">
+        <div className="space-y-5">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 className="text-base font-bold text-[#191C19]">Quy định Vòng Đời & Kỳ Ký Gửi</h3>
-              <p className="text-xs text-[#717971] mt-0.5">
-                Các quy định về thời gian hiệu lực và quyền hạn gia hạn ký gửi của Member.
-              </p>
+              <h3 className="text-base font-bold text-[#191C19]">{currentTab.title}</h3>
+              <p className="text-xs text-[#717971] mt-0.5">{currentTab.description}</p>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <Input
-                label="Độ dài một kỳ (ngày)"
-                type="number"
-                {...getFieldProps('consignment', 'termDays')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  consignment: { ...configs.consignment, termDays: e.target.value }
-                })}
-              />
-
-              <Input
-                label="Số lần gia hạn tối đa"
-                type="number"
-                {...getFieldProps('consignment', 'maxRenewals')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  consignment: { ...configs.consignment, maxRenewals: e.target.value }
-                })}
-              />
-
-              <Input
-                label="Cửa sổ rút hàng miễn phí (ngày)"
-                type="number"
-                {...getFieldProps('consignment', 'freeWithdrawalDays')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  consignment: { ...configs.consignment, freeWithdrawalDays: e.target.value }
-                })}
-              />
-
-              <Input
-                label="Hạn chọn xử lý cuối kỳ (ngày)"
-                type="number"
-                {...getFieldProps('consignment', 'unclaimedDeadlineDays')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  consignment: { ...configs.consignment, unclaimedDeadlineDays: e.target.value }
-                })}
-              />
-
-              <Input
-                label="Hạn mang đồ đến kho sau duyệt (ngày)"
-                type="number"
-                {...getFieldProps('consignment', 'bringItemDeadlineDays')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  consignment: { ...configs.consignment, bringItemDeadlineDays: e.target.value }
-                })}
-              />
-
-              <Input
-                label="Số form đang chờ tối đa / Member"
-                type="number"
-                {...getFieldProps('consignment', 'maxPendingFormsPerMember')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  consignment: { ...configs.consignment, maxPendingFormsPerMember: e.target.value }
-                })}
-              />
-            </div>
+            <span className="text-[11px] text-[#717971] whitespace-nowrap shrink-0 pt-1">
+              {currentTab.fields.length} tham số
+            </span>
           </div>
-        )}
 
-        {/* TAB 2: Giá & Hoa hồng */}
-        {activeTab === 'pricing' && (
-          <div className="space-y-5">
-            <div>
-              <h3 className="text-base font-bold text-[#191C19]">Tỷ lệ Hoa Hồng Tăng Dần & Giá Sàn</h3>
-              <p className="text-xs text-[#717971] mt-0.5">
-                Chính sách hoa hồng nền tảng và tỷ lệ bảo vệ giá bán tối thiểu.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Input
-                label="Hoa hồng kỳ 1 (%)"
-                type="number"
-                {...getFieldProps('pricingAndCommission', 'commissionTerm1')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  pricingAndCommission: { ...configs.pricingAndCommission, commissionTerm1: e.target.value }
-                })}
-              />
-              <Input
-                label="Hoa hồng kỳ 2 (%)"
-                type="number"
-                {...getFieldProps('pricingAndCommission', 'commissionTerm2')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  pricingAndCommission: { ...configs.pricingAndCommission, commissionTerm2: e.target.value }
-                })}
-              />
-              <Input
-                label="Hoa hồng kỳ 3 (%)"
-                type="number"
-                {...getFieldProps('pricingAndCommission', 'commissionTerm3')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  pricingAndCommission: { ...configs.pricingAndCommission, commissionTerm3: e.target.value }
-                })}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
-              <Input
-                label="Tỷ lệ Giá sàn (% giá chốt)"
-                type="number"
-                {...getFieldProps('pricingAndCommission', 'floorPricePercent')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  pricingAndCommission: { ...configs.pricingAndCommission, floorPricePercent: e.target.value }
-                })}
-              />
-
-              <Input
-                label="Số lần đổi giá tối đa / ngày"
-                type="number"
-                {...getFieldProps('pricingAndCommission', 'maxPriceChangesPerDay')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  pricingAndCommission: { ...configs.pricingAndCommission, maxPriceChangesPerDay: e.target.value }
-                })}
-              />
-
-              <Input
-                label="Phí rút lại hàng cố định (VNĐ)"
-                type="number"
-                {...getFieldProps('pricingAndCommission', 'withdrawalFee')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  pricingAndCommission: { ...configs.pricingAndCommission, withdrawalFee: e.target.value }
-                })}
-              />
-
-              <Input
-                label="Tỷ lệ đền hàng xuống cấp (%)"
-                type="number"
-                {...getFieldProps('pricingAndCommission', 'degradedCompensationRate')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  pricingAndCommission: { ...configs.pricingAndCommission, degradedCompensationRate: e.target.value }
-                })}
-              />
-
-              <Input
-                label="Tỷ lệ giảm giá voucher tối đa / hoa hồng (%)"
-                type="number"
-                {...getFieldProps('pricingAndCommission', 'voucherMaxRatioOfCommission')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  pricingAndCommission: { ...configs.pricingAndCommission, voucherMaxRatioOfCommission: e.target.value }
-                })}
-              />
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {currentTab.fields.map(renderField)}
           </div>
-        )}
-
-        {/* TAB 3: Ví & Rút tiền */}
-        {activeTab === 'wallet' && (
-          <div className="space-y-5">
-            <div>
-              <h3 className="text-base font-bold text-[#191C19]">Tham Số Ví Member & Rút Tiền Tự Động</h3>
-              <p className="text-xs text-[#717971] mt-0.5">
-                Các hạn mức giao dịch chuyển khoản về tài khoản ngân hàng của thành viên.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <Input
-                label="Số tiền rút tối thiểu (VNĐ)"
-                type="number"
-                {...getFieldProps('walletAndPayout', 'minWithdrawalAmount')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  walletAndPayout: { ...configs.walletAndPayout, minWithdrawalAmount: e.target.value }
-                })}
-              />
-
-              <Input
-                label="Số lần rút tối đa mỗi ngày"
-                type="number"
-                {...getFieldProps('walletAndPayout', 'maxWithdrawalsPerDay')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  walletAndPayout: { ...configs.walletAndPayout, maxWithdrawalsPerDay: e.target.value }
-                })}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* TAB 4: Đơn hàng & Trả hàng */}
-        {activeTab === 'orders' && (
-          <div className="space-y-5">
-            <div>
-              <h3 className="text-base font-bold text-[#191C19]">Thời Hạn Đơn Hàng & Xử Lý Trả Hàng</h3>
-              <p className="text-xs text-[#717971] mt-0.5">
-                Hạn chót thanh toán, tự động đối soát và cửa sổ đổi trả hàng hóa.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <Input
-                label="Thời hạn thanh toán đơn (phút)"
-                type="number"
-                {...getFieldProps('ordersAndReturns', 'paymentTimeoutMinutes')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  ordersAndReturns: { ...configs.ordersAndReturns, paymentTimeoutMinutes: e.target.value }
-                })}
-              />
-
-              <Input
-                label="Thời hạn tự hoàn thành sau giao (ngày)"
-                type="number"
-                {...getFieldProps('ordersAndReturns', 'autoCompleteDeliveredDays')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  ordersAndReturns: { ...configs.ordersAndReturns, autoCompleteDeliveredDays: e.target.value }
-                })}
-              />
-
-              <Input
-                label="Thời hạn gửi yêu cầu trả hàng (ngày)"
-                type="number"
-                {...getFieldProps('ordersAndReturns', 'returnRequestWindowDays')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  ordersAndReturns: { ...configs.ordersAndReturns, returnRequestWindowDays: e.target.value }
-                })}
-              />
-
-              <Input
-                label="Thời hạn bàn giao hàng trả cho GHN (ngày)"
-                type="number"
-                {...getFieldProps('ordersAndReturns', 'returnHandoverCarrierDays')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  ordersAndReturns: { ...configs.ordersAndReturns, returnHandoverCarrierDays: e.target.value }
-                })}
-              />
-
-              <Input
-                label="Thời hạn đến kho nhận hàng trả / rút (ngày)"
-                type="number"
-                {...getFieldProps('ordersAndReturns', 'counterPickupDays')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  ordersAndReturns: { ...configs.ordersAndReturns, counterPickupDays: e.target.value }
-                })}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* TAB 5: Vận hành & Cộng đồng */}
-        {activeTab === 'operations' && (
-          <div className="space-y-5">
-            <div>
-              <h3 className="text-base font-bold text-[#191C19]">Vận Hành Điểm Kí Gửi, Tổ Chức & Cộng Đồng</h3>
-              <p className="text-xs text-[#717971] mt-0.5">
-                Hạn mức chiến dịch gây quỹ và lưu trữ hồ sơ pháp lý.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <Input
-                label="Thời gian cảnh báo quá hạn việc (giờ)"
-                type="number"
-                {...getFieldProps('operationsAndCommunity', 'taskAutoReleaseHours')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  operationsAndCommunity: { ...configs.operationsAndCommunity, taskAutoReleaseHours: e.target.value }
-                })}
-              />
-
-              <Input
-                label="Số chiến dịch đồng thời / Tổ chức"
-                type="number"
-                {...getFieldProps('operationsAndCommunity', 'maxConcurrentCampaignsPerOrg')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  operationsAndCommunity: { ...configs.operationsAndCommunity, maxConcurrentCampaignsPerOrg: e.target.value }
-                })}
-              />
-
-              <Input
-                label="Số ngày giữ ảnh giấy tờ CCCD sau duyệt (ngày)"
-                type="number"
-                {...getFieldProps('operationsAndCommunity', 'legalDocsRetentionDays')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  operationsAndCommunity: { ...configs.operationsAndCommunity, legalDocsRetentionDays: e.target.value }
-                })}
-              />
-
-              <Input
-                label="Số ngày nhắc trước khi hết hạn gói VIP (ngày)"
-                type="number"
-                {...getFieldProps('operationsAndCommunity', 'membershipExpiryReminderDays')}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  operationsAndCommunity: { ...configs.operationsAndCommunity, membershipExpiryReminderDays: e.target.value }
-                })}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* TAB 6: Điểm tích lũy */}
-        {activeTab === 'points' && (
-          <div className="space-y-5">
-            <div>
-              <h3 className="text-base font-bold text-[#191C19]">Chương Trình Điểm Tích Lũy</h3>
-              <p className="text-xs text-[#717971] mt-0.5">
-                Quy tắc Member tích điểm khi mua hàng và đổi điểm lấy lượt thử đồ AI. Đặt 0 để tắt từng chức năng.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <Input
-                label="Số tiền đơn hàng để được 1 điểm (VNĐ)"
-                type="number"
-                {...getFieldPropsWithHint(
-                  'points',
-                  'vndPerPoint',
-                  'Tính trên số tiền khách thực trả (đã trừ voucher). Đặt 0 để tắt tích điểm.',
-                )}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  points: { ...configs.points, vndPerPoint: e.target.value }
-                })}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <Input
-                label="Số điểm đổi 1 lượt phối đồ AI"
-                type="number"
-                {...getFieldPropsWithHint(
-                  'points',
-                  'costPerAiTryon',
-                  'Phối đồ AI bằng ảnh tĩnh. Đặt 0 để đóng quy đổi loại này.',
-                )}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  points: { ...configs.points, costPerAiTryon: e.target.value }
-                })}
-              />
-
-              <Input
-                label="Số điểm đổi 1 lượt thử đồ AI real-time"
-                type="number"
-                {...getFieldPropsWithHint(
-                  'points',
-                  'costPerLiveTryon',
-                  'Thử đồ qua camera, chi phí thật cao hơn. Đặt 0 để đóng quy đổi loại này.',
-                )}
-                onChange={(e) => setConfigs({
-                  ...configs,
-                  points: { ...configs.points, costPerLiveTryon: e.target.value }
-                })}
-              />
-            </div>
-          </div>
-        )}
+        </div>
       </form>
     </div>
   );

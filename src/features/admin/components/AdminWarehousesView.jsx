@@ -282,15 +282,6 @@ export default function AdminWarehousesView({ onLogAction }) {
     );
   };
 
-  // Chọn nhanh tọa độ thành phố lớn
-  const setCityPreset = (lat, lng) => {
-    setFormData((prev) => ({
-      ...prev,
-      latitude: String(lat),
-      longitude: String(lng),
-    }));
-  };
-
   const handleSave = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
@@ -372,7 +363,7 @@ export default function AdminWarehousesView({ onLogAction }) {
       console.error('Lỗi API kho:', err);
       const errMsg =
         err.response?.data?.message || err.message || (editingWarehouse ? 'Cập nhật điểm kí gửi thất bại.' : 'Tạo điểm kí gửi mới thất bại.');
-      toast.error(`${editingWarehouse ? 'Cập nhật' : 'Tạo kho'} thất bại: ${errMsg}`);
+      toast.error(`${editingWarehouse ? 'Cập nhật' : 'Tạo địa điểm'} thất bại: ${errMsg}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -404,7 +395,7 @@ export default function AdminWarehousesView({ onLogAction }) {
       } catch (err) {
         if (err.response?.status === 409 || err.response?.data?.code === 'WAREHOUSE_HAS_STOCK') {
           toast.error(
-            `Không thể ẩn điểm kí gửi "${w.name}" vì kho vẫn còn sản phẩm tồn chưa xử lý (Mã lỗi: WAREHOUSE_HAS_STOCK)!`
+            `Không thể ẩn điểm kí gửi "${w.name}" vì vẫn còn sản phẩm ký gửi chưa xử lý!`
           );
           return;
         }
@@ -481,22 +472,13 @@ export default function AdminWarehousesView({ onLogAction }) {
       } catch (err) {
         console.error('Lỗi mở lại kho:', err);
         const errMsg = err.response?.data?.message || err.message || 'Mở hoạt động điểm kí gửi thất bại.';
-        toast.error(`Mở kho thất bại: ${errMsg}`);
+        toast.error(`Mở địa điểm ký gửi thất bại: ${errMsg}`);
       } finally {
         setTogglingId(null);
       }
     }
   };
 
-  const parsedLat = parseFloat(formData.latitude);
-  const parsedLng = parseFloat(formData.longitude);
-  const hasValidCoords =
-    !isNaN(parsedLat) &&
-    !isNaN(parsedLng) &&
-    parsedLat >= -90 &&
-    parsedLat <= 90 &&
-    parsedLng >= -180 &&
-    parsedLng <= 180;
 
   return (
     <div className="space-y-6">
@@ -506,9 +488,6 @@ export default function AdminWarehousesView({ onLogAction }) {
           <h1 className="text-2xl font-bold text-[#191C19] font-heading">
             Quản Lý Điểm Kí Gửi
           </h1>
-          <p className="text-xs text-[#717971] mt-0.5">
-            Dữ liệu mạng lưới kho thực tế từ hệ thống ReHome. Kiểm soát nhân sự và quản lý hàng tồn kho.
-          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -547,7 +526,7 @@ export default function AdminWarehousesView({ onLogAction }) {
           />
         </div>
         <select
-          aria-label="Lọc trạng thái kho"
+          aria-label="Lọc trạng thái địa điểm ký gửi"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="px-3.5 py-2.5 rounded-xl border border-[#E2E8E0] bg-white text-xs font-medium text-[#191C19] focus:outline-none focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15 shadow-xs"
@@ -637,7 +616,7 @@ export default function AdminWarehousesView({ onLogAction }) {
 
                 <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-[#F0F4EE] text-center">
                   <div className="p-2.5 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0]">
-                    <p className="text-[10px] text-[#717971]">Nhân sự Mod</p>
+                    <p className="text-[10px] text-[#717971]">Nhân sự</p>
                     <p className="text-sm font-bold text-[#191C19] mt-0.5">{w.moderatorCount} người</p>
                   </div>
                   <div className="p-2.5 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0]">
@@ -661,7 +640,7 @@ export default function AdminWarehousesView({ onLogAction }) {
                 {w.status === 'ACTIVE' && w.inventoryCount > 0 && (
                   <span className="text-[11px] text-[#D97706] flex items-center gap-1 font-medium">
                     <span className="material-symbols-outlined text-[14px]">info</span>
-                    <span>Còn tồn kho ({w.inventoryCount})</span>
+                    <span>Còn hàng ký gửi ({w.inventoryCount})</span>
                   </span>
                 )}
                 {(!w.inventoryCount || w.inventoryCount === 0) && <div></div>}
@@ -697,239 +676,172 @@ export default function AdminWarehousesView({ onLogAction }) {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        size="lg"
+        size="xl"
         title={editingWarehouse ? 'Chỉnh sửa thông tin điểm kí gửi' : 'Mở điểm kí gửi mới'}
       >
-        <form onSubmit={handleSave} className="space-y-4 max-h-[80vh] overflow-y-auto px-1 py-1">
-          {/* Tên kho */}
-          <Input
-            label="Tên điểm kí gửi"
-            required
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="Ví dụ: Điểm kí gửi Tân Bình - Chi nhánh số 5"
-          />
-
-          {/* Địa chỉ 2 cấp GHN */}
-          <div className="p-3.5 rounded-xl border border-[#E2E8E0] bg-[#FBFDFB] space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="block text-xs font-semibold text-[#191C19]">
-                Địa chỉ chi tiết chuẩn hóa (2 cấp GHN) <span className="text-[#BA1A1A]">*</span>
-              </label>
-              <span className="text-[11px] text-[#717971]">Hệ thống hành chính sau 01/07/2025</span>
+        <form onSubmit={handleSave} className="space-y-5">
+          {/* ===== Tên điểm kí gửi (full width) ===== */}
+          <div className="p-4 rounded-2xl border border-[#E2E8E0] bg-[#FBFDFB] space-y-3.5">
+            <div className="flex items-center gap-2 text-xs font-bold text-[#191C19]">
+              <span className="material-symbols-outlined text-[18px] text-[#006B2C]">store</span>
+              <span>Thông tin điểm kí gửi</span>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Dropdown Tỉnh/Thành */}
-              <div>
-                <label htmlFor="warehouse-province-select" className="text-[11px] font-medium text-[#414942] block mb-1">
-                  Tỉnh / Thành phố
-                </label>
-                <select
-                  id="warehouse-province-select"
-                  aria-label="Tỉnh / Thành phố"
-                  value={formData.provinceId}
-                  onChange={handleProvinceChange}
-                  disabled={loadingProvinces}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
-                >
-                  <option value="">-- Chọn Tỉnh / Thành phố --</option>
-                  {provinces.map((p) => (
-                    <option key={p.code} value={p.code}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Dropdown Phường/Xã */}
-              <div>
-                <label htmlFor="warehouse-ward-select" className="text-[11px] font-medium text-[#414942] block mb-1">
-                  Phường / Xã
-                </label>
-                <select
-                  id="warehouse-ward-select"
-                  aria-label="Phường / Xã"
-                  value={formData.wardCode}
-                  onChange={handleWardChange}
-                  disabled={loadingWards || !formData.provinceId}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C] disabled:bg-[#F5F5F5] disabled:text-[#9E9E9E]"
-                >
-                  <option value="">
-                    {loadingWards
-                      ? 'Đang tải danh sách phường/xã...'
-                      : !formData.provinceId
-                      ? '-- Vui lòng chọn Tỉnh/Thành trước --'
-                      : '-- Chọn Phường / Xã --'}
-                  </option>
-                  {wards.map((w) => (
-                    <option key={w.code} value={w.code}>
-                      {w.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Ô nhập số nhà / tên đường */}
-            <div>
-              <label htmlFor="warehouse-street-address-input" className="text-[11px] font-medium text-[#414942] block mb-1">
-                Số nhà, tên đường cụ thể <span className="text-[#BA1A1A]">*</span>
-              </label>
-              <input
-                id="warehouse-street-address-input"
-                type="text"
-                required
-                value={formData.streetAddress}
-                onChange={(e) => setFormData({ ...formData, streetAddress: e.target.value })}
-                placeholder="Số nhà, tên đường (ví dụ: 123 Nguyễn Thị Thập)"
-                className="w-full px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
-              />
-            </div>
-
-            {/* Preview địa chỉ ghép hoàn chỉnh */}
-            {(formData.streetAddress || formData.wardName || formData.provinceName) && (
-              <div className="text-[11px] text-[#414942] bg-white p-2.5 rounded-lg border border-[#E2E8E0] flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-sm text-[#006B2C]">pin_drop</span>
-                <span className="font-medium text-[#191C19]">Địa chỉ đầy đủ:</span>
-                <span>
-                  {[formData.streetAddress.trim(), formData.wardName, formData.provinceName]
-                    .filter(Boolean)
-                    .join(', ')}
-                </span>
-              </div>
-            )}
+            <Input
+              label="Tên điểm kí gửi"
+              required
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Ví dụ: Điểm kí gửi Tân Bình - Chi nhánh số 5"
+            />
           </div>
 
-          {/* Giờ mở cửa trực quan */}
-          <OpeningHoursPicker
-            value={formData.openingHours}
-            onChange={(val) => setFormData({ ...formData, openingHours: val })}
-          />
-
-          {/* Tọa độ bản đồ (Latitude, Longitude) & Geolocation */}
-          <div className="p-3.5 rounded-xl border border-[#E2E8E0] bg-[#FBFDFB] space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <label className="block text-xs font-semibold text-[#191C19]">
-                Tọa độ bản đồ (Latitude, Longitude) <span className="text-[#BA1A1A]">*</span>
-              </label>
-              <button
-                type="button"
-                onClick={handleGetCurrentLocation}
-                disabled={geoLoading}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#006B2C] hover:text-[#005221] bg-[#E8F5E9] hover:bg-[#C8E6C9] px-2.5 py-1 rounded-xl transition-colors border border-[#C8E6C9] self-start sm:self-auto"
-              >
-                <span className={`material-symbols-outlined text-[16px] ${geoLoading ? 'animate-spin' : ''}`}>
-                  {geoLoading ? 'progress_activity' : 'my_location'}
-                </span>
-                <span>{geoLoading ? 'Đang định vị...' : 'Lấy vị trí hiện tại'}</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="text-[11px] font-medium text-[#414942] block mb-1">
-                  Vĩ độ (Latitude) [-90 đến 90]
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  required
-                  value={formData.latitude}
-                  onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-                  placeholder="10.7769"
-                  className="w-full px-3 py-2 text-xs font-mono rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] font-medium text-[#414942] block mb-1">
-                  Kinh độ (Longitude) [-180 đến 180]
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  required
-                  value={formData.longitude}
-                  onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                  placeholder="106.7009"
-                  className="w-full px-3 py-2 text-xs font-mono rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
-                />
-              </div>
-            </div>
-
-            {/* Nút chọn nhanh tọa độ */}
-            <div className="flex items-center gap-1.5 flex-wrap pt-1 text-[11px] text-[#717971]">
-              <span>Gợi ý nhanh:</span>
-              <button
-                type="button"
-                onClick={() => setCityPreset(10.7769, 106.7009)}
-                className="px-2.5 py-1 rounded-xl bg-white border border-[#E2E8E0] hover:bg-[#F0F5EE] text-[#414942] transition-colors"
-              >
-                TP.HCM (10.7769, 106.7009)
-              </button>
-              <button
-                type="button"
-                onClick={() => setCityPreset(21.0285, 105.8542)}
-                className="px-2.5 py-1 rounded-xl bg-white border border-[#E2E8E0] hover:bg-[#F0F5EE] text-[#414942] transition-colors"
-              >
-                Hà Nội (21.0285, 105.8542)
-              </button>
-              <button
-                type="button"
-                onClick={() => setCityPreset(16.0544, 108.2022)}
-                className="px-2.5 py-1 rounded-xl bg-white border border-[#E2E8E0] hover:bg-[#F0F5EE] text-[#414942] transition-colors"
-              >
-                Đà Nẵng (16.0544, 108.2022)
-              </button>
-            </div>
-
-            {/* Khối hiển thị vị trí & Liên kết bản đồ an toàn (tránh lỗi iframe OSM từ chối kết nối) */}
-            {hasValidCoords && (
-              <div className="pt-2">
-                <div className="flex items-center justify-between mb-2 text-[11px] text-[#717971]">
-                  <span className="font-medium text-[#191C19]">Tọa độ định vị điểm kí gửi:</span>
-                  <div className="flex items-center gap-3">
-                    <a
-                      href={`https://www.google.com/maps?q=${parsedLat},${parsedLng}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[#006B2C] hover:underline flex items-center gap-0.5 font-medium"
-                    >
-                      <span>Mở Google Maps</span>
-                      <span className="material-symbols-outlined text-[13px]">open_in_new</span>
-                    </a>
-                    <a
-                      href={`https://www.openstreetmap.org/?mlat=${parsedLat}&mlon=${parsedLng}#map=16/${parsedLat}/${parsedLng}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[#006B2C] hover:underline flex items-center gap-0.5 font-medium"
-                    >
-                      <span>Mở OpenStreetMap</span>
-                      <span className="material-symbols-outlined text-[13px]">open_in_new</span>
-                    </a>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* ===== Cột trái: Địa chỉ ===== */}
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl border border-[#E2E8E0] bg-[#FBFDFB] space-y-3.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-[#191C19]">
+                    <span className="material-symbols-outlined text-[18px] text-[#006B2C]">location_city</span>
+                    <span>Địa chỉ <span className="text-[#BA1A1A]">*</span></span>
                   </div>
+                  <span className="text-[11px] text-[#717971]">Hành chính 2 cấp sau 01/07/2025</span>
                 </div>
 
-                <div className="rounded-xl border border-[#DDE5D9] bg-[#F6F9F4] p-3 text-xs flex items-center justify-between gap-3 shadow-2xs">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-[#E8F5E9] text-[#006B2C] flex items-center justify-center shrink-0">
-                      <span className="material-symbols-outlined text-[18px]">location_on</span>
-                    </div>
-                    <div>
-                      <p className="font-bold text-[#191C19]">
-                        Vĩ độ: {parsedLat.toFixed(5)} · Kinh độ: {parsedLng.toFixed(5)}
-                      </p>
-                      <p className="text-[11px] text-[#5B6776]">
-                        Tọa độ được dùng để tính khoảng cách và định vị kho gần nhất cho Member
-                      </p>
-                    </div>
+                <div>
+                  <label htmlFor="warehouse-province-select" className="text-[11px] font-medium text-[#414942] block mb-1">
+                    Tỉnh / Thành phố
+                  </label>
+                  <select
+                    id="warehouse-province-select"
+                    aria-label="Tỉnh / Thành phố"
+                    value={formData.provinceId}
+                    onChange={handleProvinceChange}
+                    disabled={loadingProvinces}
+                    className="w-full px-3 py-2.5 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+                  >
+                    <option value="">-- Chọn Tỉnh / Thành phố --</option>
+                    {provinces.map((p) => (
+                      <option key={p.code} value={p.code}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="warehouse-ward-select" className="text-[11px] font-medium text-[#414942] block mb-1">
+                    Phường / Xã
+                  </label>
+                  <select
+                    id="warehouse-ward-select"
+                    aria-label="Phường / Xã"
+                    value={formData.wardCode}
+                    onChange={handleWardChange}
+                    disabled={loadingWards || !formData.provinceId}
+                    className="w-full px-3 py-2.5 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C] disabled:bg-[#F5F5F5] disabled:text-[#9E9E9E]"
+                  >
+                    <option value="">
+                      {loadingWards
+                        ? 'Đang tải danh sách phường/xã...'
+                        : !formData.provinceId
+                        ? '-- Vui lòng chọn Tỉnh/Thành trước --'
+                        : '-- Chọn Phường / Xã --'}
+                    </option>
+                    {wards.map((w) => (
+                      <option key={w.code} value={w.code}>
+                        {w.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="warehouse-street-address-input" className="text-[11px] font-medium text-[#414942] block mb-1">
+                    Số nhà, tên đường <span className="text-[#BA1A1A]">*</span>
+                  </label>
+                  <input
+                    id="warehouse-street-address-input"
+                    type="text"
+                    required
+                    value={formData.streetAddress}
+                    onChange={(e) => setFormData({ ...formData, streetAddress: e.target.value })}
+                    placeholder="Ví dụ: 123 Nguyễn Thị Thập"
+                    className="w-full px-3 py-2.5 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+                  />
+                </div>
+
+                {(formData.streetAddress || formData.wardName || formData.provinceName) && (
+                  <div className="text-[11px] text-[#414942] bg-white p-2.5 rounded-xl border border-[#E2E8E0] flex items-start gap-1.5">
+                    <span className="material-symbols-outlined text-sm text-[#006B2C] shrink-0">pin_drop</span>
+                    <span>
+                      <span className="font-medium text-[#191C19]">Địa chỉ đầy đủ: </span>
+                      {[formData.streetAddress.trim(), formData.wardName, formData.provinceName]
+                        .filter(Boolean)
+                        .join(', ')}
+                    </span>
                   </div>
-                  <span className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C] border border-[#006B2C]/20 shrink-0">
-                    Hợp lệ
+                )}
+              </div>
+            </div>
+
+            {/* ===== Cột phải: Tọa độ & Giờ mở cửa ===== */}
+            <div className="space-y-4">
+            <div className="p-4 rounded-2xl border border-[#E2E8E0] bg-[#FBFDFB] space-y-3.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-[#191C19]">
+                  <span className="material-symbols-outlined text-[18px] text-[#006B2C]">map</span>
+                  <span>Tọa độ bản đồ <span className="text-[#BA1A1A]">*</span></span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleGetCurrentLocation}
+                  disabled={geoLoading}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#006B2C] hover:text-[#005221] bg-[#E8F5E9] hover:bg-[#C8E6C9] px-2.5 py-1 rounded-xl transition-colors border border-[#C8E6C9]"
+                >
+                  <span className={`material-symbols-outlined text-[16px] ${geoLoading ? 'animate-spin' : ''}`}>
+                    {geoLoading ? 'progress_activity' : 'my_location'}
                   </span>
+                  <span>{geoLoading ? 'Đang định vị...' : 'Lấy vị trí hiện tại'}</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-medium text-[#414942] block mb-1">
+                    Vĩ độ (Latitude)
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    value={formData.latitude}
+                    onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
+                    placeholder="10.7769"
+                    className="w-full px-3 py-2.5 text-xs font-mono rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium text-[#414942] block mb-1">
+                    Kinh độ (Longitude)
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    value={formData.longitude}
+                    onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
+                    placeholder="106.7009"
+                    className="w-full px-3 py-2.5 text-xs font-mono rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+                  />
                 </div>
               </div>
-            )}
+            </div>
+
+              <OpeningHoursPicker
+                value={formData.openingHours}
+                onChange={(val) => setFormData({ ...formData, openingHours: val })}
+              />
+            </div>
           </div>
 
           <div className="flex justify-end space-x-2 pt-3 border-t border-[#E2E8E0]">
@@ -973,7 +885,7 @@ export default function AdminWarehousesView({ onLogAction }) {
                 </h3>
                 <p className="text-xs text-[#717971] mt-1 leading-relaxed">
                   Theo quy định vận hành của ReHome, chỉ được phép ẩn điểm kí gửi khi{' '}
-                  <strong className="text-[#191C19]">hết toàn bộ hàng kí gửi</strong> lưu kho.
+                  <strong className="text-[#191C19]">hết toàn bộ hàng kí gửi</strong> đang lưu giữ.
                 </p>
               </div>
             </div>
@@ -999,7 +911,7 @@ export default function AdminWarehousesView({ onLogAction }) {
 
             <p className="text-[11px] text-[#717971] italic">
               Vui lòng điều chuyển sản phẩm sang điểm kí gửi khác hoặc hoàn tất thanh lý toàn bộ hàng hóa
-              trước khi tiến hành đóng hoặc ẩn kho.
+              trước khi tiến hành đóng hoặc ẩn địa điểm ký gửi.
             </p>
 
             <div className="flex justify-end pt-2">
