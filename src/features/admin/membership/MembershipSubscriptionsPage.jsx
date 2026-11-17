@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Badge, Button } from '../../../components/common/index.js';
+import { Badge, Button, Spinner } from '../../../components/common/index.js';
 import { formatCurrencyVND } from '../../../utils/formatters.js';
 import membershipAdminApi from '../services/membershipAdminApi.js';
 import GrantMembershipModal from './GrantMembershipModal.jsx';
@@ -251,7 +251,10 @@ export default function MembershipSubscriptionsPage() {
               {loading && items.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-10 text-center text-sm text-[#5B6776]">
-                    Đang tải danh sách thành viên...
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Spinner size="lg" />
+                      <span>Đang tải danh sách thành viên...</span>
+                    </div>
                   </td>
                 </tr>
               ) : items.length === 0 ? (

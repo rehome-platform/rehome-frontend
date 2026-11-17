@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import adminApi from '../services/adminApi.js';
 import AdminDonutChart from './AdminDonutChart.jsx';
+import { Spinner } from '../../../components/common/index.js';
 
 // Mọi trạng thái sản phẩm còn nằm trong kho (cùng định nghĩa "tồn kho" của dashboard BE), chia 2 nhóm.
 // Nhóm "Đang kinh doanh" dùng tông xanh, nhóm "Cần xử lý" dùng tông ấm để nhìn biểu đồ là thấy ngay hàng nào đang kẹt.
@@ -265,8 +266,9 @@ export default function AdminWarehouseOverview() {
           </div>
 
           {loading ? (
-            <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center text-xs text-[#717971]">
-              Đang tải hàng ký gửi theo trạng thái...
+            <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center flex flex-col items-center justify-center gap-3 text-xs text-[#717971]">
+              <Spinner size="lg" />
+              <span>Đang tải hàng ký gửi theo trạng thái...</span>
             </div>
           ) : !stockByStatus ? (
             <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center text-xs text-[#717971]">
@@ -315,8 +317,9 @@ export default function AdminWarehouseOverview() {
           </div>
 
           {loading ? (
-            <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center text-xs text-[#717971]">
-              Đang tải hàng ký gửi theo kỳ...
+            <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center flex flex-col items-center justify-center gap-3 text-xs text-[#717971]">
+              <Spinner size="lg" />
+              <span>Đang tải hàng ký gửi theo kỳ...</span>
             </div>
           ) : termTotal === 0 ? (
             <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center text-xs text-[#717971]">

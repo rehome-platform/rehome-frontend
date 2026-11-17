@@ -45,11 +45,11 @@ import {
   AdminWarehousesPage,
   ConfigPage,
   AdminAuditLogsPage,
+  ViolationWordsPage,
   MembershipPlansPage,
   MembershipSubscriptionsPage,
   MembershipSubscriptionDetailPage,
   VoucherTemplatesPage,
-  MembershipPaymentsPage,
 } from '../features/admin/pages/index.js';
 
 /**
@@ -250,11 +250,11 @@ export default function AppRouter() {
         <Route path="warehouses" element={<AdminWarehousesPage />} />
         <Route path="configs" element={<ConfigPage />} />
         <Route path="audit-logs" element={<AdminAuditLogsPage />} />
+        <Route path="violation-words" element={<ViolationWordsPage />} />
         <Route path="membership-plans" element={<MembershipPlansPage />} />
         <Route path="membership-subscriptions" element={<MembershipSubscriptionsPage />} />
         <Route path="membership-subscriptions/:id" element={<MembershipSubscriptionDetailPage />} />
         <Route path="voucher-templates" element={<VoucherTemplatesPage />} />
-        <Route path="membership-payments" element={<MembershipPaymentsPage />} />
         <Route path="system" element={<Navigate to="/admin/users" replace />} />
       </Route>
 
