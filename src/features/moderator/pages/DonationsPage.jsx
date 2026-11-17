@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
+import Spinner from '../../../components/common/Spinner.jsx';
 import { useToast } from '../../../context/ToastContext.jsx';
 import PhotoUpload from '../components/PhotoUpload.jsx';
 import { CAMPAIGN_STATUS_LABELS, donationService, isCampaignActive } from '../services/donationApi.js';
@@ -19,6 +20,12 @@ function extractNoteDetails(note) {
   }
   const cleanText = noteText.replace(imgRegex, '').replace(/Ảnh hiện vật:\s*/g, '').trim();
   return { cleanText, photos };
+}
+
+function getDonationRowDetails(row) {
+  const { cleanText, photos: notePhotos } = extractNoteDetails(row?.note);
+  const photoUrls = Array.isArray(row?.photoUrls) && row.photoUrls.length > 0 ? row.photoUrls : notePhotos;
+  return { cleanText, photos: photoUrls };
 }
 
 function formatHeldDuration(heldAt) {
@@ -80,7 +87,9 @@ export default function DonationsPage() {
   const [reassignError, setReassignError] = useState(null);
   const [reassigning, setReassigning] = useState(false);
 
-  const warehouses = useResource((options) => donationService.myWarehouses(options), []);
+  const warehouses = useResource((options) => donationService.myWarehouses(options), [], {
+    cacheKey: 'donations:myWarehouses',
+  });
   const warehouse = Array.isArray(warehouses.data) ? warehouses.data[0] : null;
   const warehouseId = warehouse?.id || null;
 
@@ -94,7 +103,10 @@ export default function DonationsPage() {
           )
         : Promise.resolve({ items: [], page: 0, size: campaignPageSize, totalElements: 0, totalPages: 0 }),
     [warehouseId, campaignView, campaignSearch, campaignPage],
-    { enabled: Boolean(warehouseId) },
+    {
+      enabled: Boolean(warehouseId),
+      cacheKey: warehouseId ? `donations:campaigns:${warehouseId}:${campaignView}:${campaignSearch}:${campaignPage}` : null,
+    },
   );
 
   const donationsResource = useResource(
@@ -107,7 +119,10 @@ export default function DonationsPage() {
           )
         : Promise.resolve([]),
     [warehouseId, campaignFilter, statusFilter],
-    { enabled: Boolean(warehouseId) },
+    {
+      enabled: Boolean(warehouseId),
+      cacheKey: warehouseId ? `donations:list:${warehouseId}:${campaignFilter || 'all'}:${statusFilter || 'all'}` : null,
+    },
   );
 
   const onHoldDonationsResource = useResource(
@@ -116,7 +131,10 @@ export default function DonationsPage() {
         ? donationService.listDonations(warehouseId, { status: 'ON_HOLD' }, options)
         : Promise.resolve([]),
     [warehouseId],
-    { enabled: Boolean(warehouseId) },
+    {
+      enabled: Boolean(warehouseId),
+      cacheKey: warehouseId ? `donations:onHold:${warehouseId}` : null,
+    },
   );
 
   const activeCampaignsForReassignResource = useResource(
@@ -277,23 +295,26 @@ export default function DonationsPage() {
     setRecordError(null);
     setRecording(true);
     try {
-      // Đóng gói theo Cách 1: chèn URL ảnh vào trường note dạng Markdown
-      let combinedNote = note.trim();
-      if (donationPhotos.length > 0) {
-        const photoMarkdown = donationPhotos.map((url, idx) => `![Hiện vật ${idx + 1}](${url})`).join(' ');
-        combinedNote = combinedNote ? `${combinedNote}\n\nẢnh hiện vật: ${photoMarkdown}` : `Ảnh hiện vật: ${photoMarkdown}`;
-      }
-
-      await donationService.recordDonation(
+      const created = await donationService.recordDonation(
         warehouseId,
-        { campaignId: effectiveCampaignId, donorName, isAnonymous, note: combinedNote },
+        {
+          campaignId: effectiveCampaignId,
+          donorName,
+          isAnonymous,
+          note: note.trim(),
+          photoUrls: donationPhotos,
+        },
       );
       toast.success('Đã ghi nhận lượt quyên góp');
       setDonorName('');
       setIsAnonymous(false);
       setNote('');
       setDonationPhotos([]);
-      donationsResource.refresh();
+      if (created) {
+        donationsResource.setData((prev) => (Array.isArray(prev) ? [created, ...prev] : [created]));
+      } else {
+        donationsResource.refresh();
+      }
     } catch (err) {
       setRecordError(normalizeError(err).message);
     } finally {
@@ -825,7 +846,7 @@ export default function DonationsPage() {
                     <div className="overflow-x-auto rounded-xl border border-neutral">
                       <table className="w-full min-w-[760px] text-left text-xs">
                         <thead>
-                          <tr className="bg-background border-b border-neutral text-[10px] uppercase font-bold tracking-wider text-textSecondary">
+                          <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
                             <th className="py-2.5 px-3 w-10">
                               <input
                                 type="checkbox"
@@ -849,7 +870,7 @@ export default function DonationsPage() {
                         <tbody className="divide-y divide-neutral">
                           {onHoldDonations.map((row) => {
                             const isChecked = selectedOnHoldIds.includes(row.id);
-                            const { cleanText, photos } = extractNoteDetails(row.note);
+                            const { cleanText, photos } = getDonationRowDetails(row);
                             const elapsed = formatHeldDuration(row.heldAt || row.createdAt);
                             const isFocused = focusedDonationId && String(row.id) === String(focusedDonationId);
                             return (
@@ -1034,7 +1055,7 @@ export default function DonationsPage() {
                         <div className="overflow-x-auto">
                           <table className="w-full min-w-[760px] text-left text-xs">
                             <thead>
-                              <tr className="bg-background border-b border-neutral text-[10px] uppercase font-bold tracking-wider text-textSecondary">
+                              <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
                                 <th className="py-2 px-3 w-8">Chọn</th>
                                 <th className="py-2 px-3">Thời gian</th>
                                 <th className="py-2 px-3">Chiến dịch / Tổ chức</th>
@@ -1128,9 +1149,9 @@ export default function DonationsPage() {
                                           </div>
                                         </div>
                                       )}
-                                      {/* Hiển thị ghi chú và ảnh hiện vật (nếu có nhúng URL) */}
+                                      {/* Hiển thị ghi chú và ảnh hiện vật (ưu tiên photoUrls, fallback regex note cũ) */}
                                       {(() => {
-                                        const { cleanText, photos } = extractNoteDetails(row.note);
+                                        const { cleanText, photos } = getDonationRowDetails(row);
 
                                         return (
                                           <div className="space-y-1.5">
@@ -1229,7 +1250,10 @@ export default function DonationsPage() {
           </div>
 
           {activeCampaignsForReassignResource.loading ? (
-            <p className="text-center py-4 text-textSecondary">Đang tải danh sách chiến dịch phù hợp...</p>
+            <div className="flex items-center justify-center gap-2 py-4 text-textSecondary text-xs">
+              <Spinner size="sm" />
+              <span>Đang tải danh sách chiến dịch phù hợp…</span>
+            </div>
           ) : reassignCampaignOptions.length === 0 ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-amber-900 font-medium">
               Chưa có chiến dịch nào phù hợp đang nhận đồ tại điểm ký gửi này — các lượt đã chọn vẫn được tạm giữ.

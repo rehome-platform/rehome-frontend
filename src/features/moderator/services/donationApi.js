@@ -113,6 +113,11 @@ function normalizeDonation(d) {
   const sku = productObj?.sku || productObj?.id || d.productId || d.sku || extractSkuFromNote(d.note);
   const productName = productObj?.name || d.productName || null;
   const productPhotoUrl = productObj?.photoUrl || productObj?.imageUrl || d.productPhotoUrl || d.photoUrl || null;
+  const photoUrls = Array.isArray(d.photoUrls)
+    ? d.photoUrls.filter(Boolean)
+    : Array.isArray(d.photos)
+      ? d.photos.filter(Boolean)
+      : [];
   const source =
     d.source ||
     (sku || (typeof d.note === 'string' && d.note.startsWith('Món ký gửi:')) ? 'CONSIGNED_ITEM' : 'DIRECT');
@@ -122,6 +127,7 @@ function normalizeDonation(d) {
     sku,
     productName,
     productPhotoUrl,
+    photoUrls,
     source,
     isConsignedItem: source === 'CONSIGNED_ITEM',
     recordedBy: d.recordedBy || d.moderatorCode || d.recordedByName || null,
@@ -226,7 +232,7 @@ export const donationService = {
     return list.map(normalizeDonation).filter(Boolean);
   },
 
-  recordDonation: async (warehouseId, { campaignId, donorName, isAnonymous, note } = {}, options = {}) => {
+  recordDonation: async (warehouseId, { campaignId, donorName, isAnonymous, note, photoUrls } = {}, options = {}) => {
     if (!warehouseId) throw new Phase2Error('Chưa xác định được điểm ký gửi.', 400);
     if (!campaignId) throw new Phase2Error('Vui lòng chọn chiến dịch.', 400);
     const anonymous = Boolean(isAnonymous);
@@ -234,6 +240,7 @@ export const donationService = {
     if (!anonymous && !trimmedName) {
       throw new Phase2Error('Vui lòng nhập tên người quyên góp hoặc chọn ẩn danh.', 400);
     }
+    const cleanPhotoUrls = Array.isArray(photoUrls) ? photoUrls.filter(Boolean) : [];
     const res = await callBackend(
       {
         method: 'post',
@@ -243,6 +250,7 @@ export const donationService = {
           donorName: anonymous ? null : trimmedName,
           isAnonymous: anonymous,
           note: String(note || '').trim(),
+          photoUrls: cleanPhotoUrls,
         },
       },
       { signal: options?.signal },
