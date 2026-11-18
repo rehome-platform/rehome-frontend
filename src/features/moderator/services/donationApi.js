@@ -113,6 +113,11 @@ function normalizeDonation(d) {
   const sku = productObj?.sku || productObj?.id || d.productId || d.sku || extractSkuFromNote(d.note);
   const productName = productObj?.name || d.productName || null;
   const productPhotoUrl = productObj?.photoUrl || productObj?.imageUrl || d.productPhotoUrl || d.photoUrl || null;
+  const photoUrls = Array.isArray(d.photoUrls)
+    ? d.photoUrls.filter(Boolean)
+    : Array.isArray(d.photos)
+      ? d.photos.filter(Boolean)
+      : [];
   const source =
     d.source ||
     (sku || (typeof d.note === 'string' && d.note.startsWith('Món ký gửi:')) ? 'CONSIGNED_ITEM' : 'DIRECT');
@@ -122,11 +127,17 @@ function normalizeDonation(d) {
     sku,
     productName,
     productPhotoUrl,
+    photoUrls,
     source,
     isConsignedItem: source === 'CONSIGNED_ITEM',
     recordedBy: d.recordedBy || d.moderatorCode || d.recordedByName || null,
     handedOverToOrganizationName: d.handedOverToOrganizationName || d.organizationName || null,
     status: d.status || 'PENDING_PICKUP',
+    heldAt: d.heldAt || null,
+    holdReason: d.holdReason || null,
+    reassignedFromCampaignId: d.reassignedFromCampaignId || null,
+    reassignedFromCampaignTitle: d.reassignedFromCampaignTitle || null,
+    reassignedAt: d.reassignedAt || null,
   };
 }
 
@@ -221,7 +232,7 @@ export const donationService = {
     return list.map(normalizeDonation).filter(Boolean);
   },
 
-  recordDonation: async (warehouseId, { campaignId, donorName, isAnonymous, note } = {}, options = {}) => {
+  recordDonation: async (warehouseId, { campaignId, donorName, isAnonymous, note, photoUrls } = {}, options = {}) => {
     if (!warehouseId) throw new Phase2Error('Chưa xác định được điểm ký gửi.', 400);
     if (!campaignId) throw new Phase2Error('Vui lòng chọn chiến dịch.', 400);
     const anonymous = Boolean(isAnonymous);
@@ -229,6 +240,7 @@ export const donationService = {
     if (!anonymous && !trimmedName) {
       throw new Phase2Error('Vui lòng nhập tên người quyên góp hoặc chọn ẩn danh.', 400);
     }
+    const cleanPhotoUrls = Array.isArray(photoUrls) ? photoUrls.filter(Boolean) : [];
     const res = await callBackend(
       {
         method: 'post',
@@ -238,6 +250,7 @@ export const donationService = {
           donorName: anonymous ? null : trimmedName,
           isAnonymous: anonymous,
           note: String(note || '').trim(),
+          photoUrls: cleanPhotoUrls,
         },
       },
       { signal: options?.signal },
@@ -258,6 +271,24 @@ export const donationService = {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.HANDOVER_DONATIONS(warehouseId),
         data: { donationIds, organizationId, campaignId },
+      },
+      { signal: options?.signal },
+    );
+  },
+
+  reassignDonations: async (warehouseId, { donationIds, campaignId } = {}, options = {}) => {
+    if (!warehouseId) throw new Phase2Error('Chưa xác định được điểm ký gửi.', 400);
+    if (!Array.isArray(donationIds) || !donationIds.length) {
+      throw new Phase2Error('Vui lòng chọn ít nhất một lượt quyên góp đang tạm giữ để chuyển.', 400);
+    }
+    if (!campaignId) {
+      throw new Phase2Error('Vui lòng chọn chiến dịch tiếp nhận mới.', 400);
+    }
+    return callBackend(
+      {
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.REASSIGN_DONATIONS(warehouseId),
+        data: { donationIds, campaignId },
       },
       { signal: options?.signal },
     );

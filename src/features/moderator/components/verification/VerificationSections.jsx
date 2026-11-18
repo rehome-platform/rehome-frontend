@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { Button, Badge, Modal } from "../../../../components/common/index.js";
+import Spinner from "../../../../components/common/Spinner.jsx";
 import { useToast } from "../../../../context/ToastContext.jsx";
 import baseApi from "../../../../services/baseApi.js";
 import { API_BASE_URL } from "../../../../configs/api.config.js";
@@ -122,7 +123,7 @@ function LegalDocumentPreviewModal({ doc, onClose }) {
       <div ref={containerRef} className="space-y-4 text-xs font-sans">
         {loading ? (
           <div className="w-full h-72 flex flex-col items-center justify-center rounded-xl border border-neutral bg-background text-textSecondary gap-3">
-            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <Spinner size="md" />
             <span className="font-medium">Đang tải tài liệu bảo mật...</span>
           </div>
         ) : error || !blobUrl ? (
@@ -545,7 +546,7 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="bg-background border-b border-neutral text-[11px] uppercase font-bold text-textSecondary tracking-wider">
+            <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
               <th className="py-2.5 px-4 w-1/3">Tên tổ chức</th>
               <th className="py-2.5 px-4">Nội dung chỉnh sửa</th>
               <th className="py-2.5 px-4 text-right">Hành động</th>
@@ -774,7 +775,7 @@ export function VerificationQueueTable({ loading, orgsQueue = [], handleOpenDeta
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="bg-background border-b border-neutral text-[11px] uppercase font-bold text-textSecondary tracking-wider">
+            <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
               <th className="py-2.5 px-3">Mã hồ sơ</th>
               <th className="py-2.5 px-3">Tên tổ chức</th>
               <th className="py-2.5 px-3">Loại hình</th>

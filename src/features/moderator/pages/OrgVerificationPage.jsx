@@ -1,3 +1,4 @@
+import Spinner from '../../../components/common/Spinner.jsx';
 import { useOrgVerification } from '../hooks/useOrgVerification.jsx';
 import {
   VerificationRejectDialog,
@@ -95,8 +96,8 @@ function AuthenticatedImage({ src, alt, className }) {
   if (loading) {
     return (
       <div className="w-full h-72 flex flex-col items-center justify-center rounded-xl border border-neutral bg-background text-textSecondary text-xs gap-3">
-        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        <span className="font-medium">Đang tải tài liệu bảo mật...</span>
+        <Spinner size="md" />
+        <span className="font-medium">Đang tải tài liệu bảo mật…</span>
       </div>
     );
   }

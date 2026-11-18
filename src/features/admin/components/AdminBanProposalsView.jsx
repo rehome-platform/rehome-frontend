@@ -50,6 +50,8 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
   const [banModalTarget, setBanModalTarget] = useState(null);
   const [banReason, setBanReason] = useState('');
   const [banSubmitting, setBanSubmitting] = useState(false);
+  const [banPreview, setBanPreview] = useState(null);
+  const [banPreviewLoading, setBanPreviewLoading] = useState(false);
 
   const loadProposals = useCallback(async () => {
     try {
@@ -197,11 +199,23 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
   };
 
   // Mở Modal xác nhận khóa tài khoản
-  const handleOpenBanModal = (proposal) => {
+  const handleOpenBanModal = async (proposal) => {
     setBanModalTarget(proposal);
     setBanReason(
       `Khóa theo đề xuất của Moderator (${proposal.moderatorName}): ${proposal.proposeReason}`
     );
+    setBanPreview(null);
+    if (proposal?.accountId) {
+      setBanPreviewLoading(true);
+      try {
+        const preview = await adminApi.getBanPreview(proposal.accountId);
+        setBanPreview(preview);
+      } catch {
+        setBanPreview(null);
+      } finally {
+        setBanPreviewLoading(false);
+      }
+    }
   };
 
   // Thực thi gọi API POST /api/admin/accounts/{id}/ban
@@ -638,8 +652,22 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] text-[11px] text-[#92400E] leading-relaxed">
-              Khi bị khóa, tài khoản sẽ bị đăng xuất khỏi mọi thiết bị ngay lập tức và không thể tiếp tục hoạt động trên nền tảng.
+            <div className="p-3 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] text-[11px] text-[#92400E] leading-relaxed space-y-1">
+              <p>
+                Khi bị khóa, tài khoản sẽ bị đăng xuất khỏi mọi thiết bị ngay lập tức và không thể tiếp tục hoạt động trên nền tảng.
+              </p>
+              {banPreviewLoading ? (
+                <p className="font-semibold">Đang kiểm tra báo cáo và lượt quyên góp liên quan...</p>
+              ) : banPreview ? (
+                <p className="font-semibold">
+                  Sẽ tự đóng <strong>{banPreview.pendingReportCount}</strong> báo cáo đang chờ và tạm giữ{' '}
+                  <strong>{banPreview.pendingPickupDonationCount}</strong> lượt quyên góp chờ lấy.
+                </p>
+              ) : (
+                <p className="font-semibold">
+                  Các báo cáo đang chờ liên quan đến tổ chức sẽ được đóng tự động và các lượt quyên góp chờ lấy sẽ chuyển sang trạng thái tạm giữ.
+                </p>
+              )}
             </div>
 
             <div>

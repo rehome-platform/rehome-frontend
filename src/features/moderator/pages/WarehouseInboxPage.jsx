@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 import { Button } from '../../../components/common/index.js';
+import Spinner from '../../../components/common/Spinner.jsx';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { warehouseInboxService } from '../services/warehouseInboxApi.js';
 import { useToast } from '../../../context/ToastContext.jsx';
@@ -419,8 +420,9 @@ export default function WarehouseInboxPage() {
             {/* List items */}
             <div className="flex-1 overflow-y-auto divide-y divide-neutral">
               {loading && (
-                <div className="p-8 text-center text-xs text-textSecondary">
-                  Đang tải danh sách hộp thư...
+                <div role="status" className="p-8 flex flex-col items-center justify-center gap-2 text-xs text-textSecondary">
+                  <Spinner size="sm" />
+                  <span>Đang tải danh sách hộp thư…</span>
                 </div>
               )}
               {!loading && error && (
