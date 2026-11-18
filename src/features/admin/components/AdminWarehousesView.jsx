@@ -404,61 +404,10 @@ export default function AdminWarehousesView({ onLogAction }) {
         setTogglingId(null);
       }
     } else {
-      // Mở lại kho nếu đang bị ẩn: Đảm bảo gửi đủ các trường hành chính bắt buộc
+      // Mở lại kho đang ẩn: gọi đúng API unhide (chỉ đổi status, không đụng thông tin kho)
       try {
         setTogglingId(w.id);
-        let provId = w.provinceId;
-        let provName = w.provinceName || '';
-        let wCode = w.wardCode;
-        let wName = w.wardName || '';
-
-        let currentProvinces = provinces;
-        if ((!provId || !wCode) && currentProvinces.length === 0) {
-          currentProvinces = await loadProvinces();
-        }
-        if (!provId && provName && currentProvinces.length > 0) {
-          const foundProv = currentProvinces.find(
-            (p) => p.name.toLowerCase() === provName.toLowerCase() || provName.includes(p.name) || p.name.includes(provName)
-          );
-          if (foundProv) {
-            provId = foundProv.code;
-            provName = foundProv.name;
-          }
-        }
-        if (!wCode && provId && wName) {
-          const loadedWards = await loadWards(provId);
-          if (loadedWards.length > 0) {
-            const foundWard = loadedWards.find(
-              (wd) => wd.name.toLowerCase() === wName.toLowerCase() || wName.includes(wd.name) || wd.name.includes(wName)
-            );
-            if (foundWard) {
-              wCode = foundWard.code;
-              wName = foundWard.name;
-            }
-          }
-        }
-
-        // Giá trị dự phòng nếu danh mục không trả về mã
-        if (!provId) provId = 202; // TP. Hồ Chí Minh
-        if (!provName) provName = 'Hồ Chí Minh';
-        if (!wCode) wCode = '90737'; // Phường Bến Nghé
-        if (!wName) wName = 'Phường Bến Nghé';
-
-        const latNum = parseFloat(w.latitude) || 10.7769;
-        const lngNum = parseFloat(w.longitude) || 106.7009;
-
-        await adminApi.updateWarehouse(w.id, {
-          name: w.name,
-          address: w.address,
-          provinceName: provName,
-          wardName: wName,
-          provinceId: parseInt(provId, 10),
-          wardCode: String(wCode),
-          latitude: latNum,
-          longitude: lngNum,
-          openingHours: w.openingHours || '08:00 - 20:00 (Thứ 2 - Chủ nhật)',
-          isNewAddress: true,
-        });
+        await adminApi.unhideWarehouse(w.id);
         await fetchWarehouses();
         toast.success(`Đã mở hoạt động lại điểm kí gửi "${w.name}".`);
         if (onLogAction) {
@@ -483,13 +432,7 @@ export default function AdminWarehousesView({ onLogAction }) {
   return (
     <div className="space-y-6">
       {/* Header & Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#191C19] font-heading">
-            Quản Lý Điểm Kí Gửi
-          </h1>
-        </div>
-
+      <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4">
         <div className="flex items-center gap-2">
           <button
             onClick={() => fetchWarehouses()}

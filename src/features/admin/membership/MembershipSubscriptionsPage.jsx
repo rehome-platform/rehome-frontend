@@ -55,6 +55,15 @@ export default function MembershipSubscriptionsPage() {
     setSearchInput(q);
   }, [q]);
 
+  // Gõ tới đâu tìm tới đó: chờ gõ xong (debounce) rồi mới đổi query param, khỏi gọi API mỗi phím
+  useEffect(() => {
+    const trimmed = searchInput.trim();
+    if (trimmed === q) return;
+    const timer = setTimeout(() => updateParams({ q: trimmed }, true), 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput]);
+
   const fetchSubscriptions = useCallback(async () => {
     const seq = ++seqRef.current;
     setLoading(true);
@@ -63,7 +72,7 @@ export default function MembershipSubscriptionsPage() {
       const res = await membershipAdminApi.getSubscriptions({
         tier: tier || undefined,
         status: status || undefined,
-        search: q || undefined,
+        q: q || undefined,
         expiringInDays: expiringInDays ? Number(expiringInDays) : undefined,
         page,
         size: PAGE_SIZE,
@@ -114,11 +123,6 @@ export default function MembershipSubscriptionsPage() {
     setSearchParams(next);
   };
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    updateParams({ q: searchInput.trim() }, true);
-  };
-
   const handleResetFilters = () => {
     setSearchInput('');
     setSearchParams(new URLSearchParams());
@@ -126,11 +130,8 @@ export default function MembershipSubscriptionsPage() {
 
   return (
     <div className="space-y-5">
-      {/* Header & Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-5 rounded-xl border border-[#E2E8E0]">
-        <div>
-          <h2 className="text-lg font-bold text-[#191C19]">Danh sách thành viên</h2>
-        </div>
+      {/* Action */}
+      <div className="flex justify-end">
         <Button variant="primary" onClick={() => setIsGrantOpen(true)} className="gap-1.5">
           <span className="material-symbols-outlined text-base">card_giftcard</span>
           <span>Tặng / gia hạn gói</span>
@@ -139,24 +140,19 @@ export default function MembershipSubscriptionsPage() {
 
       {/* Filters */}
       <div className="bg-white p-4 rounded-xl border border-[#E2E8E0]">
-        <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
           <div className="md:col-span-2">
             <label htmlFor="sub-search" className="block text-xs font-semibold text-[#1F2A37] mb-1">
               Tìm kiếm thành viên
             </label>
-            <div className="flex gap-2">
-              <input
-                id="sub-search"
-                type="text"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Tên, email hoặc mã thành viên..."
-                className="flex-1 px-3 py-2 text-sm bg-white border border-[#DDE5D9] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#006B2C]/20 focus:border-[#006B2C]"
-              />
-              <Button type="submit" variant="secondary" size="sm">
-                Tìm
-              </Button>
-            </div>
+            <input
+              id="sub-search"
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Tên, email hoặc mã thành viên..."
+              className="w-full px-3 py-2 text-sm bg-white border border-[#DDE5D9] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#006B2C]/20 focus:border-[#006B2C]"
+            />
           </div>
 
           <div>
@@ -223,7 +219,7 @@ export default function MembershipSubscriptionsPage() {
               </Button>
             )}
           </div>
-        </form>
+        </div>
       </div>
 
       {/* Error */}

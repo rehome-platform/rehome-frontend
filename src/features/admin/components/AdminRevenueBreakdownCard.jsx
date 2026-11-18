@@ -11,6 +11,7 @@ export default function AdminRevenueBreakdownCard({ dashboardData = {}, onViewDe
   const platformRevenue = Number(dashboardData.platformRevenue || 0);
   const commissionRevenue = Number(dashboardData.commissionRevenue || 0);
   const withdrawalFeeRevenue = Number(dashboardData.withdrawalFeeRevenue || 0);
+  const membershipRevenue = Number(dashboardData.membershipRevenue || 0);
   const compensationExpense = Number(dashboardData.compensationExpense || 0);
   const totalSoldItemsCount = Number(dashboardData.totalSoldItemsCount || 0);
   const netProfitMarginPercent = Number(dashboardData.netProfitMarginPercent || 0);
@@ -48,6 +49,14 @@ export default function AdminRevenueBreakdownCard({ dashboardData = {}, onViewDe
       color: '#673AB7',
       dotClass: 'bg-[#673AB7]',
     },
+    {
+      key: 'membership',
+      label: 'Doanh thu gói thành viên',
+      value: membershipRevenue,
+      sales: null,
+      color: '#E3A712',
+      dotClass: 'bg-[#E3A712]',
+    },
   ];
 
   const totalBreakdown = items.reduce((sum, item) => sum + item.value, 0);
@@ -76,7 +85,7 @@ export default function AdminRevenueBreakdownCard({ dashboardData = {}, onViewDe
             Cơ Cấu Doanh Thu Nền Tảng
           </h3>
           <p className="text-xs text-[#717971] mt-0.5">
-            Tỷ trọng hoa hồng Kỳ 1, Kỳ 2, Kỳ 3 &amp; phí rút hàng ({totalSoldItemsCount} món đã bán · Biên nền tảng {netProfitMarginPercent}%)
+            Tỷ trọng hoa hồng Kỳ 1, Kỳ 2, Kỳ 3, phí rút hàng &amp; doanh thu gói thành viên ({totalSoldItemsCount} món đã bán · Biên nền tảng {netProfitMarginPercent}%)
           </p>
         </div>
         {onViewDetail && (
@@ -100,7 +109,7 @@ export default function AdminRevenueBreakdownCard({ dashboardData = {}, onViewDe
             Chưa phát sinh doanh thu nền tảng trong khoảng thời gian này
           </h4>
           <p className="text-xs text-[#717971] max-w-sm mt-1">
-            Hoa hồng ({formatCurrencyVND(commissionRevenue)}) và phí rút hàng ({formatCurrencyVND(withdrawalFeeRevenue)}) sẽ hiển thị tự động khi có giao dịch hoàn tất.
+            Hoa hồng ({formatCurrencyVND(commissionRevenue)}), phí rút hàng ({formatCurrencyVND(withdrawalFeeRevenue)}) và doanh thu gói thành viên ({formatCurrencyVND(membershipRevenue)}) sẽ hiển thị tự động khi có giao dịch hoàn tất.
           </p>
         </div>
       ) : (
@@ -145,6 +154,8 @@ export default function AdminRevenueBreakdownCard({ dashboardData = {}, onViewDe
               Hoa hồng: <strong className="text-[#006B2C]">{formatCurrencyVND(commissionRevenue)}</strong>
               {' · '}
               Phí rút: <strong className="text-[#673AB7]">{formatCurrencyVND(withdrawalFeeRevenue)}</strong>
+              {' · '}
+              Gói VIP: <strong className="text-[#E3A712]">{formatCurrencyVND(membershipRevenue)}</strong>
             </div>
           </div>
 

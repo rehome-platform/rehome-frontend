@@ -406,9 +406,6 @@ export default function ConfigPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold font-heading text-[#191C19]">
-            Cấu Hình Tham Số Hệ Thống ReHome
-          </h1>
           <p className="text-xs text-[#717971] mt-0.5">
             Bấm "Sửa" trên tham số cần thay đổi, chỉnh xong bấm "Lưu thay đổi tham số" để áp dụng.
           </p>

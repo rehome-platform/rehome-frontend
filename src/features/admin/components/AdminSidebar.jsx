@@ -40,7 +40,7 @@ export default function AdminSidebar({
     {
       id: 'fund-ledger',
       path: '/admin/fund-ledger',
-      label: 'Sổ quỹ & Đối soát',
+      label: 'Giao dịch',
       icon: 'account_balance_wallet',
     },
     {
@@ -76,7 +76,7 @@ export default function AdminSidebar({
     {
       id: 'audit',
       path: '/admin/audit-logs',
-      label: 'Nhật ký kiểm toán (Audit)',
+      label: 'Audit log',
       icon: 'history',
     },
     {
@@ -97,7 +97,7 @@ export default function AdminSidebar({
     {
       id: 'membership-subscriptions',
       path: '/admin/membership-subscriptions',
-      label: 'Thành viên',
+      label: 'Danh sách thành viên',
       icon: 'card_membership',
     },
     {
@@ -105,6 +105,12 @@ export default function AdminSidebar({
       path: '/admin/voucher-templates',
       label: 'Quản lý voucher',
       icon: 'confirmation_number',
+    },
+    {
+      id: 'receipt-clause-templates',
+      path: '/admin/receipt-clause-templates',
+      label: 'Điều khoản biên nhận',
+      icon: 'description',
     },
   ];
 
@@ -186,13 +192,8 @@ export default function AdminSidebar({
           <nav aria-label="Điều hướng quản trị" className="p-4 space-y-1.5 overflow-y-auto max-h-[calc(100vh-160px)]">
             {menuItems.map(renderMenuItem)}
 
-            <div className="pt-3 mt-3 border-t border-[#E2E8E0]">
-              <p className="px-3.5 pb-1.5 text-[10px] font-bold tracking-wider text-[#717971] whitespace-nowrap">
-                Gói Thành Viên &amp; Voucher
-              </p>
-              <div className="space-y-1.5">
-                {membershipMenuItems.map(renderMenuItem)}
-              </div>
+            <div className="space-y-1.5">
+              {membershipMenuItems.map(renderMenuItem)}
             </div>
           </nav>
         </div>

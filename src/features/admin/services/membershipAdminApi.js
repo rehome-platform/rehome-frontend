@@ -78,6 +78,11 @@ export const membershipAdminApi = {
     return unwrap(res);
   },
 
+  async activateVoucherTemplate(id) {
+    const res = await baseApi.post(`/api/admin/voucher-templates/${id}/activate`);
+    return unwrap(res);
+  },
+
   async getMembershipStats({ from, to } = {}) {
     const res = await baseApi.get('/api/admin/membership-stats', {
       params: cleanParams({ from, to }),

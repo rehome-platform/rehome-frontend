@@ -19,6 +19,9 @@ const TARGET_TYPE_LABEL = {
   MEMBERSHIP_PLAN: 'Gói thành viên',
   MEMBER_SUBSCRIPTION: 'Đăng ký thành viên',
   VOUCHER_TEMPLATE: 'Voucher',
+  RECEIPT_CLAUSE_TEMPLATE: 'Điều khoản biên nhận',
+  VIOLATION_WORD: 'Từ ngữ vi phạm',
+  CONTENT_REVIEW: 'Nội dung bị gắn cờ',
 };
 
 // Mốc lọc nhanh theo phút gần nhất (độ chính xác phút, nằm ngoài phạm vi ngày của AdminPeriodFilter)
@@ -43,7 +46,9 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
   const [availableActionTypes, setAvailableActionTypes] = useState([]);
 
   // Bộ lọc
-  const [selectedTargetType, setSelectedTargetType] = useState('ALL'); // Filter Đối tượng
+  const [actorSearch, setActorSearch] = useState(''); // Filter Người thực hiện (tên/email, khớp ở backend)
+  const [selectedActorRole, setSelectedActorRole] = useState('ALL'); // Filter vai trò người thực hiện
+  const [selectedTargetType, setSelectedTargetType] = useState('ALL'); // Filter Đối tượng tác động
   const [selectedActionType, setSelectedActionType] = useState('ALL');
 
   // Chọn theo thời gian (dùng chung bộ lọc Admin) + lọc thêm theo giờ:phút trong khoảng ngày,
@@ -84,6 +89,8 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
       case 'HIDE_WAREHOUSE':
       case 'Ẩn kho':
         return 'Ẩn địa điểm ký gửi';
+      case 'UNHIDE_WAREHOUSE':
+        return 'Mở hoạt động lại địa điểm ký gửi';
       case 'CREATE_WAREHOUSE':
       case 'Tạo kho':
         return 'Tạo địa điểm ký gửi';
@@ -96,7 +103,24 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
         return 'Cập nhật Moderator';
       case 'CHANGE_WAREHOUSE':
       case 'ASSIGN_WAREHOUSE':
+      case 'CHANGE_MODERATOR_WAREHOUSE':
         return 'Phân công địa điểm ký gửi';
+      case 'CREATE_RECEIPT_CLAUSE_TEMPLATE':
+        return 'Thêm điều khoản biên nhận';
+      case 'UPDATE_RECEIPT_CLAUSE_TEMPLATE':
+        return 'Cập nhật điều khoản biên nhận';
+      case 'DELETE_RECEIPT_CLAUSE_TEMPLATE':
+        return 'Xóa điều khoản biên nhận';
+      case 'TOGGLE_RECEIPT_CLAUSE_TEMPLATE':
+        return 'Bật/tắt điều khoản biên nhận';
+      case 'CREATE_VIOLATION_WORD':
+        return 'Thêm từ ngữ vi phạm';
+      case 'UPDATE_VIOLATION_WORD':
+        return 'Cập nhật từ ngữ vi phạm';
+      case 'DELETE_VIOLATION_WORD':
+        return 'Xóa từ ngữ vi phạm';
+      case 'TOGGLE_VIOLATION_WORD':
+        return 'Bật/tắt từ ngữ vi phạm';
       case 'UPDATE_CONFIG':
       case 'Cập nhật cấu hình':
         return 'Cập nhật cấu hình';
@@ -122,7 +146,26 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
         return 'Cập nhật mẫu voucher';
       case 'DEACTIVATE_VOUCHER_TEMPLATE':
         return 'Ngưng kích hoạt mẫu voucher';
+      case 'CONTENT_REVIEW_APPROVED':
+        return 'Duyệt nội dung cộng đồng';
+      case 'CONTENT_REVIEW_REJECTED':
+        return 'Từ chối nội dung cộng đồng';
+      case 'CONTENT_AUTO_FLAG':
+        return 'Tự động gắn cờ nội dung vi phạm';
+      case 'CONTENT_NOTIFY_ADMIN':
+        return 'Thông báo Admin về nội dung nghi vi phạm';
+      case 'DONATE_CONSIGNED_ITEM':
+        return 'Quyên góp hàng ký gửi';
+      // Giá trị cũ còn lưu trong DB từ trước khi đổi tên hành động, không còn được code hiện tại sinh ra
+      // nhưng vẫn phải dịch để không lộ tiếng Anh với log cũ
+      case 'CREATE_ORDER':
+        return 'Tạo đơn hàng';
+      case 'REMOVE_POST':
+        return 'Gỡ bài viết vi phạm';
       default:
+        if (typeof actionType === 'string' && actionType.startsWith('CONTENT_REVIEW_')) {
+          return 'Duyệt nội dung cộng đồng';
+        }
         return actionType || 'Thao tác hệ thống';
     }
   };
@@ -156,6 +199,8 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
         page: 0,
         size: 50,
       };
+      if (actorSearch.trim()) params.search = actorSearch.trim();
+      if (selectedActorRole !== 'ALL') params.actorRole = selectedActorRole;
       if (selectedTargetType !== 'ALL') params.targetType = selectedTargetType;
       if (selectedActionType !== 'ALL') params.actionType = selectedActionType;
       const { from, to } = buildRequestRange();
@@ -234,9 +279,6 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
 
       const combined = [...sessionLogs, ...mapped];
       setLogs(combined);
-      if (combined.length > 0 && !expandedLogId) {
-        setExpandedLogId(combined[0].id);
-      }
     } catch (err) {
       console.warn('Lỗi gọi API audit-logs:', err);
       // Giữ lại các log động trong phiên nếu backend tạm thời lỗi
@@ -264,8 +306,12 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
   };
 
   useEffect(() => {
-    fetchAuditLogs();
+    // Gõ "Người thực hiện" mới cần chờ gõ xong rồi mới gọi API; các bộ lọc khác (select/ngày) áp dụng ngay
+    const timer = setTimeout(fetchAuditLogs, actorSearch ? 400 : 0);
+    return () => clearTimeout(timer);
   }, [
+    actorSearch,
+    selectedActorRole,
     selectedTargetType,
     selectedActionType,
     activeRange.apiFrom,
@@ -277,8 +323,10 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
     dateError,
   ]);
 
-  // Bộ lọc theo Đối tượng / Loại hành động (thời gian đã lọc ở phía API)
+  // Bộ lọc theo Vai trò / Đối tượng / Loại hành động (thời gian đã lọc ở phía API)
   const filteredLogs = logs.filter((log) => {
+    const matchActorRole = selectedActorRole === 'ALL' || log.role === selectedActorRole;
+
     // Filter theo Đối tượng tác động (targetType)
     const matchTargetType =
       selectedTargetType === 'ALL' ||
@@ -293,7 +341,7 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
       log.actionType === selectedActionType ||
       log.rawActionType === selectedActionType;
 
-    return matchTargetType && matchAction;
+    return matchActorRole && matchTargetType && matchAction;
   });
 
   // Phân trang thực tế
@@ -303,7 +351,7 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedTargetType, selectedActionType, activeRange.apiFrom, activeRange.apiTo, fromTime, toTime, quickMinutes]);
+  }, [selectedActorRole, selectedTargetType, selectedActionType, activeRange.apiFrom, activeRange.apiTo, fromTime, toTime, quickMinutes]);
 
   const paginatedLogs = filteredLogs.slice(
     (currentPage - 1) * pageSize,
@@ -311,6 +359,8 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
   );
 
   const handleResetFilter = () => {
+    setActorSearch('');
+    setSelectedActorRole('ALL');
     setSelectedTargetType('ALL');
     setSelectedActionType('ALL');
     dateFilter.setPeriod('ALL');
@@ -367,18 +417,6 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
 
   return (
     <div className="space-y-6">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#191C19] font-heading">
-            Audit Log
-          </h1>
-          <p className="text-xs text-[#717971] mt-0.5">
-            Lưu vết và truy xuất toàn bộ thao tác phân quyền, xử phạt, ẩn địa điểm ký gửi và thay đổi tham số hệ thống.
-          </p>
-        </div>
-      </div>
-
       {dateError && (
         <div
           role="alert"
@@ -442,25 +480,41 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
         {/* Hàng 2: Lọc Đối tượng / Loại hành động & hành động phụ */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-[#F0F4EE]">
           <div className="flex flex-wrap items-center gap-2.5">
-            {/* Filter "Đối tượng" (Thay thế cho Người thực hiện) */}
+            {/* Filter "Người thực hiện": tìm theo tên hoặc email, backend tự khớp cả tên tổ chức */}
+            <input
+              type="text"
+              value={actorSearch}
+              onChange={(e) => setActorSearch(e.target.value)}
+              placeholder="Người thực hiện (tên hoặc email)"
+              aria-label="Lọc theo người thực hiện"
+              className="px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors w-56"
+            />
+
+            {/* Filter vai trò của người thực hiện */}
+            <select
+              value={selectedActorRole}
+              onChange={(e) => setSelectedActorRole(e.target.value)}
+              aria-label="Lọc theo vai trò người thực hiện"
+              className="px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
+            >
+              <option value="ALL">Vai trò: Tất cả</option>
+              <option value="MEMBER">Member</option>
+              <option value="MODERATOR">Moderator</option>
+              <option value="ADMIN">Admin</option>
+            </select>
+
+            {/* Filter "Đối tượng tác động" */}
             <select
               value={selectedTargetType}
               onChange={(e) => setSelectedTargetType(e.target.value)}
               className="px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
             >
-              <option value="ALL">Đối tượng: Tất cả</option>
-              <option value="ACCOUNT">Tài khoản (Member / Moderator)</option>
-              <option value="ORGANIZATION_ACCOUNT">Hồ sơ Tổ chức (ORGANIZATION_ACCOUNT)</option>
-              <option value="POST">Bài viết cộng đồng (POST)</option>
-              <option value="CAMPAIGN">Chiến dịch quyên góp (CAMPAIGN)</option>
-              <option value="WAREHOUSE">Địa điểm ký gửi</option>
-              <option value="ORGANIZATION">Tổ chức từ thiện</option>
-              <option value="PRODUCT">Sản phẩm & Hàng kí gửi</option>
-              <option value="ORDER">Đơn hàng</option>
-              <option value="SYSTEM_CONFIG">Cấu hình hệ thống</option>
-              <option value="MEMBERSHIP_PLAN">Gói thành viên (MEMBERSHIP_PLAN)</option>
-              <option value="MEMBER_SUBSCRIPTION">Đăng ký thành viên (MEMBER_SUBSCRIPTION)</option>
-              <option value="VOUCHER_TEMPLATE">Mẫu voucher (VOUCHER_TEMPLATE)</option>
+              <option value="ALL">Đối tượng tác động: Tất cả</option>
+              {Object.entries(TARGET_TYPE_LABEL).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
 
             {/* Filter Loại hành động */}
@@ -470,14 +524,9 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
               className="px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
             >
               <option value="ALL">Loại hành động: Tất cả</option>
-              <option value="Khóa tài khoản">Khóa tài khoản</option>
-              <option value="Mở khóa tài khoản">Mở khóa tài khoản</option>
-              <option value="Ẩn kho">Ẩn địa điểm ký gửi</option>
-              <option value="Tạo Moderator">Tạo Moderator</option>
-              <option value="Cập nhật cấu hình">Cập nhật cấu hình</option>
               {availableActionTypes.map((act) => (
                 <option key={act} value={act}>
-                  {formatActionLabel(act)} ({act})
+                  {formatActionLabel(act)}
                 </option>
               ))}
             </select>
@@ -496,7 +545,9 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
               <span>{loading ? 'Đang tải...' : 'Làm mới'}</span>
             </button>
 
-            {(selectedTargetType !== 'ALL' ||
+            {(actorSearch ||
+              selectedActorRole !== 'ALL' ||
+              selectedTargetType !== 'ALL' ||
               selectedActionType !== 'ALL' ||
               dateFilter.period !== 'ALL' ||
               fromTime ||

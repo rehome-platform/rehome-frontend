@@ -4,19 +4,33 @@ import { useToast } from '../../../context/ToastContext.jsx';
 import { membershipAdminApi } from '../services/membershipAdminApi.js';
 import { TIER_LABELS } from './membershipConstants.js';
 
+// RT = thử đồ "real-time" qua camera (khác với "Phối đồ AI" là ghép ảnh tĩnh, không cần camera)
+// Chỉ còn hạn mức theo NGÀY: trần theo tháng backend vẫn hỗ trợ (tùy chọn, mặc định null = không
+// giới hạn) nhưng không cần thiết với nghiệp vụ hiện tại nên bỏ khỏi UI, không cho Admin chỉnh ở đây.
 const QUOTA_FIELDS = [
-  { key: 'liveTryonPerDay', label: 'RT / ngày' },
-  { key: 'liveTryonPerMonth', label: 'RT / tháng' },
-  { key: 'aiTryonPerDay', label: 'Phối đồ / ngày' },
-  { key: 'aiTryonPerMonth', label: 'Phối đồ / tháng' },
+  { key: 'liveTryonPerDay', label: 'Thử đồ real-time (camera) / ngày' },
+  { key: 'aiTryonPerDay', label: 'Phối đồ AI (ảnh tĩnh) / ngày' },
+];
+
+const LIMIT_FIELDS = [
+  {
+    key: 'liveTryonMaxSeconds',
+    label: 'Số giây tối đa mỗi lượt thử đồ real-time',
+    min: 5,
+    max: 120,
+  },
+  {
+    key: 'maxPendingConsignmentForms',
+    label: 'Số form ký gửi đang chờ tối đa',
+    min: 1,
+    max: 50,
+  },
 ];
 
 const ALL_QUOTA_KEYS = [
   'liveTryonPerDay',
-  'liveTryonPerMonth',
   'liveTryonMaxSeconds',
   'aiTryonPerDay',
-  'aiTryonPerMonth',
   'maxPendingConsignmentForms',
 ];
 
@@ -55,6 +69,7 @@ export default function PlanEditModal({ isOpen, plan, onClose, onSuccess }) {
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [editingKeys, setEditingKeys] = useState(() => new Set());
   const previousNumbersRef = useRef({});
 
   useEffect(() => {
@@ -63,6 +78,7 @@ export default function PlanEditModal({ isOpen, plan, onClose, onSuccess }) {
       setErrors({});
       setSubmitError('');
       setSubmitting(false);
+      setEditingKeys(new Set());
       previousNumbersRef.current = {
         pricePerYear: plan.pricePerYear ?? 0,
         liveTryonPerDay: plan.liveTryonPerDay ?? 0,
@@ -79,6 +95,25 @@ export default function PlanEditModal({ isOpen, plan, onClose, onSuccess }) {
     if (!plan || !form) return false;
     return ALL_QUOTA_KEYS.some((key) => isQuotaReduced(plan[key], form[key]));
   }, [plan, form]);
+
+  // Hạn mức nào khác với giá trị gốc của gói (đang áp dụng) -> tô vàng + liệt kê ở banner, giống ConfigPage
+  const dirtyLimitFields = useMemo(() => {
+    if (!plan || !form) return [];
+    return [...QUOTA_FIELDS, ...LIMIT_FIELDS].filter(({ key }) => {
+      const original = plan[key] ?? null;
+      const current = form[key] === '' ? null : form[key];
+      return String(original) !== String(current);
+    });
+  }, [plan, form]);
+
+  const toggleEditing = (key) => {
+    setEditingKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   if (!isOpen || !plan || !form) {
     return null;
@@ -155,26 +190,6 @@ export default function PlanEditModal({ isOpen, plan, onClose, onSuccess }) {
       maxForms > 50
     ) {
       nextErrors.maxPendingConsignmentForms = 'Số form ký gửi tối đa phải từ 1 đến 50';
-    }
-
-    if (
-      form.liveTryonPerDay !== null &&
-      form.liveTryonPerMonth !== null &&
-      form.liveTryonPerDay !== '' &&
-      form.liveTryonPerMonth !== '' &&
-      Number(form.liveTryonPerDay) > Number(form.liveTryonPerMonth)
-    ) {
-      nextErrors.liveTryonPerDay = 'RT/ngày không được lớn hơn RT/tháng';
-    }
-
-    if (
-      form.aiTryonPerDay !== null &&
-      form.aiTryonPerMonth !== null &&
-      form.aiTryonPerDay !== '' &&
-      form.aiTryonPerMonth !== '' &&
-      Number(form.aiTryonPerDay) > Number(form.aiTryonPerMonth)
-    ) {
-      nextErrors.aiTryonPerDay = 'Phối đồ/ngày không được lớn hơn Phối đồ/tháng';
     }
 
     setErrors(nextErrors);
@@ -310,29 +325,81 @@ export default function PlanEditModal({ isOpen, plan, onClose, onSuccess }) {
           </div>
         )}
 
+        {/* Cảnh báo thay đổi chưa lưu (cùng kiểu với trang Cấu hình tham số hệ thống) */}
+        {dirtyLimitFields.length > 0 && (
+          <div className="p-3.5 bg-[#FFFBEB] border border-[#F59E0B] text-[#92400E] rounded-2xl text-xs shadow-sm flex items-start gap-2">
+            <span className="material-symbols-outlined text-lg shrink-0">warning</span>
+            <div>
+              <p className="font-bold">
+                Bạn có {dirtyLimitFields.length} hạn mức đã sửa nhưng chưa lưu.
+              </p>
+              <p className="text-[11px] mt-0.5">
+                {dirtyLimitFields.map((f) => f.label).join(' · ')}. Bấm "Lưu thay đổi" bên dưới để áp dụng.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {QUOTA_FIELDS.map(({ key, label }) => {
             const isUnlimited = form[key] === null;
+            const editing = editingKeys.has(key);
+            const dirty = dirtyLimitFields.some((f) => f.key === key);
             return (
-              <div key={key}>
-                <Input
+              <div
+                key={key}
+                className={`rounded-2xl border p-4 flex flex-col gap-2.5 transition-colors ${
+                  dirty
+                    ? 'border-[#F59E0B] bg-[#FFFBEB]/60'
+                    : editing
+                    ? 'border-[#006B2C] bg-white shadow-sm'
+                    : 'border-[#DDE5D9] bg-[#FBFDFB]'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <label htmlFor={`plan-${key}`} className="text-xs font-semibold text-[#191C19] leading-snug">
+                    {label}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => toggleEditing(key)}
+                    aria-label={editing ? `Xong: ${label}` : `Sửa: ${label}`}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors shrink-0 ${
+                      editing
+                        ? 'bg-[#006B2C] text-white hover:bg-[#005523]'
+                        : 'text-[#006B2C] border border-[#006B2C]/30 hover:bg-[#E8F5E9]'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[14px]">{editing ? 'check' : 'edit'}</span>
+                    <span>{editing ? 'Xong' : 'Sửa'}</span>
+                  </button>
+                </div>
+
+                <input
                   id={`plan-${key}`}
-                  label={label}
                   type="number"
                   min={0}
+                  readOnly={!editing}
                   disabled={isUnlimited}
                   value={isUnlimited ? '' : form[key]}
                   onChange={(e) => handleNumberChange(key, e.target.value)}
-                  error={errors[key]}
+                  placeholder={isUnlimited ? 'Không giới hạn' : undefined}
+                  className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-bold font-mono outline-none transition-all ${
+                    editing
+                      ? 'border-[#006B2C] bg-white text-[#191C19] focus:ring-2 focus:ring-[#006B2C]/15'
+                      : 'border-transparent bg-[#F0F4EE] text-[#191C19] cursor-default'
+                  } disabled:bg-[#F5F5F5] disabled:text-[#9E9E9E]`}
                 />
-                <label className="inline-flex items-center gap-2 text-xs text-[#414942] cursor-pointer -mt-1">
+                {errors[key] && <p className="text-[11px] text-[#D92D20] font-medium">{errors[key]}</p>}
+
+                <label className="inline-flex items-center gap-2 text-xs text-[#414942] cursor-pointer">
                   <input
                     type="checkbox"
                     checked={isUnlimited}
                     onChange={(e) => handleToggleUnlimited(key, e.target.checked)}
                     className="rounded border-[#DDE5D9] text-[#006B2C] focus:ring-[#006B2C]"
                   />
-                  <span>Không giới hạn {label}</span>
+                  <span>Không giới hạn</span>
                 </label>
               </div>
             );
@@ -340,26 +407,57 @@ export default function PlanEditModal({ isOpen, plan, onClose, onSuccess }) {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
-            id="plan-max-seconds"
-            label="Giây / lượt RT (5–120)"
-            type="number"
-            min={5}
-            max={120}
-            value={form.liveTryonMaxSeconds}
-            onChange={(e) => handleNumberChange('liveTryonMaxSeconds', e.target.value)}
-            error={errors.liveTryonMaxSeconds}
-          />
-          <Input
-            id="plan-max-consignment"
-            label="Form ký gửi tối đa (1–50)"
-            type="number"
-            min={1}
-            max={50}
-            value={form.maxPendingConsignmentForms}
-            onChange={(e) => handleNumberChange('maxPendingConsignmentForms', e.target.value)}
-            error={errors.maxPendingConsignmentForms}
-          />
+          {LIMIT_FIELDS.map(({ key, label, min, max }) => {
+            const editing = editingKeys.has(key);
+            const dirty = dirtyLimitFields.some((f) => f.key === key);
+            return (
+              <div
+                key={key}
+                className={`rounded-2xl border p-4 flex flex-col gap-2.5 transition-colors ${
+                  dirty
+                    ? 'border-[#F59E0B] bg-[#FFFBEB]/60'
+                    : editing
+                    ? 'border-[#006B2C] bg-white shadow-sm'
+                    : 'border-[#DDE5D9] bg-[#FBFDFB]'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <label htmlFor={`plan-${key}`} className="text-xs font-semibold text-[#191C19] leading-snug">
+                    {label} ({min}–{max})
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => toggleEditing(key)}
+                    aria-label={editing ? `Xong: ${label}` : `Sửa: ${label}`}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors shrink-0 ${
+                      editing
+                        ? 'bg-[#006B2C] text-white hover:bg-[#005523]'
+                        : 'text-[#006B2C] border border-[#006B2C]/30 hover:bg-[#E8F5E9]'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[14px]">{editing ? 'check' : 'edit'}</span>
+                    <span>{editing ? 'Xong' : 'Sửa'}</span>
+                  </button>
+                </div>
+
+                <input
+                  id={`plan-${key}`}
+                  type="number"
+                  min={min}
+                  max={max}
+                  readOnly={!editing}
+                  value={form[key]}
+                  onChange={(e) => handleNumberChange(key, e.target.value)}
+                  className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-bold font-mono outline-none transition-all ${
+                    editing
+                      ? 'border-[#006B2C] bg-white text-[#191C19] focus:ring-2 focus:ring-[#006B2C]/15'
+                      : 'border-transparent bg-[#F0F4EE] text-[#191C19] cursor-default'
+                  }`}
+                />
+                {errors[key] && <p className="text-[11px] text-[#D92D20] font-medium">{errors[key]}</p>}
+              </div>
+            );
+          })}
         </div>
 
         <div className="flex flex-wrap items-center gap-6 pt-1">

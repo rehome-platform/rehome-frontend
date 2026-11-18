@@ -167,6 +167,11 @@ export const adminApi = {
     return unwrap(res);
   },
 
+  async unhideWarehouse(id) {
+    const res = await baseApi.post(API_ENDPOINTS.ADMIN.UNHIDE_WAREHOUSE(id));
+    return unwrap(res);
+  },
+
   // Đơn vị hành chính GHN 2 cấp
   async getProvinces() {
     const res = await baseApi.get(API_ENDPOINTS.ADDRESS_UNITS.PROVINCES);
@@ -206,9 +211,10 @@ export const adminApi = {
   },
 
   // 5. Nhật ký kiểm soát (Audit Log)
-  async getAuditLogs({ actorAccountId, search, actionType, actionTypes, targetType, targetId, from, to, page = 0, size = 20 } = {}) {
+  async getAuditLogs({ actorAccountId, actorRole, search, actionType, actionTypes, targetType, targetId, from, to, page = 0, size = 20 } = {}) {
     const params = { page, size };
     if (actorAccountId) params.actorAccountId = actorAccountId;
+    if (actorRole && actorRole !== 'ALL') params.actorRole = actorRole;
     if (search && search.trim()) params.search = search.trim();
     if (actionType && actionType !== 'ALL') params.actionType = actionType;
     if (actionTypes) {

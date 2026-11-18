@@ -6,7 +6,8 @@ import React from 'react';
  *
  * - `label` null (period = "Toàn thời gian", không có kỳ trước) -> không hiện gì.
  * - `loading` true -> hiện khung chờ mờ, không chặn hiển thị con số chính.
- * - `previous` bằng 0 mà `current` > 0 -> hiện "Mới" thay vì chia cho 0.
+ * - `previous` bằng 0 mà `current` > 0 -> không chia % được (chia cho 0), hiện số tuyệt đối tăng
+ *   thêm "+{current} so với {label}" thay vì phần trăm.
  * - Cả hai cùng bằng 0, hoặc `previous`/`current` chưa có (null) -> không hiện gì.
  */
 export default function ComparisonBadge({ current, previous, loading, label, className = '' }) {
@@ -27,8 +28,8 @@ export default function ComparisonBadge({ current, previous, loading, label, cla
   if (previous === 0) {
     return (
       <span className={`inline-flex items-center gap-1 text-xs font-bold text-[#006B2C] ${className}`}>
-        <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
-        Mới so với {label}
+        <span className="material-symbols-outlined text-[14px]">trending_up</span>
+        +{current.toLocaleString('vi-VN')} so với {label}
       </span>
     );
   }
