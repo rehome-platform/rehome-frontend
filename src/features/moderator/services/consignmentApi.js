@@ -150,6 +150,32 @@ export const consignmentService = {
     const blob = new Blob([response.data], { type: 'application/pdf' });
     return { pdfUrl: URL.createObjectURL(blob) };
   },
+
+  // PUT /consignment-receipts/{id}
+  updateReceipt: async (receiptId, payload, options) => {
+    const result = await callBackend(
+      {
+        method: 'put',
+        url: API_ENDPOINTS.MODERATOR.RECEIPT_UPDATE(receiptId),
+        data: payload,
+      },
+      { signal: options?.signal }
+    );
+    return result ? { ...result, productSku: result.productSku || result.sku || null } : result;
+  },
+
+  // POST /consignment-receipts/{id}/void
+  voidReceipt: async (receiptId, reason, options) => {
+    const result = await callBackend(
+      {
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.RECEIPT_VOID(receiptId),
+        data: { reason },
+      },
+      { signal: options?.signal }
+    );
+    return result ? { ...result, productSku: result.productSku || result.sku || null } : result;
+  },
 };
 
 function enrichFormBrands(items, options) {

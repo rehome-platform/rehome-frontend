@@ -64,12 +64,40 @@ export function useConsignmentDetail() {
   const [returnReason, setReturnReason] = useState('');
   const [returnNote, setReturnNote] = useState('');
   const [resultReceiptId, setReceiptId] = useState(null);
+  const [voidedReceiptSnapshot, setVoidedReceiptSnapshot] = useState(null);
   const completedForm = React.useRef(null);
-  const receiptId = resultReceiptId || form?.receiptId;
-  const receiptStep = !!receiptId || ['WAITING_CONFIRMATION', 'AWAIT_MEMBER_CONFIRM', 'STOCK_IN', 'PRINT', 'COMPLETED'].includes(form?.resumeStep);
+  const receiptId = resultReceiptId || (voidedReceiptSnapshot ? null : form?.receiptId);
+  const receiptStep =
+    !!receiptId ||
+    (!voidedReceiptSnapshot &&
+      ['WAITING_CONFIRMATION', 'AWAIT_MEMBER_CONFIRM', 'STOCK_IN', 'PRINT', 'COMPLETED'].includes(
+        form?.resumeStep,
+      ));
   const receiptCreated = (id) => {
     completedForm.current = form;
+    setVoidedReceiptSnapshot(null);
     setReceiptId(id);
+  };
+  const handleReceiptVoided = (voidedReceipt) => {
+    const snap = voidedReceipt || form?.receipt || {};
+    setVoidedReceiptSnapshot(snap);
+    setReceiptId(null);
+    if (snap.agreedPrice && !price) setPrice(String(snap.agreedPrice));
+    if (snap.conditionNote && !conditionNote) setCondition(snap.conditionNote);
+    if (snap.termLengthDays && !term) setTerm(String(snap.termLengthDays));
+    resource.setData?.((prev) =>
+      prev
+        ? {
+            ...prev,
+            status: 'INSPECTING',
+            resumeStep: 'INSPECTION',
+            receiptId: null,
+            receiptConfirmed: false,
+            allowedActions: ['COMPLETE_INSPECTION', 'RETURN_ONSITE'],
+          }
+        : prev,
+    );
+    resource.refresh?.();
   };
   React.useEffect(() => {
     if (receiptStep) window.scrollTo?.({ top: 0, behavior: 'smooth' });
@@ -94,6 +122,7 @@ export function useConsignmentDetail() {
       return num <= 1 ? Number((num * 100).toPrecision(15)) : num;
     };
     const configuredTermDays =
+      voidedReceiptSnapshot?.termLengthDays ??
       formConsignmentConfig?.termLengthDays ??
       form?.termLengthDays ??
       form?.receipt?.termLengthDays ??
@@ -101,6 +130,7 @@ export function useConsignmentDetail() {
       options?.termLengthDays?.[0] ??
       DEFAULT_TERM_OPTIONS[0];
     const maxRenewals =
+      voidedReceiptSnapshot?.maxRenewals ??
       formConsignmentConfig?.maxRenewals ??
       form?.maxRenewals ??
       form?.receipt?.maxRenewals ??
@@ -108,33 +138,38 @@ export function useConsignmentDetail() {
       options?.maxRenewals ??
       DEFAULT_MAX_RENEWALS;
     const freeWithdrawalWindowDays =
+      voidedReceiptSnapshot?.freeWithdrawalWindowDays ??
       formConsignmentConfig?.freeWithdrawalWindowDays ??
       form?.freeWithdrawalWindowDays ??
       cachedSystemConfig?.freeWithdrawalWindowDays ??
       DEFAULT_SYSTEM_CONFIGS.consignment.freeWithdrawalDays;
     const floorPricePercent = normalizePct(
-      formConsignmentConfig?.floorPricePercent ??
+      voidedReceiptSnapshot?.floorPriceRatio ??
+        formConsignmentConfig?.floorPricePercent ??
         formConsignmentConfig?.floorPriceRatio ??
         form?.floorPriceRatio ??
         cachedSystemConfig?.floorPricePercent,
       DEFAULT_SYSTEM_CONFIGS.pricingAndCommission.floorPricePercent,
     );
     const commissionTerm1 = normalizePct(
-      formConsignmentConfig?.commissionTerm1 ??
+      voidedReceiptSnapshot?.commissionRateTerm1 ??
+        formConsignmentConfig?.commissionTerm1 ??
         formConsignmentConfig?.commissionRateTerm1 ??
         form?.commissionRateTerm1 ??
         cachedSystemConfig?.commissionTerm1,
       DEFAULT_SYSTEM_CONFIGS.pricingAndCommission.commissionTerm1,
     );
     const commissionTerm2 = normalizePct(
-      formConsignmentConfig?.commissionTerm2 ??
+      voidedReceiptSnapshot?.commissionRateTerm2 ??
+        formConsignmentConfig?.commissionTerm2 ??
         formConsignmentConfig?.commissionRateTerm2 ??
         form?.commissionRateTerm2 ??
         cachedSystemConfig?.commissionTerm2,
       DEFAULT_SYSTEM_CONFIGS.pricingAndCommission.commissionTerm2,
     );
     const commissionTerm3 = normalizePct(
-      formConsignmentConfig?.commissionTerm3 ??
+      voidedReceiptSnapshot?.commissionRateTerm3 ??
+        formConsignmentConfig?.commissionTerm3 ??
         formConsignmentConfig?.commissionRateTerm3 ??
         form?.commissionRateTerm3 ??
         cachedSystemConfig?.commissionTerm3,
@@ -150,9 +185,10 @@ export function useConsignmentDetail() {
       commissionTerm2,
       commissionTerm3,
     };
-  }, [formConsignmentConfig, form, cachedSystemConfig, options]);
+  }, [voidedReceiptSnapshot, formConsignmentConfig, form, cachedSystemConfig, options]);
 
   const hasDynamicTermDays =
+    voidedReceiptSnapshot?.termLengthDays != null ||
     formConsignmentConfig?.termLengthDays != null ||
     form?.termLengthDays != null ||
     form?.receipt?.termLengthDays != null ||
@@ -237,6 +273,7 @@ export function useConsignmentDetail() {
     term,
     conditionNote,
     setReceiptId,
+    handleReceiptVoided,
     setCondition,
     setPrice,
     setTerm,

@@ -36,20 +36,24 @@ afterAll(() => {
   URL.revokeObjectURL = originalRevoke;
 });
 afterEach(() => { server.resetHandlers(); vi.useRealTimers(); });
-const form = () => ({ id: 'form-1', productName: 'Áo Zara', status: 'INSPECTING', claimedBy: 'mod-a', memberId: 'member-1',
+const form = () => ({
+  id: 'form-1', productName: 'Áo Zara', status: 'INSPECTING', claimedBy: 'mod-a', memberId: 'member-1',
   member: { id: 'member-1', fullName: 'Nguyễn An' }, categoryId: 'cat-1', brandId: 'brand-1', size: 'M',
   description: 'Ghi chú bán hàng', receiptId: state.created ? 'receipt-1' : null,
-  resumeStep: !state.created ? 'INSPECTION' : state.sku ? 'PRINT' : state.confirmed ? 'STOCK_IN' : 'WAITING_CONFIRMATION', productSku: state.sku });
-const receipt = () => ({ id: 'receipt-1', formId: 'form-1', receiptNo: 'KG-001', productName: 'Áo Zara',
+  resumeStep: !state.created ? 'INSPECTION' : state.sku ? 'PRINT' : state.confirmed ? 'STOCK_IN' : 'WAITING_CONFIRMATION', productSku: state.sku
+});
+const receipt = () => ({
+  id: 'receipt-1', formId: 'form-1', receiptNo: 'KG-001', productName: 'Áo Zara',
   agreedPrice: 850000, floorPrice: 425000, conditionNote: 'Còn mới', size: 'M', categoryId: 'cat-1', brandId: 'brand-1',
-  confirmedAt: state.confirmed ? '2026-11-01T03:00:00Z' : null, sku: state.sku });
+  confirmedAt: state.confirmed ? '2026-11-01T03:00:00Z' : null, sku: state.sku
+});
 const label = { sku: 'Q7-AO-000001', name: 'Áo Zara', brandName: 'Zara', categoryName: 'Áo', size: 'M', warehouseName: 'Kho A' };
 beforeEach(() => {
   state = { created: false, confirmed: false, sku: null };
   localStorage.clear();
   requests = { complete: 0, create: [], stages: [], pdf: 0, mark: 0, receipt: 0 };
-  downloadClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
-  vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+  downloadClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => { });
+  vi.spyOn(window, 'scrollTo').mockImplementation(() => { });
   server.use(
     http.get(detailPath, () => json(form())),
     http.get(`${base}/moderator/consignment-forms`, ({ request }) => {
@@ -97,7 +101,7 @@ async function completeInspection(user) {
   for (const box of screen.getAllByRole('checkbox')) await user.click(box);
   await user.type(screen.getByPlaceholderText(/Mô tả độ mới/), 'Còn mới');
   await user.type(screen.getByPlaceholderText(/VD: 850000/), '850000');
-  await user.selectOptions(screen.getByLabelText(/Độ dài kỳ ký gửi/), '30');
+  expect(screen.getByLabelText(/Độ dài kỳ ký gửi/)).toHaveTextContent('30 ngày / kỳ');
   await user.click(screen.getByRole('button', { name: /Đạt kiểm định/ }));
 }
 async function stock(user) {

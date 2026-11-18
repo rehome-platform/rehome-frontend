@@ -69,6 +69,7 @@ export const API_ENDPOINTS = {
     MY_WAREHOUSES: "/warehouses/moderator",
     WAREHOUSE_CAMPAIGNS: (warehouseId) => `/warehouses/${moderatorId(warehouseId)}/campaigns`,
     PUBLIC_CAMPAIGNS: "/campaigns",
+    UNHIDE_CAMPAIGN: (id) => `/campaigns/${moderatorId(id)}/unhide`,
     WAREHOUSE_DONATIONS: (warehouseId) => `/warehouses/${moderatorId(warehouseId)}/donations`,
     HANDOVER_DONATIONS: (warehouseId) => `/warehouses/${moderatorId(warehouseId)}/donations/handover`,
     REASSIGN_DONATIONS: (warehouseId) => `/warehouses/${moderatorId(warehouseId)}/donations/reassign`,
@@ -92,6 +93,8 @@ export const API_ENDPOINTS = {
     CONSIGNMENT_FORMS: "/moderator/consignment-forms",
     CONSIGNMENT_FORM_DETAIL: (id) => `/moderator/consignment-forms/${moderatorId(id)}`,
     RECEIPT_DETAIL: (id) => `/consignment-receipts/${moderatorId(id)}`,
+    RECEIPT_UPDATE: (id) => `/consignment-receipts/${moderatorId(id)}`,
+    RECEIPT_VOID: (id) => `/consignment-receipts/${moderatorId(id)}/void`,
     RECEIPT_PDF: (id) => `/consignment-receipts/${moderatorId(id)}/pdf`,
 
     // API 36, 37, 38, 39, 40, 41, 42, 43: Tồn kho & Sản phẩm
@@ -210,12 +213,7 @@ export const API_ENDPOINTS = {
     MARK_ALL_READ: "/notifications/read-all",
   },
 
-  // 5. Thanh toán MoMo - trang hiển thị kết quả sau khi được redirect về
-  MOMO: {
-    RETURN_INFO: "/api/momo/return-info",
-  },
-
-  // 6. Thanh toán VNPay - trang hiển thị kết quả sau khi được redirect về
+  // 5. Thanh toán VNPay - trang hiển thị kết quả sau khi được redirect về
   VNPAY: {
     RETURN_INFO: "/api/vnpay/return-info",
   },

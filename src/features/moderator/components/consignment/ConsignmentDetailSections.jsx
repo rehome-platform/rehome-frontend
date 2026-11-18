@@ -95,7 +95,7 @@ export function ConsignmentReturnPanel({ resource, formId, proof, returnReason, 
   );
 }
 
-export function ConsignmentInspectionPanel({ allChecked, checkedCount, checklist, toggleCheck, price, term, conditionNote, resource, formId, proof, setFeedback, setReceiptId, setCondition, errors, setPrice, setTerm, termOptions, consignmentConfig }) {
+export function ConsignmentInspectionPanel({ allChecked, checkedCount, checklist, toggleCheck, price, term, conditionNote, resource, formId, proof, setFeedback, setReceiptId, setCondition, errors, setPrice, setTerm, termOptions, consignmentConfig, onOpenReturn }) {
   return (
     <div className="rounded-2xl border-2 border-[#2b2b2b] bg-white p-5 space-y-5 shadow-sm">
       {/* Checklist 6 tiêu chí (KD-04) */}
@@ -145,6 +145,7 @@ export function ConsignmentInspectionPanel({ allChecked, checkedCount, checklist
         setTerm={setTerm}
         termOptions={termOptions}
         consignmentConfig={consignmentConfig}
+        onOpenReturn={onOpenReturn}
       />
     </div>
   );
