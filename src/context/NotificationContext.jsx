@@ -32,8 +32,9 @@ export const dedupeNotificationsById = (items = []) => {
 };
 
 export const NotificationProvider = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { isConnected } = useWebSocket();
+  const isAdmin = String(user?.role || '').toLowerCase() === 'admin';
 
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -49,7 +50,7 @@ export const NotificationProvider = ({ children }) => {
   const fetchSeqRef = useRef(0);
 
   const fetchNotifications = useCallback(async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || isAdmin) return;
     const seq = ++fetchSeqRef.current;
     setLoading(true);
     try {
@@ -130,10 +131,10 @@ export const NotificationProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isAdmin]);
 
   const loadMoreNotifications = useCallback(async () => {
-    if (loadingMore || !hasMore || !isAuthenticated) return;
+    if (loadingMore || !hasMore || !isAuthenticated || isAdmin) return;
     setLoadingMore(true);
     try {
       const nextPage = page + 1;
@@ -169,7 +170,7 @@ export const NotificationProvider = ({ children }) => {
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasMore, isAuthenticated, page]);
+  }, [loadingMore, hasMore, isAuthenticated, isAdmin, page]);
 
   const markAsRead = useCallback(async (id) => {
     const target = notificationsRef.current.find((n) => String(n.id) === String(id));
@@ -280,7 +281,7 @@ export const NotificationProvider = ({ children }) => {
   useNotificationQueue(handleRealtimeNotification);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || isAdmin) {
       setNotifications([]);
       setUnreadCount(0);
       setActiveToasts([]);
@@ -291,7 +292,7 @@ export const NotificationProvider = ({ children }) => {
     }
 
     fetchNotifications();
-  }, [isAuthenticated, fetchNotifications]);
+  }, [isAuthenticated, isAdmin, fetchNotifications]);
 
   return (
     <NotificationContext.Provider

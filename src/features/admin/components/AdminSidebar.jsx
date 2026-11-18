@@ -17,7 +17,7 @@ export default function AdminSidebar({
   onCloseMobile,
 }) {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, loggingOut } = useAuth();
 
   const displayName = user?.fullName || user?.name || user?.email || 'Quản trị viên';
   const displayEmail = user?.email || 'admin@rehome.vn';
@@ -212,8 +212,9 @@ export default function AdminSidebar({
             </div>
             <button
               onClick={() => logout && logout()}
+              disabled={loggingOut}
               title="Đăng xuất"
-              className="p-1.5 text-[#717971] hover:text-[#BA1A1A] hover:bg-white rounded-xl transition-colors shrink-0"
+              className="p-1.5 text-[#717971] hover:text-[#BA1A1A] hover:bg-white rounded-xl transition-colors shrink-0 disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-[18px]">logout</span>
             </button>

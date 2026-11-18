@@ -14,6 +14,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => getUser());
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!getToken());
   const [loading, setLoading] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
 
   // Khôi phục và đồng bộ phiên đăng nhập từ backend khi load lại trang
@@ -131,14 +132,19 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
     window.dispatchEvent(new CustomEvent('auth:logout'));
-    setLoading(true);
+    // Phản hồi tức thì trên UI bằng cách xoá token & session state ngay trước khi chờ API logout
+    removeTokens();
+    setUser(null);
+    setIsAuthenticated(false);
     try {
       await authService.logout();
+    } catch {
+      // Ignore logout network error since local session is already cleared
     } finally {
-      removeTokens();
-      setUser(null);
-      setIsAuthenticated(false);
+      setLoggingOut(false);
       setLoading(false);
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
@@ -168,6 +174,7 @@ export const AuthProvider = ({ children }) => {
         user,
         isAuthenticated,
         loading: loading || isInitializing,
+        loggingOut,
         isInitializing,
         login,
         loginWithGoogle,
