@@ -6,7 +6,7 @@ import { inventoryService } from '../services/warehouseApi.js';
 import { usePhase2 } from '../hooks/warehouseHooks.jsx';
 import { normalizeError } from '../models/warehouseModel.js';
 
-export default function PhotoUpload({ onChange, disabled = false }) {
+export default function PhotoUpload({ onChange, disabled = false, maxFiles = null }) {
   const phase2 = usePhase2();
   const fallbackController = useRef(new AbortController());
   const signal = phase2?.signal || fallbackController.current.signal;
@@ -79,7 +79,14 @@ export default function PhotoUpload({ onChange, disabled = false }) {
     const rawFiles = Array.from(event.target.files || []);
     if (!rawFiles.length) return;
 
-    const added = rawFiles.map((file) => {
+    const remaining = maxFiles != null ? Math.max(0, maxFiles - files.length) : rawFiles.length;
+    const allowedFiles = rawFiles.slice(0, remaining);
+    if (!allowedFiles.length) {
+      event.target.value = '';
+      return;
+    }
+
+    const added = allowedFiles.map((file) => {
       let previewUrl = '';
       if (typeof window !== 'undefined' && window.URL?.createObjectURL) {
         try {
@@ -129,7 +136,7 @@ export default function PhotoUpload({ onChange, disabled = false }) {
     <div className="space-y-3 font-sans">
       <div className="flex items-center justify-between">
         <label htmlFor="photo-file-input" className="block text-sm font-semibold text-[#191C19]">
-          Ảnh sản phẩm ({files.length})
+          Ảnh sản phẩm ({files.length}{maxFiles != null ? `/${maxFiles}` : ''})
         </label>
         <span className="text-xs text-[#5B6776]">
           Ảnh đầu tiên sẽ là <strong>Ảnh chính</strong>
@@ -260,6 +267,7 @@ export default function PhotoUpload({ onChange, disabled = false }) {
         })}
 
         {/* Ô bấm thêm ảnh (Dropzone / Add tile) */}
+        {(maxFiles == null || files.length < maxFiles) && (
         <div
           role="button"
           tabIndex={0}
@@ -280,6 +288,7 @@ export default function PhotoUpload({ onChange, disabled = false }) {
           <span className="text-xs font-bold text-[#006B2C]">Thêm ảnh</span>
           <span className="text-[10px] text-[#5B6776] mt-0.5">Chọn hoặc kéo ảnh vào</span>
         </div>
+        )}
       </div>
 
       {/* Input file ẩn thực tế */}

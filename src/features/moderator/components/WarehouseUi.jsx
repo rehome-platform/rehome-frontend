@@ -63,10 +63,15 @@ export function Page({ title, subtitle, children, actions, apiColors = true }) {
     </ModeratorLayout>
   );
 }
-export function Card({ title, children }) {
+export function Card({ title, actions, children }) {
   return (
     <section className="rounded-2xl border border-neutral bg-white p-5 space-y-4">
-      {title && <h2 className="text-lg font-semibold">{title}</h2>}
+      {(title || actions) && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {title && <h2 className="text-lg font-semibold">{title}</h2>}
+          {actions && <div className="flex items-center gap-2">{actions}</div>}
+        </div>
+      )}
       {children}
     </section>
   );
