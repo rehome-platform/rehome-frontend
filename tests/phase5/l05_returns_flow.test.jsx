@@ -164,6 +164,21 @@ beforeEach(() => {
       });
     }),
 
+    // POST /return-requests/:id/item-action
+    http.post(`${API_BASE_URL}/return-requests/:id/item-action`, async ({ params, request }) => {
+      const body = await request.json();
+      const item = moderatorMockData.returnRequests.find((r) => String(r.id) === String(params.id));
+      if (item) {
+        item.status = 'VALID';
+        item.itemAction = body.action;
+      }
+      return HttpResponse.json({
+        result: { id: params.id, status: 'VALID', itemAction: body.action },
+        isSuccess: true,
+        statusCode: 200,
+      });
+    }),
+
     // POST /return-requests/:id/resolve-invalid
     http.post(`${API_BASE_URL}/return-requests/:id/resolve-invalid`, async ({ params, request }) => {
       const body = await request.json();
@@ -348,12 +363,14 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     const validRadio = screen.getByLabelText(/Hợp lệ — hoàn tiền cho người mua/i);
     fireEvent.click(validRadio);
 
-    // Click "Lưu kết luận" -> opens TH-04 outcome dialog
+    // Click "Lưu kết luận" -> refunds buyer (Step 1) and opens TH-04 outcome dialog (Step 2)
     fireEvent.click(screen.getByText(/Lưu kết luận/i));
 
     await waitFor(() => {
       expect(screen.getByText(/Chọn phương án xử lý món hàng \(TH-04\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/ĐÃ HOÀN TIỀN NGƯỜI MUA/i)).toBeInTheDocument();
     });
+    window.alert.mockClear();
 
     // Click "Đăng bán lại (Relist)" should only select, not auto-submit
     fireEvent.click(screen.getByText(/Đăng bán lại \(Relist\)/i));
@@ -392,7 +409,6 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
   });
 
   it('TH-08: allows marking a returning parcel as lost with buyer refund', async () => {
-    window.confirm = vi.fn(() => true);
     window.alert = vi.fn();
 
     render(
@@ -413,8 +429,10 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     const lostBtns = screen.getAllByRole('button', { name: /Báo thất lạc/i });
     fireEvent.click(lostBtns[0]);
 
+    const confirmBtn = await screen.findByRole('button', { name: /Xác nhận thất lạc/i });
+    fireEvent.click(confirmBtn);
+
     await waitFor(() => {
-      expect(window.confirm).toHaveBeenCalled();
       expect(window.alert).toHaveBeenCalled();
     });
   });

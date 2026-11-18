@@ -123,10 +123,10 @@ export function ReturnOutcomeDialog({
               {selectedItem?.code || 'YC-00084'} · Quyết định xử lý món hàng
             </div>
             <p className="text-[11px] text-textSecondary mt-0.5">
-              Quyết định riêng với việc hoàn tiền. Đã hoàn tiền không có nghĩa là phải bỏ món.
+              Người mua đã được hoàn tiền. Chọn 1 trong 3 phương án xử lý món hàng bên dưới.
             </p>
           </div>
-          <span className="text-[10px] font-extrabold px-3 py-1 bg-[#2b2b2b] text-white rounded tracking-wide uppercase self-start sm:self-auto">
+          <span className="text-[10px] font-extrabold px-3 py-1 bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7] rounded-full tracking-wide uppercase self-start sm:self-auto">
             ĐÃ HOÀN TIỀN NGƯỜI MUA
           </span>
         </div>
@@ -547,7 +547,7 @@ export function DegradedCaseModal({
                       disabled={evidenceUploading || degradedSubmitting}
                       className="text-[10px] py-1 px-2 border-neutral"
                     >
-                      {evidenceUploading ? 'Đang tải…' : '📁 Tải ảnh từ máy'}
+                      {evidenceUploading ? 'Đang tải…' : 'Tải ảnh từ máy'}
                     </Button>
                   </div>
 
@@ -676,6 +676,45 @@ export function ReturnRejectDialog({ isRejectModalOpen, setIsRejectModalOpen, re
   );
 }
 
+export function ReturnMarkLostDialog({ markLostTarget, onClose, onConfirm, submitting = false }) {
+  return (
+    <Modal
+      isOpen={Boolean(markLostTarget)}
+      onClose={() => { if (!submitting) onClose(); }}
+      title="Xác nhận bưu kiện thất lạc (TH-08)"
+    >
+      <div className="space-y-4 text-xs font-sans">
+        <p className="text-text leading-relaxed">
+          Xác nhận bưu kiện trả hàng <strong>{markLostTarget?.code}</strong> đã thất lạc bởi bên vận chuyển?
+        </p>
+        <p className="text-textSecondary leading-relaxed">
+          Hệ thống sẽ hoàn tiền cho người mua và tạo khiếu nại bảo hiểm với đơn vị giao vận.
+        </p>
+        <div className="flex justify-end gap-2 pt-2 border-t border-neutral">
+          <Button
+            size="sm"
+            variant="outline"
+            className="rounded-xl border-neutral"
+            disabled={submitting}
+            onClick={onClose}
+          >
+            Hủy
+          </Button>
+          <Button
+            size="sm"
+            loading={submitting}
+            disabled={submitting}
+            className="bg-error hover:bg-red-700 text-white font-bold rounded-xl px-4"
+            onClick={onConfirm}
+          >
+            Xác nhận thất lạc
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function ReturnVerdictForm({ inspectionVerdict, setInspectionVerdict, invalidReason, setInvalidReason }) {
   return (
     <div className="border border-neutral rounded-2xl p-4 bg-surface space-y-3 text-xs font-sans shadow-sm">
@@ -743,10 +782,11 @@ export function ReturnInspectionVerdict({
     <div className="lg:col-span-6 space-y-4 font-sans">
       {/* Cảnh báo kiểm định viên */}
       {selectedItem?.isInspectorSelf && (
-        <div className="border border-secondary bg-[#FFFDF5] p-3.5 rounded-2xl flex justify-between items-center gap-3 shadow-sm">
+        <div className="border border-neutral bg-surface p-4 rounded-2xl flex justify-between items-center gap-3 shadow-sm">
           <div className="text-xs">
-            <div className="font-bold text-text mb-1">
-              Món này do CHÍNH BẠN kiểm định lúc nhập kho {selectedItem.stockInDate}
+            <div className="font-bold text-text mb-1 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+              <span>Món này do CHÍNH BẠN kiểm định lúc nhập kho {selectedItem.stockInDate}</span>
             </div>
             <div className="text-[11px] text-textSecondary leading-relaxed">
               Người mua đang nói tình trạng tệ hơn kết luận bạn viết. Bạn vẫn kết luận được, nhưng nên để người khác xem cho khách quan.
@@ -756,7 +796,7 @@ export function ReturnInspectionVerdict({
             type="button"
             disabled={releasingReturn || !selectedItem?.id}
             onClick={() => handleReleaseReturn?.()}
-            className="shrink-0 text-xs font-semibold px-3 py-1.5 border border-neutral rounded-xl bg-surface hover:bg-background text-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="shrink-0 text-xs font-semibold px-3 py-1.5 border border-neutral rounded-xl bg-background hover:bg-neutral/20 text-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {releasingReturn ? 'Đang chuyển...' : <>Chuyển cho<br />người khác</>}
           </button>
@@ -775,7 +815,7 @@ export function ReturnInspectionVerdict({
               onClick={handleFlagCounterfeit}
               className="px-3.5 py-2 rounded-xl border border-error bg-error-light text-error text-xs font-bold hover:bg-red-100 transition-colors"
             >
-              ⚠️ Báo nghi hàng giả
+              Báo nghi hàng giả
             </button>
           )}
           {handleOpenDegradedCase && (
@@ -784,7 +824,7 @@ export function ReturnInspectionVerdict({
               onClick={handleOpenDegradedCase}
               className="px-3.5 py-2 rounded-xl border border-secondary bg-[#FFFDF5] text-[#B45309] text-xs font-bold hover:bg-amber-100 transition-colors"
             >
-              📉 Báo hàng xuống cấp (TH-04 / KG-16)
+              Báo hàng xuống cấp (TH-04 / KG-16)
             </button>
           )}
         </div>

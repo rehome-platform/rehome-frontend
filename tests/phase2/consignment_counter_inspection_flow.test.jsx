@@ -97,6 +97,76 @@ describe('Luồng 2 - Bước 3: Quầy tiếp nhận, Kiểm định tại qu�
 
       expect(await screen.findByTestId('detail-page')).toBeInTheDocument();
     });
+
+    it('hiển thị đúng trạng thái "Đang bán" cho sản phẩm đã kiểm định và ẩn nút "Bắt đầu kiểm định" cho các status khác APPROVED', async () => {
+      const mockMember = {
+        memberId: 'MB-004821',
+        memberCode: 'MB-004821',
+        fullName: 'Lê Minh C',
+        phone: '0901234567',
+        isIdentityVerified: true,
+      };
+
+      vi.spyOn(counterService, 'lookup').mockResolvedValue([mockMember]);
+      vi.spyOn(counterService, 'confirm').mockResolvedValue({
+        memberId: 'MB-004821',
+        accountId: 'MB-004821',
+        identityToken: 'token-mb-4821',
+        member: mockMember,
+        expiresAt: new Date(Date.now() + 900000).toISOString(),
+      });
+      vi.spyOn(counterService, 'tasks').mockResolvedValue({
+        pendingForms: [
+          {
+            id: '7d1b0f1f-93ef-4d02-89f7-1db3fe46f02b',
+            productName: 'Đầm suông Zara hoa nhí',
+            desiredPrice: 420000,
+            status: 'APPROVED',
+            productSku: 'HCM-D-000043',
+            productStatus: 'ON_SALE',
+            resumeStep: 'COMPLETED',
+          },
+          {
+            id: '36975b24-9999-4f53-a36d-a7cfab71057b',
+            productName: 'Áo sơ mi Zara lụa trắng',
+            desiredPrice: 450000,
+            status: 'PENDING',
+          },
+          {
+            id: '1aff128c-15a1-4022-814f-24aad1cd3059',
+            productName: 'Áo len H&M cổ tròn màu be',
+            desiredPrice: 240000,
+            status: 'APPROVED',
+          },
+        ],
+        pendingWithdrawals: [],
+        pendingEndOfTerm: [],
+      });
+
+      const user = userEvent.setup();
+      renderWithProviders(
+        <Routes>
+          <Route path="/moderator/counter" element={<CounterPage />} />
+        </Routes>,
+        '/moderator/counter'
+      );
+
+      const searchInput = screen.getByRole('textbox', { name: /Mã Member|Số điện thoại/i });
+      await user.type(searchInput, 'MB-004821');
+      await user.click(screen.getByRole('button', { name: /^Tra cứu$/i }));
+
+      await user.click(await screen.findByRole('button', { name: /Chọn Member MB-004821/i }));
+      await user.click(await screen.findByRole('button', { name: /Tôi đã đối chiếu đúng Member/i }));
+
+      expect(await screen.findByText('Đầm suông Zara hoa nhí')).toBeInTheDocument();
+      expect(screen.getByText('Đang bán')).toBeInTheDocument();
+      expect(screen.getByText('Chờ duyệt')).toBeInTheDocument();
+      expect(screen.getByText('Đã duyệt')).toBeInTheDocument();
+
+      // Chỉ có đúng 1 nút "Bắt đầu kiểm định" cho sản phẩm có status APPROVED chưa kiểm định
+      const startInspectBtns = screen.getAllByRole('button', { name: /Bắt đầu kiểm định/i });
+      expect(startInspectBtns).toHaveLength(1);
+    });
   });
 
   describe('2. Màn hình Chờ Member xác nhận trên mobile', () => {

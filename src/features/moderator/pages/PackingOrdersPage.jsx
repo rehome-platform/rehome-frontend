@@ -78,7 +78,7 @@ export function PackingDetail({ orderId, onChanged }) {
               className="flex items-center gap-1.5"
               onClick={() => model.setPrintModalOpen(true)}
             >
-              <span>📄</span> In vận đơn A5
+              In vận đơn A5
             </Button>
           )}
         </div>

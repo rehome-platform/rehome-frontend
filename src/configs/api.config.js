@@ -130,6 +130,7 @@ export const API_ENDPOINTS = {
     REJECT_RETURN: (id) => `/return-requests/${moderatorId(id)}/reject`,
     INSPECT_RETURN: (id) => `/return-requests/${moderatorId(id)}/inspect`,
     RESOLVE_RETURN: (id) => `/return-requests/${moderatorId(id)}/resolve`,
+    RETURN_ITEM_ACTION: (id) => `/return-requests/${moderatorId(id)}/item-action`,
     REPORT_COUNTERFEIT: (id) => `/return-requests/${moderatorId(id)}/flag-counterfeit`,
     FLAG_COUNTERFEIT: (id) => `/return-requests/${moderatorId(id)}/flag-counterfeit`,
     COUNTERFEIT_CONCLUSION: (id) => `/return-requests/${moderatorId(id)}/counterfeit-conclusion`,

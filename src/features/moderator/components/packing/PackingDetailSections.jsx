@@ -1,10 +1,9 @@
-import React, { useState } from "react";
+import React from "react";
 import { safeDocumentUrl } from "../../models/warehouseModel.js";
 import { warehouseDateTime } from "../../models/warehouseTime.js";
 import Button from "../../../../components/common/Button.jsx";
 import { canPack, canShip } from "../../models/packingModel.js";
 import { operationReady } from "../../config/packingContract.js";
-import { useToast } from "../../../../context/ToastContext.jsx";
 import { formatDeadlineWithCountdown } from "../WarehouseUi.jsx";
 
 export function PackingRecipientPanel({ order, scanLogs }) {
@@ -102,34 +101,7 @@ export function PackingRecipientPanel({ order, scanLogs }) {
   );
 }
 
-export function PackingShipmentPanel({ order, onOpenPrintModal, onHandover, handoverLoading = false }) {
-  const toast = useToast();
-  const [handedOver, setHandedOver] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const isHandedOver =
-    handedOver ||
-    ['SHIPPING', 'DELIVERED', 'COMPLETED'].includes(order?.status) ||
-    Boolean(order?.handedOverAt);
-  const isBusy = handoverLoading || submitting;
-
-  const handleHandover = async () => {
-    if (isHandedOver || isBusy || !onHandover) return;
-    setSubmitting(true);
-    try {
-      const ok = await onHandover();
-      if (ok !== false) {
-        setHandedOver(true);
-        toast.success('Đã xác nhận bàn giao hàng cho shipper GHN!');
-      } else {
-        toast.error('Không thể xác nhận bàn giao cho GHN. Vui lòng thử lại.');
-      }
-    } catch (err) {
-      toast.error(err?.message || 'Không thể xác nhận bàn giao cho GHN. Vui lòng thử lại.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
+export function PackingShipmentPanel({ order, onOpenPrintModal }) {
   return (
     <div className="rounded-2xl border-2 border-[#006B2C] bg-white p-5 space-y-4 shadow-sm animate-in fade-in duration-200">
       <div>
@@ -155,23 +127,6 @@ export function PackingShipmentPanel({ order, onOpenPrintModal, onHandover, hand
       </div>
 
       <Button onClick={onOpenPrintModal} disabled={!order.ghnTrackingCode}>In vận đơn A5</Button>
-
-      {/* Khi shipper đã lấy hàng */}
-      <div className="p-4 rounded-xl border border-[#8a8a8a] bg-[#fafafa] space-y-3">
-        <p className="text-xs font-bold text-[#191C19]">Khi shipper đã lấy hàng</p>
-        <p className="text-xs text-[#5f5f5f] leading-relaxed">
-          Bấm xác nhận để đơn chuyển sang <strong>Đang giao</strong> và người mua nhận thông báo kèm mã vận đơn.
-        </p>
-        <Button
-          variant="outline"
-          disabled={isHandedOver || isBusy}
-          loading={isBusy}
-          className="text-xs font-bold py-2 border-[#2b2b2b] text-[#006B2C] hover:bg-[#F0F5EE] disabled:opacity-60 disabled:cursor-not-allowed"
-          onClick={handleHandover}
-        >
-          {isBusy ? 'Đang xác nhận...' : '✓ Đã bàn giao cho GHN'}
-        </Button>
-      </div>
     </div>
   );
 }
@@ -200,12 +155,6 @@ export function PackingScanPanel({
           Chỉ tạo được vận đơn khi đủ {totalCount} / {totalCount} món khớp mã
         </span>
       </div>
-
-      {!canPack(order, scope, now) && (
-        <p role="status" className="text-xs text-[#BA1A1A] font-semibold">
-          Đơn chưa cho phép thao tác hoặc bạn không còn claim hợp lệ. Hãy kiểm tra lại hàng đợi.
-        </p>
-      )}
 
       <form
         className="flex flex-wrap items-end gap-3"

@@ -141,7 +141,6 @@ export default function InventoryDetailPage() {
       {isForbidden && (
         <div className="rounded-2xl border border-amber-300 bg-amber-50 p-6 space-y-3">
           <div className="flex items-center gap-2">
-            <span className="text-xl">⚠️</span>
             <h3 className="font-bold text-amber-900 text-base">Sản phẩm không thuộc kho bạn quản lý</h3>
           </div>
           <p className="text-xs text-amber-800 leading-relaxed">
@@ -156,7 +155,6 @@ export default function InventoryDetailPage() {
       {isNotFound && (
         <div className="rounded-2xl border border-red-300 bg-red-50 p-6 space-y-3">
           <div className="flex items-center gap-2">
-            <span className="text-xl">🔍</span>
             <h3 className="font-bold text-red-900 text-base">Không tìm thấy sản phẩm</h3>
           </div>
           <p className="text-xs text-red-800 leading-relaxed">

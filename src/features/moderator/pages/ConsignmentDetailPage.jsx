@@ -185,12 +185,15 @@ export default function ConsignmentDetailPage() {
 
               {/* ================= THAO TÁC 2: YÊU CẦU XÁC NHẬN TẠI QUẦY (KD-03) ================= */}
               {(model.allowed('START_INSPECTION') || model.allowed('COMPLETE_INSPECTION') || model.allowed('RETURN_ONSITE')) && !model.identified && (
-                <div className="rounded-2xl border-2 border-[#D97706] bg-[#FFFBEB] p-5 space-y-3">
-                  <p className="text-xs font-bold text-[#B45309]">Cần đối chiếu danh tính Member tại quầy</p>
-                  <p className="text-xs text-[#92400E] leading-relaxed">
+                <div className="rounded-2xl border border-neutral bg-surface p-5 space-y-3 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                    <p className="text-xs font-bold text-text">Cần đối chiếu danh tính Member tại quầy</p>
+                  </div>
+                  <p className="text-xs text-textSecondary leading-relaxed">
                     Khách phải có mặt tại quầy và được xác nhận danh tính trước khi bấm Bắt đầu kiểm định hoặc trả đồ.
                   </p>
-                  <Link to="/moderator/counter">
+                  <Link to="/moderator/counter" className="block">
                     <Button className="w-full text-xs font-bold">
                       Đến Quầy tiếp nhận xác nhận Member
                     </Button>
