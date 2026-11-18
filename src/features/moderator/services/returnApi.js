@@ -357,20 +357,49 @@ export const returnService = {
   },
 
   /**
-   * API 88 / F-133: Chốt xử lý hợp lệ (Hoàn tiền + Chọn Relist hoặc Return Seller)
+   * API 88 / F-133: Chốt xử lý hợp lệ (Bước 1: Hoàn tiền người mua; hoặc 1 bước nếu truyền outcome)
    */
   resolveValid: async (retId, outcome, options = {}) => {
+    const fallback = () => returnMockApi.resolveValid(retId, outcome);
+    if (isFixtureMode) return fallback();
+
+    const payload = {
+      resolution: 'VALID',
+      resolutionNote:
+        options?.resolutionNote ||
+        (outcome === 'DISCARD' ? (options?.discardReason || 'Tiêu huỷ hàng hỏng/giả') : 'Hàng đúng tình trạng, duyệt hoàn tiền'),
+    };
+    if (outcome) {
+      payload.action = outcome;
+    }
+
+    const res = await callBackend(
+      {
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.RESOLVE_RETURN(retId),
+        data: payload,
+      },
+      { signal: options?.signal }
+    );
+    return res?.data || res;
+  },
+
+  /**
+   * Bước 2 (TH-04): Chọn phương án xử lý món hàng sau khi đã hoàn tiền cho người mua
+   */
+  applyItemAction: async (retId, outcome, options = {}) => {
     const fallback = () => returnMockApi.resolveValid(retId, outcome);
     if (isFixtureMode) return fallback();
 
     const res = await callBackend(
       {
         method: 'post',
-        url: API_ENDPOINTS.MODERATOR.RESOLVE_RETURN(retId),
+        url: API_ENDPOINTS.MODERATOR.RETURN_ITEM_ACTION(retId),
         data: {
-          resolution: 'VALID',
           action: outcome,
-          resolutionNote: options?.resolutionNote || (outcome === 'DISCARD' ? (options?.discardReason || 'Tiêu huỷ hàng hỏng/giả') : 'Hàng đúng tình trạng, duyệt hoàn tiền'),
+          resolutionNote:
+            options?.resolutionNote ||
+            (outcome === 'DISCARD' ? (options?.discardReason || 'Tiêu huỷ hàng hỏng/giả') : 'Hàng đúng tình trạng, duyệt hoàn tiền'),
         },
       },
       { signal: options?.signal }
