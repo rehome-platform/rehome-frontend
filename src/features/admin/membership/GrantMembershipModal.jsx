@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { Modal, Button } from '../../../components/common/index.js';
+import React, { useEffect, useRef, useState } from 'react';
+import { Modal, Button, Spinner } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import adminApi from '../services/adminApi.js';
 import membershipAdminApi from '../services/membershipAdminApi.js';
-import { PAID_TIERS, TIER_LABELS } from './membershipConstants.js';
+import { PAID_TIERS, TIER_LABELS, SUBSCRIPTION_STATUS_LABELS } from './membershipConstants.js';
+import TierBadge from './TierBadge.jsx';
 
 function formatGrantError(err) {
   const status = err?.response?.status;
@@ -15,59 +16,113 @@ function formatGrantError(err) {
   return err?.message || 'Không thể tặng / gia hạn gói. Vui lòng thử lại.';
 }
 
-export default function GrantMembershipModal({ isOpen, onClose, onSuccess, initialMember = null }) {
+/**
+ * `member` truyền sẵn (mở từ trang Chi tiết thành viên) -> bỏ qua tìm kiếm, dùng luôn, đã kèm
+ * thông tin gói hiện tại. Không truyền (mở từ trang Gói thành viên / Danh sách thành viên) -> hiện
+ * ô tìm theo tên/email/mã, gõ tới đâu tìm tới đó; chọn xong tự tải gói hiện tại của người đó.
+ */
+export default function GrantMembershipModal({ isOpen, onClose, onSuccess, member = null, defaultTier = null }) {
   const toast = useToast();
-  const [selectedMember, setSelectedMember] = useState(initialMember);
+
+  const [selectedMember, setSelectedMember] = useState(member);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
-  const [tier, setTier] = useState(PAID_TIERS[0]);
+  const [planInfo, setPlanInfo] = useState(null); // { tier, status, expiresAt } | null | undefined (chưa tải)
+  const [tier, setTier] = useState(defaultTier || PAID_TIERS[0]);
   const [months, setMonths] = useState('1');
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  const searchSeqRef = useRef(0);
+
   useEffect(() => {
     if (!isOpen) return;
-    setSelectedMember(initialMember || null);
+    setSelectedMember(member);
     setSearchQuery('');
     setSearchResults([]);
     setSearching(false);
     setHasSearched(false);
-    setTier(PAID_TIERS[0]);
+    setTier(defaultTier || PAID_TIERS[0]);
     setMonths('1');
     setReason('');
     setSubmitting(false);
     setError('');
-  }, [isOpen, initialMember]);
+  }, [isOpen, member, defaultTier]);
 
-  const handleSearchMembers = async () => {
-    setSearching(true);
-    setError('');
-    try {
-      const res = await adminApi.getAccounts({
-        search: searchQuery.trim(),
-        role: 'MEMBER',
-        size: 10,
-      });
-      const list = Array.isArray(res) ? res : res?.content || [];
-      setSearchResults(list);
-      setHasSearched(true);
-    } catch (err) {
-      setError(err?.response?.data?.message || err?.message || 'Không thể tìm kiếm thành viên.');
-    } finally {
-      setSearching(false);
+  // Member đã có sẵn currentTier (từ trang chi tiết) thì dùng luôn; chọn qua tìm kiếm thì tự tải
+  useEffect(() => {
+    if (!isOpen || !selectedMember) {
+      setPlanInfo(null);
+      return;
     }
-  };
+    if (selectedMember.currentTier !== undefined) {
+      setPlanInfo({
+        tier: selectedMember.currentTier,
+        status: selectedMember.currentStatus,
+        expiresAt: selectedMember.currentExpiresAt,
+      });
+      return;
+    }
+    let cancelled = false;
+    setPlanInfo(undefined);
+    membershipAdminApi
+      .getSubscriptions({ q: selectedMember.email || selectedMember.memberCode, size: 10 })
+      .then((res) => {
+        if (cancelled) return;
+        const list = Array.isArray(res) ? res : res?.content || [];
+        const match = list.find((s) => s.memberId === selectedMember.id);
+        setPlanInfo(match ? { tier: match.tier, status: match.status, expiresAt: match.expiresAt } : null);
+      })
+      .catch(() => {
+        if (!cancelled) setPlanInfo(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, selectedMember]);
+
+  // Gõ tới đâu tìm tới đó (debounce), tìm theo tài khoản Member - kể cả người chưa từng mua gói
+  useEffect(() => {
+    if (!isOpen || selectedMember) return;
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setHasSearched(false);
+      return;
+    }
+    const seq = ++searchSeqRef.current;
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await adminApi.getAccounts({ search: searchQuery.trim(), role: 'MEMBER', size: 10 });
+        if (seq !== searchSeqRef.current) return;
+        const list = Array.isArray(res) ? res : res?.content || [];
+        setSearchResults(list);
+        setHasSearched(true);
+      } catch (err) {
+        if (seq !== searchSeqRef.current) return;
+        setError(err?.response?.data?.message || err?.message || 'Không thể tìm kiếm thành viên.');
+      } finally {
+        if (seq === searchSeqRef.current) setSearching(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [isOpen, searchQuery, selectedMember]);
+
+  if (!isOpen) {
+    return null;
+  }
+
+  const hasCurrentPlan = Boolean(planInfo && planInfo.tier && planInfo.tier !== 'FREE');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (submitting) return;
 
-    const accountId = selectedMember?.id ?? selectedMember?.accountId;
-    if (!accountId) {
+    if (!selectedMember) {
       setError('Vui lòng chọn thành viên.');
       return;
     }
@@ -87,9 +142,9 @@ export default function GrantMembershipModal({ isOpen, onClose, onSuccess, initi
     setError('');
     try {
       await membershipAdminApi.grantSubscription({
-        accountId,
+        memberId: selectedMember.id,
         tier,
-        durationMonths: parsedMonths,
+        months: parsedMonths,
         reason: reason.trim(),
       });
       toast.success('Đã tặng / gia hạn gói thành viên thành công.');
@@ -105,7 +160,7 @@ export default function GrantMembershipModal({ isOpen, onClose, onSuccess, initi
   return (
     <Modal isOpen={isOpen} onClose={submitting ? undefined : onClose} title="Tặng / gia hạn gói thành viên" size="md">
       <form noValidate onSubmit={handleSubmit} className="space-y-4">
-        {/* Member selector */}
+        {/* Member */}
         <div>
           <label className="block text-xs font-semibold text-[#1F2A37] mb-1.5">
             Thành viên <span className="text-[#D92D20]">*</span>
@@ -121,7 +176,7 @@ export default function GrantMembershipModal({ isOpen, onClose, onSuccess, initi
                   {selectedMember.memberCode ? ` • ${selectedMember.memberCode}` : ''}
                 </p>
               </div>
-              {!initialMember && (
+              {!member && (
                 <button
                   type="button"
                   onClick={() => setSelectedMember(null)}
@@ -133,53 +188,88 @@ export default function GrantMembershipModal({ isOpen, onClose, onSuccess, initi
             </div>
           ) : (
             <div className="space-y-2">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleSearchMembers();
-                    }
-                  }}
-                  placeholder="Tìm theo tên, email hoặc mã thành viên..."
-                  className="flex-1 px-3.5 py-2 text-sm bg-white border border-[#DDE5D9] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#006B2C]/20 focus:border-[#006B2C]"
-                />
-                <Button type="button" variant="secondary" size="sm" onClick={handleSearchMembers} loading={searching}>
-                  Tìm
-                </Button>
-              </div>
-              {searchResults.length > 0 && (
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Tìm theo tên, email hoặc mã thành viên..."
+                className="w-full px-3.5 py-2 text-sm bg-white border border-[#DDE5D9] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#006B2C]/20 focus:border-[#006B2C]"
+              />
+              {searching && (
+                <div className="flex items-center gap-2 text-xs text-[#5B6776] py-1">
+                  <Spinner size="sm" />
+                  <span>Đang tìm...</span>
+                </div>
+              )}
+              {!searching && searchResults.length > 0 && (
                 <ul className="max-h-40 overflow-y-auto border border-[#DDE5D9] rounded-xl divide-y divide-[#E2E8E0]">
                   {searchResults.map((acc) => (
                     <li key={acc.id}>
                       <button
                         type="button"
-                        onClick={() => setSelectedMember(acc)}
+                        onClick={() =>
+                          setSelectedMember({
+                            id: acc.accountId,
+                            fullName: acc.fullName,
+                            email: acc.email,
+                            memberCode: acc.code,
+                          })
+                        }
                         className="w-full text-left px-3 py-2 hover:bg-[#F6F9F4] transition-colors"
                       >
                         <p className="text-sm font-medium text-[#191C19]">{acc.fullName || acc.email}</p>
                         <p className="text-xs text-[#5B6776]">
-                          {acc.email} {acc.memberCode ? `• ${acc.memberCode}` : ''}
+                          {acc.email} {acc.code ? `• ${acc.code}` : ''}
                         </p>
                       </button>
                     </li>
                   ))}
                 </ul>
               )}
-              {hasSearched && searchResults.length === 0 && !searching && (
+              {!searching && hasSearched && searchResults.length === 0 && (
                 <p className="text-xs text-[#5B6776]">Không tìm thấy thành viên phù hợp.</p>
               )}
             </div>
           )}
         </div>
 
+        {/* Gói hiện tại — để Admin thấy bối cảnh trước khi chọn hạng/số tháng mới */}
+        {selectedMember && (
+          <div>
+            <p className="block text-xs font-semibold text-[#1F2A37] mb-1.5">Gói hiện tại</p>
+            {planInfo === undefined ? (
+              <div className="flex items-center gap-2 p-3 rounded-xl border border-[#DDE5D9] bg-white text-xs text-[#5B6776]">
+                <Spinner size="sm" />
+                <span>Đang tải...</span>
+              </div>
+            ) : hasCurrentPlan ? (
+              <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-[#DDE5D9] bg-white">
+                <div className="flex items-center gap-2">
+                  <TierBadge tier={planInfo.tier} label={TIER_LABELS[planInfo.tier] || planInfo.tier} />
+                  {planInfo.status && (
+                    <span className="text-xs text-[#5B6776]">
+                      {SUBSCRIPTION_STATUS_LABELS[planInfo.status] || planInfo.status}
+                    </span>
+                  )}
+                </div>
+                {planInfo.expiresAt && (
+                  <p className="text-xs text-[#5B6776] whitespace-nowrap">
+                    Hết hạn: {new Date(planInfo.expiresAt).toLocaleDateString('vi-VN')}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="p-3 rounded-xl border border-[#DDE5D9] bg-white text-xs text-[#5B6776]">
+                Chưa có gói trả phí nào — đang ở hạng {TIER_LABELS.FREE}.
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Tier select (PAID_TIERS only) */}
         <div>
           <label htmlFor="grant-tier" className="block text-xs font-semibold text-[#1F2A37] mb-1.5">
-            Hạng gói <span className="text-[#D92D20]">*</span>
+            Hạng gói mới <span className="text-[#D92D20]">*</span>
           </label>
           <select
             id="grant-tier"
@@ -193,6 +283,11 @@ export default function GrantMembershipModal({ isOpen, onClose, onSuccess, initi
               </option>
             ))}
           </select>
+          {hasCurrentPlan && (
+            <p className="text-[11px] text-[#5B6776] mt-1">
+              Chọn đúng hạng hiện tại để gia hạn thêm, hoặc hạng khác để đổi hạng.
+            </p>
+          )}
         </div>
 
         {/* Months input (1-24) */}

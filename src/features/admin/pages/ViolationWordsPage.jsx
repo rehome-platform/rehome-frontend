@@ -213,16 +213,11 @@ export default function ViolationWordsPage() {
       <div className="bg-white p-6 rounded-xl border border-[#E2E8E0] space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-[#191C19] font-heading">
-                Quản lý từ ngữ vi phạm
-              </h2>
-              {totalElements > 0 && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-[#E8F5E9] text-[#006B2C]">
-                  {totalElements} từ khóa
-                </span>
-              )}
-            </div>
+            {totalElements > 0 && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-[#E8F5E9] text-[#006B2C]">
+                {totalElements} từ khóa
+              </span>
+            )}
           </div>
           <Button variant="primary" onClick={handleOpenCreate} className="gap-1.5">
             <span className="material-symbols-outlined text-base">add</span>

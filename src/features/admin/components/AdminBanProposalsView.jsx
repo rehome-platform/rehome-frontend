@@ -272,16 +272,6 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
       {/* Header & Bộ lọc */}
       <div className="bg-white p-5 rounded-2xl border border-[#E2E8E0] shadow-xs space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[#E2E8E0] pb-4">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <span className="w-9 h-9 rounded-xl bg-[#FEF2F2] text-[#DC2626] flex items-center justify-center">
-                <span className="material-symbols-outlined text-[20px]">gavel</span>
-              </span>
-              <h2 className="text-lg font-extrabold text-[#191C19] font-heading">
-                Đề Xuất Khóa Tài Khoản Từ Moderator
-              </h2>
-            </div>
-          </div>
 
           {/* Filter Tabs */}
           <div className="flex flex-wrap items-center gap-1.5 bg-[#F8FAF8] p-1 rounded-xl border border-[#E2E8E0]">
@@ -468,7 +458,7 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
               {/* Drawer Header */}
               <div className="flex items-start justify-between border-b border-[#E2E8E0] pb-4">
                 <div>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#DC2626]">
+                  <span className="text-[11px] font-bold tracking-wider text-[#DC2626]">
                     Hồ sơ đề xuất khóa tài khoản
                   </span>
                   <h3 className="text-lg font-extrabold text-[#191C19] font-heading mt-0.5">
@@ -479,15 +469,15 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
                   </p>
                   <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
                     <div className="px-3 py-2 rounded-xl border border-[#E2E8E0] bg-[#F8FAF8]">
-                      <div className="text-[10px] uppercase tracking-wide text-[#717971] font-semibold">Loại đối tượng</div>
+                      <div className="text-[10px] tracking-wide text-[#717971] font-semibold">Loại đối tượng</div>
                       <div className="font-semibold text-[#191C19]">{TARGET_TYPE_LABEL[selectedProposal.targetType] || selectedProposal.targetType}</div>
                     </div>
                     <div className="px-3 py-2 rounded-xl border border-[#E2E8E0] bg-[#F8FAF8]">
-                      <div className="text-[10px] uppercase tracking-wide text-[#717971] font-semibold">Email</div>
+                      <div className="text-[10px] tracking-wide text-[#717971] font-semibold">Email</div>
                       <div className="font-mono text-[#191C19] break-all">{selectedProposal.orgEmail}</div>
                     </div>
                     <div className="px-3 py-2 rounded-xl border border-[#E2E8E0] bg-[#F8FAF8]">
-                      <div className="text-[10px] uppercase tracking-wide text-[#717971] font-semibold">Số điện thoại</div>
+                      <div className="text-[10px] tracking-wide text-[#717971] font-semibold">Số điện thoại</div>
                       <div className="font-mono text-[#191C19]">{selectedProposal.orgPhone}</div>
                     </div>
                   </div>
@@ -537,7 +527,7 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
               {/* Khối Lịch sử vi phạm của Tổ chức */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#191C19]">
+                  <h4 className="text-xs font-bold tracking-wider text-[#191C19]">
                     Lịch sử bị xử lý vi phạm ({violationHistory.length})
                   </h4>
                   <span className="text-[11px] text-[#717971]">
@@ -567,7 +557,7 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
                           </span>
                         </div>
                         <p className="text-[#414942]">
-                          Lý do: <span className="italic">"{h.reason}"</span>
+                          Lý do: <span>"{h.reason}"</span>
                         </p>
                         {h.actorName && (
                           <div className="text-[11px] text-[#717971]">

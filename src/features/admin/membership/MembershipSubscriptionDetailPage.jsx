@@ -84,12 +84,15 @@ export default function MembershipSubscriptionDetailPage() {
   const payments = Array.isArray(detail.payments) ? detail.payments : [];
   const vouchers = Array.isArray(detail.vouchers) ? detail.vouchers : [];
 
-  const initialMember = detail.memberId
+  const memberForGrant = detail.memberId
     ? {
         id: detail.memberId,
         fullName: detail.memberName,
         email: detail.memberEmail,
         memberCode: detail.memberCode,
+        currentTier: detail.tier,
+        currentStatus: detail.status,
+        currentExpiresAt: detail.expiresAt,
       }
     : null;
 
@@ -103,7 +106,6 @@ export default function MembershipSubscriptionDetailPage() {
             <span>Quay lại</span>
           </Button>
           <div>
-            <h2 className="text-lg font-bold text-[#191C19]">Chi tiết gói thành viên</h2>
             <p className="text-xs text-[#5B6776]">
               {detail.memberName || '-'} • {detail.memberEmail || '-'}
               {detail.memberCode ? ` (${detail.memberCode})` : ''}
@@ -192,20 +194,12 @@ export default function MembershipSubscriptionDetailPage() {
           {quotaUsage ? (
             <dl className="divide-y divide-[#E2E8E0] text-sm">
               <div className="py-2.5 flex items-center justify-between gap-4">
-                <dt className="text-[#5B6776]">Live try-on hôm nay</dt>
+                <dt className="text-[#5B6776]">Thử đồ ảo hôm nay</dt>
                 <dd className="font-semibold text-[#191C19]">{quotaUsage.liveTryonUsedToday ?? 0}</dd>
               </div>
               <div className="py-2.5 flex items-center justify-between gap-4">
-                <dt className="text-[#5B6776]">Live try-on tháng này</dt>
-                <dd className="font-semibold text-[#191C19]">{quotaUsage.liveTryonUsedThisMonth ?? 0}</dd>
-              </div>
-              <div className="py-2.5 flex items-center justify-between gap-4">
-                <dt className="text-[#5B6776]">AI try-on hôm nay</dt>
+                <dt className="text-[#5B6776]">Phối đồ hôm nay</dt>
                 <dd className="font-semibold text-[#191C19]">{quotaUsage.aiTryonUsedToday ?? 0}</dd>
-              </div>
-              <div className="py-2.5 flex items-center justify-between gap-4">
-                <dt className="text-[#5B6776]">AI try-on tháng này</dt>
-                <dd className="font-semibold text-[#191C19]">{quotaUsage.aiTryonUsedThisMonth ?? 0}</dd>
               </div>
               <div className="py-2.5 flex items-center justify-between gap-4">
                 <dt className="text-[#5B6776]">Tin nổi bật</dt>
@@ -310,7 +304,7 @@ export default function MembershipSubscriptionDetailPage() {
         isOpen={isGrantOpen}
         onClose={() => setIsGrantOpen(false)}
         onSuccess={fetchDetail}
-        initialMember={initialMember}
+        member={memberForGrant}
       />
 
       <CancelMembershipModal

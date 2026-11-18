@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import AdminPeriodFilter from './AdminPeriodFilter.jsx';
 import { Spinner } from '../../../components/common/index.js';
+import { useAuth } from '../../../context/AuthContext.jsx';
 
 /**
  * View Quản lý Tài khoản ReHome
@@ -27,6 +28,8 @@ export default function AdminAccountsView({
   dateFilter,
   dateError,
 }) {
+  const { user: currentUser } = useAuth();
+
   const [accounts, setAccounts] = useState(
     Array.isArray(remoteAccounts) ? remoteAccounts : []
   );
@@ -161,15 +164,6 @@ export default function AdminAccountsView({
 
   return (
     <div className="space-y-6">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#191C19] font-heading">
-            Tài khoản
-          </h1>
-        </div>
-      </div>
-
       {dateError && (
         <div
           role="alert"

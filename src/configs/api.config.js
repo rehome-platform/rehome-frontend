@@ -190,6 +190,7 @@ export const API_ENDPOINTS = {
     CREATE_WAREHOUSE: "/warehouses",
     UPDATE_WAREHOUSE: (id) => `/warehouses/${encodeURIComponent(id)}`,
     HIDE_WAREHOUSE: (id) => `/api/admin/warehouses/${id}/hide`,
+    UNHIDE_WAREHOUSE: (id) => `/api/admin/warehouses/${id}/unhide`,
 
     CONFIGS: "/api/admin/config",
     UPDATE_CONFIG: (key) => `/api/admin/config/${key}`,

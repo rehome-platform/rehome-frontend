@@ -28,6 +28,56 @@ function toApiRatio(percent) {
   return Number((Number(percent) / 100).toPrecision(12));
 }
 
+// Thẻ 1 trường số, có nút Sửa/Xong (chỉ xem tới khi bấm Sửa) + tô vàng khi khác giá trị đã lưu —
+// cùng kiểu với trang Cấu hình tham số hệ thống và modal Chỉnh sửa gói thành viên.
+function NumberFieldCard({ id, label, value, onChange, error, editing, dirty, onToggleEdit, ...inputProps }) {
+  return (
+    <div
+      className={`rounded-2xl border p-4 flex flex-col gap-2.5 transition-colors ${
+        dirty
+          ? 'border-[#F59E0B] bg-[#FFFBEB]/60'
+          : editing
+          ? 'border-[#006B2C] bg-white shadow-sm'
+          : 'border-[#DDE5D9] bg-[#FBFDFB]'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <label htmlFor={id} className="text-xs font-semibold text-[#191C19] leading-snug">
+          {label}
+        </label>
+        <button
+          type="button"
+          onClick={onToggleEdit}
+          aria-label={editing ? `Xong: ${label}` : `Sửa: ${label}`}
+          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors shrink-0 ${
+            editing
+              ? 'bg-[#006B2C] text-white hover:bg-[#005523]'
+              : 'text-[#006B2C] border border-[#006B2C]/30 hover:bg-[#E8F5E9]'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[14px]">{editing ? 'check' : 'edit'}</span>
+          <span>{editing ? 'Xong' : 'Sửa'}</span>
+        </button>
+      </div>
+
+      <input
+        id={id}
+        type="number"
+        readOnly={!editing}
+        value={value}
+        onChange={onChange}
+        {...inputProps}
+        className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-bold font-mono outline-none transition-all ${
+          editing
+            ? 'border-[#006B2C] bg-white text-[#191C19] focus:ring-2 focus:ring-[#006B2C]/15'
+            : 'border-transparent bg-[#F0F4EE] text-[#191C19] cursor-default'
+        }`}
+      />
+      {error && <p className="text-[11px] text-[#D92D20] font-medium">{error}</p>}
+    </div>
+  );
+}
+
 function buildInitialTierState(tierRules = []) {
   const map = {};
   for (const tier of PAID_TIERS) {
@@ -51,7 +101,6 @@ export default function VoucherTemplateModal({
   onClose,
   template = null,
   onSuccess,
-  onDeactivate,
 }) {
   const toast = useToast();
   const isEdit = Boolean(template?.id);
@@ -71,6 +120,20 @@ export default function VoucherTemplateModal({
   const [submitError, setSubmitError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
+  const [editingKeys, setEditingKeys] = useState(() => new Set());
+  const originalRef = useRef({});
+
+  const toggleEditing = (key) => {
+    setEditingKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const isDirty = (key, currentValue) =>
+    isEdit && String(originalRef.current[key] ?? '') !== String(currentValue ?? '');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -101,6 +164,20 @@ export default function VoucherTemplateModal({
       setValidDays(template.validDays != null ? String(template.validDays) : '30');
       setActive(template.active !== undefined ? Boolean(template.active) : true);
       setTierState(buildInitialTierState(template.tierRules));
+
+      // Ảnh chụp giá trị gốc để tô vàng ô nào đang sửa khác giá trị đã lưu, giống ConfigPage
+      originalRef.current = {
+        discountValue:
+          nextKind === 'PERCENT'
+            ? toDisplayPercent(template.discountValue)
+            : template.discountValue != null
+              ? String(template.discountValue)
+              : '',
+        maxDiscountAmount:
+          template.maxDiscountAmount != null ? String(template.maxDiscountAmount) : '',
+        minOrderAmount: template.minOrderAmount != null ? String(template.minOrderAmount) : '0',
+        validDays: template.validDays != null ? String(template.validDays) : '30',
+      };
     } else {
       setName('');
       setDescription('');
@@ -112,7 +189,9 @@ export default function VoucherTemplateModal({
       setValidDays('30');
       setActive(true);
       setTierState(buildInitialTierState());
+      originalRef.current = {};
     }
+    setEditingKeys(new Set());
     setErrors({});
     setSubmitError('');
     submittingRef.current = false;
@@ -258,6 +337,16 @@ export default function VoucherTemplateModal({
   const isOrderDiscount = type === 'ORDER_DISCOUNT';
   const effectiveKind = isOrderDiscount ? 'PERCENT' : discountKind;
 
+  const numberFields = [
+    { key: 'discountValue', label: effectiveKind === 'PERCENT' ? 'Mức giảm (%)' : 'Mức giảm (đ)', value: discountValue },
+    ...(effectiveKind === 'PERCENT'
+      ? [{ key: 'maxDiscountAmount', label: 'Giảm tối đa (đ)', value: maxDiscountAmount }]
+      : []),
+    { key: 'minOrderAmount', label: 'Đơn tối thiểu (đ)', value: minOrderAmount },
+    { key: 'validDays', label: 'Hiệu lực (ngày)', value: validDays },
+  ];
+  const dirtyFields = numberFields.filter((f) => isDirty(f.key, f.value));
+
   return (
     <Modal
       isOpen={isOpen}
@@ -347,52 +436,71 @@ export default function VoucherTemplateModal({
           </div>
         ) : null}
 
+        {/* Cảnh báo thay đổi chưa lưu (cùng kiểu với trang Cấu hình tham số hệ thống) */}
+        {dirtyFields.length > 0 && (
+          <div className="p-3.5 bg-[#FFFBEB] border border-[#F59E0B] text-[#92400E] rounded-2xl text-xs shadow-sm flex items-start gap-2">
+            <span className="material-symbols-outlined text-lg shrink-0">warning</span>
+            <div>
+              <p className="font-bold">Bạn có {dirtyFields.length} trường đã sửa nhưng chưa lưu.</p>
+              <p className="text-[11px] mt-0.5">
+                {dirtyFields.map((f) => f.label).join(' · ')}. Bấm "Lưu mẫu voucher" bên dưới để áp dụng.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
+          <NumberFieldCard
             id="voucher-discount-value"
-            type="number"
-            step={effectiveKind === 'PERCENT' ? 'any' : '1000'}
             label={effectiveKind === 'PERCENT' ? 'Mức giảm (%)' : 'Mức giảm (đ)'}
-            required
+            step={effectiveKind === 'PERCENT' ? 'any' : '1000'}
             value={discountValue}
             onChange={(e) => setDiscountValue(e.target.value)}
             error={errors.discountValue}
             placeholder={effectiveKind === 'PERCENT' ? 'Ví dụ: 10' : 'Ví dụ: 15000'}
+            editing={editingKeys.has('discountValue')}
+            dirty={isDirty('discountValue', discountValue)}
+            onToggleEdit={() => toggleEditing('discountValue')}
           />
 
           {effectiveKind === 'PERCENT' ? (
-            <Input
+            <NumberFieldCard
               id="voucher-max-discount"
-              type="number"
               label="Giảm tối đa (đ)"
-              required
               value={maxDiscountAmount}
               onChange={(e) => setMaxDiscountAmount(e.target.value)}
               error={errors.maxDiscountAmount}
               placeholder="Ví dụ: 50000"
+              editing={editingKeys.has('maxDiscountAmount')}
+              dirty={isDirty('maxDiscountAmount', maxDiscountAmount)}
+              onToggleEdit={() => toggleEditing('maxDiscountAmount')}
             />
           ) : null}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
+          <NumberFieldCard
             id="voucher-min-order"
-            type="number"
             label="Đơn tối thiểu (đ)"
-            required
             value={minOrderAmount}
             onChange={(e) => setMinOrderAmount(e.target.value)}
             error={errors.minOrderAmount}
+            editing={editingKeys.has('minOrderAmount')}
+            dirty={isDirty('minOrderAmount', minOrderAmount)}
+            onToggleEdit={() => toggleEditing('minOrderAmount')}
           />
 
-          <Input
+          <NumberFieldCard
             id="voucher-valid-days"
-            type="number"
             label="Hiệu lực (ngày)"
-            required
+            min={1}
+            max={365}
             value={validDays}
             onChange={(e) => setValidDays(e.target.value)}
             error={errors.validDays}
+            editing={editingKeys.has('validDays')}
+            dirty={isDirty('validDays', validDays)}
+            onToggleEdit={() => toggleEditing('validDays')}
           />
         </div>
 
@@ -459,29 +567,13 @@ export default function VoucherTemplateModal({
           ) : null}
         </div>
 
-        <div className="flex items-center justify-between gap-3 pt-3 border-t border-[#E2E8E0]">
-          {isEdit && template?.active ? (
-            <Button
-              type="button"
-              variant="danger"
-              onClick={() => onDeactivate?.(template)}
-              disabled={submitting}
-              className="gap-1"
-            >
-              <span className="material-symbols-outlined text-sm">block</span>
-              <span>Ngừng phát</span>
-            </Button>
-          ) : (
-            <span />
-          )}
-          <div className="flex gap-3">
-            <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
-              Hủy
-            </Button>
-            <Button type="submit" variant="primary" loading={submitting} disabled={submitting}>
-              Lưu mẫu voucher
-            </Button>
-          </div>
+        <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#E2E8E0]">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
+            Hủy
+          </Button>
+          <Button type="submit" variant="primary" loading={submitting} disabled={submitting}>
+            Lưu mẫu voucher
+          </Button>
         </div>
       </form>
     </Modal>
