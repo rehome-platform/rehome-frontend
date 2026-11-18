@@ -570,11 +570,9 @@ describe('ConsignmentDetailPage component behaviors', () => {
     const priceInput = screen.getByPlaceholderText(/VD: 850000/);
     await user.type(priceInput, '850000');
 
-    const termSelect = screen.getByLabelText(/Độ dài kỳ ký gửi/);
-    await user.selectOptions(termSelect, '30');
-    expect(Array.from(termSelect.options).map((o) => o.value).filter(Boolean)).toEqual(['30']);
-    expect(termSelect.textContent).toContain('30 ngày / kỳ (tối đa 2 lần gia hạn)');
-    expect(termSelect.textContent).not.toMatch(/Kỳ [123]/);
+    const termDisplay = screen.getByLabelText(/Độ dài kỳ ký gửi/);
+    expect(termDisplay.textContent).toContain('30 ngày / kỳ (tối đa 2 lần gia hạn)');
+    expect(termDisplay.textContent).not.toMatch(/Kỳ [123]/);
 
     const submitBtn = screen.getByRole('button', { name: /Đạt kiểm định/ });
     expect(submitBtn).toBeEnabled();
@@ -616,8 +614,11 @@ describe('ConsignmentDetailPage component behaviors', () => {
       { memberId: 'member-1', identityToken: 'token-abc' },
     );
     expect(await screen.findByRole('heading', { name: /Áo len/ })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Lý do không nhận/)).not.toBeInTheDocument();
 
-    const returnSelect = screen.getByLabelText(/Lý do không nhận/);
+    await user.click(screen.getByRole('button', { name: 'Trả đồ tại chỗ' }));
+
+    const returnSelect = await screen.findByLabelText(/Lý do không nhận/);
     await user.selectOptions(returnSelect, returnSelect.options[1].value);
 
     const noteInput = screen.getByPlaceholderText(/Mô tả vết bẩn, lỗi rách/);

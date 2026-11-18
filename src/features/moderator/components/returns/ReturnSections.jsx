@@ -830,7 +830,7 @@ export function ReturnInspectionVerdict({
           </span>
         </div>
         <p className="text-[10px] text-textSecondary pt-1">
-          Vào ví ReHome, không hoàn về thẻ/MoMo. Tiền của người ký gửi đang giữ nên không phải đòi lại.
+          Vào ví ReHome, không hoàn về thẻ/VNPay. Tiền của người ký gửi đang giữ nên không phải đòi lại.
         </p>
       </div>
     

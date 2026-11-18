@@ -13,7 +13,7 @@ export const CONDITION_PRESETS = [
   { value: 'FLAW', label: 'Có lỗi nhỏ (80-85%)', noteTemplate: 'Có lỗi nhỏ ở viền/khuy, tổng thể 85% còn tốt' },
 ];
 
-export function ConsignmentInspectionForm({ price, term, conditionNote, allChecked, resource, formId, proof, setFeedback, setReceiptId, setCondition, errors, setPrice, setTerm, termOptions, consignmentConfig }) {
+export function ConsignmentInspectionForm({ price, term, conditionNote, allChecked, resource, formId, proof, setFeedback, setReceiptId, setCondition, errors, setPrice, setTerm, termOptions, consignmentConfig, onOpenReturn }) {
   const [selectedConditionLevel, setSelectedConditionLevel] = React.useState('LIKE_NEW');
 
   const handleSelectConditionLevel = (lvl) => {
@@ -59,7 +59,7 @@ export function ConsignmentInspectionForm({ price, term, conditionNote, allCheck
       className="space-y-4 border-t border-[#e0e0e0] pt-4"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!validMoney(price) || !term || !conditionNote.trim() || !allChecked) return;
+        if (!validMoney(price) || !conditionNote.trim() || !allChecked) return;
         resource.mutate(
           async (opts) => {
             try {
@@ -69,7 +69,7 @@ export function ConsignmentInspectionForm({ price, term, conditionNote, allCheck
                 ...proof,
                 conditionNote: conditionNote.trim(),
                 agreedPrice: Number(price),
-                termLengthDays: Number(term),
+                termLengthDays: effectiveTermDays,
               },
               opts,
               );
@@ -125,14 +125,14 @@ export function ConsignmentInspectionForm({ price, term, conditionNote, allCheck
           placeholder="Mô tả độ mới 99%, chi tiết vải hoặc phụ kiện..."
         />
       </div>
-    
-      <div className="grid grid-cols-2 gap-3">
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field
           label="Giá chốt thỏa thuận (VND)"
           required
           type="number"
           min="1000"
-          step="1000"
+          step="1"
           inputMode="numeric"
           value={price}
           onChange={(e) => setPrice(e.target.value.replace(/\D/g, ''))}
@@ -144,21 +144,15 @@ export function ConsignmentInspectionForm({ price, term, conditionNote, allCheck
           error={errors.agreedPrice || (price && !validMoney(price) ? (/^\d+$/.test(String(price)) && Number(price) < 1000 ? 'Giá tối thiểu phải từ 1.000đ' : 'Số nguyên dương hợp lệ.') : null)}
           placeholder="VD: 850000"
         />
-        <Field label="Độ dài kỳ ký gửi">
-          <select
-            required
-            className="rounded-xl border-neutral"
-            value={term}
-            onChange={(e) => setTerm(e.target.value)}
+        <div className="block text-sm font-medium">
+          <span>Độ dài kỳ ký gửi</span>
+          <div
+            aria-label="Độ dài kỳ ký gửi"
+            className="mt-1 w-full rounded-xl border border-neutral bg-[#F6F9F4] px-3 py-2 text-xs font-semibold text-[#191C19] flex items-center min-h-[38px]"
           >
-            <option value="">Chọn độ dài mỗi kỳ</option>
-            {(termOptions || [effectiveTermDays]).map((days) => (
-              <option key={days} value={days}>
-                {days} ngày / kỳ (tối đa {maxRenewals} lần gia hạn)
-              </option>
-            ))}
-          </select>
-        </Field>
+            {effectiveTermDays} ngày / kỳ (tối đa {maxRenewals} lần gia hạn)
+          </div>
+        </div>
       </div>
 
       {numericPrice > 0 && (
@@ -197,15 +191,27 @@ export function ConsignmentInspectionForm({ price, term, conditionNote, allCheck
       <p className="text-[11px] text-[#5B6776]">
         Mặc định mỗi kỳ {effectiveTermDays} ngày, tối đa {maxRenewals} lần gia hạn (tổng {totalTerms} kỳ · {effectiveTermDays * totalTerms} ngày).
       </p>
-    
-      <Button
-        type="submit"
-        disabled={!allChecked || !conditionNote.trim() || !validMoney(price) || !term}
-        loading={resource.busy}
-        className="w-full py-3 font-bold text-xs bg-[#006B2C] text-white hover:bg-[#005221]"
-      >
-        Đạt kiểm định — Tạo biên nhận ký gửi
-      </Button>
+
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="submit"
+          disabled={!allChecked || !conditionNote.trim() || !validMoney(price)}
+          loading={resource.busy}
+          className="flex-1 py-3 font-bold text-xs bg-[#006B2C] text-white hover:bg-[#005221]"
+        >
+          Đạt kiểm định — Tạo biên nhận ký gửi
+        </Button>
+        {onOpenReturn && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onOpenReturn}
+            className="py-3 px-4 font-bold text-xs border-[#BA1A1A] text-[#BA1A1A] hover:bg-red-50"
+          >
+            Trả đồ tại chỗ
+          </Button>
+        )}
+      </div>
     </form>
   );
 }

@@ -42,13 +42,12 @@ describe('membershipConstants', () => {
 
     expect(PAYMENT_METHOD_LABELS).toEqual({
       WALLET: 'Ví ReHome',
-      MOMO: 'MoMo',
       VNPAY: 'VNPay',
       ADMIN_GRANT: 'Admin tặng',
     });
 
     expect(VOUCHER_TYPE_LABELS).toEqual({
-      SHIPPING: 'Miễn phí vận chuyển',
+      SHIPPING: 'Giảm phí vận chuyển',
       ORDER_DISCOUNT: 'Giảm giá đơn hàng',
     });
   });
@@ -173,23 +172,6 @@ describe('membershipAdminApi', () => {
     await membershipAdminApi.getVoucherStats({ from: undefined, to: '2026-11-13' });
     expect(baseApi.get).toHaveBeenLastCalledWith('/api/admin/voucher-stats', {
       params: { to: '2026-11-13' },
-    });
-
-    await membershipAdminApi.getPayments({
-      from: '2026-11-01',
-      to: undefined,
-      tier: 'SILVER',
-      method: '',
-      page: 0,
-      size: 15,
-    });
-    expect(baseApi.get).toHaveBeenLastCalledWith('/api/admin/membership-payments', {
-      params: { from: '2026-11-01', tier: 'SILVER', page: 0, size: 15 },
-    });
-
-    await membershipAdminApi.getPayments();
-    expect(baseApi.get).toHaveBeenLastCalledWith('/api/admin/membership-payments', {
-      params: {},
     });
   });
 });

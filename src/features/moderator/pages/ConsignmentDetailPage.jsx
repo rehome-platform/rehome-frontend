@@ -60,7 +60,7 @@ export default function ConsignmentDetailPage() {
             timestamp: Date.now(),
           })
         );
-      } catch {}
+      } catch { }
     }
   }, [model.form]);
 
@@ -69,10 +69,10 @@ export default function ConsignmentDetailPage() {
     backStatus === 'APPROVED'
       ? 'Đã duyệt, chờ mang đến'
       : backStatus === 'INSPECTING'
-      ? 'Đang kiểm định'
-      : backStatus === 'STOCKED'
-      ? 'Nhập kho hôm nay'
-      : 'Chờ duyệt';
+        ? 'Đang kiểm định'
+        : backStatus === 'STOCKED'
+          ? 'Nhập kho hôm nay'
+          : 'Chờ duyệt';
 
   return (
     <Page
@@ -122,7 +122,22 @@ export default function ConsignmentDetailPage() {
       {model.receiptStep && (
         <div className="space-y-5">
           <Link className="inline-block text-sm font-semibold text-primary underline" to="/moderator/consignments?status=INSPECTING">Thoát về danh sách</Link>
-          {model.receiptId ? <ReceiptPanel key={model.receiptId} receiptId={model.receiptId} form={model.receiptForm} allowStockIn /> : (
+          {model.receiptId ? (
+            <ReceiptPanel
+              key={model.receiptId}
+              receiptId={model.receiptId}
+              form={model.receiptForm}
+              allowStockIn
+              onReceiptVoided={(voidedReceipt) => {
+                if (model.handleReceiptVoided) {
+                  model.handleReceiptVoided(voidedReceipt);
+                } else {
+                  model.setReceiptId?.(null);
+                  model.resource?.refresh?.();
+                }
+              }}
+            />
+          ) : (
             <div role="alert" className="rounded-xl border p-4">Chưa có mã biên nhận để tiếp tục. Vui lòng tải lại trạng thái.</div>
           )}
         </div>
@@ -193,11 +208,14 @@ export default function ConsignmentDetailPage() {
 
               {/* ================= THAO TÁC 3: CHECKLIST KIỂM ĐỊNH & CHỐT GIÁ (KD-04, KD-05) ================= */}
               {model.allowed('COMPLETE_INSPECTION') && model.identified && (
-                <ConsignmentInspectionPanel {...model.sections.ConsignmentInspectionPanel} />
+                <ConsignmentInspectionPanel
+                  {...model.sections.ConsignmentInspectionPanel}
+                  onOpenReturn={model.allowed('RETURN_ONSITE') ? () => setReturnModalOpen(true) : undefined}
+                />
               )}
 
               {/* ================= THAO TÁC 4: TRẢ ĐỒ TẠI CHỖ (KD-06) ================= */}
-              {model.allowed('RETURN_ONSITE') && model.identified && (
+              {model.allowed('RETURN_ONSITE') && !model.allowed('COMPLETE_INSPECTION') && model.identified && (
                 <ConsignmentReturnPanel {...model.sections.ConsignmentReturnPanel} />
               )}
             </div>

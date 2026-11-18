@@ -70,7 +70,7 @@ export default function Footer() {
           <div className="flex space-x-4 mt-2 sm:mt-0">
             <span>Sổ kép đối ứng</span>
             <span>•</span>
-            <span>Sandbox MoMo & GHN</span>
+            <span>Sandbox VNPay & GHN</span>
             <span>•</span>
             <span>Admin & Moderator Web</span>
           </div>

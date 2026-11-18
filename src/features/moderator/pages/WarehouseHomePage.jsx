@@ -29,12 +29,23 @@ const waitedHours = (item) => {
   return Number.isFinite(time) ? Math.max(0, Math.floor((Date.now() - time) / 3600000)) : null;
 };
 
-function Stat({ label, value, tone }) {
-  return (
-    <div className={`rounded-2xl border bg-white p-4 ${tone === 'alert' ? 'border-primary border-2' : 'border-neutral'}`}>
+function Stat({ label, value, tone, to }) {
+  const card = (
+    <div
+      className={`rounded-2xl border bg-white p-4 transition-colors ${
+        tone === 'alert' ? 'border-primary border-2' : 'border-neutral'
+      } ${to ? 'hover:border-[#006B2C] hover:bg-[#F6F9F4]/60 cursor-pointer' : ''}`}
+    >
       <p className="text-xs text-textSecondary">{label}</p>
       <p className="mt-2 text-3xl font-semibold tracking-tight">{value}</p>
     </div>
+  );
+  return to ? (
+    <Link to={to} className="block rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30">
+      {card}
+    </Link>
+  ) : (
+    card
   );
 }
 
@@ -138,11 +149,11 @@ export default function WarehouseHomePage() {
       {firstError && <ResourceState resource={firstError} empty={false} />}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <Stat label="Việc chờ xử lý" value={pending} />
-        <Stat label={`Quá hạn ${OVERDUE_HOURS}h`} value={overdue} tone="alert" />
-        <Stat label="Đơn chờ đóng gói" value={countOf(packing.data)} />
-        <Stat label="Chờ rút hàng" value={countOf(withdrawal.data)} />
-        <Stat label="Tồn kho đang bán" value={countOf(onSale.data)} />
+        <Stat label="Việc chờ xử lý" value={pending} to="/moderator/queue" />
+        <Stat label={`Quá hạn ${OVERDUE_HOURS}h`} value={overdue} tone="alert" to="/moderator/queue" />
+        <Stat label="Đơn chờ đóng gói" value={countOf(packing.data)} to="/moderator/packing" />
+        <Stat label="Chờ rút hàng" value={countOf(withdrawal.data)} to="/moderator/queue?type=WITHDRAWAL" />
+        <Stat label="Tồn kho đang bán" value={countOf(onSale.data)} to="/moderator/inventory?status=ON_SALE" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px] items-start">

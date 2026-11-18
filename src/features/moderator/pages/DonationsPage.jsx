@@ -87,6 +87,15 @@ export default function DonationsPage() {
   const [reassignError, setReassignError] = useState(null);
   const [reassigning, setReassigning] = useState(false);
 
+  // Bỏ ẩn chiến dịch (HIDDEN -> OPEN/CLOSED)
+  const [unhideTarget, setUnhideTarget] = useState(null);
+  const [unhideReason, setUnhideReason] = useState('');
+  const [unhideError, setUnhideError] = useState(null);
+  const [unhiding, setUnhiding] = useState(false);
+
+  // Xem ảnh hiện vật kích thước lớn
+  const [previewPhotoUrl, setPreviewPhotoUrl] = useState(null);
+
   const warehouses = useResource((options) => donationService.myWarehouses(options), [], {
     cacheKey: 'donations:myWarehouses',
   });
@@ -383,6 +392,45 @@ export default function DonationsPage() {
     setReassignModalOpen(true);
   };
 
+  const openUnhideModal = (campaign) => {
+    setUnhideTarget(campaign);
+    setUnhideReason('');
+    setUnhideError(null);
+  };
+
+  const handleConfirmUnhide = async () => {
+    const reason = unhideReason.trim();
+    if (!unhideTarget?.id || !reason || unhiding) {
+      if (!reason) setUnhideError('Vui lòng nhập lý do bỏ ẩn chiến dịch.');
+      return;
+    }
+    setUnhideError(null);
+    setUnhiding(true);
+    try {
+      await donationService.unhideCampaign(unhideTarget.id, reason);
+      toast.success('Đã bỏ ẩn chiến dịch. Các lượt quyên góp đang tạm giữ đã tự động chuyển về "Chờ lấy".');
+      setUnhideTarget(null);
+      setUnhideReason('');
+      campaignsResource.refresh();
+      donationsResource.refresh();
+      onHoldDonationsResource.refresh();
+    } catch (err) {
+      const normalized = normalizeError(err);
+      if (normalized.status === 409 && normalized.code === 'CAMPAIGN_ORGANIZATION_BANNED') {
+        setUnhideError('Tổ chức đang bị khoá, mở khoá tổ chức trước');
+      } else if (normalized.status === 409 && normalized.code === 'CAMPAIGN_NOT_HIDDEN') {
+        setUnhideError('Chiến dịch không còn bị ẩn');
+        campaignsResource.refresh();
+        donationsResource.refresh();
+        onHoldDonationsResource.refresh();
+      } else {
+        setUnhideError(normalized.message || 'Không thể bỏ ẩn chiến dịch.');
+      }
+    } finally {
+      setUnhiding(false);
+    }
+  };
+
   const handleConfirmReassign = async () => {
     const targetCampaignId = reassignCampaignId || (reassignCampaignOptions[0]?.id ? String(reassignCampaignOptions[0].id) : '');
     if (!warehouseId || !selectedOnHoldIds.length || !targetCampaignId || reassigning) return;
@@ -400,9 +448,9 @@ export default function DonationsPage() {
       onHoldDonationsResource.refresh();
       donationsResource.refresh();
     } catch (err) {
+      const beMessage = err?.response?.data?.message || err?.message;
       const normalized = normalizeError(err);
-      const code = err?.code || err?.response?.data?.code;
-      setReassignError(code ? `[${code}] ${normalized.message}` : normalized.message);
+      setReassignError(beMessage || normalized.message || 'Không thể chuyển sang chiến dịch khác.');
     } finally {
       setReassigning(false);
     }
@@ -535,23 +583,34 @@ export default function DonationsPage() {
                         </div>
                       )}
 
-                      <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center justify-between gap-2 pt-1">
                         <span className="text-[11px] text-textSecondary">
                           Hạn: {c.endTime ? date(c.endTime) : '—'}
                         </span>
-                        <button
-                          type="button"
-                          aria-label={`Chọn ${c.title}`}
-                          onClick={() => {
-                            setSelectedCampaignId(String(c.id));
-                            setCampaignFilter(String(c.id));
-                            setSelectedIds([]);
-                            if (recordError) setRecordError(null);
-                          }}
-                          className="text-[11px] font-bold text-[#006B2C] hover:underline cursor-pointer"
-                        >
-                          Chọn chiến dịch
-                        </button>
+                        <div className="flex items-center gap-2">
+                          {c.status === 'HIDDEN' && (
+                            <button
+                              type="button"
+                              onClick={() => openUnhideModal(c)}
+                              className="text-[11px] font-bold text-amber-800 hover:underline cursor-pointer"
+                            >
+                              Bỏ ẩn
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            aria-label={`Chọn ${c.title}`}
+                            onClick={() => {
+                              setSelectedCampaignId(String(c.id));
+                              setCampaignFilter(String(c.id));
+                              setSelectedIds([]);
+                              if (recordError) setRecordError(null);
+                            }}
+                            className="text-[11px] font-bold text-[#006B2C] hover:underline cursor-pointer"
+                          >
+                            Chọn chiến dịch
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -754,9 +813,9 @@ export default function DonationsPage() {
                     Ảnh gói hiện vật quyên góp (tuỳ chọn)
                   </label>
                   <p className="text-[10px] text-[#5B6776] mb-1.5">
-                    Chụp hoặc tải ảnh gói đồ quyên góp tại quầy để lưu chứng từ đối soát.
+                    Chụp hoặc tải ảnh gói đồ quyên góp tại quầy để lưu chứng từ đối soát (tối đa 5 ảnh).
                   </p>
-                  <PhotoUpload disabled={isRecordBlocked || recording} onChange={onDonationPhotosChange} />
+                  <PhotoUpload maxFiles={5} disabled={isRecordBlocked || recording} onChange={onDonationPhotosChange} />
                 </div>
 
                 <Button
@@ -834,7 +893,7 @@ export default function DonationsPage() {
                           onClick={openReassignModal}
                           className="bg-[#006B2C] hover:bg-[#005523] text-white font-bold"
                         >
-                          Chuyển sang chiến dịch… ({selectedOnHoldIds.length})
+                          Chuyển sang chiến dịch khác ({selectedOnHoldIds.length})
                         </Button>
                       </div>
                     </div>
@@ -929,6 +988,10 @@ export default function DonationsPage() {
                                           href={src}
                                           target="_blank"
                                           rel="noreferrer"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            setPreviewPhotoUrl(src);
+                                          }}
                                           title="Xem ảnh hiện vật kích thước lớn"
                                           className="block"
                                         >
@@ -986,6 +1049,7 @@ export default function DonationsPage() {
                 >
                   <option value="">Mọi trạng thái</option>
                   <option value="PENDING_PICKUP">Chờ lấy (PENDING_PICKUP)</option>
+                  <option value="ON_HOLD">Tạm giữ (ON_HOLD)</option>
                   <option value="HANDED_OVER">Đã bàn giao (HANDED_OVER)</option>
                 </select>
 
@@ -1173,6 +1237,10 @@ export default function DonationsPage() {
                                                     href={src}
                                                     target="_blank"
                                                     rel="noreferrer"
+                                                    onClick={(e) => {
+                                                      e.preventDefault();
+                                                      setPreviewPhotoUrl(src);
+                                                    }}
                                                     title="Xem ảnh hiện vật kích thước lớn"
                                                     className="block group"
                                                   >
@@ -1194,9 +1262,17 @@ export default function DonationsPage() {
                                     </td>
                                     <td className="py-3 px-3 align-top">
                                       {row.status === 'ON_HOLD' ? (
-                                        <span className="inline-block rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-[10px] font-bold text-amber-900 whitespace-nowrap">
-                                          Tạm giữ
-                                        </span>
+                                        <div className="space-y-1">
+                                          <span className="inline-block rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-[10px] font-bold text-amber-900 whitespace-nowrap">
+                                            Tạm giữ
+                                          </span>
+                                          {row.holdReason && (
+                                            <p className="text-[10px] text-amber-900 font-medium">{row.holdReason}</p>
+                                          )}
+                                          {row.heldAt && (
+                                            <p className="text-[10px] text-textSecondary">Tạm giữ lúc: {date(row.heldAt)}</p>
+                                          )}
+                                        </div>
                                       ) : isPending ? (
                                         <div className="space-y-1">
                                           <span className="inline-block rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-800">
@@ -1204,7 +1280,8 @@ export default function DonationsPage() {
                                           </span>
                                           {row.reassignedFromCampaignTitle && (
                                             <p className="text-[10px] text-textSecondary">
-                                              Chuyển từ: <strong>{row.reassignedFromCampaignTitle}</strong>
+                                              Chuyển từ chiến dịch <strong>{row.reassignedFromCampaignTitle}</strong>
+                                              {row.reassignedAt ? ` (${date(row.reassignedAt)})` : ''}
                                             </p>
                                           )}
                                         </div>
@@ -1218,6 +1295,12 @@ export default function DonationsPage() {
                                           )}
                                           {row.handedOverAt && (
                                             <p className="text-[10px] text-textSecondary">{date(row.handedOverAt)}</p>
+                                          )}
+                                          {row.reassignedFromCampaignTitle && (
+                                            <p className="text-[10px] text-textSecondary">
+                                              Chuyển từ chiến dịch <strong>{row.reassignedFromCampaignTitle}</strong>
+                                              {row.reassignedAt ? ` (${date(row.reassignedAt)})` : ''}
+                                            </p>
                                           )}
                                         </div>
                                       )}
@@ -1400,6 +1483,95 @@ export default function DonationsPage() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Modal Bỏ ẩn chiến dịch */}
+      <Modal
+        isOpen={Boolean(unhideTarget)}
+        onClose={() => { if (!unhiding) setUnhideTarget(null); }}
+        title="Bỏ ẩn chiến dịch"
+        size="sm"
+      >
+        <div className="space-y-4 text-xs">
+          {unhideTarget && (
+            <div className="rounded-xl border border-neutral bg-[#F6F9F4] p-3 space-y-1">
+              <p className="font-bold text-text">{unhideTarget.title}</p>
+              <p className="text-textSecondary">{unhideTarget.organizationName}</p>
+            </div>
+          )}
+
+          <div>
+            <label htmlFor="unhide-campaign-reason" className="block font-bold text-text mb-1">
+              Lý do bỏ ẩn <span className="text-red-600">*</span>
+            </label>
+            <textarea
+              id="unhide-campaign-reason"
+              rows={3}
+              value={unhideReason}
+              disabled={unhiding}
+              onChange={(e) => {
+                setUnhideReason(e.target.value);
+                if (unhideError) setUnhideError(null);
+              }}
+              placeholder="Nhập lý do bỏ ẩn chiến dịch (bắt buộc)..."
+              className="w-full rounded-xl border border-neutral bg-white px-3 py-2 text-xs text-text focus:border-[#006B2C] focus:outline-none"
+            />
+          </div>
+
+          {unhideError && (
+            <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+              {unhideError}
+            </div>
+          )}
+
+          <div className="flex gap-2 justify-end pt-1">
+            <Button variant="outline" disabled={unhiding} onClick={() => setUnhideTarget(null)}>
+              Hủy
+            </Button>
+            <Button
+              variant="primary"
+              loading={unhiding}
+              disabled={unhiding || !unhideReason.trim()}
+              onClick={handleConfirmUnhide}
+              className="bg-[#006B2C] hover:bg-[#005523] text-white font-bold"
+            >
+              Xác nhận bỏ ẩn
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal Xem lớn ảnh quyên góp */}
+      <Modal
+        isOpen={Boolean(previewPhotoUrl)}
+        onClose={() => setPreviewPhotoUrl(null)}
+        title="Ảnh hiện vật quyên góp"
+        size="lg"
+      >
+        {previewPhotoUrl && (
+          <div className="space-y-3 text-xs">
+            <div className="flex items-center justify-center rounded-xl bg-black/5 overflow-hidden max-h-[72vh]">
+              <img
+                src={previewPhotoUrl}
+                alt="Ảnh hiện vật quyên góp kích thước lớn"
+                className="max-h-[70vh] max-w-full object-contain rounded-lg"
+              />
+            </div>
+            <div className="flex items-center justify-between pt-1">
+              <a
+                href={previewPhotoUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-[#006B2C] hover:underline"
+              >
+                Mở ảnh gốc trong tab mới ↗
+              </a>
+              <Button variant="outline" size="sm" onClick={() => setPreviewPhotoUrl(null)}>
+                Đóng
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </Page>
   );
