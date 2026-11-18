@@ -1,7 +1,7 @@
 import { WarehouseHistoryTabs } from '../components/WarehouseHistoryTabs.jsx';
 import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Page, ResourceState, Pager, money } from '../components/WarehouseUi.jsx';
+import { Page, ResourceState, Pager, Status, money } from '../components/WarehouseUi.jsx';
 import Button from '../../../components/common/Button.jsx';
 import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
 import { consignmentService } from '../services/warehouseApi.js';
@@ -95,31 +95,47 @@ export default function ConsignmentListPage() {
       <WarehouseHistoryTabs type="INSPECTION">
         {/* THẺ GHIM ĐƠN VỪA THAO TÁC GẦN ĐÂY */}
         {lastConsignment && (
-          <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl text-xs text-[#92400E] shadow-sm">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-bold text-[#D97706]">Đơn vừa mở gần đây:</span>
-              <span className="font-semibold text-[#191C19]">{lastConsignment.name}</span>
-              <span className="text-[#717971]">({lastConsignment.formId})</span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FEA619] text-[#191C19]">
-                {lastConsignment.status}
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-surface border border-neutral rounded-2xl text-xs shadow-sm">
+            <div className="flex flex-wrap items-center gap-2.5 min-w-0">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-textSecondary">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                Đơn vừa mở gần đây
               </span>
+              <span className="text-neutral">·</span>
+              <span className="font-bold text-text truncate">{lastConsignment.name}</span>
+              <span className="font-mono text-[11px] text-textSecondary bg-background px-2 py-0.5 rounded-md border border-neutral/60">
+                #{String(lastConsignment.formId || '').slice(0, 8)}
+              </span>
+              <Status>{lastConsignment.status}</Status>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 shrink-0">
               {lastConsignment.status && lastConsignment.status !== currentStatus && (
                 <button
                   type="button"
                   onClick={() => handleTabChange(lastConsignment.status)}
-                  className="text-xs text-[#5B6776] underline hover:text-[#191C19]"
+                  className="px-3 py-1.5 rounded-xl border border-neutral bg-background text-xs font-semibold text-textSecondary hover:text-text hover:bg-neutral/20 transition-colors cursor-pointer"
                 >
                   Mở tab {TABS.find((t) => t.key === lastConsignment.status)?.label || lastConsignment.status}
                 </button>
               )}
               <Link
                 to={`/moderator/consignments/${encodeURIComponent(lastConsignment.formId)}`}
-                className="font-bold text-[#006B2C] hover:underline flex items-center gap-1"
+                className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-hover transition-colors shadow-xs"
               >
                 Tiếp tục kiểm định →
               </Link>
+              <button
+                type="button"
+                aria-label="Ẩn thông báo đơn vừa mở"
+                onClick={() => {
+                  setLastConsignment(null);
+                  try { sessionStorage.removeItem('rehome_last_consignment'); } catch { }
+                }}
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-textSecondary hover:text-text hover:bg-background transition-colors cursor-pointer"
+                title="Ẩn"
+              >
+                ✕
+              </button>
             </div>
           </div>
         )}
@@ -147,8 +163,28 @@ export default function ConsignmentListPage() {
         </div>
 
         {/* 2. KHUNG LƯU Ý HƯỚNG DẪN DUYỆT TRÊN ẢNH (KD-01) */}
-        <div className="p-3.5 rounded-xl border border-neutral bg-[#F6F9F4] text-xs text-text leading-relaxed shadow-sm">
-          <strong>Ở bước này bạn duyệt trên ảnh, chưa thấy hàng thật.</strong> Duyệt nghĩa là mời Member mang sản phẩm đến kho trong thời hạn được thông báo, chưa phải cam kết nhận hàng. Kiểm định thật diễn ra tại quầy.
+        <div className="flex items-start gap-3 px-4 py-3 rounded-2xl border border-neutral border-l-4 border-l-primary bg-surface text-xs shadow-xs">
+          <svg
+            className="w-4 h-4 text-primary shrink-0 mt-0.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+          </svg>
+          <div className="space-y-0.5 leading-relaxed">
+            <p className="font-bold text-text">
+              Ở bước này bạn duyệt trên ảnh, chưa thấy hàng thật.
+            </p>
+            <p className="text-textSecondary">
+              Duyệt nghĩa là mời Member mang sản phẩm đến kho trong thời hạn được thông báo, chưa phải cam kết nhận hàng. Kiểm định thật diễn ra tại quầy.
+            </p>
+          </div>
         </div>
 
         <ResourceState resource={resource} empty={!rawItems.length} />
