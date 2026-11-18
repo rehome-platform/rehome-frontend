@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
+import Spinner from '../../../components/common/Spinner.jsx';
 import { inventoryService } from '../services/warehouseApi.js';
 import { usePhase2 } from '../hooks/warehouseHooks.jsx';
 import { normalizeError } from '../models/warehouseModel.js';
@@ -197,7 +198,7 @@ export default function PhotoUpload({ onChange, disabled = false }) {
                 {/* Trạng thái Uploading / Tiến độ */}
                 {item.status === 'UPLOADING' && (
                   <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center p-3 text-white z-30 space-y-1">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mb-1" />
+                    <Spinner size="sm" color="#ffffff" className="mb-1" />
                     <span className="text-[11px] font-semibold">{item.progress}%</span>
                     <div className="w-full bg-white/30 h-1.5 rounded-full overflow-hidden">
                       <div className="bg-[#006B2C] h-full" style={{ width: `${item.progress}%` }} />

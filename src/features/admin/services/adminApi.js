@@ -123,6 +123,17 @@ export const adminApi = {
     return unwrap(res);
   },
 
+  async getBanPreview(accountId) {
+    const res = await baseApi.get(API_ENDPOINTS.ADMIN.BAN_ACCOUNT_PREVIEW(accountId));
+    const data = unwrap(res) || {};
+    return {
+      pendingReportCount: Number(data.pendingReportCount ?? data.pendingReportsCount ?? 0),
+      pendingPickupDonationCount: Number(
+        data.pendingPickupDonationCount ?? data.pendingDonationsCount ?? data.pendingPickupCount ?? 0,
+      ),
+    };
+  },
+
   async banAccount(accountId, reason) {
     const res = await baseApi.post(API_ENDPOINTS.ADMIN.BAN_ACCOUNT(accountId), { reason });
     return unwrap(res);

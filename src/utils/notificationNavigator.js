@@ -98,10 +98,17 @@ export function resolveNotificationUrl(notification, userRole) {
         ? `/moderator/verifications?tab=LEGAL_CHANGES&id=${encodeURIComponent(id)}`
         : '/moderator/verifications?tab=LEGAL_CHANGES';
 
+    case 'DONATION_REASSIGN':
+    case 'DONATION_ON_HOLD':
+      return id
+        ? `/moderator/donations?tab=ON_HOLD&donationId=${encodeURIComponent(id)}`
+        : '/moderator/donations?tab=ON_HOLD';
+
     case 'DONATION':
     case 'DONATION_RECORDED':
     case 'DONATION_HANDOVER':
     case 'DONATION_PICKUP':
+    case 'DONATION_REASSIGNED':
       return id
         ? `/moderator/donations?donationId=${encodeURIComponent(id)}`
         : '/moderator/donations';
@@ -116,6 +123,7 @@ export function resolveNotificationUrl(notification, userRole) {
       return '/moderator/reports';
 
     case 'VIOLATION_REPORT':
+    case 'VIOLATION_REPORT_HANDLED':
       return id ? `/moderator/reports?id=${encodeURIComponent(id)}` : '/moderator/reports';
 
     case 'INVENTORY':

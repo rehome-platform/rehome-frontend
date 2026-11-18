@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 import { Button, Badge } from '../../../components/common/index.js';
+import Spinner from '../../../components/common/Spinner.jsx';
 import { violationReportService } from '../services/violationReportApi.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import { formatDateTime, formatDate } from '../../../utils/formatters.js';
@@ -118,9 +119,17 @@ export default function ViolationReportsPage() {
   const [selectedAction, setSelectedAction] = useState('REMOVE_POST');
   const [actionReason, setActionReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const listCacheRef = useRef({});
 
-  // Tải danh sách báo cáo từ API thật GET /violation-reports
-  const fetchReports = useCallback(async () => {
+  // Tải danh sách báo cáo từ API thật GET /violation-reports (có cache theo tab/filter)
+  const fetchReports = useCallback(async ({ force = false } = {}) => {
+    const cacheKey = `${statusFilter}:${typeFilter}`;
+    if (!force && Array.isArray(listCacheRef.current[cacheKey])) {
+      setReports(listCacheRef.current[cacheKey]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
@@ -129,6 +138,7 @@ export default function ViolationReportsPage() {
         type: typeFilter,
       });
       const list = res?.data || [];
+      listCacheRef.current[cacheKey] = list;
       setReports(list);
 
       // Làm giàu thông tin hiển thị (tên tổ chức & nội dung tóm tắt) cho các dòng trong hàng đợi VP-01
@@ -215,7 +225,7 @@ export default function ViolationReportsPage() {
     setSelectedReport(null);
     setSelectedReportId(null);
     setSearchParams({});
-    fetchReports();
+    fetchReports({ force: true });
   };
 
   // Xác nhận xử lý quyết định vi phạm
@@ -239,9 +249,19 @@ export default function ViolationReportsPage() {
       const label = ACTION_LABEL_MAP[selectedAction] || selectedAction;
       toast.success(`Đã thực thi [${label}] thành công!`);
 
+      // Optimistic UI: cập nhật trực tiếp trạng thái dòng trên bảng và cache, không reload toàn bộ bảng
+      const nextStatus = isDismiss ? 'DISMISSED' : 'RESOLVED';
+      setReports((prev) => {
+        const updated = prev
+          .map((item) => (String(item.id) === String(selectedReport.id) ? { ...item, status: nextStatus } : item))
+          .filter((item) => (statusFilter === 'PENDING' ? String(item.id) !== String(selectedReport.id) : true));
+        listCacheRef.current[`${statusFilter}:${typeFilter}`] = updated;
+        return updated;
+      });
+      setSelectedReport((prev) => (prev ? { ...prev, status: nextStatus } : prev));
+      delete detailsCacheRef.current[selectedReport.id];
       // Tải lại chi tiết để hiển thị kết quả đã xử lý
       await loadDetail(selectedReport.id);
-      fetchReports();
     } catch (err) {
       console.error('Lỗi khi xử lý báo cáo vi phạm:', err);
       toast.error(err?.message || 'Có lỗi xảy ra khi xử lý báo cáo.');
@@ -348,7 +368,7 @@ export default function ViolationReportsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-background border-b border-neutral text-[11px] uppercase font-semibold text-textSecondary tracking-wider">
+                    <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
                       <th className="py-3 px-3.5">Loại đối tượng</th>
                       <th className="py-3 px-3.5">Mã đối tượng (Target ID)</th>
                       <th className="py-3 px-3.5 text-center">Số lượt báo cáo</th>
@@ -362,8 +382,8 @@ export default function ViolationReportsPage() {
                       <tr>
                         <td colSpan="6" className="py-12 text-center text-textSecondary">
                           <div className="flex flex-col items-center justify-center gap-2">
-                            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                            <span>Đang nạp dữ liệu báo cáo vi phạm từ máy chủ...</span>
+                            <Spinner size="md" />
+                            <span>Đang nạp dữ liệu báo cáo vi phạm từ máy chủ…</span>
                           </div>
                         </td>
                       </tr>
@@ -450,9 +470,15 @@ export default function ViolationReportsPage() {
                               </span>
                             </td>
 
-                            {/* Lý do báo cáo mẫu */}
-                            <td className="py-3.5 px-3.5 text-textSecondary max-w-xs truncate" title={rep.sampleReason}>
-                              "{rep.sampleReason || 'Không có mô tả chi tiết'}"
+                            {/* Lý do báo cáo mẫu & Lý do đóng (nếu đã xử lý) */}
+                            <td className="py-3.5 px-3.5 text-textSecondary max-w-xs" title={rep.resolutionReason || rep.sampleReason}>
+                              <p className="truncate">"{rep.sampleReason || 'Không có mô tả chi tiết'}"</p>
+                              {(rep.resolutionReason || rep.resolutionNote || rep.status === 'RESOLVED') &&
+                                (rep.resolutionReason || rep.resolutionNote) && (
+                                  <p className="mt-1 inline-block rounded-md bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+                                    Lý do đóng: {rep.resolutionReason || rep.resolutionNote}
+                                  </p>
+                                )}
                             </td>
 
                             {/* Thời gian */}
@@ -786,8 +812,23 @@ export default function ViolationReportsPage() {
                     </div>
 
                     {isResolvedOrDismissed ? (
-                      <div className="p-4 rounded-xl bg-background border border-neutral text-xs text-textSecondary text-center space-y-2">
-                        <span>🔒 Đối tượng này đã được quyết định xử lý xong.</span>
+                      <div className="p-4 rounded-xl bg-background border border-neutral text-xs text-textSecondary space-y-2">
+                        <span className="font-bold text-text block">🔒 Đối tượng này đã được quyết định xử lý xong.</span>
+                        {(selectedReport.resolutionReason || selectedReport.resolutionNote) && (
+                          <p className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-emerald-900 font-semibold">
+                            Lý do xử lý: {selectedReport.resolutionReason || selectedReport.resolutionNote}
+                          </p>
+                        )}
+                        {(selectedReport.resolvedByName || selectedReport.resolvedBy || selectedReport.resolvedAt) && (
+                          <p className="text-[11px] text-textSecondary">
+                            {selectedReport.resolvedByName || selectedReport.resolvedBy
+                              ? `Người xử lý: ${selectedReport.resolvedByName || selectedReport.resolvedBy}`
+                              : ''}
+                            {selectedReport.resolvedAt
+                              ? `${selectedReport.resolvedByName || selectedReport.resolvedBy ? ' · ' : 'Thời điểm: '}${formatDateTime(selectedReport.resolvedAt)}`
+                              : ''}
+                          </p>
+                        )}
                         <p className="text-[11px]">
                           Mọi báo cáo PENDING cùng đối tượng đã được đóng tự động.
                         </p>

@@ -802,6 +802,35 @@ function LockAccountModal({
   lockModalAccount, lockReason, lockError, isLocking,
   setLockModalAccount, setLockReason, setLockError, handleConfirmLock,
 }) {
+  const roleStr = String(lockModalAccount?.role || '').toUpperCase();
+  const isOrgAccount =
+    roleStr.includes('ORG') || String(lockModalAccount?.role || '').toLowerCase().includes('tổ chức');
+  const [banPreview, setBanPreview] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  useEffect(() => {
+    if (!lockModalAccount?.id || !isOrgAccount) {
+      setBanPreview(null);
+      return undefined;
+    }
+    let cancelled = false;
+    setPreviewLoading(true);
+    adminApi
+      .getBanPreview(lockModalAccount.id)
+      .then((res) => {
+        if (!cancelled) setBanPreview(res);
+      })
+      .catch(() => {
+        if (!cancelled) setBanPreview(null);
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [lockModalAccount?.id, isOrgAccount]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
       <div className="w-full max-w-lg bg-white rounded-2xl border border-[#DDE5D9] shadow-2xl p-6 sm:p-7 space-y-4">
@@ -842,6 +871,23 @@ function LockAccountModal({
             {lockModalAccount.role}
           </span>
         </div>
+
+        {isOrgAccount && (
+          <div className="p-3 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] text-xs text-[#92400E] leading-relaxed">
+            {previewLoading ? (
+              <span>Đang kiểm tra báo cáo và lượt quyên góp liên quan...</span>
+            ) : banPreview ? (
+              <span>
+                Sẽ tự đóng <strong>{banPreview.pendingReportCount}</strong> báo cáo đang chờ và tạm giữ{' '}
+                <strong>{banPreview.pendingPickupDonationCount}</strong> lượt quyên góp chờ lấy.
+              </span>
+            ) : (
+              <span>
+                Các báo cáo đang chờ liên quan đến tổ chức sẽ được đóng tự động và các lượt quyên góp chờ lấy sẽ chuyển sang trạng thái tạm giữ.
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Textarea Reason */}
         <div>

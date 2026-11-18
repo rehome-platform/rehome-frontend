@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
+import Spinner from '../../../components/common/Spinner.jsx';
 import { queueService, inventoryService } from '../services/warehouseApi.js';
 import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
 import { listItems, ownsClaim } from '../models/warehouseModel.js';
@@ -128,7 +129,12 @@ export default function WarehouseHomePage() {
         </div>
       )}
 
-      {loading && <p role="status">Đang tải dữ liệu…</p>}
+      {loading && (
+        <div role="status" className="flex items-center gap-2.5 py-2 text-sm text-textSecondary">
+          <Spinner size="sm" />
+          <span>Đang tải dữ liệu…</span>
+        </div>
+      )}
       {firstError && <ResourceState resource={firstError} empty={false} />}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -148,7 +154,7 @@ export default function WarehouseHomePage() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[560px] text-left text-xs">
                 <thead>
-                  <tr className="border-b border-neutral text-xs font-semibold uppercase tracking-wider text-textSecondary bg-[#FAFBF9]">
+                  <tr className="border-b border-neutral text-xs font-semibold text-textSecondary bg-[#FAFBF9] whitespace-nowrap">
                     <th className="py-2.5 px-3">Loại việc</th>
                     <th className="py-2.5 px-3">Mã</th>
                     <th className="py-2.5 px-3">Đối tượng</th>

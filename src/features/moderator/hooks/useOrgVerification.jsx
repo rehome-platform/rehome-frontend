@@ -240,7 +240,13 @@ export function useOrgVerification() {
     const orgId = selectedOrg.refId || selectedOrg.targetId || selectedOrg.organizationId || selectedOrg.id;
     try {
       await orgVerificationService.approveOrg(orgId, auditNote);
-      await loadData();
+      // Optimistic UI: cập nhật trực tiếp trạng thái dòng trong state, không reload toàn bộ bảng
+      setOrgsQueue((prev) =>
+        prev.map((item) => {
+          const itemId = item.refId || item.targetId || item.organizationId || item.id;
+          return String(itemId) === String(orgId) ? { ...item, status: 'APPROVED' } : item;
+        }),
+      );
       notify('success', `Đã xác thực tổ chức ${selectedOrg.name} thành công! Tổ chức đã được cấp quyền tạo chiến dịch tiếp nhận quyên góp.`);
       setViewMode('LIST');
       setSelectedOrg(null);
@@ -256,7 +262,14 @@ export function useOrgVerification() {
     const orgId = selectedOrg.refId || selectedOrg.targetId || selectedOrg.organizationId || selectedOrg.id;
     try {
       await orgVerificationService.rejectOrg(orgId, rejectReason);
-      await loadData();
+      setOrgsQueue((prev) =>
+        prev.map((item) => {
+          const itemId = item.refId || item.targetId || item.organizationId || item.id;
+          return String(itemId) === String(orgId)
+            ? { ...item, status: 'REJECTED', rejectReason }
+            : item;
+        }),
+      );
       setIsRejectModalOpen(false);
       setRejectReason('');
       setViewMode('LIST');
@@ -272,7 +285,9 @@ export function useOrgVerification() {
   const handleApproveLegalChange = async (changeId) => {
     try {
       await orgVerificationService.approveLegalChange(changeId);
-      await loadData();
+      setLegalChanges((prev) =>
+        prev.map((item) => (String(item.id) === String(changeId) ? { ...item, status: 'APPROVED' } : item)),
+      );
       notify('success', 'Đã duyệt yêu cầu đổi thông tin pháp lý thành công! Ghi nhận vào Audit Log hệ thống.');
       setViewMode('LIST');
       setSelectedChange(null);
@@ -286,7 +301,11 @@ export function useOrgVerification() {
   const handleRejectLegalChange = async (changeId, reason = 'Thông tin pháp lý không hợp lệ') => {
     try {
       await orgVerificationService.rejectLegalChange(changeId, reason);
-      await loadData();
+      setLegalChanges((prev) =>
+        prev.map((item) =>
+          String(item.id) === String(changeId) ? { ...item, status: 'REJECTED', rejectReason: reason } : item,
+        ),
+      );
       notify('success', 'Đã từ chối yêu cầu đổi thông tin pháp lý.');
       setViewMode('LIST');
       setSelectedChange(null);

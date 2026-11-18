@@ -25,12 +25,14 @@ export function Phase2Provider({ children }) {
 }
 function ScopedSession({ user, warehouse, children }) {
   const controller = useMemo(() => new AbortController(), []);
+  const cache = useMemo(() => new Map(), []);
   const mounted = useRef(false);
   const [identity, setIdentity] = useState(null);
   useEffect(() => {
     mounted.current = true;
     const abort = () => {
       controller.abort();
+      cache.clear();
       setIdentity(null);
     };
     window.addEventListener('auth:expired', abort);
@@ -58,6 +60,7 @@ function ScopedSession({ user, warehouse, children }) {
       identity,
       setIdentity,
       signal: controller.signal,
+      cache,
       warehouse: {
         ...warehouse,
         name: warehouse.name || (isFixtureMode ? 'Điểm kí gửi A · dữ liệu thử' : 'Chưa có thông tin điểm kí gửi'),
@@ -74,11 +77,15 @@ export function usePhase2() {
 export function useResource(
   loader,
   dependencies = [],
-  { enabled = true, poll = false, done = () => false, refreshInterval = 0 } = {},
+  { enabled = true, poll = false, done = () => false, refreshInterval = 0, cacheKey = null } = {},
 ) {
   const session = usePhase2();
-  const [state, setState] = useState({ data: null, loading: false, error: null });
+  const [state, setState] = useState(() => {
+    const cached = cacheKey && session?.cache?.has(cacheKey) ? session.cache.get(cacheKey) : null;
+    return { data: cached, loading: false, error: null };
+  });
   const [version, setVersion] = useState(0);
+  const forceReloadRef = useRef(false);
   const [pollExpired, setPollExpired] = useState(false);
   const [busy, setBusy] = useState(false);
   const loaderRef = useRef(loader);
@@ -100,10 +107,26 @@ export function useResource(
       mutations.current.forEach((controller) => controller.abort());
     };
   }, dependencies);
+  const setData = useCallback(
+    (updater) => {
+      setState((previous) => {
+        const nextData = typeof updater === 'function' ? updater(previous.data) : updater;
+        if (cacheKey && session?.cache) {
+          session.cache.set(cacheKey, nextData);
+        }
+        return { ...previous, data: nextData };
+      });
+    },
+    [cacheKey, session],
+  );
   const refresh = useCallback(() => {
+    forceReloadRef.current = true;
+    if (cacheKey && session?.cache) {
+      session.cache.delete(cacheKey);
+    }
     setState({ data: null, loading: true, error: null });
     setVersion((value) => value + 1);
-  }, []);
+  }, [cacheKey, session]);
   useEffect(() => {
     window.addEventListener('warehouse:changed', refresh);
     return () => window.removeEventListener('warehouse:changed', refresh);
@@ -111,6 +134,12 @@ export function useResource(
   useEffect(() => {
     if (!enabled || session.signal.aborted) {
       setState({ data: null, loading: false, error: null });
+      return;
+    }
+    const isForced = forceReloadRef.current;
+    forceReloadRef.current = false;
+    if (!isForced && !poll && !refreshInterval && cacheKey && session?.cache?.has(cacheKey)) {
+      setState({ data: session.cache.get(cacheKey), loading: false, error: null });
       return;
     }
     const controller = new AbortController();
@@ -144,6 +173,9 @@ export function useResource(
         failures = 0;
         complete = doneRef.current(data);
         terminal = false;
+        if (cacheKey && session?.cache) {
+          session.cache.set(cacheKey, data);
+        }
         setState({ data, loading: false, error: null });
       } catch (error) {
         if (controller.signal.aborted || current !== epoch.current) return;
@@ -195,7 +227,7 @@ export function useResource(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.scope, session.signal, enabled, poll, refreshInterval, version, ...dependencies]);
 
-  const mutate = async (action, { onSuccess, onUncertain, onError } = {}) => {
+  const mutate = async (action, { onSuccess, onUncertain, onError, skipRefresh = false } = {}) => {
     if (mutationLock.current || session.signal.aborted) return false;
     const controller = new AbortController();
     mutations.current.add(controller);
@@ -209,7 +241,9 @@ export function useResource(
       const result = await action({ scope: session.scope, signal: controller.signal });
       if (controller.signal.aborted) return false;
       await onSuccess?.(result);
-      refresh();
+      if (!skipRefresh) {
+        refresh();
+      }
       return true;
     } catch (error) {
       if (controller.signal.aborted) return false;
@@ -239,6 +273,7 @@ export function useResource(
     error: actionError || state.error,
     actionError,
     clearActionError: () => setActionError(null),
+    setData,
     refresh,
     mutate,
     busy,
