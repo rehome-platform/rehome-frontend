@@ -296,37 +296,42 @@ export function CounterConsignmentTasks({ taskGroups }) {
           {taskGroups.pendingForms.length}
         </span>
       </div>
-      {taskGroups.pendingForms.map((task) => (
-        <div
-          key={task.formId}
-          className="rounded-2xl border-2 border-[#2b2b2b] bg-white overflow-hidden shadow-sm"
-        >
-          <div className="bg-[#f4f4f4] border-b border-[#8a8a8a] px-4 py-2.5 flex items-center justify-between">
-            <span className="text-xs font-bold text-[#191C19]">
-              {task.status === 'APPROVED' ? 'Đã duyệt online — Tiếp nhận & Kiểm định' : 'Form ký gửi'}
-            </span>
-            <span className="text-[11px] text-[#5B6776]">
-              Form {task.formId} · <Status>{task.status}</Status>
-            </span>
-          </div>
-          <div className="p-4 flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="font-bold text-sm text-[#191C19]">{task.name || task.productName || task.formId}</p>
-              <p className="text-xs text-[#5B6776] mt-0.5">
-                {task.desiredPrice ? `Giá mong muốn: ${money(task.desiredPrice)}` : 'Đang có mặt tại quầy'}
-              </p>
+      {taskGroups.pendingForms.map((task) => {
+        const isReadyForInspection = task.status === 'APPROVED';
+        return (
+          <div
+            key={task.formId}
+            className="rounded-2xl border-2 border-[#2b2b2b] bg-white overflow-hidden shadow-sm"
+          >
+            <div className="bg-[#f4f4f4] border-b border-[#8a8a8a] px-4 py-2.5 flex items-center justify-between">
+              <span className="text-xs font-bold text-[#191C19]">
+                {isReadyForInspection ? 'Đã duyệt online — Tiếp nhận & Kiểm định' : 'Form ký gửi'}
+              </span>
+              <span className="text-[11px] text-[#5B6776]">
+                Form {task.formId} · <Status>{task.status}</Status>
+              </span>
             </div>
-            <Link
-              to={`/moderator/consignments/${encodeURIComponent(task.formId)}`}
-              state={{ form: task, identified: true }}
-            >
-              <Button className="bg-[#2b2b2b] text-white hover:bg-black text-xs font-bold px-4 py-2">
-                Bắt đầu kiểm định
-              </Button>
-            </Link>
+            <div className="p-4 flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="font-bold text-sm text-[#191C19]">{task.name || task.productName || task.formId}</p>
+                <p className="text-xs text-[#5B6776] mt-0.5">
+                  {task.desiredPrice ? `Giá mong muốn: ${money(task.desiredPrice)}` : 'Đang có mặt tại quầy'}
+                </p>
+              </div>
+              {isReadyForInspection && (
+                <Link
+                  to={`/moderator/consignments/${encodeURIComponent(task.formId)}`}
+                  state={{ form: task, identified: true }}
+                >
+                  <Button className="bg-[#2b2b2b] text-white hover:bg-black text-xs font-bold px-4 py-2">
+                    Bắt đầu kiểm định
+                  </Button>
+                </Link>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
