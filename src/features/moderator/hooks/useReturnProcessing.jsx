@@ -63,6 +63,8 @@ export function useReturnProcessing() {
   const [degradedSubmitting, setDegradedSubmitting] = useState(false);
   const resolvedDegradedReturns = useRef(new Set());
   const [degradedCaseState, setDegradedCaseState] = useState('CHO_KET_LUAN');
+  const [markLostTarget, setMarkLostTarget] = useState(null);
+  const [markLostSubmitting, setMarkLostSubmitting] = useState(false);
 
   const [evidenceImageUrls, setEvidenceImageUrls] = useState([]);
   const [evidenceUploading, setEvidenceUploading] = useState(false);
@@ -499,17 +501,21 @@ export function useReturnProcessing() {
   };
 
   // Mark Lost Parcel (TH-08)
-  const handleMarkLost = async (targetItem) => {
+  const handleMarkLost = (targetItem) => {
     const target = targetItem || selectedItem;
     if (!target || resolvingRef.current) return;
-    const confirmed = window.confirm(
-      `Xác nhận bưu kiện trả hàng ${target.code} đã thất lạc bởi bên vận chuyển? Hệ thống sẽ hoàn tiền cho người mua và tạo khiếu nại bảo hiểm với đơn vị giao vận.`
-    );
-    if (!confirmed) return;
+    setMarkLostTarget(target);
+  };
+
+  const handleConfirmMarkLost = async () => {
+    if (!markLostTarget || resolvingRef.current) return;
+    const target = markLostTarget;
     resolvingRef.current = true;
+    setMarkLostSubmitting(true);
     try {
       await returnService.markLost(target.id, 'Thất lạc trong quá trình vận chuyển bởi bưu tá GHN');
       await fetchReturns();
+      setMarkLostTarget(null);
       if (viewMode !== 'QUEUE') {
         setViewMode('QUEUE');
         setSelectedItem(null);
@@ -519,6 +525,7 @@ export function useReturnProcessing() {
       notify('error', 'Có lỗi khi báo thất lạc: ' + (err.message || ''));
     } finally {
       resolvingRef.current = false;
+      setMarkLostSubmitting(false);
     }
   };
 
@@ -634,6 +641,12 @@ export function useReturnProcessing() {
         rejectReason,
         setRejectReason,
         handleConfirmRejectRequest,
+      },
+      ReturnMarkLostDialog: {
+        markLostTarget,
+        onClose: () => setMarkLostTarget(null),
+        onConfirm: handleConfirmMarkLost,
+        submitting: markLostSubmitting,
       },
       ReturnOutcomeDialog: {
         isOutcomeModalOpen,

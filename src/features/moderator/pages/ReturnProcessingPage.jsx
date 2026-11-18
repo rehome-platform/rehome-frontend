@@ -3,6 +3,7 @@ import {
   ReturnCompareDialog,
   ReturnOutcomeDialog,
   ReturnRejectDialog,
+  ReturnMarkLostDialog,
   ReturnInspectionVerdict,
   ReturnInspectionProduct,
   ReturnReviewDecision,
@@ -170,6 +171,9 @@ export default function ReturnProcessingPage() {
 
         {/* MODAL: Từ chối yêu cầu trả (TH-02) */}
         <ReturnRejectDialog {...model.sections.ReturnRejectDialog} />
+
+        {/* MODAL: Xác nhận bưu kiện thất lạc (TH-08) */}
+        <ReturnMarkLostDialog {...model.sections.ReturnMarkLostDialog} />
 
         {/* MODAL: Xử lý món hàng TH-04 sau khi hoàn tiền */}
         <ReturnOutcomeDialog {...model.sections.ReturnOutcomeDialog} />

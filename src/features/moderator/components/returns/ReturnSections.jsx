@@ -676,6 +676,45 @@ export function ReturnRejectDialog({ isRejectModalOpen, setIsRejectModalOpen, re
   );
 }
 
+export function ReturnMarkLostDialog({ markLostTarget, onClose, onConfirm, submitting = false }) {
+  return (
+    <Modal
+      isOpen={Boolean(markLostTarget)}
+      onClose={() => { if (!submitting) onClose(); }}
+      title="Xác nhận bưu kiện thất lạc (TH-08)"
+    >
+      <div className="space-y-4 text-xs font-sans">
+        <p className="text-text leading-relaxed">
+          Xác nhận bưu kiện trả hàng <strong>{markLostTarget?.code}</strong> đã thất lạc bởi bên vận chuyển?
+        </p>
+        <p className="text-textSecondary leading-relaxed">
+          Hệ thống sẽ hoàn tiền cho người mua và tạo khiếu nại bảo hiểm với đơn vị giao vận.
+        </p>
+        <div className="flex justify-end gap-2 pt-2 border-t border-neutral">
+          <Button
+            size="sm"
+            variant="outline"
+            className="rounded-xl border-neutral"
+            disabled={submitting}
+            onClick={onClose}
+          >
+            Hủy
+          </Button>
+          <Button
+            size="sm"
+            loading={submitting}
+            disabled={submitting}
+            className="bg-error hover:bg-red-700 text-white font-bold rounded-xl px-4"
+            onClick={onConfirm}
+          >
+            Xác nhận thất lạc
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function ReturnVerdictForm({ inspectionVerdict, setInspectionVerdict, invalidReason, setInvalidReason }) {
   return (
     <div className="border border-neutral rounded-2xl p-4 bg-surface space-y-3 text-xs font-sans shadow-sm">

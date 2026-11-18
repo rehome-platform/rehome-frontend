@@ -409,7 +409,6 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
   });
 
   it('TH-08: allows marking a returning parcel as lost with buyer refund', async () => {
-    window.confirm = vi.fn(() => true);
     window.alert = vi.fn();
 
     render(
@@ -430,8 +429,10 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     const lostBtns = screen.getAllByRole('button', { name: /Báo thất lạc/i });
     fireEvent.click(lostBtns[0]);
 
+    const confirmBtn = await screen.findByRole('button', { name: /Xác nhận thất lạc/i });
+    fireEvent.click(confirmBtn);
+
     await waitFor(() => {
-      expect(window.confirm).toHaveBeenCalled();
       expect(window.alert).toHaveBeenCalled();
     });
   });
