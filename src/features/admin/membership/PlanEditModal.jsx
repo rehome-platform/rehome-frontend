@@ -468,7 +468,7 @@ export default function PlanEditModal({ isOpen, plan, onClose, onSuccess }) {
               onChange={(e) => handleFieldChange('featuredListing', e.target.checked)}
               className="rounded border-[#DDE5D9] text-[#006B2C] focus:ring-[#006B2C]"
             />
-            <span>Hiển thị tin nổi bật</span>
+            <span>Hiển thị tin nổi bật (hạng cao hơn được xếp trên)</span>
           </label>
 
           {!isFree && (

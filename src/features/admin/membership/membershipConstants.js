@@ -48,24 +48,22 @@ export const SUBSCRIPTION_STATUS_LABELS = {
   PENDING_PAYMENT: 'Chờ thanh toán',
 };
 
-export const MEMBERSHIP_PAYMENT_METHODS = ['WALLET', 'MOMO', 'VNPAY'];
-export const VALID_PAYMENT_METHODS = ['WALLET', 'MOMO', 'VNPAY'];
+export const MEMBERSHIP_PAYMENT_METHODS = ['WALLET', 'VNPAY'];
+export const VALID_PAYMENT_METHODS = ['WALLET', 'VNPAY'];
 
 export const PAYMENT_METHOD_LABELS = {
   WALLET: 'Ví ReHome',
-  MOMO: 'MoMo',
   VNPAY: 'VNPay',
   ADMIN_GRANT: 'Admin tặng',
 };
 
 export const MEMBERSHIP_PAYMENT_METHOD_LABELS = {
   WALLET: 'Ví ReHome',
-  MOMO: 'MoMo',
   VNPAY: 'VNPay',
 };
 
 export const VOUCHER_TYPE_LABELS = {
-  SHIPPING: 'Miễn phí vận chuyển',
+  SHIPPING: 'Giảm phí vận chuyển',
   ORDER_DISCOUNT: 'Giảm giá đơn hàng',
 };
 
