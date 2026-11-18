@@ -131,6 +131,10 @@ export default function MembershipPlansPage() {
           keyExtractor={(row) => row.id || row.tier}
           emptyMessage="Chưa có dữ liệu gói thành viên."
         />
+
+        <p className="text-xs text-[#5B6776]">
+          Lưu ý hiển thị trên sàn: sản phẩm của thành viên có tin nổi bật được ưu tiên đầu danh sách, hạng cao hơn được xếp trên.
+        </p>
       </div>
 
       <PlanEditModal

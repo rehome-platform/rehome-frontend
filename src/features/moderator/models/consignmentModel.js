@@ -90,12 +90,19 @@ function normalizeConsignmentConfig(data) {
 }
 
 function formTerms(data) {
+  const receiptObj = data.receipt || null;
+  const isReceiptVoided =
+    (receiptObj?.status === 'VOIDED' || Boolean(receiptObj?.voidedAt)) &&
+    !receiptObj?.replacedByReceiptId;
+  const activeReceiptId = isReceiptVoided
+    ? receiptObj?.replacedByReceiptId || null
+    : data.receiptId || receiptObj?.id || null;
   return {
     desiredPrice: Number(data.desiredPrice || 0),
     bringDeadline: data.bringInDeadline || data.bringDeadline || null,
     rejectReason: data.rejectReason || null,
-    receiptId: data.receiptId || data.receipt?.id || null,
-    receiptConfirmed: Boolean(data.receiptConfirmed || data.confirmedAt || data.receipt?.confirmedAt),
+    receiptId: activeReceiptId,
+    receiptConfirmed: Boolean(!isReceiptVoided && (data.receiptConfirmed || data.confirmedAt || receiptObj?.confirmedAt)),
     category: data.category?.name || data.category || data.categoryName || '',
     categoryName: data.categoryName || data.category?.name || data.category || '',
     brand: data.brand?.name || data.brand || data.brandName || '',

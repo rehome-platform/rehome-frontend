@@ -72,7 +72,9 @@ function formatCampaignPage(rawRes, { view = 'ACTIVE', q = '', page = 0, size = 
   let list = rawList.map(normalizeCampaign).filter(Boolean);
 
   // Enforce view filtering as fallback if backend ignores view=ACTIVE/HISTORY or returns locked orgs
-  list = list.filter((c) => (view === 'HISTORY' ? !isCampaignActive(c) : isCampaignActive(c)));
+  list = list.filter((c) =>
+    view === 'HISTORY' ? !isCampaignActive(c) : isCampaignActive(c) || c.status === 'HIDDEN',
+  );
 
   const trimmedQ = String(q || '').trim().toLowerCase();
   if (isArray && trimmedQ) {
@@ -240,7 +242,7 @@ export const donationService = {
     if (!anonymous && !trimmedName) {
       throw new Phase2Error('Vui lòng nhập tên người quyên góp hoặc chọn ẩn danh.', 400);
     }
-    const cleanPhotoUrls = Array.isArray(photoUrls) ? photoUrls.filter(Boolean) : [];
+    const cleanPhotoUrls = Array.isArray(photoUrls) ? photoUrls.filter(Boolean).slice(0, 5) : [];
     const res = await callBackend(
       {
         method: 'post',
@@ -250,7 +252,7 @@ export const donationService = {
           donorName: anonymous ? null : trimmedName,
           isAnonymous: anonymous,
           note: String(note || '').trim(),
-          photoUrls: cleanPhotoUrls,
+          ...(cleanPhotoUrls.length > 0 ? { photoUrls: cleanPhotoUrls } : {}),
         },
       },
       { signal: options?.signal },
@@ -289,6 +291,20 @@ export const donationService = {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.REASSIGN_DONATIONS(warehouseId),
         data: { donationIds, campaignId },
+      },
+      { signal: options?.signal },
+    );
+  },
+
+  unhideCampaign: async (campaignId, reason, options = {}) => {
+    if (!campaignId) throw new Phase2Error('Chưa xác định được chiến dịch.', 400);
+    const trimmedReason = String(reason || '').trim();
+    if (!trimmedReason) throw new Phase2Error('Vui lòng nhập lý do bỏ ẩn chiến dịch.', 400);
+    return callBackend(
+      {
+        method: 'patch',
+        url: API_ENDPOINTS.MODERATOR.UNHIDE_CAMPAIGN(campaignId),
+        data: { reason: trimmedReason },
       },
       { signal: options?.signal },
     );

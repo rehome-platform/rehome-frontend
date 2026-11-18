@@ -28,7 +28,7 @@ function readInitialSidebarState() {
 export default function ModeratorLayout({ children, apiColors = true }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, loggingOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(readInitialSidebarState);
   const [skuQuery, setSkuQuery] = useState('');
@@ -271,12 +271,15 @@ export default function ModeratorLayout({ children, apiColors = true }) {
           <button
             type="button"
             onClick={logout}
+            disabled={loggingOut}
             title="Đăng xuất"
             aria-label="Đăng xuất"
-            className="inline-flex items-center gap-1.5 hover:text-error hover:underline transition-colors"
+            className="inline-flex items-center gap-1.5 hover:text-error hover:underline transition-colors disabled:opacity-50"
           >
             <span aria-hidden="true" className="material-symbols-outlined text-[16px]">logout</span>
-            <span data-sidebar-label className={isSidebarCollapsed ? 'lg:hidden' : ''}>Đăng xuất</span>
+            <span data-sidebar-label className={isSidebarCollapsed ? 'lg:hidden' : ''}>
+              {loggingOut ? 'Đang đăng xuất…' : 'Đăng xuất'}
+            </span>
           </button>
         </div>
       </aside>

@@ -11,6 +11,9 @@ import {
 const ORDER_DISCOUNT_NOTE =
   'Voucher giảm đơn hàng bắt buộc theo phần trăm; phần giảm giá do nền tảng chịu (không trừ vào tiền người ký gửi) và bị chặn trần theo hoa hồng kỳ ký gửi.';
 
+const SHIPPING_NOTE =
+  'Voucher giảm phí vận chuyển áp một lần cho cả lần thanh toán (không vượt quá tổng phí vận chuyển).';
+
 /**
  * Convert API ratio (e.g. 0.10) to UI percentage (e.g. 10) without float artifacts.
  */
@@ -430,11 +433,9 @@ export default function VoucherTemplateModal({
           </div>
         </div>
 
-        {isOrderDiscount ? (
-          <div className="p-3 rounded-xl bg-[#F6F9F4] border border-[#006B2C]/20 text-xs text-[#1F2A37]">
-            {ORDER_DISCOUNT_NOTE}
-          </div>
-        ) : null}
+        <div className="p-3 rounded-xl bg-[#F6F9F4] border border-[#006B2C]/20 text-xs text-[#1F2A37]">
+          {isOrderDiscount ? ORDER_DISCOUNT_NOTE : SHIPPING_NOTE}
+        </div>
 
         {/* Cảnh báo thay đổi chưa lưu (cùng kiểu với trang Cấu hình tham số hệ thống) */}
         {dirtyFields.length > 0 && (

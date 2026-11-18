@@ -4,6 +4,7 @@ import { Badge, Button, Spinner } from '../../../components/common/index.js';
 import { formatCurrencyVND } from '../../../utils/formatters.js';
 import membershipAdminApi from '../services/membershipAdminApi.js';
 import GrantMembershipModal from './GrantMembershipModal.jsx';
+import CancelMembershipModal from './CancelMembershipModal.jsx';
 import {
   TIER_ORDER,
   TIER_LABELS,
@@ -48,6 +49,7 @@ export default function MembershipSubscriptionsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isGrantOpen, setIsGrantOpen] = useState(false);
+  const [cancellingSubscription, setCancellingSubscription] = useState(null);
 
   const seqRef = useRef(0);
 
@@ -241,12 +243,13 @@ export default function MembershipSubscriptionsPage() {
                 <th className="py-3 px-4 whitespace-nowrap">Chu kỳ</th>
                 <th className="py-3 px-4 text-right whitespace-nowrap">Giá đã trả</th>
                 <th className="py-3 px-4 whitespace-nowrap">Còn lại</th>
+                <th className="py-3 px-4 text-right whitespace-nowrap">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E2E8E0] text-sm text-[#1F2A37]">
               {loading && items.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-sm text-[#5B6776]">
+                  <td colSpan={7} className="py-10 text-center text-sm text-[#5B6776]">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Spinner size="lg" />
                       <span>Đang tải danh sách thành viên...</span>
@@ -255,7 +258,7 @@ export default function MembershipSubscriptionsPage() {
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-sm text-[#5B6776]">
+                  <td colSpan={7} className="py-10 text-center text-sm text-[#5B6776]">
                     Không có gói thành viên nào phù hợp.
                   </td>
                 </tr>
@@ -263,6 +266,10 @@ export default function MembershipSubscriptionsPage() {
                 items.map((item) => {
                   const hasDays = item.daysRemaining !== null && item.daysRemaining !== undefined;
                   const isExpiringSoon = hasDays && Number(item.daysRemaining) <= 3;
+                  const isTerminal =
+                    item.status === 'CANCELLED' ||
+                    item.status === 'EXPIRED' ||
+                    item.tier === 'FREE';
 
                   return (
                     <tr
@@ -295,6 +302,23 @@ export default function MembershipSubscriptionsPage() {
                         ) : (
                           '-'
                         )}
+                      </td>
+                      <td
+                        className="py-3 px-4 text-right whitespace-nowrap"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Button
+                          type="button"
+                          variant="danger"
+                          size="sm"
+                          disabled={isTerminal}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCancellingSubscription(item);
+                          }}
+                        >
+                          Hủy gói
+                        </Button>
                       </td>
                     </tr>
                   );
@@ -336,6 +360,13 @@ export default function MembershipSubscriptionsPage() {
         isOpen={isGrantOpen}
         onClose={() => setIsGrantOpen(false)}
         onSuccess={fetchSubscriptions}
+      />
+
+      <CancelMembershipModal
+        isOpen={Boolean(cancellingSubscription)}
+        onClose={() => setCancellingSubscription(null)}
+        onSuccess={fetchSubscriptions}
+        subscription={cancellingSubscription}
       />
     </div>
   );
