@@ -34,7 +34,6 @@ export function ConsignmentAccessNotice({  }) {
   return (
     <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-6 space-y-4">
       <div className="flex items-start gap-3">
-        <span className="text-2xl">⚠️</span>
         <div className="space-y-1">
           <h3 className="font-bold text-sm text-amber-900">
             Tài khoản hiện tại chưa được phép xem chi tiết ký gửi này

@@ -97,7 +97,7 @@ export default function ConsignmentListPage() {
         {lastConsignment && (
           <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl text-xs text-[#92400E] shadow-sm">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-bold text-[#D97706]">📌 Đơn vừa mở gần đây:</span>
+              <span className="font-bold text-[#D97706]">Đơn vừa mở gần đây:</span>
               <span className="font-semibold text-[#191C19]">{lastConsignment.name}</span>
               <span className="text-[#717971]">({lastConsignment.formId})</span>
               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FEA619] text-[#191C19]">

@@ -287,7 +287,7 @@ export function VerificationChecklist({ checklist, setChecklist, isEnterprise, s
           </span>
           {missingCccd && (
             <span className="block text-[10px] text-error font-medium mt-1">
-              ⚠️ Hồ sơ thiếu ảnh CCCD. Nếu xác thực, hệ thống sẽ từ chối vì chưa đủ hồ sơ tối thiểu. Hãy nhấn &quot;Từ chối kèm lý do&quot; để tổ chức bổ sung.
+              Hồ sơ thiếu ảnh CCCD. Nếu xác thực, hệ thống sẽ từ chối vì chưa đủ hồ sơ tối thiểu. Hãy nhấn &quot;Từ chối kèm lý do&quot; để tổ chức bổ sung.
             </span>
           )}
         </div>

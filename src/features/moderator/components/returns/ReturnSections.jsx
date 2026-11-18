@@ -547,7 +547,7 @@ export function DegradedCaseModal({
                       disabled={evidenceUploading || degradedSubmitting}
                       className="text-[10px] py-1 px-2 border-neutral"
                     >
-                      {evidenceUploading ? 'Đang tải…' : '📁 Tải ảnh từ máy'}
+                      {evidenceUploading ? 'Đang tải…' : 'Tải ảnh từ máy'}
                     </Button>
                   </div>
 
@@ -775,7 +775,7 @@ export function ReturnInspectionVerdict({
               onClick={handleFlagCounterfeit}
               className="px-3.5 py-2 rounded-xl border border-error bg-error-light text-error text-xs font-bold hover:bg-red-100 transition-colors"
             >
-              ⚠️ Báo nghi hàng giả
+              Báo nghi hàng giả
             </button>
           )}
           {handleOpenDegradedCase && (
@@ -784,7 +784,7 @@ export function ReturnInspectionVerdict({
               onClick={handleOpenDegradedCase}
               className="px-3.5 py-2 rounded-xl border border-secondary bg-[#FFFDF5] text-[#B45309] text-xs font-bold hover:bg-amber-100 transition-colors"
             >
-              📉 Báo hàng xuống cấp (TH-04 / KG-16)
+              Báo hàng xuống cấp (TH-04 / KG-16)
             </button>
           )}
         </div>

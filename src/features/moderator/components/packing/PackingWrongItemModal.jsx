@@ -88,7 +88,7 @@ export function PackingWrongItemModal({ isOpen, onClose, wrongItem, currentOrder
             .
           </p>
           <p className="font-bold text-[#BA1A1A]">
-            👉 Trả lại món này rồi lấy đúng món còn thiếu bên dưới.
+            Trả lại món này rồi lấy đúng món còn thiếu bên dưới.
           </p>
         </div>
 
