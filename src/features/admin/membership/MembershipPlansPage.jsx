@@ -115,12 +115,6 @@ export default function MembershipPlansPage() {
   return (
     <div className="space-y-4">
       <div className="p-6 bg-white rounded-xl border border-[#E2E8E0] space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold text-[#191C19]">Cấu hình gói thành viên</h2>
-          </div>
-        </div>
-
         {error && (
           <div className="flex items-center justify-between gap-3 rounded-xl border border-[#D92D20]/30 bg-[#FFF5F5] px-4 py-3 text-sm text-[#D92D20]">
             <span>{error}</span>

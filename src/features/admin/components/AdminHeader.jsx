@@ -36,17 +36,18 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
     if (activeTitle) return activeTitle;
     const path = location.pathname;
     if (path.startsWith('/admin/fund-ledger')) return 'Giao dịch';
-    if (path.startsWith('/admin/users')) return 'Quản lý Tài khoản';
-    if (path.startsWith('/admin/moderators')) return 'Quản lý Nhân sự';
+    if (path.startsWith('/admin/users')) return 'Quản lý tài khoản';
+    if (path.startsWith('/admin/moderators')) return 'Quản lý nhân sự';
     if (path.startsWith('/admin/ban-proposals')) return 'Đề xuất khóa tài khoản';
-    if (path.startsWith('/admin/warehouses')) return 'Quản lý Điểm kí gửi ReHome';
-    if (path.startsWith('/admin/configs')) return 'Cấu hình Tham số Hệ thống';
+    if (path.startsWith('/admin/warehouses')) return 'Quản lý điểm kí gửi ReHome';
+    if (path.startsWith('/admin/configs')) return 'Cấu hình tham số hệ thống';
     if (path.startsWith('/admin/audit-logs')) return 'Audit log';
     if (path.startsWith('/admin/violation-words')) return 'Quản lý từ ngữ vi phạm';
     if (path.startsWith('/admin/membership-plans')) return 'Cấu hình gói thành viên';
     if (/^\/admin\/membership-subscriptions\/.+/.test(path)) return 'Chi tiết gói thành viên';
     if (path.startsWith('/admin/membership-subscriptions')) return 'Danh sách thành viên';
     if (path.startsWith('/admin/voucher-templates')) return 'Quản lý voucher';
+    if (path.startsWith('/admin/receipt-clause-templates')) return 'Điều khoản biên nhận';
     return 'Tổng quan điều hành';
   };
 
@@ -82,7 +83,7 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
         </button>
 
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-[11px] font-semibold text-[#717971] uppercase tracking-wider hidden sm:inline shrink-0">
+          <span className="text-[11px] font-semibold text-[#717971] tracking-wider hidden sm:inline shrink-0">
             Hệ thống
           </span>
           <span className="text-xs text-[#E2E8E0] hidden sm:inline shrink-0">/</span>

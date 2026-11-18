@@ -50,6 +50,7 @@ import {
   MembershipSubscriptionsPage,
   MembershipSubscriptionDetailPage,
   VoucherTemplatesPage,
+  ReceiptClauseTemplatesPage,
 } from '../features/admin/pages/index.js';
 
 /**
@@ -255,6 +256,7 @@ export default function AppRouter() {
         <Route path="membership-subscriptions" element={<MembershipSubscriptionsPage />} />
         <Route path="membership-subscriptions/:id" element={<MembershipSubscriptionDetailPage />} />
         <Route path="voucher-templates" element={<VoucherTemplatesPage />} />
+        <Route path="receipt-clause-templates" element={<ReceiptClauseTemplatesPage />} />
         <Route path="system" element={<Navigate to="/admin/users" replace />} />
       </Route>
 

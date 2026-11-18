@@ -1,12 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Badge, Button, Modal, Table } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import { membershipAdminApi } from '../services/membershipAdminApi.js';
 import { VOUCHER_TYPE_LABELS } from './membershipConstants.js';
 import VoucherTemplateModal from './VoucherTemplateModal.jsx';
-
-const DEACTIVATE_NOTICE =
-  'Ngừng phát chỉ dừng cấp mã mới; các voucher đã phát cho thành viên vẫn giữ hiệu lực.';
 
 function formatVndCompact(value) {
   const num = Number(value || 0);
@@ -30,15 +27,12 @@ export default function VoucherTemplatesPage() {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [togglingId, setTogglingId] = useState(null);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [detailTemplate, setDetailTemplate] = useState(null);
-
-  const [deactivateTarget, setDeactivateTarget] = useState(null);
-  const [deactivating, setDeactivating] = useState(false);
-  const [deactivateError, setDeactivateError] = useState('');
-  const deactivatingRef = useRef(false);
 
   const loadTemplates = useCallback(async () => {
     setLoading(true);
@@ -61,6 +55,12 @@ export default function VoucherTemplatesPage() {
     loadTemplates();
   }, [loadTemplates]);
 
+  const filteredTemplates = useMemo(() => {
+    if (statusFilter === 'ACTIVE') return templates.filter((t) => t.active);
+    if (statusFilter === 'INACTIVE') return templates.filter((t) => !t.active);
+    return templates;
+  }, [templates, statusFilter]);
+
   const handleOpenCreate = () => {
     setEditingTemplate(null);
     setModalOpen(true);
@@ -71,34 +71,26 @@ export default function VoucherTemplatesPage() {
     setModalOpen(true);
   };
 
-  const handleOpenDeactivate = (template) => {
-    setModalOpen(false);
-    setDeactivateError('');
-    deactivatingRef.current = false;
-    setDeactivating(false);
-    setDeactivateTarget(template);
-  };
-
-  const handleConfirmDeactivate = async () => {
-    if (!deactivateTarget || deactivatingRef.current) return;
-    deactivatingRef.current = true;
-    setDeactivating(true);
-    setDeactivateError('');
+  // Bật/tắt ngay tại bảng, không cần hộp thoại xác nhận — có thể bật lại bất cứ lúc nào nên không
+  // phải thao tác một chiều/nguy hiểm như xoá
+  const handleToggleActive = async (template) => {
+    if (togglingId) return;
+    setTogglingId(template.id);
     try {
-      await membershipAdminApi.deactivateVoucherTemplate(deactivateTarget.id);
-      toast.success(`Đã ngừng phát mẫu voucher "${deactivateTarget.name}".`);
-      setDeactivateTarget(null);
+      if (template.active) {
+        await membershipAdminApi.deactivateVoucherTemplate(template.id);
+        toast.success(`Đã ngừng phát "${template.name}". Mã đã phát trước đó vẫn dùng được tới hết hạn.`);
+      } else {
+        await membershipAdminApi.activateVoucherTemplate(template.id);
+        toast.success(`Đã phát mã trở lại cho "${template.name}".`);
+      }
       await loadTemplates();
     } catch (err) {
       const msg =
-        err?.response?.data?.message ||
-        err?.message ||
-        'Không thể ngừng phát mẫu voucher.';
-      setDeactivateError(msg);
-      toast.error(`Ngừng phát thất bại: ${msg}`);
+        err?.response?.data?.message || err?.message || 'Không thể đổi trạng thái mẫu voucher.';
+      toast.error(msg);
     } finally {
-      deactivatingRef.current = false;
-      setDeactivating(false);
+      setTogglingId(null);
     }
   };
 
@@ -118,9 +110,30 @@ export default function VoucherTemplatesPage() {
     {
       header: 'Trạng thái',
       render: (row) => (
-        <Badge variant={row.active ? 'success' : 'default'}>
-          {row.active ? 'Đang phát' : 'Ngừng phát'}
-        </Badge>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={row.active}
+          disabled={togglingId === row.id}
+          onClick={() => handleToggleActive(row)}
+          title={row.active ? 'Đang phát — bấm để ngừng phát' : 'Đã ngừng phát — bấm để phát lại'}
+          className="flex items-center gap-2 group disabled:opacity-50"
+        >
+          <span
+            className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 ${
+              row.active ? 'bg-[#006B2C]' : 'bg-[#D9DEDA] group-hover:bg-[#C4CCC6]'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${
+                row.active ? 'translate-x-4' : 'translate-x-0.5'
+              }`}
+            />
+          </span>
+          <span className={`text-xs font-semibold ${row.active ? 'text-[#006B2C]' : 'text-[#5B6776]'}`}>
+            {row.active ? 'Đang phát' : 'Ngừng phát'}
+          </span>
+        </button>
       ),
     },
     {
@@ -144,7 +157,6 @@ export default function VoucherTemplatesPage() {
     <div className="p-6 bg-white rounded-xl border border-[#E2E8E0] space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-[#191C19]">Quản lý voucher</h2>
           <p className="text-xs text-[#5B6776] mt-0.5">
             Thiết lập mẫu voucher định kỳ phát cho các hạng thành viên.
           </p>
@@ -155,6 +167,26 @@ export default function VoucherTemplatesPage() {
         </Button>
       </div>
 
+      <div className="flex items-center gap-2">
+        <label htmlFor="voucher-status-filter" className="text-xs font-medium text-[#414942]">
+          Trạng thái:
+        </label>
+        <select
+          id="voucher-status-filter"
+          aria-label="Lọc theo trạng thái"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="rounded-xl border border-[#E2E8E0] bg-white px-3 py-2 text-xs font-medium text-[#191C19] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30"
+        >
+          <option value="ALL">Tất cả</option>
+          <option value="ACTIVE">Đang phát</option>
+          <option value="INACTIVE">Ngừng phát</option>
+        </select>
+        <span className="text-xs text-[#717971]">
+          {filteredTemplates.length}/{templates.length} mẫu
+        </span>
+      </div>
+
       {error ? (
         <div className="p-3 rounded-xl bg-[#FFF5F5] border border-[#D92D20]/30 text-xs text-[#D92D20]">
           {error}
@@ -163,7 +195,7 @@ export default function VoucherTemplatesPage() {
 
       <Table
         columns={columns}
-        data={templates}
+        data={filteredTemplates}
         loading={loading}
         emptyMessage="Chưa có mẫu voucher nào."
       />
@@ -173,7 +205,6 @@ export default function VoucherTemplatesPage() {
         onClose={() => setModalOpen(false)}
         template={editingTemplate}
         onSuccess={loadTemplates}
-        onDeactivate={handleOpenDeactivate}
       />
 
       <Modal
@@ -232,47 +263,6 @@ export default function VoucherTemplatesPage() {
             </div>
           </dl>
         )}
-      </Modal>
-
-      <Modal
-        isOpen={Boolean(deactivateTarget)}
-        onClose={() => !deactivating && setDeactivateTarget(null)}
-        title="Xác nhận ngừng phát mẫu voucher"
-        size="sm"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-[#1F2A37]">
-            Bạn có chắc muốn ngừng phát mẫu{' '}
-            <span className="font-semibold">{deactivateTarget?.name}</span>?
-          </p>
-          <div className="p-3 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-[#5B6776]">
-            {DEACTIVATE_NOTICE}
-          </div>
-          {deactivateError ? (
-            <div className="p-3 rounded-xl bg-[#FFF5F5] border border-[#D92D20]/30 text-xs text-[#D92D20]">
-              {deactivateError}
-            </div>
-          ) : null}
-          <div className="flex justify-end gap-3 pt-2">
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={deactivating}
-              onClick={() => setDeactivateTarget(null)}
-            >
-              Hủy
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              loading={deactivating}
-              disabled={deactivating}
-              onClick={handleConfirmDeactivate}
-            >
-              Xác nhận ngừng phát
-            </Button>
-          </div>
-        </div>
       </Modal>
     </div>
   );
