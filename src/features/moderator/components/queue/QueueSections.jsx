@@ -275,7 +275,6 @@ export const QUEUE_PRIMARY_LINK_CLASS =
 
 export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resource, handleClaim, setClaimTarget, linkTarget, setFeedback, setReleaseTarget, onCheckWithdrawal, onViewDetail }) {
   const rowRef = React.useRef(null);
-  const [previewOpen, setPreviewOpen] = React.useState(false);
   React.useEffect(() => {
     if (isFocused && !resource.loading) {
       rowRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
@@ -285,10 +284,6 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
   const isWithdrawal = item.type === 'WITHDRAWAL' || item.type === 'ITEM_WITHDRAWAL';
   const isPendingWithdrawalApproval = isWithdrawal && item.status === 'PENDING_APPROVAL';
   const subjectName = extractQueueSubjectName(item);
-  const thumbnailUrl = isWithdrawal
-    ? item.productImageUrl || item.imageUrl || item.photoUrl || firstPhotoUrl(item.photos)
-    : null;
-  const productTitle = item.targetName || item.productName || item.name || item.typeLabel;
 
   return (
     <tr
@@ -298,49 +293,14 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
         } ${isFocused ? 'bg-[#EBF1E8] ring-2 ring-inset ring-primary' : ''}`}
     >
       <td className="py-3 px-4 font-semibold text-text whitespace-nowrap align-middle">
-        <div className="flex items-center gap-2.5">
-          {isWithdrawal && (
-            thumbnailUrl ? (
-              <button
-                type="button"
-                onClick={() => setPreviewOpen(true)}
-                className="w-10 h-10 rounded-lg overflow-hidden border border-neutral bg-[#F8FAF8] shrink-0 cursor-pointer hover:ring-2 hover:ring-[#006B2C]/40 transition-shadow focus:outline-none focus:ring-2 focus:ring-[#006B2C]/40"
-                title={`Xem ảnh sản phẩm: ${productTitle}`}
-                aria-label={`Xem ảnh sản phẩm ${productTitle}`}
-              >
-                <img
-                  src={thumbnailUrl}
-                  alt={productTitle}
-                  className="w-full h-full object-cover"
-                />
-              </button>
-            ) : (
-              <span
-                aria-label="Không có ảnh sản phẩm"
-                className="w-10 h-10 rounded-lg border border-dashed border-neutral bg-[#F6F9F4] text-textSecondary/70 text-xs font-medium inline-flex items-center justify-center shrink-0 select-none"
-              >
-                —
-              </span>
-            )
+        <div className="flex items-center gap-2">
+          <span>{item.typeLabel}</span>
+          {isFocused && (
+            <span className="inline-block rounded-full bg-primary px-2.5 py-0.5 text-[10px] text-white font-medium whitespace-nowrap">
+              Việc vừa mở
+            </span>
           )}
-          <div className="flex items-center gap-2">
-            <span>{item.typeLabel}</span>
-            {isFocused && (
-              <span className="inline-block rounded-full bg-primary px-2.5 py-0.5 text-[10px] text-white font-medium whitespace-nowrap">
-                Việc vừa mở
-              </span>
-            )}
-          </div>
         </div>
-        {isWithdrawal && thumbnailUrl && (
-          <ReturnImageLightbox
-            isOpen={previewOpen}
-            onClose={() => setPreviewOpen(false)}
-            images={[thumbnailUrl]}
-            initialIndex={0}
-            categoryLabel={productTitle}
-          />
-        )}
       </td>
       <td className="py-3 px-3 text-text font-medium whitespace-nowrap align-middle">
         {subjectName}
@@ -376,8 +336,8 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
           <span className="text-textSecondary">—</span>
         )}
       </td>
-      <td className="py-3 px-4 text-right whitespace-nowrap align-middle">
-        <div className="flex items-center justify-end gap-2 flex-nowrap">
+      <td className="py-3 px-3 text-center whitespace-nowrap align-middle">
+        <div className="inline-flex items-center justify-center flex-nowrap">
           {!item.claimedBy && (
             <Button
               size="sm"
@@ -390,36 +350,17 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
             </Button>
           )}
           {isMine && (
-            <>
-              <Button
-                size="sm"
-                variant="outline"
-                className={QUEUE_SECONDARY_BTN_CLASS}
-                onClick={() => {
-                  setFeedback?.(null);
-                  setReleaseTarget(item);
-                }}
-              >
-                Nhả việc
-              </Button>
-              {isPendingWithdrawalApproval && onCheckWithdrawal ? (
-                <Button
-                  size="sm"
-                  variant="primary"
-                  className={QUEUE_PRIMARY_BTN_CLASS}
-                  onClick={() => onCheckWithdrawal(item)}
-                >
-                  Duyệt yêu cầu
-                </Button>
-              ) : linkTarget ? (
-                <Link
-                  to={linkTarget}
-                  className={QUEUE_PRIMARY_LINK_CLASS}
-                >
-                  {item.type === 'PACKING' ? 'Đóng gói' : 'Mở việc'}
-                </Link>
-              ) : null}
-            </>
+            <Button
+              size="sm"
+              variant="outline"
+              className={QUEUE_SECONDARY_BTN_CLASS}
+              onClick={() => {
+                setFeedback?.(null);
+                setReleaseTarget(item);
+              }}
+            >
+              Nhả việc
+            </Button>
           )}
           {isClaimedByOther && (
             <Button
@@ -430,6 +371,33 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
             >
               Đã có người nhận
             </Button>
+          )}
+        </div>
+      </td>
+      <td className="py-3 px-4 text-right whitespace-nowrap align-middle">
+        <div className="flex items-center justify-end gap-2 flex-nowrap">
+          {isMine ? (
+            isPendingWithdrawalApproval && onCheckWithdrawal ? (
+              <Button
+                size="sm"
+                variant="primary"
+                className={QUEUE_PRIMARY_BTN_CLASS}
+                onClick={() => onCheckWithdrawal(item)}
+              >
+                Duyệt yêu cầu
+              </Button>
+            ) : linkTarget ? (
+              <Link
+                to={linkTarget}
+                className={QUEUE_PRIMARY_LINK_CLASS}
+              >
+                {item.type === 'PACKING' ? 'Đóng gói' : 'Mở việc'}
+              </Link>
+            ) : (
+              <span className="text-textSecondary">—</span>
+            )
+          ) : (
+            <span className="text-textSecondary">—</span>
           )}
         </div>
       </td>

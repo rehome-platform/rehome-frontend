@@ -322,22 +322,32 @@ export default function ViolationReportsPage() {
                 </p>
               </div>
 
-              {/* Bộ lọc trạng thái nhanh */}
-              <div className="flex flex-wrap items-center gap-1.5 bg-background p-1 rounded-xl border border-neutral">
-                {STATUS_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setStatusFilter(opt.value)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-                      statusFilter === opt.value
-                        ? 'bg-primary text-white shadow-xs'
-                        : 'text-textSecondary hover:text-text hover:bg-surface'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+              {/* Bộ lọc trạng thái nhanh & nút Tải lại */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1.5 bg-background p-1 rounded-xl border border-neutral">
+                  {STATUS_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setStatusFilter(opt.value)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                        statusFilter === opt.value
+                          ? 'bg-primary text-white shadow-xs'
+                          : 'text-textSecondary hover:text-text hover:bg-surface'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  loading={loading}
+                  onClick={() => fetchReports({ force: true })}
+                  className="whitespace-nowrap"
+                >
+                  Tải lại
+                </Button>
               </div>
             </div>
 

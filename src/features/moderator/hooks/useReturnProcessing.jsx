@@ -633,6 +633,7 @@ export function useReturnProcessing() {
     tabCounts,
     loading,
     error,
+    fetchReturns,
     filteredRequests,
     historyRequests,
     quickDetailItem,

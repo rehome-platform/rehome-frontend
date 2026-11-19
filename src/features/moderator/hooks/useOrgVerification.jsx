@@ -346,8 +346,11 @@ export function useOrgVerification() {
     }
   };
 
+  const handleRefresh = () => Promise.all([loadData(), fetchExistingOrgs()]);
+
   return {
     viewMode,
+    handleRefresh,
     setActiveMainTab,
     activeMainTab,
     orgsQueue,

@@ -242,8 +242,18 @@ export default function OrgVerificationPage() {
                   Xác minh sai một hồ sơ là một tổ chức giả được phép kêu gọi quyên góp. Không có hạn gấp — làm kỹ hơn làm nhanh.
                 </p>
               </div>
-              <div className="text-xs text-textSecondary font-medium">
-                Cam kết phản hồi trong 5 ngày làm việc
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="text-xs text-textSecondary font-medium">
+                  Cam kết phản hồi trong 5 ngày làm việc
+                </div>
+                <Button
+                  variant="outline"
+                  loading={model.loading}
+                  onClick={() => model.handleRefresh?.()}
+                  className="whitespace-nowrap"
+                >
+                  Tải lại
+                </Button>
               </div>
             </div>
 

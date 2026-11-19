@@ -114,7 +114,8 @@ export default function ConsignmentQueuePage() {
                   <th className="py-2.5 px-3">Đã chờ</th>
                   <th className="py-2.5 px-3">Người nhận</th>
                   <th className="py-2.5 px-3 text-center w-24">Chi tiết</th>
-                  <th className="py-2.5 px-4 text-right">Hành động</th>
+                  <th className="py-2.5 px-3 text-center w-36">Nhận / Nhả việc</th>
+                  <th className="py-2.5 px-4 text-right w-32">Hành động</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral">
