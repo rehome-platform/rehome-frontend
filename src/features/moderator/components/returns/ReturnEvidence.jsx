@@ -1,24 +1,269 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import Button from '../../../../components/common/Button.jsx';
+import Modal from '../../../../components/common/Modal.jsx';
 
-export function ReturnPhotoGallery({ photos = [], label, emptyText }) {
-  return <div className="flex flex-wrap gap-2">
-    {photos.length ? photos.map((src, index) => <img key={`${src}-${index}`} src={src} alt={`${label} ${index + 1}`} className="w-28 h-32 object-contain rounded-xl border border-neutral" />)
-      : <p className="text-xs text-textSecondary">{emptyText}</p>}
-  </div>;
+export function ReturnImageLightbox({
+  isOpen,
+  onClose,
+  images = [],
+  initialIndex = 0,
+  categoryLabel = '',
+}) {
+  const safeImages = Array.isArray(images) ? images.filter(Boolean) : [];
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    if (isOpen) {
+      const clamped = Math.max(0, Math.min(Number(initialIndex) || 0, Math.max(0, safeImages.length - 1)));
+      setActiveIndex(clamped);
+    }
+  }, [isOpen, initialIndex, safeImages.length]);
+
+  useEffect(() => {
+    if (!isOpen || safeImages.length <= 1) return undefined;
+    const handleKey = (e) => {
+      if (e.key === 'ArrowLeft') {
+        setActiveIndex((prev) => (prev - 1 + safeImages.length) % safeImages.length);
+      } else if (e.key === 'ArrowRight') {
+        setActiveIndex((prev) => (prev + 1) % safeImages.length);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isOpen, safeImages.length]);
+
+  if (!isOpen || safeImages.length === 0) return null;
+  const currentUrl = safeImages[activeIndex] || safeImages[0];
+  const modalTitle = categoryLabel ? `Xem ảnh · ${categoryLabel}` : 'Xem ảnh chi tiết';
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={modalTitle} size="xl">
+      <div className="space-y-4 font-sans">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+          {categoryLabel ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F6F9F4] text-[#006B2C] border border-[#C6E1CE] font-semibold">
+              {categoryLabel}
+            </span>
+          ) : (
+            <span />
+          )}
+          <span className="text-textSecondary font-semibold">
+            {`Ảnh ${activeIndex + 1} / ${safeImages.length}`}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-center rounded-2xl border border-neutral bg-[#F8FAF8] p-3 min-h-[280px]">
+          <img
+            src={currentUrl}
+            alt={categoryLabel ? `${categoryLabel} ${activeIndex + 1}` : `Ảnh ${activeIndex + 1}`}
+            className="max-h-[70vh] max-w-full object-contain rounded-xl"
+          />
+        </div>
+
+        <div className="flex items-center justify-between gap-3 pt-1">
+          <div className="flex items-center gap-2">
+            {safeImages.length > 1 && (
+              <>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    setActiveIndex((prev) => (prev - 1 + safeImages.length) % safeImages.length)
+                  }
+                >
+                  Trước
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setActiveIndex((prev) => (prev + 1) % safeImages.length)}
+                >
+                  Sau
+                </Button>
+              </>
+            )}
+          </div>
+          <Button type="button" size="sm" variant="outline" onClick={onClose}>
+            Đóng
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
 }
 
-export function ReturnEvidence({ evidenceImageUrls = [], evidenceUploading = false, evidenceError = '', uploadEvidence, retryEvidence, removeEvidence }) {
-  return <div className="space-y-2 border border-neutral rounded-xl p-3 text-xs">
-    <label className="block font-bold">Ảnh bằng chứng kiểm hàng (2 đến 5 ảnh) *
-      <input aria-label="Tải ảnh bằng chứng kiểm hàng" type="file" accept="image/*" multiple disabled={evidenceUploading || evidenceImageUrls.length >= 5}
-        onChange={event => { const files = Array.from(event.target.files || []); event.target.value = ''; uploadEvidence?.(files); }} />
-    </label>
-    <p>{evidenceImageUrls.length} / 5 ảnh đã tải lên</p>
-    <div className="flex flex-wrap gap-2">{evidenceImageUrls.map((url, index) => <div key={`${url}-${index}`}>
-      <img src={url} alt={`Bằng chứng kiểm hàng ${index + 1}`} className="w-20 h-24 object-contain" />
-      <button type="button" disabled={evidenceUploading} onClick={() => removeEvidence?.(index)} aria-label={`Xóa ảnh bằng chứng ${index + 1}`}>Xóa ảnh</button>
-    </div>)}</div>
-    {evidenceUploading && <p role="status">Đang tải ảnh lên...</p>}
-    {evidenceError && <div role="alert">{evidenceError} <button type="button" disabled={evidenceUploading} onClick={() => retryEvidence?.()}>Thử tải lại</button></div>}
-  </div>;
+export function ReturnPhotoGallery({ photos = [], label, emptyText }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {photos.length ? (
+        photos.map((src, index) => (
+          <img
+            key={`${src}-${index}`}
+            src={src}
+            alt={`${label} ${index + 1}`}
+            className="w-28 h-32 object-cover rounded-xl border border-neutral bg-background"
+          />
+        ))
+      ) : (
+        <p className="text-xs text-textSecondary">{emptyText}</p>
+      )}
+    </div>
+  );
+}
+
+export function ReturnEvidence({
+  evidenceImageUrls = [],
+  evidenceUploading = false,
+  evidenceError = '',
+  uploadEvidence,
+  retryEvidence,
+  removeEvidence,
+}) {
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+  const count = evidenceImageUrls.length;
+  const remaining = Math.max(0, 5 - count);
+  const isCountValid = count >= 2 && count <= 5;
+  const isDisabled = evidenceUploading || count >= 5;
+
+  return (
+    <div className="rounded-2xl border border-[#C6E1CE] bg-[#F6F9F4]/70 p-4 space-y-3 text-xs font-sans shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="space-y-1">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#ECFDF3] text-[#067647] border border-[#ABEFC6]">
+            Bằng chứng kiểm hàng tại kho
+          </span>
+          <p className="font-bold text-text text-xs">Ảnh bằng chứng kiểm hàng (2 đến 5 ảnh) *</p>
+          <p className="text-[11px] text-textSecondary">
+            Ảnh chụp thực tế khi mở kiện hàng tại kho, tách biệt với ảnh đóng gói và ảnh người mua gửi.
+          </p>
+        </div>
+        <span
+          className={`px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${
+            isCountValid
+              ? 'bg-[#ECFDF3] text-[#067647] border-[#ABEFC6]'
+              : 'bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]'
+          }`}
+        >
+          {`${count} / 5 ảnh đã tải lên`}
+        </span>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2.5">
+        <label
+          className={`inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-xl border text-xs font-semibold transition-colors ${
+            isDisabled
+              ? 'border-neutral bg-white/60 text-textSecondary opacity-60 cursor-not-allowed'
+              : 'border-[#006B2C] bg-white text-[#006B2C] hover:bg-[#ECFDF3] cursor-pointer'
+          }`}
+        >
+          <span>
+            {evidenceUploading
+              ? 'Đang tải ảnh...'
+              : remaining === 0
+                ? 'Đã đủ tối đa 5 ảnh'
+                : count === 0
+                  ? 'Chọn ảnh kiểm hàng (2–5 ảnh)'
+                  : `Thêm ảnh (còn ${remaining})`}
+          </span>
+          <input
+            aria-label="Tải ảnh bằng chứng kiểm hàng"
+            type="file"
+            accept="image/*"
+            multiple
+            disabled={isDisabled}
+            className="sr-only"
+            onChange={(event) => {
+              const files = Array.from(event.target.files || []);
+              event.target.value = '';
+              uploadEvidence?.(files);
+            }}
+          />
+        </label>
+        {count > 0 && (
+          <span className="text-[11px] text-textSecondary">Bấm vào ảnh để xem kích thước đầy đủ</span>
+        )}
+      </div>
+
+      {count > 0 ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {evidenceImageUrls.map((url, index) => (
+            <div
+              key={`${url}-${index}`}
+              className="relative aspect-square rounded-xl overflow-hidden border border-neutral bg-white shadow-sm group"
+            >
+              <button
+                type="button"
+                onClick={() => setLightboxIndex(index)}
+                className="w-full h-full block cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#006B2C]/40"
+                title={`Xem ảnh bằng chứng ${index + 1}`}
+              >
+                <img
+                  src={url}
+                  alt={`Bằng chứng kiểm hàng ${index + 1}`}
+                  className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                />
+                <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/65 text-white text-[10px] font-bold">
+                  #{index + 1}
+                </span>
+                <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-white/90 text-[#1F2A37] text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                  Phóng to
+                </span>
+              </button>
+              <button
+                type="button"
+                disabled={evidenceUploading}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  removeEvidence?.(index);
+                }}
+                aria-label={`Xóa ảnh bằng chứng ${index + 1}`}
+                title="Xóa ảnh"
+                className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/70 text-white text-xs font-bold flex items-center justify-center hover:bg-[#D92D20] disabled:opacity-50 cursor-pointer transition-colors"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed border-[#C6E1CE] bg-white/70 px-3.5 py-4 text-center text-[11px] text-textSecondary">
+          Chưa có ảnh bằng chứng kiểm hàng. Vui lòng tải lên từ 2 đến 5 ảnh rõ nét.
+        </div>
+      )}
+
+      {evidenceUploading && (
+        <p role="status" className="text-xs font-semibold text-[#006B2C]">
+          Đang tải ảnh lên...
+        </p>
+      )}
+      {evidenceError && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#FECDCA] bg-[#FEF3F2] px-3 py-2 text-[#B42318]"
+        >
+          <span className="font-medium">{evidenceError}</span>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={evidenceUploading}
+            onClick={() => retryEvidence?.()}
+            className="border-[#FECDCA] text-[#B42318] hover:bg-white"
+          >
+            Thử tải lại
+          </Button>
+        </div>
+      )}
+
+      <ReturnImageLightbox
+        isOpen={lightboxIndex !== null}
+        onClose={() => setLightboxIndex(null)}
+        images={evidenceImageUrls}
+        initialIndex={lightboxIndex ?? 0}
+        categoryLabel="Ảnh bằng chứng kiểm hàng"
+      />
+    </div>
+  );
 }
