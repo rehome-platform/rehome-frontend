@@ -97,6 +97,183 @@ describe('Luồng 2 - Bước 3: Quầy tiếp nhận, Kiểm định tại qu�
 
       expect(await screen.findByTestId('detail-page')).toBeInTheDocument();
     });
+
+    it('hiển thị đúng trạng thái "Đang bán" cho sản phẩm đã kiểm định và ẩn nút "Bắt đầu kiểm định" cho các status khác APPROVED', async () => {
+      const mockMember = {
+        memberId: 'MB-004821',
+        memberCode: 'MB-004821',
+        fullName: 'Lê Minh C',
+        phone: '0901234567',
+        isIdentityVerified: true,
+      };
+
+      vi.spyOn(counterService, 'lookup').mockResolvedValue([mockMember]);
+      vi.spyOn(counterService, 'confirm').mockResolvedValue({
+        memberId: 'MB-004821',
+        accountId: 'MB-004821',
+        identityToken: 'token-mb-4821',
+        member: mockMember,
+        expiresAt: new Date(Date.now() + 900000).toISOString(),
+      });
+      vi.spyOn(counterService, 'tasks').mockResolvedValue({
+        pendingForms: [
+          {
+            id: '7d1b0f1f-93ef-4d02-89f7-1db3fe46f02b',
+            productName: 'Đầm suông Zara hoa nhí',
+            desiredPrice: 420000,
+            status: 'APPROVED',
+            productSku: 'HCM-D-000043',
+            productStatus: 'ON_SALE',
+            resumeStep: 'COMPLETED',
+          },
+          {
+            id: '36975b24-9999-4f53-a36d-a7cfab71057b',
+            productName: 'Áo sơ mi Zara lụa trắng',
+            desiredPrice: 450000,
+            status: 'PENDING',
+          },
+          {
+            id: '1aff128c-15a1-4022-814f-24aad1cd3059',
+            productName: 'Áo len H&M cổ tròn màu be',
+            desiredPrice: 240000,
+            status: 'APPROVED',
+          },
+        ],
+        pendingWithdrawals: [],
+        pendingEndOfTerm: [],
+      });
+
+      const user = userEvent.setup();
+      renderWithProviders(
+        <Routes>
+          <Route path="/moderator/counter" element={<CounterPage />} />
+        </Routes>,
+        '/moderator/counter'
+      );
+
+      const searchInput = screen.getByRole('textbox', { name: /Mã Member|Số điện thoại/i });
+      await user.type(searchInput, 'MB-004821');
+      await user.click(screen.getByRole('button', { name: /^Tra cứu$/i }));
+
+      await user.click(await screen.findByRole('button', { name: /Chọn Member MB-004821/i }));
+      await user.click(await screen.findByRole('button', { name: /Tôi đã đối chiếu đúng Member/i }));
+
+      expect(await screen.findByText('Đầm suông Zara hoa nhí')).toBeInTheDocument();
+      expect(screen.getByText('Đang bán')).toBeInTheDocument();
+      expect(screen.getByText('Chờ duyệt')).toBeInTheDocument();
+      expect(screen.getByText('Đã duyệt')).toBeInTheDocument();
+
+      // Chỉ có đúng 1 nút "Bắt đầu kiểm định" cho sản phẩm có status APPROVED chưa kiểm định
+      const startInspectBtns = screen.getAllByRole('button', { name: /Bắt đầu kiểm định/i });
+      expect(startInspectBtns).toHaveLength(1);
+    });
+
+    it('sử dụng trực tiếp resumeStep, displayStatus, productSku, receiptId, confirmedAt từ API 27 để hiển thị đúng trạng thái và nút bước tiếp theo', async () => {
+      const mockMember = {
+        memberId: 'MB-009900',
+        memberCode: 'MB-009900',
+        fullName: 'Phạm Quốc D',
+        phone: '0911222333',
+        isIdentityVerified: true,
+      };
+
+      vi.spyOn(counterService, 'lookup').mockResolvedValue([mockMember]);
+      vi.spyOn(counterService, 'confirm').mockResolvedValue({
+        memberId: 'MB-009900',
+        accountId: 'MB-009900',
+        identityToken: 'token-mb-9900',
+        member: mockMember,
+        expiresAt: new Date(Date.now() + 900000).toISOString(),
+      });
+      vi.spyOn(counterService, 'tasks').mockResolvedValue({
+        pendingForms: [
+          {
+            id: '11111111-1111-4111-8111-111111111111',
+            productName: 'Áo sơ mi đã duyệt chờ kiểm định',
+            desiredPrice: 300000,
+            status: 'APPROVED',
+            receiptId: null,
+            confirmedAt: null,
+            resumeStep: 'START_INSPECTION',
+            productSku: null,
+            productStatus: null,
+            displayStatus: 'START_INSPECTION',
+          },
+          {
+            id: '22222222-2222-4222-8222-222222222222',
+            productName: 'Túi xách chờ Member xác nhận',
+            desiredPrice: 800000,
+            status: 'INSPECTING',
+            receiptId: 'rcpt-await-1',
+            confirmedAt: null,
+            resumeStep: 'AWAIT_MEMBER_CONFIRM',
+            productSku: null,
+            productStatus: null,
+            displayStatus: 'AWAIT_MEMBER_CONFIRM',
+          },
+          {
+            id: '33333333-3333-4333-8333-333333333333',
+            productName: 'Giày thể thao đã xác nhận chờ nhập kho',
+            desiredPrice: 950000,
+            status: 'INSPECTING',
+            receiptId: 'rcpt-stock-2',
+            confirmedAt: '2026-11-19T08:00:00Z',
+            resumeStep: 'STOCK_IN',
+            productSku: null,
+            productStatus: null,
+            displayStatus: 'STOCK_IN',
+          },
+          {
+            id: '44444444-4444-4444-8444-444444444444',
+            productName: 'Váy lụa đã lên sàn',
+            desiredPrice: 600000,
+            status: 'APPROVED',
+            receiptId: 'rcpt-done-3',
+            confirmedAt: '2026-11-18T10:00:00Z',
+            resumeStep: 'COMPLETED',
+            productSku: 'HCM-V-000108',
+            productStatus: 'ON_SALE',
+            displayStatus: 'ON_SALE',
+          },
+        ],
+        pendingWithdrawals: [],
+        pendingEndOfTerm: [],
+      });
+
+      const user = userEvent.setup();
+      renderWithProviders(
+        <Routes>
+          <Route path="/moderator/counter" element={<CounterPage />} />
+        </Routes>,
+        '/moderator/counter'
+      );
+
+      const searchInput = screen.getByRole('textbox', { name: /Mã Member|Số điện thoại/i });
+      await user.type(searchInput, 'MB-009900');
+      await user.click(screen.getByRole('button', { name: /^Tra cứu$/i }));
+      await user.click(await screen.findByRole('button', { name: /Chọn Member MB-009900/i }));
+      await user.click(await screen.findByRole('button', { name: /Tôi đã đối chiếu đúng Member/i }));
+
+      expect(await screen.findByText('Áo sơ mi đã duyệt chờ kiểm định')).toBeInTheDocument();
+      // Không hiển thị raw enum tiếng Anh
+      expect(screen.queryByText('START_INSPECTION')).not.toBeInTheDocument();
+      expect(screen.queryByText('AWAIT_MEMBER_CONFIRM')).not.toBeInTheDocument();
+      expect(screen.queryByText('STOCK_IN')).not.toBeInTheDocument();
+
+      // Hiển thị nhãn tiếng Việt chuẩn
+      expect(screen.getByText('Đã duyệt')).toBeInTheDocument();
+      expect(screen.getByText('Chờ Member xác nhận')).toBeInTheDocument();
+      expect(screen.getByText('Chờ nhập kho')).toBeInTheDocument();
+      expect(screen.getByText('Đang bán')).toBeInTheDocument();
+
+      // Hiển thị mã SKU cho sản phẩm đã nhập kho
+      expect(screen.getByText(/HCM-V-000108/)).toBeInTheDocument();
+
+      // Nút điều hướng đúng từng resumeStep
+      expect(screen.getAllByRole('button', { name: /Bắt đầu kiểm định/i })).toHaveLength(1);
+      expect(screen.getByRole('button', { name: /Xem biên nhận chờ xác nhận/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Tiếp tục nhập kho/i })).toBeInTheDocument();
+    });
   });
 
   describe('2. Màn hình Chờ Member xác nhận trên mobile', () => {

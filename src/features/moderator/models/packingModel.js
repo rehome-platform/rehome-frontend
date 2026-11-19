@@ -21,6 +21,12 @@ export function canPack(order, scope, now = Date.now()) {
   return isPackableStatus && ownsActiveClaim(order, scope, now) && Boolean(order.allowedActions?.includes('SCAN'));
 }
 
+export function canEditPackingPhotos(order, scope, now = Date.now()) {
+  if (!order) return false;
+  const isPackableStatus = ['PAID', 'PACKING'].includes(order.status ?? 'PAID');
+  return isPackableStatus && ownsActiveClaim(order, scope, now);
+}
+
 function hasCompleteScan(order) {
   const ids = order.items?.map((item) => item.productId) || [];
   const scanned = new Set(order.scannedProductIds || []);
@@ -45,6 +51,10 @@ export function canShip(order, scope, now = Date.now()) {
     Boolean(order.allowedActions?.includes('CREATE_SHIPMENT')) &&
     hasCompleteScan(order)
   );
+}
+
+export function canHandoverToGhn(order) {
+  return Boolean(order && order.status === 'PACKED' && order.ghnTrackingCode);
 }
 
 function isHandoverTask(task, scope) {
@@ -84,6 +94,7 @@ export const ORDER_STATUS_LABELS = {
   PENDING_PAYMENT: 'Chờ thanh toán',
   PAID: 'Đã thanh toán',
   PACKING: 'Đang đóng gói',
+  PACKED: 'Đã đóng gói',
   SHIPPING: 'Đang vận chuyển',
   DELIVERED: 'Đã giao hàng',
   COMPLETED: 'Hoàn tất',
@@ -192,6 +203,7 @@ function packingTotals(raw) {
     autoCompleteDeadline: raw.autoCompleteDeadline || null,
     returnDeadline: raw.returnDeadline || null,
     deliveredAt: raw.deliveredAt || null,
+    handedOverAt: raw.handedOverAt || null,
   };
 }
 
@@ -209,6 +221,7 @@ export function normalizePackingOrder(raw, scope = {}) {
     shipmentCreatedAt: raw.shipmentCreatedAt || null,
     expectedDeliveryDate: raw.expectedDeliveryDate || null,
     items,
+    packingPhotoUrls: Array.isArray(raw.packingPhotoUrls) ? raw.packingPhotoUrls : [],
     ...progress,
     allowedActions: packingActions(raw, progress),
     ...packingShipment(raw, scope),

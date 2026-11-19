@@ -244,10 +244,10 @@ describe('Organization Verification Data Mapping & Design Tokens', () => {
       verificationStatus: 'PENDING',
     });
     const approveSpy = vi.spyOn(orgVerificationService, 'approveOrg').mockResolvedValue({ success: true });
-    vi.spyOn(window, 'alert').mockImplementation(() => {});
+    vi.spyOn(window, 'alert').mockImplementation(() => { });
 
     const { result } = renderHook(() => useOrgVerification());
-    await act(async () => {});
+    await act(async () => { });
 
     expect(result.current.orgsQueue.length).toBe(1);
     expect(result.current.orgsQueue[0].refId).toBe('org-uuid-b291');
@@ -255,7 +255,7 @@ describe('Organization Verification Data Mapping & Design Tokens', () => {
     act(() => {
       result.current.handleOpenDetail(result.current.orgsQueue[0]);
     });
-    await act(async () => {});
+    await act(async () => { });
 
     act(() => {
       result.current.setChecklist({
@@ -291,15 +291,15 @@ describe('Organization Verification Data Mapping & Design Tokens', () => {
     vi.spyOn(orgVerificationService, 'approveOrg').mockRejectedValue(
       new Error('CHECKLIST_INCOMPLETE: chưa hoàn tất checklist xác minh.')
     );
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => { });
 
     const { result } = renderHook(() => useOrgVerification());
-    await act(async () => {});
+    await act(async () => { });
 
     act(() => {
       result.current.handleOpenDetail(result.current.orgsQueue[0]);
     });
-    await act(async () => {});
+    await act(async () => { });
 
     act(() => {
       result.current.setChecklist({
@@ -335,10 +335,10 @@ describe('Organization Verification Data Mapping & Design Tokens', () => {
       verificationStatus: 'PENDING',
     });
     const rejectSpy = vi.spyOn(orgVerificationService, 'rejectOrg').mockResolvedValue({ success: true });
-    vi.spyOn(window, 'alert').mockImplementation(() => {});
+    vi.spyOn(window, 'alert').mockImplementation(() => { });
 
     const { result } = renderHook(() => useOrgVerification());
-    await act(async () => {});
+    await act(async () => { });
 
     act(() => {
       result.current.handleOpenDetail(result.current.orgsQueue[0]);
@@ -373,7 +373,7 @@ describe('Organization Verification Data Mapping & Design Tokens', () => {
     });
 
     const { result } = renderHook(() => useOrgVerification());
-    await act(async () => {});
+    await act(async () => { });
 
     expect(result.current.legalChanges).toHaveLength(1);
     const item = result.current.legalChanges[0];
@@ -426,12 +426,12 @@ describe('Organization Verification Data Mapping & Design Tokens', () => {
     expect(screen.getByText(/04\/11\/2026/)).toBeInTheDocument();
   });
 
-  it('VerificationLegalChanges buttons invoke approve and reject with requestId', () => {
-    const handleApprove = vi.fn();
-    const handleReject = vi.fn();
+  it('VerificationLegalChanges buttons open custom modals (no window.prompt/confirm) and invoke approve and reject with requestId', async () => {
+    const handleApprove = vi.fn().mockResolvedValue(undefined);
+    const handleReject = vi.fn().mockResolvedValue(undefined);
 
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-    vi.spyOn(window, 'prompt').mockReturnValue('Lý do kiểm thử');
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('Lý do kiểm thử');
 
     const mockChanges = [
       {
@@ -455,11 +455,61 @@ describe('Organization Verification Data Mapping & Design Tokens', () => {
       />
     );
 
-    fireEvent.click(screen.getByText('Duyệt đổi pháp lý'));
+    // Approve via custom confirmation modal (no window.confirm)
+    fireEvent.click(screen.getByRole('button', { name: 'Duyệt đổi pháp lý' }));
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.getByText(/Xác nhận duyệt yêu cầu đổi pháp lý/i)).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Xác nhận duyệt' }));
+    });
     expect(handleApprove).toHaveBeenCalledWith('req-uuid-abc');
 
-    fireEvent.click(screen.getByText('Từ chối'));
+    // Reject via custom popup modal (no window.prompt)
+    fireEvent.click(screen.getByRole('button', { name: 'Từ chối' }));
+    expect(promptSpy).not.toHaveBeenCalled();
+    expect(screen.getByText(/Từ chối yêu cầu đổi pháp lý/i)).toBeInTheDocument();
+    const reasonInput = screen.getByPlaceholderText(/Nhập lý do từ chối/i);
+    fireEvent.change(reasonInput, { target: { value: 'Lý do kiểm thử' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Xác nhận từ chối' }));
+    });
     expect(handleReject).toHaveBeenCalledWith('req-uuid-abc', 'Lý do kiểm thử');
+  });
+
+  it('handleConfirmReject updates status to REJECTED and stays on LIST view even when opened via ?id= deep link', async () => {
+    window.history.pushState({}, '', '/moderator/verifications?id=org-uuid-b291');
+    vi.spyOn(orgVerificationService, 'getQueue').mockResolvedValue({
+      data: [{ id: 'queue-uuid-e607', refId: 'org-uuid-b291', status: 'PENDING' }],
+      total: 1,
+    });
+    vi.spyOn(orgVerificationService, 'getLegalChanges').mockResolvedValue({ data: [] });
+    vi.spyOn(orgVerificationService, 'getOrgDetail').mockResolvedValue({
+      legalName: 'Tổ Chức Từ Thiện B',
+      orgType: 'Tổ chức từ thiện',
+      taxCode: 'không có',
+      verificationStatus: 'PENDING',
+    });
+    vi.spyOn(orgVerificationService, 'rejectOrg').mockResolvedValue({ verificationStatus: 'REJECTED' });
+    vi.spyOn(window, 'alert').mockImplementation(() => { });
+
+    const { result } = renderHook(() => useOrgVerification());
+    await act(async () => { });
+
+    expect(result.current.viewMode).toBe('DETAIL');
+
+    act(() => {
+      result.current.setRejectReason('Thiếu giấy phép công chứng');
+    });
+
+    await act(async () => {
+      await result.current.handleConfirmReject();
+    });
+
+    expect(result.current.viewMode).toBe('LIST');
+    expect(result.current.selectedOrg).toBeNull();
+    expect(result.current.orgsQueue[0].status).toBe('REJECTED');
+
+    window.history.pushState({}, '', '/moderator/verifications');
   });
 
   it('VerificationLegalChanges renders correct badges for REJECTED and APPROVED statuses', () => {

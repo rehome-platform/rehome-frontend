@@ -35,6 +35,7 @@ function normalizeOrderResult(result, orderId, scope) {
     shippingAddress: fullAddress,
     warehouseName: result.warehouseName || scope?.warehouseName || 'Kho Quận 7',
     ghnTrackingCode: result.ghnTrackingCode || '',
+    packingPhotoUrls: Array.isArray(result.packingPhotoUrls) ? result.packingPhotoUrls : [],
     items,
     scannedProductIds,
     scannedCount: result.scannedCount ?? scannedProductIds.length,
@@ -49,6 +50,7 @@ function normalizeOrderResult(result, orderId, scope) {
     autoCompleteDeadline: result.autoCompleteDeadline || null,
     returnDeadline: result.returnDeadline || null,
     deliveredAt: result.deliveredAt || null,
+    handedOverAt: result.handedOverAt || null,
   };
 }
 
@@ -60,10 +62,11 @@ export async function request(operation, { orderId, data, signal, scope } = {}) 
     validateScope(scope);
     if (operation === 'read') return packingMockApi.getOrderDetail(orderId, scope);
     if (operation === 'scan') return packingMockApi.scanSku(orderId, data?.productId);
+    if (operation === 'packingPhotos') return packingMockApi.updatePackingPhotos(orderId, data?.photoUrls);
     if (operation === 'shipment') return packingMockApi.createShipment(orderId, data);
     if (operation === 'label') throw new Phase2Error('Phiếu GHN thật chỉ có trong chế độ API.', 501);
     if (operation === 'handover') return packingMockApi.handover(data);
-    if (operation === 'ghnHandover') return { orderId, status: 'SHIPPING' };
+    if (operation === 'ghnHandover') return { orderId, status: 'SHIPPING', handedOverAt: new Date().toISOString() };
   }
 
   const config = operationConfig(operation);
@@ -135,6 +138,12 @@ export const packingService = {
   },
   scan: (orderId, productId, options) =>
     request('scan', { ...options, orderId, data: { productId: String(productId || '').trim() } }),
+  updatePhotos: (orderId, photoUrls, options) =>
+    request('packingPhotos', {
+      ...options,
+      orderId,
+      data: { photoUrls: Array.isArray(photoUrls) ? photoUrls : [] },
+    }),
   shipment: (orderId, options) => request('shipment', { ...options, orderId, data: options?.data }),
   label: (orderId, options) => request('label', { ...options, orderId }),
   handoverOrder: (orderId, options) => request('ghnHandover', { ...options, orderId }),

@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import baseApi from '../../src/services/baseApi.js';
 import { ToastProvider } from '../../src/context/ToastContext.jsx';
 import { AuthProvider, useAuth } from '../../src/context/AuthContext.jsx';
-import { PackingShipmentPanel } from '../../src/features/moderator/components/packing/PackingDetailSections.jsx';
+import { PackingShipmentPanel, PackingScanPanel } from '../../src/features/moderator/components/packing/PackingDetailSections.jsx';
 import { PackingWrongItemModal } from '../../src/features/moderator/components/packing/PackingWrongItemModal.jsx';
 import { ReturnInspectionVerdict } from '../../src/features/moderator/components/returns/ReturnSections.jsx';
 import { returnService } from '../../src/features/moderator/services/returnApi.js';
@@ -21,35 +21,35 @@ describe('Track 2: Dead buttons, mock data removal, and modals', () => {
     localStorage.clear();
   });
 
-  it('BUG-M2-002 / BUG-M5-006: PackingShipmentPanel wires GHN handover and locks button once handed over or SHIPPING', async () => {
-    const onHandover = vi.fn().mockResolvedValue(true);
-    const { rerender } = render(
+  it('PackingShipmentPanel and PackingScanPanel omit removed GHN handover card and claim warning', () => {
+    render(
       <ToastProvider>
         <PackingShipmentPanel
           order={{ orderId: 'ORD-1', ghnTrackingCode: 'GHN-123', status: 'PACKING' }}
           onOpenPrintModal={() => {}}
-          onHandover={onHandover}
+        />
+        <PackingScanPanel
+          totalCount={1}
+          order={{ orderId: 'ORD-1', status: 'SHIPPING' }}
+          scope={{ userId: 'mod-1' }}
+          now={Date.now()}
+          scan={() => {}}
+          sku=""
+          input={{ current: null }}
+          setSku={() => {}}
+          uncertain={false}
+          resource={{ busy: false, loading: false }}
+          setCamera={() => {}}
+          message=""
+          create={() => {}}
         />
       </ToastProvider>
     );
 
-    const btn = screen.getByRole('button', { name: /Đã bàn giao cho GHN/i });
-    expect(btn).toBeEnabled();
-    fireEvent.click(btn);
-
-    await waitFor(() => expect(onHandover).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(btn).toBeDisabled());
-
-    rerender(
-      <ToastProvider>
-        <PackingShipmentPanel
-          order={{ orderId: 'ORD-2', ghnTrackingCode: 'GHN-456', status: 'SHIPPING' }}
-          onOpenPrintModal={() => {}}
-          onHandover={vi.fn()}
-        />
-      </ToastProvider>
-    );
-    expect(screen.getByRole('button', { name: /Đã bàn giao cho GHN/i })).toBeDisabled();
+    expect(screen.queryByText(/Khi shipper đã lấy hàng/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Đã bàn giao cho GHN/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Đơn chưa cho phép thao tác/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /In vận đơn A5/i })).toBeEnabled();
   });
 
   it('BUG-M2-001: PackingWrongItemModal has no DH-00244 or RH-C2M08P hardcoded fallbacks', () => {

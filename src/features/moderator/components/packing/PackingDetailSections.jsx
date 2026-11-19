@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { safeDocumentUrl } from "../../models/warehouseModel.js";
 import { warehouseDateTime } from "../../models/warehouseTime.js";
 import Button from "../../../../components/common/Button.jsx";
-import { canPack, canShip } from "../../models/packingModel.js";
+import Modal from "../../../../components/common/Modal.jsx";
+import { canPack, canShip, canHandoverToGhn } from "../../models/packingModel.js";
 import { operationReady } from "../../config/packingContract.js";
-import { useToast } from "../../../../context/ToastContext.jsx";
 import { formatDeadlineWithCountdown } from "../WarehouseUi.jsx";
 
 export function PackingRecipientPanel({ order, scanLogs }) {
@@ -103,40 +103,23 @@ export function PackingRecipientPanel({ order, scanLogs }) {
 }
 
 export function PackingShipmentPanel({ order, onOpenPrintModal, onHandover, handoverLoading = false }) {
-  const toast = useToast();
-  const [handedOver, setHandedOver] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const isHandedOver =
-    handedOver ||
-    ['SHIPPING', 'DELIVERED', 'COMPLETED'].includes(order?.status) ||
-    Boolean(order?.handedOverAt);
-  const isBusy = handoverLoading || submitting;
-
-  const handleHandover = async () => {
-    if (isHandedOver || isBusy || !onHandover) return;
-    setSubmitting(true);
-    try {
-      const ok = await onHandover();
-      if (ok !== false) {
-        setHandedOver(true);
-        toast.success('Đã xác nhận bàn giao hàng cho shipper GHN!');
-      } else {
-        toast.error('Không thể xác nhận bàn giao cho GHN. Vui lòng thử lại.');
-      }
-    } catch (err) {
-      toast.error(err?.message || 'Không thể xác nhận bàn giao cho GHN. Vui lòng thử lại.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const isHandedOver = ['SHIPPING', 'DELIVERED', 'COMPLETED'].includes(order?.status);
+  const canConfirmHandover = canHandoverToGhn(order) && typeof onHandover === 'function';
 
   return (
     <div className="rounded-2xl border-2 border-[#006B2C] bg-white p-5 space-y-4 shadow-sm animate-in fade-in duration-200">
-      <div>
-        <h3 className="text-base font-bold text-[#006B2C]">Vận đơn đã tạo thành công</h3>
-        <p className="text-xs text-[#5B6776] mt-0.5">
-          Thời điểm tạo vận đơn: {warehouseDateTime(order?.shipmentCreatedAt)}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h3 className="text-base font-bold text-[#006B2C]">Vận đơn đã tạo thành công</h3>
+          <p className="text-xs text-[#5B6776] mt-0.5">
+            Thời điểm tạo vận đơn: {warehouseDateTime(order?.shipmentCreatedAt)}
+          </p>
+        </div>
+        {isHandedOver && (
+          <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7]">
+            Đã bàn giao cho GHN
+          </span>
+        )}
       </div>
 
       <div className="p-4 rounded-xl border border-[#2b2b2b] bg-[#f9faf9] space-y-2">
@@ -152,26 +135,177 @@ export function PackingShipmentPanel({ order, onOpenPrintModal, onHandover, hand
           <span>Dự kiến giao:</span>
           <span className="font-semibold text-[#191C19]">{warehouseDateTime(order?.expectedDeliveryDate)}</span>
         </div>
+        {isHandedOver && order?.handedOverAt && (
+          <div className="flex justify-between text-xs text-[#5f5f5f] pt-1 border-t border-[#e0e0e0]">
+            <span>Thời điểm bàn giao GHN:</span>
+            <span className="font-semibold text-[#006B2C]">{warehouseDateTime(order.handedOverAt)}</span>
+          </div>
+        )}
       </div>
 
-      <Button onClick={onOpenPrintModal} disabled={!order.ghnTrackingCode}>In vận đơn A5</Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button onClick={onOpenPrintModal} disabled={!order.ghnTrackingCode}>In vận đơn A5</Button>
+        {canConfirmHandover && (
+          <Button
+            variant="outline"
+            disabled={handoverLoading || !operationReady('ghnHandover')}
+            onClick={onHandover}
+            className="border-[#006B2C] text-[#006B2C] hover:bg-[#E8F5E9] font-bold"
+          >
+            {handoverLoading ? 'Đang xác nhận...' : 'Xác nhận bàn giao GHN'}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
 
-      {/* Khi shipper đã lấy hàng */}
-      <div className="p-4 rounded-xl border border-[#8a8a8a] bg-[#fafafa] space-y-3">
-        <p className="text-xs font-bold text-[#191C19]">Khi shipper đã lấy hàng</p>
-        <p className="text-xs text-[#5f5f5f] leading-relaxed">
-          Bấm xác nhận để đơn chuyển sang <strong>Đang giao</strong> và người mua nhận thông báo kèm mã vận đơn.
+export function PackingPhotosPanel({
+  photos = [],
+  canEdit = false,
+  lockedByShipment = false,
+  uploading = false,
+  saving = false,
+  error = '',
+  onUpload,
+  onRemove,
+}) {
+  const fileInputRef = useRef(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const busy = uploading || saving;
+  const remaining = Math.max(0, 5 - photos.length);
+
+  const handleFileChange = (event) => {
+    const selected = Array.from(event.target.files || []);
+    event.target.value = '';
+    if (selected.length > 0 && onUpload) {
+      onUpload(selected);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-[#8a8a8a] bg-white p-5 space-y-4 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-bold text-[#191C19]">Ảnh đóng gói đơn hàng</h3>
+          <p className="text-[11px] text-[#5B6776] mt-0.5">
+            Chụp tối đa 5 ảnh trước khi bàn giao GHN để làm bằng chứng đối chiếu nếu phát sinh trả hàng.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#F0F5EE] text-[#006B2C]">
+            {photos.length} / 5 ảnh
+          </span>
+          {lockedByShipment && (
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#f4f4f4] text-[#5B6776] border border-[#d4d4d4]">
+              Đã khóa sau khi tạo vận đơn
+            </span>
+          )}
+        </div>
+      </div>
+
+      {photos.length > 0 ? (
+        <div className="flex flex-wrap gap-3">
+          {photos.map((url, index) => {
+            const safeUrl = safeDocumentUrl(url) || url;
+            return (
+              <div
+                key={`${url}-${index}`}
+                className="relative group w-24 h-24 rounded-xl overflow-hidden border border-[#c4c4c4] bg-[#f9faf9]"
+              >
+                <button
+                  type="button"
+                  onClick={() => setPreviewUrl(safeUrl)}
+                  className="w-full h-full block cursor-pointer"
+                  title="Phóng to ảnh đóng gói"
+                >
+                  <img
+                    src={safeUrl}
+                    alt={`Ảnh đóng gói ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+                {canEdit && !lockedByShipment && (
+                  <button
+                    type="button"
+                    aria-label={`Xóa ảnh đóng gói ${index + 1}`}
+                    disabled={busy}
+                    onClick={() => onRemove?.(index)}
+                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/70 text-white text-xs font-bold flex items-center justify-center hover:bg-[#BA1A1A] disabled:opacity-50 cursor-pointer"
+                    title="Xóa ảnh"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="text-xs text-[#717971]">
+          {lockedByShipment
+            ? 'Đơn hàng này không có ảnh đóng gói được lưu.'
+            : 'Chưa có ảnh đóng gói. Bạn có thể tải ảnh kiện hàng trước khi tạo vận đơn GHN.'}
         </p>
-        <Button
-          variant="outline"
-          disabled={isHandedOver || isBusy}
-          loading={isBusy}
-          className="text-xs font-bold py-2 border-[#2b2b2b] text-[#006B2C] hover:bg-[#F0F5EE] disabled:opacity-60 disabled:cursor-not-allowed"
-          onClick={handleHandover}
+      )}
+
+      {canEdit && !lockedByShipment && (
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          <input
+            ref={fileInputRef}
+            id="packing-photo-input"
+            aria-label="Tải ảnh đóng gói"
+            type="file"
+            accept="image/*"
+            multiple
+            disabled={busy || remaining === 0}
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy || remaining === 0}
+            onClick={() => fileInputRef.current?.click()}
+            className="text-xs font-semibold py-2 px-3.5"
+          >
+            {uploading ? 'Đang tải ảnh lên...' : saving ? 'Đang lưu ảnh...' : `Chọn ảnh (${remaining} còn lại)`}
+          </Button>
+          {busy && (
+            <span role="status" className="text-xs text-[#5B6776]">
+              {uploading ? 'Đang tải ảnh lên máy chủ...' : 'Đang lưu danh sách ảnh đóng gói...'}
+            </span>
+          )}
+        </div>
+      )}
+
+      {error && (
+        <p role="alert" className="text-xs font-semibold text-[#BA1A1A] bg-red-50 border border-red-200 rounded-lg p-2.5">
+          {error}
+        </p>
+      )}
+
+      {previewUrl && (
+        <Modal
+          isOpen={Boolean(previewUrl)}
+          onClose={() => setPreviewUrl(null)}
+          title="Xem ảnh đóng gói"
+          size="lg"
         >
-          {isBusy ? 'Đang xác nhận...' : '✓ Đã bàn giao cho GHN'}
-        </Button>
-      </div>
+          <div className="flex flex-col items-center space-y-3">
+            <img
+              src={previewUrl}
+              alt="Xem trước ảnh đóng gói"
+              className="max-h-[70vh] max-w-full object-contain rounded-xl border border-neutral"
+            />
+            <div className="w-full flex justify-end">
+              <Button variant="outline" size="sm" onClick={() => setPreviewUrl(null)}>
+                Đóng
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -200,12 +334,6 @@ export function PackingScanPanel({
           Chỉ tạo được vận đơn khi đủ {totalCount} / {totalCount} món khớp mã
         </span>
       </div>
-
-      {!canPack(order, scope, now) && (
-        <p role="status" className="text-xs text-[#BA1A1A] font-semibold">
-          Đơn chưa cho phép thao tác hoặc bạn không còn claim hợp lệ. Hãy kiểm tra lại hàng đợi.
-        </p>
-      )}
 
       <form
         className="flex flex-wrap items-end gap-3"
@@ -330,7 +458,7 @@ export function PackingItemTable({ items, pickedItems, scannedProductIds, toggle
                     {item.size || 'M'}
                   </td>
                   <td className="py-3 px-3 text-right">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isScanned ? 'bg-[#E8F5E9] text-[#006B2C]' : 'bg-[#FFF3E0] text-[#D97706]'}`}>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-[11px] font-semibold ${isScanned ? 'bg-[#ECFDF3] text-[#067647] border-[#ABEFC6]' : 'bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]'}`}>
                       {isScanned ? 'Đã khớp' : 'Chờ quét'}
                     </span>
                   </td>

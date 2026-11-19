@@ -3,6 +3,7 @@ import {
   ReturnCompareDialog,
   ReturnOutcomeDialog,
   ReturnRejectDialog,
+  ReturnMarkLostDialog,
   ReturnInspectionVerdict,
   ReturnInspectionProduct,
   ReturnReviewDecision,
@@ -59,9 +60,8 @@ export default function ReturnProcessingPage() {
                   value={model.searchQuery}
                   onChange={(e) => model.setSearchQuery(e.target.value)}
                   placeholder="Tìm theo mã yêu cầu, mã đơn, SKU hoặc người mua..."
-                  className="w-full text-xs py-2 px-3 pl-8 rounded-xl border border-neutral bg-surface text-text placeholder:text-textSecondary focus:outline-none focus:border-primary"
+                  className="w-full text-xs py-2 px-3 rounded-xl border border-neutral bg-surface text-text placeholder:text-textSecondary focus:outline-none focus:border-primary"
                 />
-                <span className="absolute left-2.5 top-2.5 text-textSecondary text-xs">🔍</span>
                 {model.searchQuery && (
                   <button
                     type="button"
@@ -171,6 +171,9 @@ export default function ReturnProcessingPage() {
 
         {/* MODAL: Từ chối yêu cầu trả (TH-02) */}
         <ReturnRejectDialog {...model.sections.ReturnRejectDialog} />
+
+        {/* MODAL: Xác nhận bưu kiện thất lạc (TH-08) */}
+        <ReturnMarkLostDialog {...model.sections.ReturnMarkLostDialog} />
 
         {/* MODAL: Xử lý món hàng TH-04 sau khi hoàn tiền */}
         <ReturnOutcomeDialog {...model.sections.ReturnOutcomeDialog} />

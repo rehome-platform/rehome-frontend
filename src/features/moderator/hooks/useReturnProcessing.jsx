@@ -63,6 +63,8 @@ export function useReturnProcessing() {
   const [degradedSubmitting, setDegradedSubmitting] = useState(false);
   const resolvedDegradedReturns = useRef(new Set());
   const [degradedCaseState, setDegradedCaseState] = useState('CHO_KET_LUAN');
+  const [markLostTarget, setMarkLostTarget] = useState(null);
+  const [markLostSubmitting, setMarkLostSubmitting] = useState(false);
 
   const [evidenceImageUrls, setEvidenceImageUrls] = useState([]);
   const [evidenceUploading, setEvidenceUploading] = useState(false);
@@ -254,7 +256,16 @@ export function useReturnProcessing() {
       const handoverNotice = approved?.handoverDeadline
         ? ` Hạn người mua bàn giao cho GHN: ${formatDeadlineWithCountdown(approved.handoverDeadline)}.`
         : '';
-      notify('success', `Đã duyệt yêu cầu trả hàng ${selectedItem.code}! Vận đơn thu hồi GHN đã được tự động tạo và gửi tới người mua.${handoverNotice}`);
+      const trackingCode = approved?.ghnReturnTrackingCode || approved?.waybillCode || '';
+      if (approved?.ghnFallbackUsed) {
+        notify(
+          'warn',
+          `Đã duyệt yêu cầu trả hàng ${selectedItem.code} với mã thu hồi nội bộ ${trackingCode} (GHN Sandbox tạm lỗi).${handoverNotice}`
+        );
+      } else {
+        const codeNotice = trackingCode ? ` Mã vận đơn: ${trackingCode}.` : '';
+        notify('success', `Đã duyệt yêu cầu trả hàng ${selectedItem.code}! Vận đơn thu hồi GHN đã được tự động tạo và gửi tới người mua.${codeNotice}${handoverNotice}`);
+      }
       setViewMode('QUEUE');
       setSelectedItem(null);
     } catch (err) {
@@ -312,13 +323,37 @@ export function useReturnProcessing() {
         setSelectedItem(null);
       } else {
         // Hợp lệ -> lưu inspect trước rồi mở modal TH-04 để chọn Relist hay Return Seller
-        await returnService.inspect(selectedItem.id, {
-          evidenceImageUrls,
-          matchesOriginal: true,
-          degraded: false,
-          counterfeitSuspected: false,
-          conditionNote: 'Đã kiểm tra hàng về kho hợp lệ',
-        });
+        if (selectedItem.rawStatus !== 'VALID') {
+          await returnService.inspect(selectedItem.id, {
+            evidenceImageUrls,
+            matchesOriginal: true,
+            degraded: false,
+            counterfeitSuspected: false,
+            conditionNote: 'Đã kiểm tra hàng về kho hợp lệ',
+          });
+          const resolved = await returnService.resolveValid(selectedItem.id);
+          const refundedAmount =
+            resolved?.refundAmount ?? resolved?.result?.refundAmount ?? selectedItem.refundAmount ?? selectedItem.amount ?? 0;
+          setSelectedItem((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  ...resolved,
+                  id: prev.id,
+                  rawStatus: 'VALID',
+                  status: 'RESOLVED',
+                  itemAction: null,
+                  outcome: null,
+                  refundAmount: refundedAmount,
+                }
+              : prev
+          );
+          await fetchReturns();
+          notify(
+            'success',
+            `Đã kết luận hợp lệ và hoàn ${formatCurrencyVND(refundedAmount)} cho người mua! Vui lòng chọn phương án xử lý món hàng.`
+          );
+        }
         setIsOutcomeModalOpen(true);
       }
     } catch (err) {
@@ -328,13 +363,36 @@ export function useReturnProcessing() {
     }
   };
 
+  const handleOpenOutcomeModal = async (item) => {
+    const target = item || selectedItem;
+    if (!target || resolvingRef.current) return;
+    if (selectedItem?.id === target.id) {
+      setIsOutcomeModalOpen(true);
+      return;
+    }
+    const epoch = ++selectionEpoch.current;
+    try {
+      const detail = await returnService.detail(target.id);
+      if (epoch !== selectionEpoch.current) return;
+      setSelectedItem(detail);
+      setIsOutcomeModalOpen(true);
+    } catch (error) {
+      notify('error', 'Không thể tải chi tiết yêu cầu trả hàng: ' + error.message);
+    }
+  };
+
   const handleConfirmOutcome = async (outcome, extra = {}) => {
     if (!selectedItem || resolvingRef.current) return;
     resolvingRef.current = true;
     try {
-      const res = Object.keys(extra || {}).length > 0
-        ? await returnService.resolveValid(selectedItem.id, outcome, extra)
-        : await returnService.resolveValid(selectedItem.id, outcome);
+      const actionFn =
+        selectedItem.rawStatus === 'VALID' && typeof returnService.applyItemAction === 'function'
+          ? returnService.applyItemAction
+          : returnService.resolveValid;
+      const res =
+        Object.keys(extra || {}).length > 0
+          ? await actionFn(selectedItem.id, outcome, extra)
+          : await actionFn(selectedItem.id, outcome);
       await fetchReturns();
       setIsOutcomeModalOpen(false);
       setViewMode('QUEUE');
@@ -348,9 +406,9 @@ export function useReturnProcessing() {
           : 'Trả người ký gửi';
       notify(
         'success',
-        `Đã hoàn tất xử lý trả hàng! Hệ thống tự động hoàn ${formatCurrencyVND(
+        `Đã hoàn tất xử lý món hàng (${outcomeLabel})! Khoản hoàn ${formatCurrencyVND(
           confirmedRefund
-        )} vào ví người mua ReHome và chuyển hàng sang trạng thái: ${outcomeLabel}.`
+        )} đã được ghi nhận vào ví người mua ReHome.`
       );
     } catch (err) {
       notify('error', 'Có lỗi xảy ra khi xác nhận phương án: ' + (err.message || ''));
@@ -448,7 +506,7 @@ export function useReturnProcessing() {
       });
       resolving = true;
       const resolved = await returnService.resolveValid(source.id, undefined, {
-        resolutionNote: 'Hàng xuống cấp, chuyển sang quy trình bồi thường (KG-16)',
+        resolutionNote: 'Hàng xuống cấp, chuyển sang quy trình bồi thường',
       });
       showResolved(resolved);
       await fetchReturns();
@@ -473,17 +531,21 @@ export function useReturnProcessing() {
   };
 
   // Mark Lost Parcel (TH-08)
-  const handleMarkLost = async (targetItem) => {
+  const handleMarkLost = (targetItem) => {
     const target = targetItem || selectedItem;
     if (!target || resolvingRef.current) return;
-    const confirmed = window.confirm(
-      `Xác nhận bưu kiện trả hàng ${target.code} đã thất lạc bởi bên vận chuyển? Hệ thống sẽ hoàn tiền cho người mua và tạo khiếu nại bảo hiểm với đơn vị giao vận.`
-    );
-    if (!confirmed) return;
+    setMarkLostTarget(target);
+  };
+
+  const handleConfirmMarkLost = async () => {
+    if (!markLostTarget || resolvingRef.current) return;
+    const target = markLostTarget;
     resolvingRef.current = true;
+    setMarkLostSubmitting(true);
     try {
       await returnService.markLost(target.id, 'Thất lạc trong quá trình vận chuyển bởi bưu tá GHN');
       await fetchReturns();
+      setMarkLostTarget(null);
       if (viewMode !== 'QUEUE') {
         setViewMode('QUEUE');
         setSelectedItem(null);
@@ -493,6 +555,7 @@ export function useReturnProcessing() {
       notify('error', 'Có lỗi khi báo thất lạc: ' + (err.message || ''));
     } finally {
       resolvingRef.current = false;
+      setMarkLostSubmitting(false);
     }
   };
 
@@ -577,17 +640,20 @@ export function useReturnProcessing() {
         handleOpenInspect,
         handleMarkLost,
         handleOpenDegradedCaseView,
+        handleOpenOutcomeModal,
       },
       ReturnReviewDecision: {
         selectedItem,
         handleApproveAndCreateWaybill,
         setIsRejectModalOpen,
+        handleOpenOutcomeModal,
       },
       ReturnInspectionProduct: {
         ...evidenceProps,
         selectedItem,
         checklist,
         setChecklist,
+        setIsCompareModalOpen,
       },
       ReturnInspectionVerdict: {
         evidenceReady,
@@ -608,6 +674,12 @@ export function useReturnProcessing() {
         rejectReason,
         setRejectReason,
         handleConfirmRejectRequest,
+      },
+      ReturnMarkLostDialog: {
+        markLostTarget,
+        onClose: () => setMarkLostTarget(null),
+        onConfirm: handleConfirmMarkLost,
+        submitting: markLostSubmitting,
       },
       ReturnOutcomeDialog: {
         isOutcomeModalOpen,

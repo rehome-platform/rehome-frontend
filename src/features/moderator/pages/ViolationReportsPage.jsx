@@ -22,9 +22,9 @@ const TYPE_OPTIONS = [
 ];
 
 const TARGET_TYPE_MAP = {
-  POST: { label: 'Bài viết', icon: '📄', color: 'bg-blue-50 text-blue-700 border-blue-200' },
-  CAMPAIGN: { label: 'Chiến dịch', icon: '🎯', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-  ORGANIZATION_ACCOUNT: { label: 'Tổ chức', icon: '🏢', color: 'bg-purple-50 text-purple-700 border-purple-200' },
+  POST: { label: 'Bài viết', color: 'bg-[#EFF8FF] text-[#175CD3] border-[#B2DDFF]' },
+  CAMPAIGN: { label: 'Chiến dịch', color: 'bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]' },
+  ORGANIZATION_ACCOUNT: { label: 'Tổ chức', color: 'bg-[#F4F3FF] text-[#5925DC] border-[#D9D6FE]' },
 };
 
 const ACTION_LABEL_MAP = {
@@ -411,7 +411,6 @@ export default function ViolationReportsPage() {
                         const isHighPriority = rep.reportCount >= 3;
                         const typeInfo = TARGET_TYPE_MAP[rep.targetType] || {
                           label: rep.targetType,
-                          icon: '📌',
                           color: 'bg-neutral-light text-textSecondary',
                         };
 
@@ -428,7 +427,6 @@ export default function ViolationReportsPage() {
                               <span
                                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border ${typeInfo.color}`}
                               >
-                                <span>{typeInfo.icon}</span>
                                 <span>{typeInfo.label}</span>
                               </span>
                             </td>
@@ -520,7 +518,7 @@ export default function ViolationReportsPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-textSecondary">Kiểm duyệt vi phạm · </span>
                     <span className="text-base font-bold font-heading text-text">
-                      Chi tiết báo cáo & quyết định (VP-02)
+                      Chi tiết báo cáo & quyết định
                     </span>
                   </div>
                   {selectedReport && (
@@ -560,7 +558,6 @@ export default function ViolationReportsPage() {
                   <div className="border border-neutral rounded-2xl p-5 bg-surface shadow-xs space-y-4">
                     <div className="flex items-center justify-between border-b border-neutral pb-2.5">
                       <div className="text-xs font-bold font-heading uppercase text-text tracking-wider flex items-center gap-2">
-                        <span>{TARGET_TYPE_MAP[selectedReport.targetType]?.icon}</span>
                         <span>Nội dung bị báo cáo ({TARGET_TYPE_MAP[selectedReport.targetType]?.label})</span>
                       </div>
                       {targetSnapshot?.organizationDisplayName && (
@@ -656,7 +653,7 @@ export default function ViolationReportsPage() {
                                 className="w-full h-full object-cover"
                               />
                             ) : (
-                              <span className="text-2xl">🏢</span>
+                              <span className="text-sm font-bold text-textSecondary">TC</span>
                             )}
                           </div>
                           <div className="space-y-1">
@@ -688,7 +685,6 @@ export default function ViolationReportsPage() {
                   <div className="border border-neutral rounded-2xl overflow-hidden bg-surface text-xs shadow-xs">
                     <div className="p-3.5 bg-background border-b border-neutral flex items-center justify-between">
                       <div className="font-bold text-text flex items-center gap-2">
-                        <span>📢</span>
                         <span>Danh sách các lượt báo cáo từ Member ({allReportsList.length})</span>
                       </div>
                       <span className="text-[11px] text-textSecondary">
@@ -701,7 +697,7 @@ export default function ViolationReportsPage() {
                         <div key={item.id || idx} className="p-3.5 space-y-1 hover:bg-background/40 transition-colors">
                           <div className="flex items-center justify-between text-[11px]">
                             <span className="font-semibold text-text">
-                              {item.isPrimary ? '🌟 Báo cáo gốc' : `Báo cáo viên #${String(item.reporterId).substring(0, 8)}`}
+                              {item.isPrimary ? 'Báo cáo gốc' : `Báo cáo viên #${String(item.reporterId).substring(0, 8)}`}
                             </span>
                             <span className="text-textSecondary">
                               {item.createdAt ? formatDateTime(item.createdAt) : '—'}
@@ -719,7 +715,6 @@ export default function ViolationReportsPage() {
                   <div className="border border-neutral rounded-2xl overflow-hidden bg-surface text-xs shadow-xs">
                     <div className="p-3.5 bg-background border-b border-neutral flex items-center justify-between">
                       <div className="font-bold text-text flex items-center gap-2">
-                        <span>⚖️</span>
                         <span>Lịch sử vi phạm của tổ chức</span>
                       </div>
                       <span
@@ -813,7 +808,7 @@ export default function ViolationReportsPage() {
 
                     {isResolvedOrDismissed ? (
                       <div className="p-4 rounded-xl bg-background border border-neutral text-xs text-textSecondary space-y-2">
-                        <span className="font-bold text-text block">🔒 Đối tượng này đã được quyết định xử lý xong.</span>
+                        <span className="font-bold text-text block">Đối tượng này đã được quyết định xử lý xong.</span>
                         {(selectedReport.resolutionReason || selectedReport.resolutionNote) && (
                           <p className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-emerald-900 font-semibold">
                             Lý do xử lý: {selectedReport.resolutionReason || selectedReport.resolutionNote}
@@ -897,7 +892,7 @@ export default function ViolationReportsPage() {
 
                         {/* Cảnh báo tác vụ */}
                         <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 leading-relaxed">
-                          ⚠️ <strong>Lưu ý:</strong> Hành động này sẽ tự động đóng toàn bộ {allReportsList.length} báo cáo đang chờ xử lý của đối tượng này.
+                          <strong>Lưu ý:</strong> Hành động này sẽ tự động đóng toàn bộ {allReportsList.length} báo cáo đang chờ xử lý của đối tượng này.
                         </div>
 
                         {/* Nút xác nhận */}

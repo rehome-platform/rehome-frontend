@@ -32,14 +32,14 @@ export function ConsignmentClaimBanner({ form, owned, resource }) {
 
 export function ConsignmentAccessNotice({  }) {
   return (
-    <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-6 space-y-4">
+    <div className="rounded-2xl border border-neutral bg-surface p-5 space-y-4 shadow-sm">
       <div className="flex items-start gap-3">
-        <span className="text-2xl">⚠️</span>
+        <span className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 shrink-0" />
         <div className="space-y-1">
-          <h3 className="font-bold text-sm text-amber-900">
+          <h3 className="font-bold text-sm text-text">
             Tài khoản hiện tại chưa được phép xem chi tiết ký gửi này
           </h3>
-          <p className="text-xs text-amber-800 leading-relaxed">
+          <p className="text-xs text-textSecondary leading-relaxed">
             Vui lòng kiểm tra quyền truy cập và điểm ký gửi được phân công. Bạn có thể quay lại Hàng đợi công việc hoặc Quầy tiếp nhận.
           </p>
         </div>

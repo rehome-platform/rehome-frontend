@@ -182,7 +182,7 @@ export default function EndOfTermPage() {
       {/* Banner hướng dẫn nghiệp vụ */}
       <div className="rounded-2xl border border-neutral bg-surface p-4 space-y-2 shadow-sm">
         <h3 className="font-semibold text-text text-sm flex items-center gap-2">
-          <span>💡</span> Hướng dẫn quy trình xử lý cuối kỳ & vô thừa nhận
+          Hướng dẫn quy trình xử lý cuối kỳ & vô thừa nhận
         </h3>
         <ul className="text-xs text-textSecondary space-y-1 list-disc list-inside">
           <li>

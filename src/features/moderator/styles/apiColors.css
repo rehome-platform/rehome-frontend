@@ -21,11 +21,11 @@
 .moderator-api-colors [class~="bg-[#FAFCF9]"],
 .moderator-api-colors[class~="bg-[#FAFCF9]"] { background-color: #F6F9F4; }
 .moderator-api-colors [class~="bg-[#FFDAD6]/30"],
-.moderator-api-colors[class~="bg-[#FFDAD6]/30"] { background-color: rgb(217 45 32 / 0.3); }
+.moderator-api-colors[class~="bg-[#FFDAD6]/30"] { background-color: #FEF3F2; }
 .moderator-api-colors [class~="bg-[#FFF3E0]"],
-.moderator-api-colors[class~="bg-[#FFF3E0]"] { background-color: #FEA619; }
+.moderator-api-colors[class~="bg-[#FFF3E0]"] { background-color: #FFFAEB; }
 .moderator-api-colors [class~="bg-[#FFFBEB]"],
-.moderator-api-colors[class~="bg-[#FFFBEB]"] { background-color: #F6F9F4; }
+.moderator-api-colors[class~="bg-[#FFFBEB]"] { background-color: #FFFAEB; }
 .moderator-api-colors [class~="bg-[#d4d4d4]"],
 .moderator-api-colors[class~="bg-[#d4d4d4]"] { background-color: #F6F9F4; }
 .moderator-api-colors [class~="bg-[#e0e0e0]"],
@@ -173,26 +173,26 @@
 .moderator-api-colors [class~="text-[#7a7a7a]"],
 .moderator-api-colors[class~="text-[#7a7a7a]"] { color: #5B6776; }
 .moderator-api-colors [class~="text-[#92400E]"],
-.moderator-api-colors[class~="text-[#92400E]"] { color: #5B6776; }
+.moderator-api-colors[class~="text-[#92400E]"] { color: #9A3412; }
 .moderator-api-colors [class~="text-[#9a9a9a]"],
 .moderator-api-colors[class~="text-[#9a9a9a]"] { color: #5B6776; }
 .moderator-api-colors [class~="text-[#B45309]"],
-.moderator-api-colors[class~="text-[#B45309]"] { color: #1F2A37; }
+.moderator-api-colors[class~="text-[#B45309]"] { color: #B54708; }
 .moderator-api-colors [class~="text-[#BA1A1A]"],
-.moderator-api-colors[class~="text-[#BA1A1A]"] { color: #D92D20; }
+.moderator-api-colors[class~="text-[#BA1A1A]"] { color: #B42318; }
 .moderator-api-colors [class~="text-[#D97706]"],
-.moderator-api-colors[class~="text-[#D97706]"] { color: #1F2A37; }
+.moderator-api-colors[class~="text-[#D97706]"] { color: #B54708; }
 .moderator-api-colors [class~="text-[#a8a8a8]"],
 .moderator-api-colors[class~="text-[#a8a8a8]"] { color: #5B6776; }
 
 .moderator-api-colors [class~="hover:bg-black"]:hover { background-color: #00685F; }
 
-/* Semantic feedback and selected states use the same documented palette. */
+/* Semantic feedback and status surfaces: soft pastel backgrounds & refined borders. */
 .moderator-api-colors [class~="bg-[#F0F5EE]"],
 .moderator-api-colors [class~="bg-[#E8F5E9]"],
-.moderator-api-colors [class~="bg-green-50"] { background-color: rgb(0 107 44 / 0.1); }
-.moderator-api-colors [class~="bg-red-50"] { background-color: rgb(217 45 32 / 0.1); }
-.moderator-api-colors [class~="bg-amber-50"] { background-color: #FEA619; color: #1F2A37; }
-.moderator-api-colors [class~="border-red-200"] { border-color: #D92D20; }
-.moderator-api-colors [class~="border-green-200"] { border-color: #006B2C; }
-.moderator-api-colors [class~="border-amber-200"] { border-color: #FEA619; }
+.moderator-api-colors [class~="bg-green-50"] { background-color: #ECFDF3; }
+.moderator-api-colors [class~="bg-red-50"] { background-color: #FEF3F2; }
+.moderator-api-colors [class~="bg-amber-50"] { background-color: #FFFAEB; }
+.moderator-api-colors [class~="border-red-200"] { border-color: #FECDCA; }
+.moderator-api-colors [class~="border-green-200"] { border-color: #ABEFC6; }
+.moderator-api-colors [class~="border-amber-200"] { border-color: #FEDF89; }

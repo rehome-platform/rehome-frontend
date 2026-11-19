@@ -250,7 +250,7 @@ export function ExistingOrganizationsSection({
                             </span>
                             {org.donationPointReceivingHours && (
                               <span className="text-[10px] text-textSecondary/80 block">
-                                🕒 {org.donationPointReceivingHours}
+                                {org.donationPointReceivingHours}
                               </span>
                             )}
                           </div>
@@ -429,7 +429,7 @@ export function ExistingOrganizationsSection({
                 </p>
                 {selectedOrg.donationPointReceivingHours && (
                   <p className="text-text font-medium text-[11px] pt-1">
-                    🕒 Thời gian tiếp nhận: <strong>{selectedOrg.donationPointReceivingHours}</strong>
+                    Thời gian tiếp nhận: <strong>{selectedOrg.donationPointReceivingHours}</strong>
                   </p>
                 )}
               </div>

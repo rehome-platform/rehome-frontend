@@ -7,12 +7,13 @@ export default function Badge({
   className = '',
 }) {
   const variants = {
-    default: 'bg-[#F6F9F4] text-[#5B6776] border-[#DDE5D9]',
-    success: 'bg-[#006B2C]/10 text-[#006B2C] border-[#006B2C]/20',
-    warning: 'bg-[#FEA619] text-[#1F2A37] border-[#FEA619]',
-    secondary: 'bg-[#FEA619] text-[#1F2A37] border-[#FEA619]',
-    danger: 'bg-[#D92D20]/10 text-[#D92D20] border-[#D92D20]/20',
-    info: 'bg-[#00685F]/10 text-[#00685F] border-[#00685F]/20',
+    default: 'bg-[#F2F4F7] text-[#344054] border-[#D0D5DD]',
+    success: 'bg-[#ECFDF3] text-[#067647] border-[#ABEFC6]',
+    warning: 'bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]',
+    secondary: 'bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]',
+    danger: 'bg-[#FEF3F2] text-[#B42318] border-[#FECDCA]',
+    info: 'bg-[#EFF8FF] text-[#175CD3] border-[#B2DDFF]',
+    purple: 'bg-[#F4F3FF] text-[#5925DC] border-[#D9D6FE]',
   };
 
   const sizes = {

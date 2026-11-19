@@ -4,6 +4,57 @@ import { API_ENDPOINTS } from '../../../configs/api.config.js';
 import { isFixtureMode } from "../config/warehouseContract.js";
 import { Phase2Error } from "../models/warehouseModel.js";
 import { callBackend } from './warehouseTransport.js';
+import { enrichListRows } from './listDetailEnrichment.js';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function enrichCounterPendingForms(forms, options) {
+  if (!Array.isArray(forms) || forms.length === 0) return forms;
+  return enrichListRows(
+    forms,
+    (item) => {
+      const formId = item?.id || item?.formId;
+      return Boolean(
+        formId &&
+        UUID_RE.test(String(formId)) &&
+        !item.displayStatus &&
+        !item.productStatus &&
+        !item.product?.status &&
+        !item.productSku &&
+        !item.resumeStep
+      );
+    },
+    async (item) => {
+      const formId = item.id || item.formId;
+      const detail = await callBackend(
+        {
+          method: 'get',
+          url: API_ENDPOINTS.MODERATOR.CONSIGNMENT_FORM_DETAIL(formId),
+        },
+        { signal: options?.signal }
+      );
+      if (!detail) return item;
+      const productStatus = detail.product?.status || detail.productStatus || null;
+      const productSku = detail.productSku || detail.product?.sku || null;
+      const receiptId = detail.receiptId || detail.receipt?.id || null;
+      const confirmedAt = detail.confirmedAt || detail.receipt?.confirmedAt || null;
+      const resumeStep = detail.resumeStep || null;
+      return {
+        ...item,
+        formNo: detail.formNo || item.formNo,
+        formStatus: detail.status || item.status,
+        productStatus,
+        productSku,
+        product: detail.product || null,
+        receiptId,
+        confirmedAt,
+        receiptConfirmed: Boolean(confirmedAt || detail.receiptConfirmed),
+        resumeStep,
+      };
+    },
+    options
+  );
+}
 
 export const counterService = {
   // API 25: POST /counter/lookup
@@ -84,7 +135,13 @@ export const counterService = {
       },
       { signal: options?.signal }
     );
-    return { ...res, isMock: false };
+    if (Array.isArray(res)) {
+      return enrichCounterPendingForms(res, options);
+    }
+    const pendingForms = Array.isArray(res?.pendingForms)
+      ? await enrichCounterPendingForms(res.pendingForms, options)
+      : res?.pendingForms;
+    return { ...res, ...(pendingForms !== undefined ? { pendingForms } : {}), isMock: false };
   },
 
   // API 72: POST /counter/handover (Context: ITEM_WITHDRAWAL / END_OF_TERM_TAKE_BACK)

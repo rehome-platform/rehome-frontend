@@ -194,18 +194,18 @@ describe('Design Tokens: Button & Badge components', () => {
     expect(btn.className).toContain('hover:bg-[#B42318]');
   });
 
-  it('Badge adheres to fully rounded chip (rounded-full) and dark text on #FEA619 accent', () => {
+  it('Badge adheres to fully rounded chip (rounded-full) and soft pastel warning tokens', () => {
     const { rerender } = render(<Badge variant="warning">Cần xử lý</Badge>);
     let badge = screen.getByText('Cần xử lý');
     expect(badge.className).toContain('rounded-full');
-    expect(badge.className).toContain('bg-[#FEA619]');
-    expect(badge.className).toContain('text-[#1F2A37]');
+    expect(badge.className).toContain('bg-[#FFFAEB]');
+    expect(badge.className).toContain('text-[#B54708]');
 
     rerender(<Badge variant="secondary">Điểm nhấn</Badge>);
     badge = screen.getByText('Điểm nhấn');
     expect(badge.className).toContain('rounded-full');
-    expect(badge.className).toContain('bg-[#FEA619]');
-    expect(badge.className).toContain('text-[#1F2A37]');
+    expect(badge.className).toContain('bg-[#FFFAEB]');
+    expect(badge.className).toContain('text-[#B54708]');
   });
 });
 
