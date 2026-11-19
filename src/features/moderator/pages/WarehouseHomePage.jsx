@@ -8,6 +8,7 @@ import { listItems, ownsClaim } from '../models/warehouseModel.js';
 import { Page, Card, ResourceState } from '../components/WarehouseUi.jsx';
 import {
   QUEUE_ACTION_BTN_CLASS,
+  QUEUE_TEXT_LINK_CLASS,
   QUEUE_PRIMARY_BTN_CLASS,
   QUEUE_PRIMARY_LINK_CLASS,
   QueueClaimDialog,
@@ -45,9 +46,8 @@ function Stat({ label, value, tone, icon, to }) {
 
   const card = (
     <div
-      className={`rounded-2xl border bg-white p-4 shadow-card transition-all duration-150 ${
-        isAlert ? 'border-[#FECDCA] bg-[#FEF3F2]/30' : 'border-neutral/80'
-      } ${to ? 'hover:border-[#006B2C]/50 hover:shadow-card-hover hover:-translate-y-0.5 cursor-pointer' : ''}`}
+      className={`rounded-2xl border bg-white p-4 shadow-card transition-all duration-150 ${isAlert ? 'border-[#FECDCA] bg-[#FEF3F2]/30' : 'border-neutral/80'
+        } ${to ? 'hover:border-[#006B2C]/50 hover:shadow-card-hover hover:-translate-y-0.5 cursor-pointer' : ''}`}
     >
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-medium text-textSecondary">{label}</p>
@@ -113,8 +113,8 @@ export default function WarehouseHomePage() {
   const loading = [...queues, ...stocks].some((r) => r.loading);
   const firstError = [...queues, ...stocks].find((r) => r.error);
   const today = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
-  const refresh = () => {
-    setFeedback(null);
+  const refresh = (clearFeedback = true) => {
+    if (clearFeedback) setFeedback(null);
     [...queues, ...stocks].forEach((r) => r.refresh());
   };
 
@@ -122,11 +122,15 @@ export default function WarehouseHomePage() {
     setFeedback(null);
     task.source.mutate((o) => queueService.claim(task.queueId, o), {
       onSuccess: () => {
+        setClaimTarget(null);
         setFeedback({
           type: 'success',
           message: `Đã nhận việc "${task.kindLabel}" (${task.formId || task.orderId || task.queueId}) thành công.`,
         });
-        refresh();
+        refresh(false);
+      },
+      onError: () => {
+        setClaimTarget(null);
       },
     });
   };
@@ -145,11 +149,10 @@ export default function WarehouseHomePage() {
       {feedback && (
         <div
           role="alert"
-          className={`rounded-xl p-3 text-xs font-semibold flex items-center justify-between shadow-sm transition-all ${
-            feedback.type === 'success'
-              ? 'bg-[#ECFDF3] text-[#067647] border border-[#ABEFC6]'
-              : 'bg-[#FEF3F2] text-[#B42318] border border-[#FECDCA]'
-          }`}
+          className={`rounded-xl p-3 text-xs font-semibold flex items-center justify-between shadow-sm transition-all ${feedback.type === 'success'
+            ? 'bg-[#ECFDF3] text-[#067647] border border-[#ABEFC6]'
+            : 'bg-[#FEF3F2] text-[#B42318] border border-[#FECDCA]'
+            }`}
         >
           <div className="flex items-center gap-2">
             <span>{feedback.type === 'success' ? '✓' : '⚠'}</span>
@@ -216,8 +219,8 @@ export default function WarehouseHomePage() {
                     const link = task.kind === 'PACKING'
                       ? `/moderator/packing?orderId=${encodeURIComponent(task.orderId || task.refId || '')}`
                       : task.kind === 'WITHDRAWAL'
-                      ? `/moderator/counter?refId=${encodeURIComponent(task.refId || task.id || '')}`
-                      : `/moderator/queue?${new URLSearchParams({ type: task.kind, queueId: task.queueId })}`;
+                        ? `/moderator/counter?refId=${encodeURIComponent(task.refId || task.id || '')}`
+                        : `/moderator/queue?${new URLSearchParams({ type: task.kind, queueId: task.queueId })}`;
                     return (
                       <tr key={`${task.kind}-${task.queueId}`} className={`transition-colors ${isOverdue ? 'border-l-4 border-l-[#F04438] bg-[#FEF3F2]/40 hover:bg-[#FEF3F2]/70' : 'hover:bg-[#F6F9F4]/60'}`}>
                         <td className="py-3 px-3.5 font-semibold text-[#191C19] whitespace-nowrap">{task.kindLabel}</td>
@@ -253,8 +256,8 @@ export default function WarehouseHomePage() {
                           <div className="flex items-center justify-end gap-2 flex-nowrap">
                             <Button
                               size="sm"
-                              variant="outline"
-                              className={QUEUE_ACTION_BTN_CLASS}
+                              variant="ghost"
+                              className={QUEUE_TEXT_LINK_CLASS}
                               onClick={() => setDetailTarget(task)}
                             >
                               Chi tiết
@@ -296,10 +299,7 @@ export default function WarehouseHomePage() {
         claimTarget={claimTarget}
         resource={claimTarget?.source || review}
         setClaimTarget={setClaimTarget}
-        handleClaim={(task) => {
-          handleClaim(task);
-          setClaimTarget(null);
-        }}
+        handleClaim={handleClaim}
       />
       <QueueTaskDetailModal target={detailTarget} onClose={() => setDetailTarget(null)} />
     </Page>

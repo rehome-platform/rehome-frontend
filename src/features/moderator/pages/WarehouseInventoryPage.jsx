@@ -7,7 +7,7 @@ import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
 import QRScannerModal from '../../../components/QRScannerModal.jsx';
 import { inventoryService } from '../services/warehouseApi.js';
-import { returnService } from '../services/returnApi.js';
+import { returnService, pendingReturnFromInventory } from '../services/returnApi.js';
 import { enrichListRows } from '../services/listDetailEnrichment.js';
 import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
@@ -46,10 +46,6 @@ export default function WarehouseInventoryPage() {
   const [search, setSearch] = useSearchParams();
   const navigate = useNavigate();
   const [scanner, setScanner] = useState(false);
-  const [skuLookupModal, setSkuLookupModal] = useState(false);
-  const [lookupInput, setLookupInput] = useState('');
-  const [lookupResult, setLookupResult] = useState(null); // { type: 'FOUND'|'NOT_FOUND'|'OTHER_WAREHOUSE', data?: any }
-  const [isLookingUp, setIsLookingUp] = useState(false);
   const [degradedModalItem, setDegradedModalItem] = useState(null);
   const [relistTarget, setRelistTarget] = useState(null);
   const [relistSubmitting, setRelistSubmitting] = useState(false);
@@ -90,9 +86,17 @@ export default function WarehouseInventoryPage() {
           },
           options,
         );
+        const keyword = sku.trim().toLowerCase();
+        const filtered = keyword
+          ? enriched.filter(
+              (item) =>
+                String(item.sku || '').toLowerCase().includes(keyword) ||
+                String(item.name || '').toLowerCase().includes(keyword)
+            )
+          : enriched;
         return {
-          content: enriched,
-          totalElements: enriched.length,
+          content: filtered,
+          totalElements: filtered.length,
           totalPages: 1,
         };
       }
@@ -119,23 +123,14 @@ export default function WarehouseInventoryPage() {
     });
   }, [rawItems]);
 
-  const hasReturnedItems = useMemo(() => items.some((item) => item.status === 'RETURNED'), [items]);
-  const pendingDispositions = useResource(
-    (options) => returnService.listPendingDispositions(options).catch(() => []),
-    [hasReturnedItems],
-    { enabled: hasReturnedItems, refreshInterval: 30000 }
-  );
-
   const pendingReturnBySku = useMemo(() => {
     const map = new Map();
-    for (const ret of pendingDispositions.data || []) {
-      const key = String(ret?.sku || ret?.productId || '').trim().toUpperCase();
-      if (key && !map.has(key)) {
-        map.set(key, ret);
-      }
+    for (const item of items) {
+      const ret = item.status === 'RETURNED' ? pendingReturnFromInventory(item) : null;
+      if (ret) map.set(String(item.sku || item.id || '').trim().toUpperCase(), ret);
     }
     return map;
-  }, [pendingDispositions.data]);
+  }, [items]);
 
   const handleConfirmRelist = async (outcome) => {
     if (!relistTarget || relistLock.current) return;
@@ -146,7 +141,6 @@ export default function WarehouseInventoryPage() {
       toast.success(`Đã đăng bán lại sản phẩm ${relistTarget.sku || relistTarget.itemName || ''} lên sàn.`);
       setRelistTarget(null);
       resource.refresh();
-      pendingDispositions.refresh();
     } catch (err) {
       toast.error(err?.message || 'Không thể đăng bán lại sản phẩm. Vui lòng thử lại.');
     } finally {
@@ -180,45 +174,6 @@ export default function WarehouseInventoryPage() {
     { label: 'Hàng xuống cấp', value: 'DEGRADED' },
   ];
 
-  // TK-03 Lookup SKU handler
-  const handleLookupSku = async (targetSku) => {
-    const code = (targetSku || lookupInput).trim().toUpperCase();
-    if (!code) {
-      setLookupResult(null);
-      return;
-    }
-
-    setIsLookingUp(true);
-    try {
-      // Check in warehouse list first
-      const foundInList = items.find((i) => i.sku?.toUpperCase() === code);
-      if (foundInList) {
-        setLookupResult({ type: 'FOUND', data: foundInList });
-        return;
-      }
-
-      // Check specific warehouse products or call API
-      const res = await inventoryService.read(code).catch((err) => {
-        if (err.status === 403 || err.code === 'PRODUCT_NOT_IN_YOUR_WAREHOUSE') {
-          return { errorType: 'OTHER_WAREHOUSE', sku: code, warehouseName: 'Kho Thủ Đức' };
-        }
-        return null;
-      });
-
-      if (!res) {
-        setLookupResult({ type: 'NOT_FOUND', sku: code });
-      } else if (res.errorType === 'OTHER_WAREHOUSE') {
-        setLookupResult({ type: 'OTHER_WAREHOUSE', sku: code, warehouseName: res.warehouseName || 'Kho Thủ Đức' });
-      } else {
-        setLookupResult({ type: 'FOUND', data: res });
-      }
-    } catch {
-      setLookupResult({ type: 'NOT_FOUND', sku: code });
-    } finally {
-      setIsLookingUp(false);
-    }
-  };
-
   return (
     <Page
       title={
@@ -231,17 +186,6 @@ export default function WarehouseInventoryPage() {
       }
       actions={
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => {
-              setSkuLookupModal(true);
-              setLookupResult(null);
-              setLookupInput('');
-            }}
-            className="text-xs font-bold border-[#2b2b2b] text-[#2b2b2b] whitespace-nowrap"
-          >
-            Tra cứu SKU
-          </Button>
           <Button variant="outline" className="whitespace-nowrap" onClick={() => setScanner(true)}>
             Quét QR SKU
           </Button>
@@ -360,7 +304,9 @@ export default function WarehouseInventoryPage() {
                           )}
                         </td>
                         <td className="py-3.5 px-4 text-[#5f5f5f] whitespace-nowrap">
-                          {item.degradedDate ? new Date(item.degradedDate).toLocaleDateString('vi-VN') : '—'}
+                          {item.degradedDate && !Number.isNaN(new Date(item.degradedDate).getTime())
+                            ? new Date(item.degradedDate).toLocaleDateString('vi-VN')
+                            : '—'}
                         </td>
                         <td className="py-3.5 px-4 max-w-xs truncate" title={item.degradedReason || item.conditionNote}>
                           <span className="font-medium text-[#191C19]">
@@ -401,7 +347,7 @@ export default function WarehouseInventoryPage() {
                       <th className="py-2.5 px-4">Trạng thái</th>
                       <th className="py-2.5 px-4">Kỳ ký gửi</th>
                       <th className="py-2.5 px-4 text-right">Giá bán</th>
-                      <th className="py-2.5 px-4 text-right w-40">Thao tác</th>
+                      <th className="py-2.5 px-4 text-left w-[320px]">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#e0e0e0]">
@@ -463,9 +409,9 @@ export default function WarehouseInventoryPage() {
                           <td className="py-3.5 px-4 font-bold text-[#191C19] text-right whitespace-nowrap">
                             {item.currentPrice != null ? money(item.currentPrice) : (item.agreedPrice != null ? money(item.agreedPrice) : '—')}
                           </td>
-                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                            <div className="flex items-center justify-end gap-2 flex-nowrap">
-                              {pendingReturn && (
+                          <td className="py-3.5 px-4 text-left align-middle whitespace-nowrap">
+                            <div className="grid grid-cols-[104px_128px_72px] items-center justify-items-start gap-2">
+                              {pendingReturn ? (
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -474,15 +420,22 @@ export default function WarehouseInventoryPage() {
                                 >
                                   Đăng bán lại
                                 </Button>
-                              )}
-                              {(item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT') && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(item.status) && (
+                              ) : <span aria-hidden="true" />}
+                              {(item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT') && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(item.status) ? (
                                 <Link
                                   to={`/moderator/inventory/${encodeURIComponent(item.sku)}/re-consign`}
                                   className="inline-flex items-center justify-center text-xs font-semibold text-[#006B2C] bg-[#E8F5E9] hover:bg-[#D1FADF] px-3 py-1.5 rounded-xl border border-[#A5D6A7] transition-colors whitespace-nowrap"
                                 >
                                   {item.reConsignStatus === 'PROPOSAL_SENT' ? 'Theo dõi xác nhận' : 'Đàm phán giá'}
                                 </Link>
-                              )}
+                              ) : item.status === 'RETURNED' ? (
+                                <Link
+                                  to={`/moderator/inventory/${encodeURIComponent(item.sku)}`}
+                                  className="inline-flex items-center justify-center text-xs font-semibold text-error border border-error/40 hover:bg-error-light px-3 py-1.5 rounded-xl transition-colors whitespace-nowrap"
+                                >
+                                  Báo xuống cấp
+                                </Link>
+                              ) : <span aria-hidden="true" />}
                               <Link
                                 className="inline-flex items-center justify-center text-xs font-semibold py-1.5 px-3 bg-[#006B2C] text-white hover:bg-[#005523] rounded-xl shadow-sm transition-colors whitespace-nowrap"
                                 to={`/moderator/inventory/${encodeURIComponent(item.sku)}`}
@@ -510,125 +463,6 @@ export default function WarehouseInventoryPage() {
           onChange={(value) => change('page', String(value))}
         />
       )}
-
-      {/* MODAL TRA CỨU SKU CHUẨN WIREFRAME (TK-03) */}
-      <Modal
-        isOpen={skuLookupModal}
-        title="Tra cứu sản phẩm bằng mã SKU"
-        onClose={() => setSkuLookupModal(false)}
-        maxWidth="max-w-xl"
-      >
-        <div className="space-y-5 text-xs text-[#2b2b2b]">
-          <div className="space-y-1">
-            <label htmlFor="sku-lookup-input" className="block text-xs font-bold text-[#191C19]">
-              Nhập mã SKU trên tem
-            </label>
-            <p className="text-[11px] text-[#5f5f5f]">
-              Đọc mã trên tem dán ở sản phẩm. Không quét QR — kho đã bỏ quét mã (quyết định 11/10).
-            </p>
-            <div className="flex gap-2 pt-2">
-              <input
-                id="sku-lookup-input"
-                type="text"
-                value={lookupInput}
-                onChange={(e) => setLookupInput(e.target.value.toUpperCase())}
-                onKeyDown={(e) => e.key === 'Enter' && handleLookupSku()}
-                placeholder="VD: RH-K9B47T, RH-M4T19B, RH-D6P23L..."
-                className="flex-1 rounded-xl border border-neutral px-3.5 py-2 text-sm font-bold font-mono focus:outline-none focus:border-[#006B2C]"
-              />
-              <Button
-                variant="primary"
-                onClick={() => handleLookupSku()}
-                loading={isLookingUp}
-                className="font-semibold px-5 text-sm"
-              >
-                Tra cứu
-              </Button>
-            </div>
-          </div>
-
-          {/* HIỂN THỊ KẾT QUẢ THEO 4 TRẠNG THÁI WIREFRAME TK-03 */}
-          {!lookupResult && (
-            /* TK-03-ChoNhap */
-            <div className="p-6 border border-dashed border-[#c4c4c4] rounded-xl text-center space-y-1 text-[#7a7a7a]">
-              <div className="font-bold text-sm text-[#5f5f5f]">Chưa có kết quả</div>
-              <p className="text-[11px]">Nhập đủ mã SKU rồi bấm Tra cứu, hoặc Enter.</p>
-            </div>
-          )}
-
-          {lookupResult?.type === 'FOUND' && (
-            /* TK-03-TimThay */
-            <div className="border border-neutral p-4 rounded-xl bg-white space-y-3">
-              <span className="text-[10px] font-bold tracking-wider px-2.5 py-1 bg-[#006B2C] text-white rounded">
-                TÌM THẤY
-              </span>
-              <div className="flex gap-4 items-start pt-2">
-                <div className="w-16 h-16 rounded-lg border border-[#c4c4c4] bg-[#f9f9f9] flex items-center justify-center font-bold text-xs text-[#8a8a8a]">
-                  Ảnh
-                </div>
-                <div className="flex-1 min-w-0 space-y-1">
-                  <h4 className="font-bold text-sm text-[#191C19]">{lookupResult.data.name}</h4>
-                  <p className="text-[11px] text-[#5f5f5f]">
-                    {[
-                      lookupResult.data.brandName && lookupResult.data.brandName.trim().toLowerCase() !== 'rehome'
-                        ? lookupResult.data.brandName
-                        : lookupResult.data.brand && lookupResult.data.brand.trim().toLowerCase() !== 'rehome'
-                          ? lookupResult.data.brand
-                          : null,
-                      `Size ${lookupResult.data.size || 'M'}`,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </p>
-                  <p className="text-[11px] text-[#5f5f5f]">
-                    Trạng thái: <Status>{lookupResult.data.status}</Status>
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  setSkuLookupModal(false);
-                  navigate(`/moderator/inventory/${encodeURIComponent(lookupResult.data.sku)}`);
-                }}
-                className="w-full py-2 text-sm font-semibold rounded-xl"
-              >
-                Mở chi tiết sản phẩm →
-              </Button>
-            </div>
-          )}
-
-          {lookupResult?.type === 'OTHER_WAREHOUSE' && (
-            /* TK-03-KhongThuocKho */
-            <div className="border-2 border-[#2b2b2b] p-4 rounded-xl bg-white space-y-2">
-              <span className="text-[10px] font-bold tracking-wider px-2.5 py-1 border border-[#2b2b2b] text-[#2b2b2b] rounded">
-                THUỘC KHO KHÁC
-              </span>
-              <h4 className="font-bold text-sm text-[#191C19] pt-1">
-                {lookupResult.sku} không ở kho này
-              </h4>
-              <p className="text-xs text-[#4a4a4a] leading-relaxed">
-                Mã này thuộc <strong>{lookupResult.warehouseName}</strong>. Mỗi kho chỉ xem và xử lý hàng trong kho của mình — không mở được chi tiết từ đây.
-              </p>
-            </div>
-          )}
-
-          {lookupResult?.type === 'NOT_FOUND' && (
-            /* TK-03-KhongTonTai */
-            <div className="border-2 border-dashed border-[#8a8a8a] p-4 rounded-xl bg-white space-y-2">
-              <span className="text-[10px] font-bold tracking-wider px-2.5 py-1 border border-[#8a8a8a] text-[#4a4a4a] rounded">
-                KHÔNG TỒN TẠI
-              </span>
-              <h4 className="font-bold text-sm text-[#191C19] pt-1">
-                Không tìm thấy mã SKU này
-              </h4>
-              <p className="text-xs text-[#4a4a4a] leading-relaxed">
-                Kiểm tra lại đã gõ đúng mã trên tem chưa. Mã SKU bỏ chữ I, O và số 0, 1 để tránh đọc nhầm.
-              </p>
-            </div>
-          )}
-        </div>
-      </Modal>
 
       {/* Modal Quét QR SKU */}
       <QRScannerModal

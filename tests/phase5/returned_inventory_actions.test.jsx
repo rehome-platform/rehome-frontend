@@ -33,6 +33,7 @@ describe('Task 5: Returned item ("Đã bàn giao") management in WarehouseInvent
       sku: 'RH-RET-01',
       name: 'Áo khoác dạ trả về',
       status: 'RETURNED',
+      pendingReturnRequestId: 'ret-uuid-01',
       currentTerm: 1,
       daysIntoTerm: 8,
       termLengthDays: 30,
@@ -69,7 +70,6 @@ describe('Task 5: Returned item ("Đã bàn giao") management in WarehouseInvent
       totalElements: 2,
       totalPages: 1,
     });
-    vi.spyOn(returnService, 'listPendingDispositions').mockResolvedValue([pendingReturn]);
     const actionSpy = vi.spyOn(returnService, 'applyItemAction').mockImplementation(
       () => new Promise((resolve) => setTimeout(() => resolve({ id: 'ret-uuid-01', status: 'VALID', itemAction: 'RELIST' }), 30))
     );
@@ -118,6 +118,7 @@ describe('Task 5: Returned item ("Đã bàn giao") management in WarehouseInvent
       sku: 'RH-RET-02',
       name: 'Đầm midi lụa',
       status: 'RETURNED',
+      pendingReturnRequestId: 'ret-uuid-02',
       photos: [],
       allowedActions: [],
       currentPrice: 500000,
@@ -138,7 +139,6 @@ describe('Task 5: Returned item ("Đã bàn giao") management in WarehouseInvent
 
     const readSpy = vi.spyOn(inventoryService, 'read').mockResolvedValue(productReturned);
     vi.spyOn(inventoryService, 'degradedCases').mockResolvedValue([]);
-    vi.spyOn(returnService, 'findPendingDispositionBySku').mockResolvedValue(pendingReturn);
     const actionSpy = vi.spyOn(returnService, 'applyItemAction').mockResolvedValue({
       id: 'ret-uuid-02',
       status: 'VALID',

@@ -610,7 +610,7 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
                       {chg.status === 'PENDING' ? (
                         <Badge variant="warning" className="mt-1">Chờ duyệt</Badge>
                       ) : chg.status === 'REJECTED' ? (
-                        <Badge variant="error" className="mt-1">Bị từ chối</Badge>
+                        <Badge variant="danger" className="mt-1">Bị từ chối</Badge>
                       ) : (
                         <Badge variant="success" className="mt-1">Đã duyệt</Badge>
                       )}
@@ -674,7 +674,7 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
               </div>
               <div className="flex justify-between">
                 <span className="text-textSecondary">Mã số thuế:</span>
-                <span className="font-mono font-bold text-primary">{selectedChangeModal.taxCode || '0109887766'}</span>
+                <span className="font-mono font-bold text-primary">{selectedChangeModal.taxCode || '—'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-textSecondary">Người gửi yêu cầu:</span>
@@ -686,7 +686,15 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
               </div>
               <div className="flex justify-between">
                 <span className="text-textSecondary">Trạng thái:</span>
-                <span className="font-bold text-primary">{selectedChangeModal.status === 'PENDING' ? 'Chờ duyệt' : selectedChangeModal.status}</span>
+                <span className="font-bold text-primary">
+                  {selectedChangeModal.status === 'PENDING'
+                    ? 'Chờ duyệt'
+                    : selectedChangeModal.status === 'APPROVED'
+                      ? 'Đã duyệt'
+                      : selectedChangeModal.status === 'REJECTED'
+                        ? 'Bị từ chối'
+                        : selectedChangeModal.status || '—'}
+                </span>
               </div>
             </div>
 

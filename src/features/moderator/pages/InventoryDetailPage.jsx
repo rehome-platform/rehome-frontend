@@ -1,6 +1,6 @@
 import DegradedCaseDetails, { DegradedCaseSummary } from '../components/DegradedCaseDetails.jsx';
 import { latestDegradedCase, DEGRADED_DECISION_POLICY } from '../models/degradedCaseModel.js';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
@@ -8,7 +8,7 @@ import BarcodePrintModal from '../components/BarcodePrintModal.jsx';
 import PhotoUpload from '../components/PhotoUpload.jsx';
 import ProductEditModal from '../components/ProductEditModal.jsx';
 import { inventoryService } from '../services/warehouseApi.js';
-import returnService from '../services/returnApi.js';
+import returnService, { pendingReturnFromInventory } from '../services/returnApi.js';
 import { endTermService } from '../services/endTermApi.js';
 import { pricingForProduct } from '../services/endTermPricingApi.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
@@ -81,10 +81,10 @@ export default function InventoryDetailPage() {
   const pricing = useResource(options => endTermService.pendingPricing(options), [sku], {
     enabled: Boolean(data && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(data.status)), refreshInterval: 30000,
   });
-  const pendingReturn = useResource(
-    (options) => returnService.findPendingDispositionBySku(data.sku, options).catch(() => null),
-    [data?.sku, data?.status],
-    { enabled: Boolean(data?.sku && data?.status === 'RETURNED'), refreshInterval: 30000 }
+  const pendingReturnData = useMemo(() => pendingReturnFromInventory(data), [data]);
+  const pendingReturn = useMemo(
+    () => ({ data: pendingReturnData, refresh: () => product.refresh?.() }),
+    [pendingReturnData, product]
   );
   const pricingRequest = pricingForProduct(pricing.data || [], data?.id || sku);
   const canNegotiate = Boolean(pricingRequest?.decisionId && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(data?.status));
@@ -234,7 +234,7 @@ export default function InventoryDetailPage() {
                       Đăng bán lại
                     </Button>
                   )}
-                  {['ON_SALE', 'WAREHOUSE'].includes(data.status) && (
+                  {data.status === 'ON_SALE' && (
                     <Button
                       onClick={() => setEditModalOpen(true)}
                       variant="outline"

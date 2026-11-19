@@ -2,12 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { formatCurrencyVND } from "../../../utils/formatters.js";
 import { formatDeadlineWithCountdown } from "../components/WarehouseUi.jsx";
-import { returnService } from "../services/returnApi.js";
+import { returnService, needsItemAction } from "../services/returnApi.js";
 import { inventoryService } from "../services/inventoryApi.js";
 import { useToast } from "../../../context/ToastContext.jsx";
 
-const isPendingDisposition = (item) =>
-  Boolean(item && item.rawStatus === 'VALID' && !item.itemAction && !item.outcome && !item.degraded);
+const isPendingDisposition = needsItemAction;
 
 export function useReturnProcessing() {
   const toast = useToast();
@@ -633,6 +632,7 @@ export function useReturnProcessing() {
     tabCounts,
     loading,
     error,
+    fetchReturns,
     filteredRequests,
     historyRequests,
     quickDetailItem,

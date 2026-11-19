@@ -6,7 +6,8 @@ import Modal from "../../../../components/common/Modal.jsx";
 import { WORK_TYPES } from "../../pages/ConsignmentQueuePage.config.js";
 import { formatElapsedHours, withdrawalCounterLink } from '../../models/queueModel.js';
 import { inventoryService } from '../../services/inventoryApi.js';
-import { money, formatDeadlineWithCountdown } from "../WarehouseUi.jsx";
+import { money, formatDeadlineWithCountdown, Status } from "../WarehouseUi.jsx";
+import { ReturnImageLightbox } from "../returns/ReturnEvidence.jsx";
 
 export function QueueClaimDialog({ claimTarget, resource, setClaimTarget, handleClaim }) {
   return (
@@ -38,6 +39,7 @@ export function QueueClaimDialog({ claimTarget, resource, setClaimTarget, handle
             <Button
               variant="outline"
               className="flex-1 py-2 text-sm"
+              disabled={resource?.busy}
               onClick={() => setClaimTarget(null)}
             >
               Hủy
@@ -91,6 +93,7 @@ export function QueueReleaseDialog({ releaseTarget, resource, setReleaseTarget, 
             <Button
               variant="outline"
               className="flex-1 py-2 text-sm"
+              disabled={resource?.busy}
               onClick={() => setReleaseTarget(null)}
             >
               Hủy
@@ -126,9 +129,30 @@ export function extractQueueSubjectName(item) {
   return cleaned || '—';
 }
 
-export function QueueTaskDetailModal({ target, onClose }) {
+export function QueueTaskDetailModal({ target, onClose, busy = false, onApproveWithdrawal, onRejectWithdrawal }) {
   if (!target) return null;
   const isWithdrawal = target.type === 'WITHDRAWAL' || target.type === 'ITEM_WITHDRAWAL' || target.kind === 'WITHDRAWAL';
+  if (isWithdrawal) {
+    return (
+      <Modal
+        isOpen={Boolean(target)}
+        onClose={() => {
+          if (!busy) onClose?.();
+        }}
+        title={target.status === 'PENDING_APPROVAL' ? 'Chi tiết & duyệt yêu cầu rút hàng' : 'Chi tiết yêu cầu rút hàng'}
+        size="md"
+      >
+        <WithdrawalModalContent
+          key={target.refId || target.id || target.queueId}
+          target={target}
+          busy={busy}
+          onApprove={onApproveWithdrawal}
+          onReject={onRejectWithdrawal}
+          onClose={onClose}
+        />
+      </Modal>
+    );
+  }
   const codeValue = target.formId || target.orderNo || target.orderId || target.refId || target.queueId || '—';
   const titleText =
     target.targetName ||
@@ -209,9 +233,11 @@ export function QueueTaskDetailModal({ target, onClose }) {
               </span>
             </div>
           )}
-          <div className="flex justify-between gap-4">
+          <div className="flex justify-between gap-4 items-center">
             <span className="font-semibold text-textSecondary shrink-0">Trạng thái:</span>
-            <span className="font-semibold text-text text-right">{statusLabel}</span>
+            <span className="font-semibold text-text text-right">
+              {target.status ? <Status>{target.status}</Status> : statusLabel}
+            </span>
           </div>
           {target.formattedTime && (
             <div className="flex justify-between gap-4">
@@ -242,8 +268,14 @@ export function QueueTaskDetailModal({ target, onClose }) {
 
 export const QUEUE_ACTION_BTN_CLASS =
   'h-8 px-3 py-0 text-xs font-semibold leading-none rounded-xl border shrink-0 whitespace-nowrap';
-export const QUEUE_PRIMARY_BTN_CLASS = `${QUEUE_ACTION_BTN_CLASS} border-transparent`;
-export const QUEUE_PRIMARY_LINK_CLASS = `${QUEUE_ACTION_BTN_CLASS} border-transparent bg-[#006B2C] text-white hover:bg-[#005523] hover:text-white inline-flex items-center justify-center shadow-sm transition-colors`;
+export const QUEUE_TEXT_LINK_CLASS =
+  'h-8 px-2 py-0 text-xs font-medium leading-none rounded-xl border border-transparent bg-transparent text-textSecondary hover:bg-transparent hover:text-[#006B2C] hover:underline shrink-0 whitespace-nowrap';
+export const QUEUE_SECONDARY_BTN_CLASS =
+  `${QUEUE_ACTION_BTN_CLASS} border-neutral bg-white text-text hover:bg-[#F6F9F4] hover:border-[#006B2C]`;
+export const QUEUE_PRIMARY_BTN_CLASS =
+  `${QUEUE_ACTION_BTN_CLASS} border-transparent`;
+export const QUEUE_PRIMARY_LINK_CLASS =
+  `${QUEUE_ACTION_BTN_CLASS} border-transparent bg-[#006B2C] text-white hover:bg-[#005523] hover:text-white inline-flex items-center justify-center shadow-sm transition-colors`;
 
 export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resource, handleClaim, setClaimTarget, linkTarget, setFeedback, setReleaseTarget, onCheckWithdrawal, onViewDetail }) {
   const rowRef = React.useRef(null);
@@ -264,7 +296,7 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
       className={`transition-colors hover:bg-[#F6F9F4] ${item.isOverdue ? 'border-l-4 border-l-[#006B2C] bg-[#F6F9F4]' : ''
         } ${isFocused ? 'bg-[#EBF1E8] ring-2 ring-inset ring-primary' : ''}`}
     >
-      <td className="py-3 px-4 font-semibold text-text whitespace-nowrap">
+      <td className="py-3 px-4 font-semibold text-text whitespace-nowrap align-middle">
         <div className="flex items-center gap-2">
           <span>{item.typeLabel}</span>
           {isFocused && (
@@ -274,18 +306,18 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
           )}
         </div>
       </td>
-      <td className="py-3 px-3 text-text font-medium whitespace-nowrap">
+      <td className="py-3 px-3 text-text font-medium whitespace-nowrap align-middle">
         {subjectName}
       </td>
-      <td className="py-3 px-3 text-textSecondary whitespace-nowrap">
+      <td className="py-3 px-3 text-textSecondary whitespace-nowrap align-middle">
         {item.formattedTime}
       </td>
-      <td className="py-3 px-3 whitespace-nowrap">
+      <td className="py-3 px-3 whitespace-nowrap align-middle">
         <span className={`font-semibold ${item.isOverdue ? 'text-error' : 'text-text'}`}>
           {item.waitTimeFormatted || formatElapsedHours(item.hours ?? 0)}
         </span>
       </td>
-      <td className="py-3 px-3 text-textSecondary whitespace-nowrap">
+      <td className="py-3 px-3 text-textSecondary whitespace-nowrap align-middle">
         {isMine ? (
           <span className="font-bold text-[#006B2C]">Bạn đang nhận việc này</span>
         ) : isClaimedByOther ? (
@@ -294,33 +326,38 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
           <span>chưa ai nhận</span>
         )}
       </td>
-      <td className="py-3 px-3 text-right whitespace-nowrap align-middle">
-        <div className="flex items-center justify-end gap-2 flex-nowrap">
-          {onViewDetail && (
+      <td className="py-3 px-3 text-center whitespace-nowrap align-middle">
+        {onViewDetail ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            className={QUEUE_TEXT_LINK_CLASS}
+            onClick={() => onViewDetail(item)}
+          >
+            Chi tiết
+          </Button>
+        ) : (
+          <span className="text-textSecondary">—</span>
+        )}
+      </td>
+      <td className="py-3 px-4 text-left align-middle whitespace-nowrap">
+        <div className="grid grid-cols-[140px_112px] items-center justify-items-start gap-2">
+          {/* Slot 1: Nhận việc / Nhả việc / Đã có người nhận */}
+          {!item.claimedBy ? (
             <Button
               size="sm"
-              variant="outline"
-              className={QUEUE_ACTION_BTN_CLASS}
-              onClick={() => onViewDetail(item)}
+              variant="primary"
+              className={`${QUEUE_PRIMARY_BTN_CLASS} w-full`}
+              loading={resource.busy}
+              onClick={() => (setClaimTarget ? setClaimTarget(item) : handleClaim(item))}
             >
-              Chi tiết
+              Nhận việc
             </Button>
-          )}
-          {isWithdrawal && onCheckWithdrawal && (
+          ) : isMine ? (
             <Button
               size="sm"
               variant="outline"
-              className={`${QUEUE_ACTION_BTN_CLASS} text-[#006B2C] border-[#006B2C] hover:bg-[#E8F5E9]`}
-              onClick={() => onCheckWithdrawal(item)}
-            >
-              Check đơn
-            </Button>
-          )}
-          {isMine && (
-            <Button
-              size="sm"
-              variant="outline"
-              className={QUEUE_ACTION_BTN_CLASS}
+              className={`${QUEUE_SECONDARY_BTN_CLASS} w-full`}
               onClick={() => {
                 setFeedback?.(null);
                 setReleaseTarget(item);
@@ -328,46 +365,32 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
             >
               Nhả việc
             </Button>
-          )}
-          {!item.claimedBy && (
-            <Button
-              size="sm"
-              variant="primary"
-              className={QUEUE_PRIMARY_BTN_CLASS}
-              loading={resource.busy}
-              onClick={() => (setClaimTarget ? setClaimTarget(item) : handleClaim(item))}
-            >
-              Nhận việc
-            </Button>
-          )}
-          {isMine && (
-            isPendingWithdrawalApproval && onCheckWithdrawal ? (
-              <Button
-                size="sm"
-                variant="primary"
-                className={QUEUE_PRIMARY_BTN_CLASS}
-                onClick={() => onCheckWithdrawal(item)}
-              >
-                Duyệt yêu cầu
-              </Button>
-            ) : linkTarget ? (
-              <Link
-                to={linkTarget}
-                className={QUEUE_PRIMARY_LINK_CLASS}
-              >
-                {item.type === 'PACKING' ? 'Đóng gói' : 'Mở việc'}
-              </Link>
-            ) : null
-          )}
-          {isClaimedByOther && (
+          ) : (
             <Button
               size="sm"
               disabled
               variant="outline"
-              className={`${QUEUE_ACTION_BTN_CLASS} opacity-50 cursor-not-allowed`}
+              className={`${QUEUE_ACTION_BTN_CLASS} w-full opacity-50 cursor-not-allowed`}
             >
               Đã có người nhận
             </Button>
+          )}
+          {/* Slot 2: thao tác nghiệp vụ (chỉ người đang nhận) */}
+          {isMine && isPendingWithdrawalApproval && onCheckWithdrawal ? (
+            <Button
+              size="sm"
+              variant="primary"
+              className={`${QUEUE_PRIMARY_BTN_CLASS} w-full`}
+              onClick={() => onCheckWithdrawal(item)}
+            >
+              Duyệt yêu cầu
+            </Button>
+          ) : isMine && linkTarget ? (
+            <Link to={linkTarget} className={`${QUEUE_PRIMARY_LINK_CLASS} w-full`}>
+              {item.type === 'PACKING' ? 'Đóng gói' : 'Mở việc'}
+            </Link>
+          ) : (
+            <span aria-hidden="true" />
           )}
         </div>
       </td>
@@ -484,6 +507,7 @@ function WithdrawalModalContent({ target, busy, onApprove, onReject, onClose }) 
   const [rejectReason, setRejectReason] = React.useState('');
   const [reasonError, setReasonError] = React.useState('');
   const [detail, setDetail] = React.useState(null);
+  const [lightboxOpen, setLightboxOpen] = React.useState(false);
 
   const sku = target.sku || target.productId || detail?.sku || detail?.id || null;
   const existingImage = target.productImageUrl || target.imageUrl || target.photoUrl || firstPhotoUrl(target.photos);
@@ -518,11 +542,18 @@ function WithdrawalModalContent({ target, busy, onApprove, onReject, onClose }) 
     <div className="space-y-4 text-xs text-textSecondary">
       <div className="flex items-center gap-3.5 p-3.5 rounded-xl border border-neutral bg-white">
         {productImage ? (
-          <img
-            src={productImage}
-            alt={productName}
-            className="w-16 h-16 rounded-xl object-cover border border-neutral flex-shrink-0"
-          />
+          <button
+            type="button"
+            onClick={() => setLightboxOpen(true)}
+            className="w-16 h-16 rounded-xl overflow-hidden border border-neutral flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-[#006B2C]/40 transition-shadow focus:outline-none focus:ring-2 focus:ring-[#006B2C]/40"
+            title={`Phóng to ảnh sản phẩm: ${productName}`}
+          >
+            <img
+              src={productImage}
+              alt={productName}
+              className="w-full h-full object-cover"
+            />
+          </button>
         ) : (
           <div className="w-16 h-16 rounded-xl border border-dashed border-neutral bg-[#F6F9F4] flex items-center justify-center text-[10px] text-textSecondary text-center px-1 flex-shrink-0">
             Không có ảnh
@@ -535,6 +566,15 @@ function WithdrawalModalContent({ target, busy, onApprove, onReject, onClose }) 
           </p>
         </div>
       </div>
+      {productImage && (
+        <ReturnImageLightbox
+          isOpen={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+          images={[productImage]}
+          initialIndex={0}
+          categoryLabel={productName}
+        />
+      )}
 
       <div className="p-3.5 rounded-xl border border-neutral bg-[#F6F9F4] space-y-2">
         <div className="flex justify-between items-center">
@@ -582,7 +622,7 @@ function WithdrawalModalContent({ target, busy, onApprove, onReject, onClose }) 
         </div>
       </div>
 
-      {isPendingApproval ? (
+      {isPendingApproval && (onApprove || onReject) ? (
         <div className="space-y-3">
           {!rejectMode ? (
             <div className="flex gap-3 pt-1">

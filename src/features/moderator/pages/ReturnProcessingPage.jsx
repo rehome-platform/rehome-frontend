@@ -49,8 +49,18 @@ export default function ReturnProcessingPage() {
                   Sắp theo hạn xử lý, sắp quá hạn lên trước. Người mua đang chờ tiền — để lâu là một khiếu nại.
                 </p>
               </div>
-              <div className="text-xs text-textSecondary font-medium">
-                Hạn duyệt: 1 ngày làm việc kể từ khi nhận yêu cầu
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="text-xs text-textSecondary font-medium">
+                  Hạn duyệt: 1 ngày làm việc kể từ khi nhận yêu cầu
+                </div>
+                <Button
+                  variant="outline"
+                  loading={model.loading}
+                  onClick={() => model.fetchReturns?.()}
+                  className="whitespace-nowrap"
+                >
+                  Tải lại
+                </Button>
               </div>
             </div>
 
@@ -98,6 +108,15 @@ export default function ReturnProcessingPage() {
                 )}
               </div>
             </div>
+
+            {!model.loading && model.error && (
+              <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700 flex items-center justify-between gap-3">
+                <span>{model.error}</span>
+                <Button variant="outline" size="sm" onClick={() => model.fetchReturns?.()}>
+                  Thử lại
+                </Button>
+              </div>
+            )}
 
             {model.activeSection === 'WORK' ? (
               <>
@@ -147,7 +166,7 @@ export default function ReturnProcessingPage() {
               <div className="flex items-center gap-2">
                 {model.selectedItem.isOverdue && model.selectedItem.status === 'PENDING_APPROVAL' && (
                   <span className="text-[10px] font-bold px-2.5 py-1 bg-secondary text-text rounded-full shadow-sm">
-                    QUÁ HẠN DUYỆT 15 GIỜ
+                    QUÁ HẠN DUYỆT
                   </span>
                 )}
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-success-light text-primary">

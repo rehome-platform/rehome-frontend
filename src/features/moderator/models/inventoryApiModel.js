@@ -95,5 +95,5 @@ export function createdProduct(res, payload) {
 
 export function uploadedPhoto(res) {
   const url = res?.url || res?.fileUrl || (typeof res === 'string' ? res : '');
-  return { url, ...res };
+  return typeof res === 'object' && res !== null ? { ...res, url } : { url };
 }

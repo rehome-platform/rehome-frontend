@@ -119,7 +119,7 @@ export function CounterHandoverTask({ item, context, setConfirmHandover, activeR
                 {item.feeCharged ? (
                   <>
                     <span className="font-bold text-[#191C19]">{money(item.feeCharged)}</span>
-                    {item.feePaid ? (
+                    {item.feePaid || item.feePaidAt ? (
                       <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C]">
                         ✓ Đã đóng phí
                       </span>

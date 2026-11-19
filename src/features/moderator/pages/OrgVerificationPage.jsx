@@ -122,7 +122,7 @@ function AuthenticatedImage({ src, alt, className }) {
           >
             Thử tải lại
           </button>
-          {src && (
+          {src && !isProtectedUrl(src) && (
             <a
               href={src}
               target="_blank"
@@ -242,13 +242,32 @@ export default function OrgVerificationPage() {
                   Xác minh sai một hồ sơ là một tổ chức giả được phép kêu gọi quyên góp. Không có hạn gấp — làm kỹ hơn làm nhanh.
                 </p>
               </div>
-              <div className="text-xs text-textSecondary font-medium">
-                Cam kết phản hồi trong 5 ngày làm việc
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="text-xs text-textSecondary font-medium">
+                  Cam kết phản hồi trong 5 ngày làm việc
+                </div>
+                <Button
+                  variant="outline"
+                  loading={model.loading}
+                  onClick={() => model.handleRefresh?.()}
+                  className="whitespace-nowrap"
+                >
+                  Tải lại
+                </Button>
               </div>
             </div>
 
+            {!model.loading && model.error && (
+              <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700 flex items-center justify-between gap-3">
+                <span>{model.error}</span>
+                <Button variant="outline" size="sm" onClick={() => model.handleRefresh?.()}>
+                  Thử lại
+                </Button>
+              </div>
+            )}
+
             {/* Main Tabs: Hồ sơ mới vs Đổi pháp lý */}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
                 onClick={() => model.setActiveMainTab('NEW_ORGS')}
@@ -377,19 +396,20 @@ export default function OrgVerificationPage() {
                   <div className="pt-2 flex flex-wrap items-center gap-3">
                     <button
                       type="button"
-                      disabled={!model.isChecklistComplete}
+                      disabled={!model.isChecklistComplete || model.approvingOrg}
                       onClick={model.handleApproveOrg}
-                      className={`py-2.5 px-5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 ${model.isChecklistComplete
+                      className={`py-2.5 px-5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 ${model.isChecklistComplete && !model.approvingOrg
                           ? 'bg-primary text-white hover:bg-primary-hover shadow-sm cursor-pointer'
                           : 'bg-neutral-light text-textSecondary border border-neutral cursor-not-allowed'
                         }`}
                     >
-                      Xác thực tổ chức
+                      {model.approvingOrg ? 'Đang xác thực...' : 'Xác thực tổ chức'}
                     </button>
                     <button
                       type="button"
+                      disabled={model.approvingOrg}
                       onClick={() => model.setIsRejectModalOpen(true)}
-                      className="py-2.5 px-4 rounded-xl border border-error text-error hover:bg-error-light text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                      className="py-2.5 px-4 rounded-xl border border-error text-error hover:bg-error-light text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Từ chối kèm lý do
                     </button>

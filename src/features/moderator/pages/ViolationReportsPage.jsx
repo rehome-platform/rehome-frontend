@@ -257,8 +257,9 @@ export default function ViolationReportsPage() {
       const label = ACTION_LABEL_MAP[selectedAction] || selectedAction;
       toast.success(`Đã thực thi [${label}] thành công!`);
 
-      // Optimistic UI: cập nhật trực tiếp trạng thái dòng trên bảng và cache, không reload toàn bộ bảng
+      // Optimistic UI: cập nhật trực tiếp trạng thái dòng trên bảng và xóa cache các tab khác
       const nextStatus = isDismiss ? 'DISMISSED' : 'RESOLVED';
+      listCacheRef.current = {};
       setReports((prev) => {
         const updated = prev
           .map((item) => (String(item.id) === String(selectedReport.id) ? { ...item, status: nextStatus } : item))
@@ -322,22 +323,32 @@ export default function ViolationReportsPage() {
                 </p>
               </div>
 
-              {/* Bộ lọc trạng thái nhanh */}
-              <div className="flex flex-wrap items-center gap-1.5 bg-background p-1 rounded-xl border border-neutral">
-                {STATUS_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setStatusFilter(opt.value)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-                      statusFilter === opt.value
-                        ? 'bg-primary text-white shadow-xs'
-                        : 'text-textSecondary hover:text-text hover:bg-surface'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+              {/* Bộ lọc trạng thái nhanh & nút Tải lại */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1.5 bg-background p-1 rounded-xl border border-neutral">
+                  {STATUS_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setStatusFilter(opt.value)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                        statusFilter === opt.value
+                          ? 'bg-primary text-white shadow-xs'
+                          : 'text-textSecondary hover:text-text hover:bg-surface'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  loading={loading}
+                  onClick={() => fetchReports({ force: true })}
+                  className="whitespace-nowrap"
+                >
+                  Tải lại
+                </Button>
               </div>
             </div>
 
@@ -562,7 +573,9 @@ export default function ViolationReportsPage() {
                                     alt={`Ảnh ${idx + 1}`}
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
-                                      e.currentTarget.src = 'https://via.placeholder.com/150?text=Ảnh+lỗi';
+                                      e.currentTarget.onerror = null;
+                                      e.currentTarget.src =
+                                        "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150'><rect width='100%' height='100%' fill='%23f3f4f6'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%236b7280' font-size='12' font-family='sans-serif'>Ảnh lỗi</text></svg>";
                                     }}
                                   />
                                   <span className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px] font-bold transition-opacity">
@@ -590,7 +603,9 @@ export default function ViolationReportsPage() {
                               alt="Ảnh bìa chiến dịch"
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                e.currentTarget.src = 'https://via.placeholder.com/600x200?text=Ảnh+bìa+lỗi';
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src =
+                                  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='200'><rect width='100%' height='100%' fill='%23f3f4f6'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%236b7280' font-size='14' font-family='sans-serif'>Không tải được ảnh bìa</text></svg>";
                               }}
                             />
                           </div>
@@ -665,7 +680,11 @@ export default function ViolationReportsPage() {
                         <div key={item.id || idx} className="p-3.5 space-y-1 hover:bg-background/40 transition-colors">
                           <div className="flex items-center justify-between text-[11px]">
                             <span className="font-semibold text-text">
-                              {item.isPrimary ? 'Báo cáo gốc' : `Báo cáo viên #${String(item.reporterId).substring(0, 8)}`}
+                              {item.isPrimary
+                                ? 'Báo cáo gốc'
+                                : item.reporterId
+                                  ? `Báo cáo viên #${String(item.reporterId).substring(0, 8)}`
+                                  : 'Báo cáo viên ẩn danh'}
                             </span>
                             <span className="text-textSecondary">
                               {item.createdAt ? formatDateTime(item.createdAt) : '—'}
@@ -703,7 +722,7 @@ export default function ViolationReportsPage() {
                             <div key={idx} className="p-3 space-y-1 bg-surface">
                               <div className="flex items-center justify-between">
                                 <span className="font-bold text-text flex items-center gap-1.5">
-                                  <Badge variant="error">
+                                  <Badge variant="danger">
                                     {ACTION_LABEL_MAP[act.action] || act.action}
                                   </Badge>
                                   <span className="text-textSecondary font-normal">
@@ -887,7 +906,10 @@ export default function ViolationReportsPage() {
           className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-xs"
           onClick={() => setPreviewImage(null)}
         >
-          <div className="relative max-w-4xl max-h-[90vh] bg-surface rounded-2xl overflow-hidden p-2 shadow-2xl">
+          <div
+            className="relative max-w-4xl max-h-[90vh] bg-surface rounded-2xl overflow-hidden p-2 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               type="button"
               onClick={() => setPreviewImage(null)}

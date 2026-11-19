@@ -286,6 +286,7 @@ export function DegradedCaseModal({
 
   const handleFileUpload = (e) => {
     const files = Array.from(e.target.files || []);
+    e.target.value = '';
     if (files.length && uploadEvidence) {
       uploadEvidence(files);
     }
@@ -427,7 +428,7 @@ export function DegradedCaseModal({
               <span className="text-[10px] uppercase font-bold text-[#006B2C]">Phương án 1 · Đền 100%</span>
               <p className="text-base font-extrabold text-[#006B2C]">{showAmount(fullCompensation)}</p>
               <p className="text-[10px] text-[#5f5f5f] leading-tight">
-                Không lấy lại đồ. Hàng thành tài sản nền tảng (PLATFORM_OWNED).
+                Không lấy lại đồ. Hàng thành tài sản nền tảng.
               </p>
             </div>
             <div className="p-3 rounded-xl border border-[#D97706] bg-[#FFFBEB] space-y-1">
@@ -604,7 +605,7 @@ export function ReturnVerdictForm({ inspectionVerdict, setInspectionVerdict, inv
         </div>
       )}
       <p className="text-[10px] text-textSecondary">
-        Chọn Không hợp lệ thì bắt buộc nhập lý do và ít nhất một ảnh kho chụp để đối chất.
+        Chọn Không hợp lệ thì bắt buộc nhập lý do và tải lên từ 2 đến 5 ảnh kho chụp để đối chất.
       </p>
     </div>
   );
@@ -836,23 +837,31 @@ export function ReturnInspectionProduct({
 }
 
 export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybill, setIsRejectModalOpen, handleOpenOutcomeModal }) {
+  const thumbUrl = selectedItem?.packingPhotoUrls?.[0] || selectedItem?.stockInPhotos?.[0] || null;
+  const buyerLine = [selectedItem?.buyerName, selectedItem?.buyerPhone].filter(Boolean).join(' · ') || '—';
   return (
     <div className="lg:col-span-5 space-y-4 font-sans">
       <div>
         <h2 className="text-base font-bold text-text">Đơn và món liên quan</h2>
         <p className="text-xs text-textSecondary">
-          Đơn #{selectedItem?.orderNo || selectedItem?.orderId} · Người mua: {selectedItem?.buyerName}
+          Đơn #{selectedItem?.orderNo || selectedItem?.orderId || '—'} · Người mua: {selectedItem?.buyerName || '—'}
         </p>
       </div>
     
       {/* Box món đồ */}
       <div className="border border-neutral rounded-2xl overflow-hidden bg-surface shadow-sm">
         <div className="p-3.5 flex items-center gap-3 border-b border-neutral">
-          <img
-            src={selectedItem?.stockInPhotos?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400'}
-            alt={selectedItem?.itemName}
-            className="w-12 h-14 object-cover rounded-xl border border-neutral"
-          />
+          {thumbUrl ? (
+            <img
+              src={thumbUrl}
+              alt={selectedItem?.itemName || 'Sản phẩm'}
+              className="w-12 h-14 object-cover rounded-xl border border-neutral shrink-0"
+            />
+          ) : (
+            <div className="w-12 h-14 rounded-xl border border-dashed border-neutral bg-background flex items-center justify-center text-[10px] text-textSecondary shrink-0">
+              Ảnh
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <div className="text-xs font-bold text-text">{selectedItem?.sku}</div>
             <div className="text-xs text-textSecondary">{selectedItem?.itemName}</div>
@@ -896,9 +905,9 @@ export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybi
           Vận đơn trả hàng sẽ tạo khi bấm duyệt
         </div>
         <div className="text-xs text-text leading-relaxed">
-          Lấy tại <strong className="font-semibold">{selectedItem?.buyerName} · {selectedItem?.buyerPhone}</strong>
+          Lấy tại <strong className="font-semibold">{buyerLine}</strong>
           <br />
-          {selectedItem?.buyerAddress}
+          {selectedItem?.buyerAddress || '—'}
         </div>
         {selectedItem?.ghnReturnTrackingCode && (
           <div className="pt-2 border-t border-neutral space-y-1.5 text-[11px]">

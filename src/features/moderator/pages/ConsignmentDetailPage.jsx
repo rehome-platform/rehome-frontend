@@ -85,9 +85,6 @@ export default function ConsignmentDetailPage() {
               BẠN ĐANG NHẬN VIỆC NÀY
             </span>
           )}
-          <Link to={`/moderator/consignments?status=${backStatus}`}>
-            <Button variant="outline">← Tab {backLabel}</Button>
-          </Link>
           <Button
             variant="outline"
             onClick={() => {
@@ -170,10 +167,14 @@ export default function ConsignmentDetailPage() {
                     {(model.form.member.fullName || 'M')[0].toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <p className="font-bold text-[#191C19]">{model.form.member.fullName} · {model.form.member.memberCode}</p>
-                    <p className="text-[#717971] text-[11px] truncate">
-                      {model.form.member.phone} · Đã ký gửi 7 món · chưa có vi phạm
+                    <p className="font-bold text-[#191C19]">
+                      {[model.form.member.fullName, model.form.member.memberCode].filter(Boolean).join(' · ') || '—'}
                     </p>
+                    {model.form.member.phone && (
+                      <p className="text-[#717971] text-[11px] truncate">
+                        {model.form.member.phone}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}

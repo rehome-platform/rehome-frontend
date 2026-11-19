@@ -206,7 +206,7 @@ export default function PackingOrdersPage() {
     let source = apiItems.filter((item) => {
       const mine = isAssignedToMe(item);
       if (item.claimedBy && !mine) return false;
-      return isFixtureMode ? true : mine;
+      return true;
     });
     if (keyword.trim()) {
       const q = keyword.toLowerCase().trim();
@@ -230,30 +230,28 @@ export default function PackingOrdersPage() {
 
   const handleClaim = async (queueId) => {
     setClaimError('');
-    try {
-      await queue.mutate((options) => queueService.claim(queueId, options), {
-        onSuccess: () => window.dispatchEvent(new Event('warehouse:changed')),
-      });
-    } catch (err) {
-      if (err?.status === 409 || err?.code === 'QUEUE_ITEM_ALREADY_CLAIMED') {
-        setClaimError('Công việc đã được nhân viên khác nhận trước. Hệ thống đã làm mới danh sách.');
-      } else {
-        setClaimError(err?.message || 'Không thể nhận việc. Vui lòng thử lại.');
-      }
-      queue.refresh();
-    }
+    await queue.mutate((options) => queueService.claim(queueId, options), {
+      onSuccess: () => window.dispatchEvent(new Event('warehouse:changed')),
+      onError: (err) => {
+        if (err?.status === 409 || err?.code === 'QUEUE_ITEM_ALREADY_CLAIMED') {
+          setClaimError('Công việc đã được nhân viên khác nhận trước. Hệ thống đã làm mới danh sách.');
+        } else {
+          setClaimError(err?.message || 'Không thể nhận việc. Vui lòng thử lại.');
+        }
+        queue.refresh();
+      },
+    });
   };
 
   const handleRelease = async (queueId) => {
     setClaimError('');
-    try {
-      await queue.mutate((options) => queueService.release(queueId, options), {
-        onSuccess: () => setSearch({ page: String(page) }),
-      });
-    } catch (err) {
-      setClaimError(err?.message || 'Không thể nhả việc. Vui lòng thử lại.');
-      queue.refresh();
-    }
+    await queue.mutate((options) => queueService.release(queueId, options), {
+      onSuccess: () => setSearch({ page: String(page) }),
+      onError: (err) => {
+        setClaimError(err?.message || 'Không thể nhả việc. Vui lòng thử lại.');
+        queue.refresh();
+      },
+    });
   };
 
   return (

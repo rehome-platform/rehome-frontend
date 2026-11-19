@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
 import { catalogService } from '../services/warehouseApi.js';
@@ -9,6 +9,14 @@ export default function BrandQuickAddModal({ isOpen, onClose, existingBrands = [
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const saving = React.useRef(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setName('');
+      setOriginCountry('');
+      setError(null);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -44,7 +52,7 @@ export default function BrandQuickAddModal({ isOpen, onClose, existingBrands = [
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={() => { if (!loading) onClose(); }}
       title="Thêm nhanh thương hiệu"
       size="sm"
     >

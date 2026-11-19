@@ -65,7 +65,6 @@ export function ConsignmentReturnPanel({ resource, formId, proof, returnReason, 
         </Field>
         <Field
           label="Ghi chú thêm · tuỳ chọn"
-          required
           value={returnNote}
           onChange={(e) => setReturnNote(e.target.value)}
           error={errors.note}
@@ -85,7 +84,7 @@ export function ConsignmentReturnPanel({ resource, formId, proof, returnReason, 
           <Button
             variant="danger"
             type="submit"
-            disabled={!returnReason || !returnNote.trim()}
+            disabled={!returnReason}
             loading={resource.busy}
             className="flex-1 text-xs font-bold py-2.5"
           >
@@ -348,7 +347,7 @@ export function ConsignmentSummary({ form }) {
         </div>
         <div className="px-4 py-2.5 flex justify-between">
           <span className="text-[#5f5f5f] w-32">Danh mục</span>
-          <span className="font-semibold text-[#191C19] flex-1 text-right">{form.category || 'Áo khoác · slot: Áo'}</span>
+          <span className="font-semibold text-[#191C19] flex-1 text-right">{form.category || '—'}</span>
         </div>
         <div className="px-4 py-2.5 flex justify-between">
           <span className="text-[#5f5f5f] w-32">Thương hiệu</span>
@@ -356,7 +355,7 @@ export function ConsignmentSummary({ form }) {
         </div>
         <div className="px-4 py-2.5 flex justify-between">
           <span className="text-[#5f5f5f] w-32">Kích cỡ</span>
-          <span className="font-semibold text-[#191C19] flex-1 text-right">{form.size || 'M'}</span>
+          <span className="font-semibold text-[#191C19] flex-1 text-right">{form.size || '—'}</span>
         </div>
         <div className="px-4 py-2.5 flex justify-between">
           <span className="text-[#5f5f5f] w-32">Tình trạng khai</span>
@@ -392,13 +391,15 @@ export function ConsignmentPhotoViewer({ photos, activePhotoIdx, photoUrl, setAc
       {/* Ảnh to xem trước */}
       <div className="aspect-[4/3] rounded-xl border border-[#c4c4c4] bg-[#f9faf9] flex items-center justify-center overflow-hidden relative">
         {photoUrl ? (
-          <img src={photoUrl} alt="Ảnh sản phẩm ký gửi" className="w-full h-full object-contain" />
+          <>
+            <img src={photoUrl} alt="Ảnh sản phẩm ký gửi" className="w-full h-full object-contain" />
+            <span className="absolute bottom-3 bg-white/90 border border-[#c4c4c4] px-3 py-1 text-[11px] font-semibold text-[#4a4a4a] rounded shadow-sm">
+              {activePhotoIdx === 0 ? 'Mặt trước' : activePhotoIdx === 1 ? 'Mặt sau' : activePhotoIdx === 2 ? 'Nhãn mác' : 'Tem thương hiệu'}
+            </span>
+          </>
         ) : (
           <span className="text-xs text-[#717971]">Chưa có ảnh</span>
         )}
-        <span className="absolute bottom-3 bg-white/90 border border-[#c4c4c4] px-3 py-1 text-[11px] font-semibold text-[#4a4a4a] rounded shadow-sm">
-          {activePhotoIdx === 0 ? 'Mặt trước' : activePhotoIdx === 1 ? 'Mặt sau' : activePhotoIdx === 2 ? 'Nhãn mác' : 'Tem thương hiệu'}
-        </span>
       </div>
 
       {/* Thumbnails 4 góc */}

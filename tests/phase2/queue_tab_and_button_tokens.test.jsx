@@ -199,6 +199,7 @@ describe('HQ-01: Tab selection in place, Claim flow, and "Mở việc" without a
       name: 'Áo thun',
       targetName: 'Áo thun',
       subjectSubtitle: 'Trần Thị C',
+      productImageUrl: 'https://cdn.rehome.test/ao-thun.jpg',
       status: 'PENDING_APPROVAL',
       claimedBy: 'mod-a',
       createdAt: '2026-10-01T00:00:00Z',
@@ -208,14 +209,23 @@ describe('HQ-01: Tab selection in place, Claim flow, and "Mở việc" without a
     renderQueueApp();
 
     const packRow = (await screen.findByText('Nguyễn Văn B')).closest('tr');
-    const packActionsWrap = within(packRow).getByRole('button', { name: 'Chi tiết' }).parentElement;
-    expect(packActionsWrap.className).toContain('flex-nowrap');
-    expect(packActionsWrap.className).toContain('justify-end');
+    // 7 columns: Nhận/Nhả việc được gộp vào cột Hành động (căn trái)
+    const headers = screen.getAllByRole('columnheader').map((th) => th.textContent.trim());
+    expect(headers).toEqual(['Loại việc', 'Đối tượng', 'Tạo lúc', 'Đã chờ', 'Người nhận', 'Chi tiết', 'Hành động']);
+
+    const packDetailBtn = within(packRow).getByRole('button', { name: 'Chi tiết' });
+    const packReleaseBtn = within(packRow).getByRole('button', { name: 'Nhả việc' });
+    const packActionLink = within(packRow).getByRole('link', { name: 'Đóng gói' });
+    const packActionsWrap = packActionLink.parentElement;
+    // Nhả việc + Mở việc nằm cùng ô Hành động, căn trái, lưới cố định
+    expect(packDetailBtn.closest('td')).not.toBe(packReleaseBtn.closest('td'));
+    expect(packReleaseBtn.closest('td')).toBe(packActionLink.closest('td'));
+    expect(packActionLink.closest('td').className).toContain('text-left');
+    expect(packActionsWrap.className).toContain('grid');
+    expect(packActionsWrap.className).toContain('justify-items-start');
     expect(packActionsWrap.className).toContain('gap-2');
 
-    const packButtons = Array.from(packActionsWrap.children);
-    expect(packButtons.map((el) => el.textContent.trim())).toEqual(['Chi tiết', 'Nhả việc', 'Đóng gói']);
-    packButtons.forEach((el) => {
+    [packReleaseBtn, packActionLink].forEach((el) => {
       expect(el.className).toContain('h-8');
       expect(el.className).toContain('px-3');
       expect(el.className).toContain('text-xs');
@@ -227,16 +237,16 @@ describe('HQ-01: Tab selection in place, Claim flow, and "Mở việc" without a
     });
 
     const withdrawRow = screen.getByText('Trần Thị C').closest('tr');
-    const withdrawActionsWrap = within(withdrawRow).getByRole('button', { name: 'Chi tiết' }).parentElement;
-    expect(withdrawActionsWrap.className).toContain('flex-nowrap');
-    const withdrawButtons = Array.from(withdrawActionsWrap.children);
-    expect(withdrawButtons.map((el) => el.textContent.trim())).toEqual([
-      'Chi tiết',
-      'Check đơn',
-      'Nhả việc',
-      'Duyệt yêu cầu',
-    ]);
-    withdrawButtons.forEach((el) => {
+    // Check đơn button is removed and no thumbnail image is rendered inside Loại việc column
+    expect(within(withdrawRow).queryByRole('button', { name: 'Check đơn' })).not.toBeInTheDocument();
+    expect(within(withdrawRow).queryByRole('img')).not.toBeInTheDocument();
+
+    const withdrawDetailBtn = within(withdrawRow).getByRole('button', { name: 'Chi tiết' });
+    const withdrawReleaseBtn = within(withdrawRow).getByRole('button', { name: 'Nhả việc' });
+    const withdrawApproveBtn = within(withdrawRow).getByRole('button', { name: 'Duyệt yêu cầu' });
+    expect(withdrawDetailBtn.closest('td')).not.toBe(withdrawReleaseBtn.closest('td'));
+    expect(withdrawReleaseBtn.closest('td')).toBe(withdrawApproveBtn.closest('td'));
+    [withdrawReleaseBtn, withdrawApproveBtn].forEach((el) => {
       expect(el.className).toContain('h-8');
       expect(el.className).toContain('px-3');
       expect(el.className).toContain('text-xs');

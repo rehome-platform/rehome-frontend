@@ -39,20 +39,17 @@ describe('API 28 queue contract', () => {
     expect(items[0]).toMatchObject({ queueId: 'queue-w', refId: 'withdrawal-1', accountId: 'account-1', memberCode: 'MB-001' });
   });
 
-  it('shows Member code separately in the withdrawal row and check modal, with identical counter links', async () => {
+  it('shows Member code separately in the withdrawal row and integrated Chi tiết modal, with identical counter links', async () => {
     server.use(http.get(queuesUrl, () => ok([withdrawal])));
     renderPage(<ConsignmentQueuePage />);
     const row = (await screen.findByText('Nguyễn An')).closest('tr');
     expect(within(row).getByText('Nguyễn An')).toBeInTheDocument();
     expect(within(row).queryByText('MB-001')).not.toBeInTheDocument();
+    expect(within(row).queryByRole('button', { name: 'Check đơn' })).not.toBeInTheDocument();
     const openHref = within(row).getByRole('link', { name: 'Mở việc' }).getAttribute('href');
     fireEvent.click(within(row).getByRole('button', { name: 'Chi tiết' }));
-    const detailDialog = screen.getByRole('dialog');
-    expect(within(detailDialog).getByText('Áo len')).toBeInTheDocument();
-    expect(within(detailDialog).getByText('MB-001')).toBeInTheDocument();
-    fireEvent.click(within(detailDialog).getAllByRole('button', { name: 'Đóng' })[0]);
-    fireEvent.click(within(row).getByRole('button', { name: 'Check đơn' }));
     const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Áo len')).toBeInTheDocument();
     expect(within(dialog).getByText('Nguyễn An')).toBeInTheDocument();
     expect(within(dialog).getByText('MB-001')).toBeInTheDocument();
     const counterHref = within(dialog).getByRole('link', { name: /Đến Quầy bàn giao/ }).getAttribute('href');
@@ -62,10 +59,10 @@ describe('API 28 queue contract', () => {
     expect(new URL(counterHref, 'http://localhost').searchParams.get('memberCode')).toBe('MB-001');
   });
 
-  it('omits Member code when absent and still preserves accountId in the modal link', async () => {
+  it('omits Member code when absent and still preserves accountId in the Chi tiết modal link', async () => {
     server.use(http.get(queuesUrl, () => ok([{ ...withdrawal, memberCode: null }])));
     renderPage(<ConsignmentQueuePage />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Check đơn' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Chi tiết' }));
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByText('Nguyễn An')).toBeInTheDocument();
     expect(within(dialog).queryByText(/Mã Member/)).not.toBeInTheDocument();
