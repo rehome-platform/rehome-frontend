@@ -52,16 +52,19 @@ export function PackingQueueItem({
       {/* 7. Trạng thái người giữ */}
       <td className="py-3 px-3">
         {isMine ? (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-[#E8F5E9] text-[#006B2C]">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-semibold bg-[#ECFDF3] text-[#067647] border-[#ABEFC6]">
+            <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-[#12B76A]" />
             Bạn đang giữ
           </span>
         ) : isClaimedByOther ? (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-[#FFF3E0] text-[#D97706]">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-semibold bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]">
+            <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-[#F79009]" />
             {item.claimedByName || 'Người khác giữ'}
           </span>
         ) : (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold text-[#5f5f5f]">
-            chưa ai nhận
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-semibold bg-[#F2F4F7] text-[#344054] border-[#D0D5DD]">
+            <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-[#667085]" />
+            Chưa ai nhận
           </span>
         )}
       </td>
