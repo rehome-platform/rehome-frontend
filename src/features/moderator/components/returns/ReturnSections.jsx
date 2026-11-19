@@ -140,7 +140,7 @@ export function ReturnOutcomeDialog({
     <Modal
       isOpen={isOutcomeModalOpen}
       onClose={() => setIsOutcomeModalOpen(false)}
-      title="Chọn phương án xử lý món hàng (TH-04)"
+      title="Chọn phương án xử lý món hàng"
       size="xl"
     >
       <div className="space-y-5 text-xs font-sans">
@@ -374,7 +374,7 @@ export function ReturnOutcomeDialog({
                 <div className="space-y-1.5 text-[11px]">
                   <div className="flex justify-between">
                     <span className="text-textSecondary">Thời hạn lấy:</span>
-                    <span className="font-bold text-[#191C19]">30 ngày tại quầy BG-01</span>
+                    <span className="font-bold text-[#191C19]">30 ngày tại quầy</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-textSecondary">Phí lưu kho:</span>
@@ -481,7 +481,7 @@ export function DegradedCaseModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="TH-04 · Hàng xuống cấp, đề xuất đền cho người ký gửi"
+      title="Hàng xuống cấp, đề xuất đền cho người ký gửi"
     >
       <div className="space-y-4 text-xs font-sans max-h-[82vh] overflow-y-auto pr-1">
         {/* Banner lưu ý trách nhiệm */}
@@ -677,7 +677,7 @@ export function ReturnRejectDialog({ isRejectModalOpen, setIsRejectModalOpen, re
     <Modal
       isOpen={isRejectModalOpen}
       onClose={() => setIsRejectModalOpen(false)}
-      title="Từ chối yêu cầu trả hàng (TH-02)"
+      title="Từ chối yêu cầu trả hàng"
     >
       <div className="space-y-4 text-xs font-sans">
         <p className="text-textSecondary">
@@ -711,7 +711,7 @@ export function ReturnMarkLostDialog({ markLostTarget, onClose, onConfirm, submi
     <Modal
       isOpen={Boolean(markLostTarget)}
       onClose={() => { if (!submitting) onClose(); }}
-      title="Xác nhận bưu kiện thất lạc (TH-08)"
+      title="Xác nhận bưu kiện thất lạc"
     >
       <div className="space-y-4 text-xs font-sans">
         <p className="text-text leading-relaxed">
@@ -854,7 +854,7 @@ export function ReturnInspectionVerdict({
               onClick={handleOpenDegradedCase}
               className="px-3.5 py-2 rounded-xl border border-secondary bg-[#FFFDF5] text-[#B45309] text-xs font-bold hover:bg-amber-100 transition-colors"
             >
-              Báo hàng xuống cấp (TH-04 / KG-16)
+              Báo hàng xuống cấp
             </button>
           )}
         </div>
@@ -1235,7 +1235,7 @@ export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybi
             onClick={() => handleOpenOutcomeModal(selectedItem)}
             className="w-full py-2.5 px-4 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-hover shadow-sm transition-colors"
           >
-            Chọn phương án xử lý món hàng (TH-04)
+            Chọn phương án xử lý món hàng
           </button>
         </div>
       )}

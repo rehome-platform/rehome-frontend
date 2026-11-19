@@ -89,7 +89,7 @@ export function ReturnQueueRow({
                 type="button"
                 onClick={() => handleMarkLost(r)}
                 className="text-[11px] px-2.5 py-1.5 rounded-xl border border-error text-error hover:bg-error-light transition-colors"
-                title="Báo bưu kiện thất lạc bởi đơn vị giao vận (TH-08)"
+                title="Báo bưu kiện thất lạc bởi đơn vị giao vận"
               >
                 Báo thất lạc
               </button>
@@ -103,7 +103,7 @@ export function ReturnQueueRow({
                 type="button"
                 onClick={() => handleOpenOutcomeModal(r)}
                 className="text-[11px] font-bold px-2.5 py-1.5 rounded-xl bg-primary text-white hover:bg-primary-hover shadow-sm transition-colors"
-                title="Chọn phương án xử lý món hàng (TH-04)"
+                title="Chọn phương án xử lý món hàng"
               >
                 Chọn xử lý món
               </button>
@@ -119,10 +119,10 @@ export function ReturnQueueRow({
               <button
                 type="button"
                 onClick={() => (handleOpenDegradedCaseView ? handleOpenDegradedCaseView(r) : handleOpenReview(r))}
-                className="text-[11px] px-2.5 py-1.5 rounded-xl border border-amber-600 bg-amber-50 text-amber-800 font-bold hover:bg-amber-100 transition-colors"
-                title="Xem kết luận hàng xuống cấp (TH-07)"
+                className="text-[11px] px-2.5 py-1.5 rounded-xl border border-[#FEDF89] bg-[#FFFAEB] text-[#B54708] font-semibold hover:bg-[#FEF0C7] transition-colors"
+                title="Xem kết luận hàng xuống cấp"
               >
-                TH-07
+                Biên bản xuống cấp
               </button>
             )}
           </div>
