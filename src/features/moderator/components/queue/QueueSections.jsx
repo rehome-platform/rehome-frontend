@@ -110,7 +110,137 @@ export function QueueReleaseDialog({ releaseTarget, resource, setReleaseTarget, 
   );
 }
 
-export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resource, handleClaim, setClaimTarget, linkTarget, setFeedback, setReleaseTarget, onCheckWithdrawal }) {
+export function extractQueueSubjectName(item) {
+  if (!item) return '—';
+  const raw =
+    item.memberName ||
+    item.buyerName ||
+    item.sellerName ||
+    item.subjectSubtitle ||
+    item.fieldChanged ||
+    item.orgName ||
+    item.organizationName ||
+    item.memberCode ||
+    '—';
+  const cleaned = String(raw).split('·')[0].trim();
+  return cleaned || '—';
+}
+
+export function QueueTaskDetailModal({ target, onClose }) {
+  if (!target) return null;
+  const isWithdrawal = target.type === 'WITHDRAWAL' || target.type === 'ITEM_WITHDRAWAL' || target.kind === 'WITHDRAWAL';
+  const codeValue = target.formId || target.orderNo || target.orderId || target.refId || target.queueId || '—';
+  const titleText =
+    target.targetName ||
+    target.productName ||
+    target.orgName ||
+    target.name ||
+    '—';
+  const subjectText = target.subjectSubtitle || target.memberName || target.buyerName || target.sellerName || '—';
+  const waitText = target.waitTimeFormatted || formatElapsedHours(target.hours ?? 0);
+  const fee = target.feeCharged ?? target.withdrawalFee ?? 0;
+  const isPaid = Boolean(target.feePaid || target.feePaidAt);
+  const statusLabel =
+    isWithdrawal && target.status === 'PENDING_APPROVAL'
+      ? 'Chờ duyệt'
+      : isWithdrawal && target.status === 'PENDING_PICKUP'
+        ? 'Chờ bàn giao'
+        : target.status || 'Đang chờ xử lý';
+
+  return (
+    <Modal
+      isOpen={Boolean(target)}
+      title="Chi tiết công việc"
+      onClose={onClose}
+      size="md"
+    >
+      <div className="space-y-4 text-xs text-textSecondary">
+        <div className="rounded-xl border border-neutral bg-[#F6F9F4] p-3.5 space-y-2">
+          <div className="flex justify-between gap-4">
+            <span className="font-semibold text-textSecondary shrink-0">Loại công việc:</span>
+            <span className="font-bold text-text text-right">{target.typeLabel || target.kindLabel || 'Công việc kho'}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="font-semibold text-textSecondary shrink-0">Mã công việc:</span>
+            <span className="font-mono font-bold text-text text-right break-all">{codeValue}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="font-semibold text-textSecondary shrink-0">Nội dung / Sản phẩm:</span>
+            <span className="font-semibold text-text text-right">{titleText}</span>
+          </div>
+          {target.sku && (
+            <div className="flex justify-between gap-4">
+              <span className="font-semibold text-textSecondary shrink-0">Mã SKU:</span>
+              <span className="font-mono font-bold text-text text-right">{target.sku}</span>
+            </div>
+          )}
+          {(target.campaignTitle || target.organizationName) && (
+            <div className="flex justify-between gap-4">
+              <span className="font-semibold text-textSecondary shrink-0">Chiến dịch / Tổ chức:</span>
+              <span className="font-medium text-text text-right">
+                {[target.campaignTitle, target.organizationName].filter(Boolean).join(' · ')}
+              </span>
+            </div>
+          )}
+          <div className="flex justify-between gap-4">
+            <span className="font-semibold text-textSecondary shrink-0">Đối tượng:</span>
+            <span className="font-medium text-text text-right">{subjectText}</span>
+          </div>
+          {target.memberCode && (
+            <div className="flex justify-between gap-4">
+              <span className="font-semibold text-textSecondary shrink-0">Mã Member:</span>
+              <span className="font-mono font-bold text-text text-right">{target.memberCode}</span>
+            </div>
+          )}
+          {isWithdrawal && (
+            <div className="flex justify-between gap-4">
+              <span className="font-semibold text-textSecondary shrink-0">Phí rút hàng:</span>
+              <span className="text-right">
+                {fee > 0 ? (
+                  <>
+                    <strong className="text-text mr-1.5">{money(fee)}</strong>
+                    <span className={isPaid ? 'text-[#006B2C] font-semibold' : 'text-[#BA1A1A] font-semibold'}>
+                      ({isPaid ? 'Đã thanh toán' : 'Chưa thanh toán'})
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-[#006B2C] font-semibold">Miễn phí</span>
+                )}
+              </span>
+            </div>
+          )}
+          <div className="flex justify-between gap-4">
+            <span className="font-semibold text-textSecondary shrink-0">Trạng thái:</span>
+            <span className="font-semibold text-text text-right">{statusLabel}</span>
+          </div>
+          {target.formattedTime && (
+            <div className="flex justify-between gap-4">
+              <span className="font-semibold text-textSecondary shrink-0">Tạo lúc:</span>
+              <span className="text-text text-right">{target.formattedTime}</span>
+            </div>
+          )}
+          <div className="flex justify-between gap-4">
+            <span className="font-semibold text-textSecondary shrink-0">Đã chờ:</span>
+            <span className="font-semibold text-text text-right">{waitText}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="font-semibold text-textSecondary shrink-0">Người nhận:</span>
+            <span className="font-semibold text-text text-right">
+              {target.claimedBy ? (target.claimedByName || target.claimedBy) : 'Chưa ai nhận'}
+            </span>
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <Button variant="outline" size="sm" onClick={onClose} className="whitespace-nowrap">
+            Đóng
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resource, handleClaim, setClaimTarget, linkTarget, setFeedback, setReleaseTarget, onCheckWithdrawal, onViewDetail }) {
   const rowRef = React.useRef(null);
   React.useEffect(() => {
     if (isFocused && !resource.loading) {
@@ -120,7 +250,7 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
 
   const isWithdrawal = item.type === 'WITHDRAWAL' || item.type === 'ITEM_WITHDRAWAL';
   const isPendingWithdrawalApproval = isWithdrawal && item.status === 'PENDING_APPROVAL';
-  const titleText = item.targetName || item.orgName || item.productName || item.orderNo || item.name || item.formId || item.orderId || item.queueId;
+  const subjectName = extractQueueSubjectName(item);
 
   return (
     <tr
@@ -129,74 +259,28 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
       className={`transition-colors hover:bg-[#F6F9F4] ${item.isOverdue ? 'border-l-4 border-l-[#006B2C] bg-[#F6F9F4]' : ''
         } ${isFocused ? 'bg-[#EBF1E8] ring-2 ring-inset ring-primary' : ''}`}
     >
-      <td className="py-3 px-4 font-semibold text-text">
-        <div>{item.typeLabel}</div>
-        {isPendingWithdrawalApproval && (
-          <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
-            Chờ duyệt
-          </span>
-        )}
-        {isWithdrawal && item.status === 'PENDING_PICKUP' && (
-          <span className="mt-1 inline-block rounded-full bg-[#E8F5E9] px-2 py-0.5 text-[10px] font-bold text-[#006B2C]">
-            Chờ bàn giao
-          </span>
-        )}
+      <td className="py-3 px-4 font-semibold text-text whitespace-nowrap">
+        <div className="flex items-center gap-2">
+          <span>{item.typeLabel}</span>
+          {isFocused && (
+            <span className="inline-block rounded-full bg-primary px-2.5 py-0.5 text-[10px] text-white font-medium whitespace-nowrap">
+              Việc vừa mở
+            </span>
+          )}
+        </div>
       </td>
-      <td className="py-3 px-3 font-medium text-text">
-        {isPendingWithdrawalApproval && isMine && onCheckWithdrawal ? (
-          <button
-            type="button"
-            onClick={() => onCheckWithdrawal(item)}
-            className="text-left text-[#006B2C] hover:underline font-bold cursor-pointer"
-          >
-            {titleText}
-          </button>
-        ) : isMine && linkTarget ? (
-          <Link to={linkTarget} className="text-[#006B2C] hover:underline font-bold">
-            {titleText}
-          </Link>
-        ) : (
-          <span>{titleText}</span>
-        )}
-        {(isWithdrawal || item.type === 'DONATION_PICKUP') && item.sku && (
-          <div className="mt-0.5 text-[11px] font-mono text-textSecondary">SKU: {item.sku}</div>
-        )}
-        {item.type === 'DONATION_PICKUP' && (item.campaignTitle || item.organizationName) && (
-          <div className="mt-0.5 text-[11px] text-textSecondary">
-            {[item.campaignTitle, item.organizationName].filter(Boolean).join(' · ')}
-          </div>
-        )}
-        {isFocused && <span className="ml-2 inline-block rounded-full bg-primary px-2.5 py-0.5 text-[10px] text-white font-medium">Việc vừa mở</span>}
+      <td className="py-3 px-3 text-text font-medium whitespace-nowrap">
+        {subjectName}
       </td>
-      <td className="py-3 px-3 text-textSecondary">
-        {isWithdrawal ? (
-          <>
-            <div>{item.subjectSubtitle || item.memberName || item.sellerName || '—'}</div>
-            {item.memberCode && (
-              <div className="mt-1 text-[11px]">Mã Member: <span className="font-mono">{item.memberCode}</span></div>
-            )}
-            {item.feeCharged > 0 && (
-              <div className="mt-1 text-[11px]">
-                Phí rút: <strong className="text-text">{money(item.feeCharged)}</strong>{' '}
-                {item.feePaid ? (
-                  <span className="text-[#006B2C] font-semibold">(Đã thanh toán)</span>
-                ) : (
-                  <span className="text-[#BA1A1A] font-semibold">(Chưa thanh toán)</span>
-                )}
-              </div>
-            )}
-          </>
-        ) : (item.subjectSubtitle || item.fieldChanged || item.buyerName || item.memberName || item.sellerName || item.memberCode || '—')}
-      </td>
-      <td className="py-3 px-3 text-textSecondary">
+      <td className="py-3 px-3 text-textSecondary whitespace-nowrap">
         {item.formattedTime}
       </td>
-      <td className="py-3 px-3">
+      <td className="py-3 px-3 whitespace-nowrap">
         <span className={`font-semibold ${item.isOverdue ? 'text-error' : 'text-text'}`}>
           {item.waitTimeFormatted || formatElapsedHours(item.hours ?? 0)}
         </span>
       </td>
-      <td className="py-3 px-3 text-textSecondary">
+      <td className="py-3 px-3 text-textSecondary whitespace-nowrap">
         {isMine ? (
           <span className="font-bold text-[#006B2C]">Bạn đang nhận việc này</span>
         ) : isClaimedByOther ? (
@@ -205,13 +289,23 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
           <span>chưa ai nhận</span>
         )}
       </td>
-      <td className="py-3 px-3 text-right">
+      <td className="py-3 px-3 text-right whitespace-nowrap">
         <div className="flex items-center justify-end gap-2">
+          {onViewDetail && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs py-1.5 px-2.5 font-semibold whitespace-nowrap"
+              onClick={() => onViewDetail(item)}
+            >
+              Chi tiết
+            </Button>
+          )}
           {isWithdrawal && onCheckWithdrawal && (
             <Button
               size="sm"
               variant="outline"
-              className="text-xs py-1.5 px-2.5 font-semibold text-[#006B2C] border-[#006B2C] hover:bg-[#E8F5E9]"
+              className="text-xs py-1.5 px-2.5 font-semibold text-[#006B2C] border-[#006B2C] hover:bg-[#E8F5E9] whitespace-nowrap"
               onClick={() => onCheckWithdrawal(item)}
             >
               Check đơn
@@ -221,6 +315,7 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
             <Button
               size="sm"
               variant="primary"
+              className="whitespace-nowrap"
               loading={resource.busy}
               onClick={() => (setClaimTarget ? setClaimTarget(item) : handleClaim(item))}
             >
@@ -233,6 +328,7 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
                 <Button
                   size="sm"
                   variant="primary"
+                  className="whitespace-nowrap"
                   onClick={() => onCheckWithdrawal(item)}
                 >
                   Duyệt yêu cầu
@@ -240,7 +336,7 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
               ) : linkTarget && (
                 <Link
                   to={linkTarget}
-                  className="text-xs py-1.5 px-3 bg-[#006B2C] text-white hover:bg-[#005523] hover:text-white font-semibold rounded-xl inline-flex items-center gap-1 shadow-sm transition-colors"
+                  className="text-xs py-1.5 px-3 bg-[#006B2C] text-white hover:bg-[#005523] hover:text-white font-semibold rounded-xl inline-flex items-center gap-1 shadow-sm transition-colors whitespace-nowrap"
                 >
                   {item.type === 'PACKING' ? 'Đóng gói →' : 'Mở việc'}
                 </Link>
@@ -248,6 +344,7 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
               <Button
                 size="sm"
                 variant="outline"
+                className="whitespace-nowrap"
                 onClick={() => {
                   setFeedback?.(null);
                   setReleaseTarget(item);
@@ -262,7 +359,7 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
               size="sm"
               disabled
               variant="outline"
-              className="opacity-50 cursor-not-allowed"
+              className="opacity-50 cursor-not-allowed whitespace-nowrap"
             >
               Đã có người nhận
             </Button>
@@ -319,7 +416,7 @@ export function QueueFilters({ statusFilter, sortParam = 'newest', changeFilter,
       <button
         type="button"
         onClick={toggleOverdue}
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${overdueOnly
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors whitespace-nowrap ${overdueOnly
             ? 'border-2 border-[#006B2C] bg-[#006B2C] text-white'
             : 'border border-neutral bg-white text-text hover:bg-[#F6F9F4]'
           }`}
@@ -328,7 +425,7 @@ export function QueueFilters({ statusFilter, sortParam = 'newest', changeFilter,
         {overdueOnly && <span>✕</span>}
       </button>
 
-      <span className="ml-auto text-xs text-textSecondary">
+      <span className="ml-auto text-xs text-textSecondary whitespace-nowrap">
         Hiển thị {filteredItems.length} / {rawItems.length} việc
       </span>
     </div>
@@ -344,7 +441,7 @@ export function QueueTabs({ typeParam, changeFilter }) {
             <Link
               key={tab.key}
               to={tab.directUrl}
-              className="px-3.5 py-1.5 rounded-xl border border-neutral bg-white text-xs font-semibold text-textSecondary hover:bg-[#F6F9F4] hover:text-[#006B2C] transition-colors"
+              className="px-3.5 py-1.5 rounded-xl border border-neutral bg-white text-xs font-semibold text-textSecondary hover:bg-[#F6F9F4] hover:text-[#006B2C] transition-colors whitespace-nowrap"
             >
               {tab.label}
             </Link>
@@ -358,7 +455,7 @@ export function QueueTabs({ typeParam, changeFilter }) {
             role="tab"
             aria-selected={isSelected}
             onClick={() => changeFilter('type', tab.key === 'ALL' ? '' : tab.key)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${isSelected
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border whitespace-nowrap ${isSelected
                 ? 'border-[#006B2C] bg-[#006B2C] text-white shadow-sm'
                 : 'border-neutral bg-white text-textSecondary hover:bg-[#F6F9F4] hover:text-[#006B2C]'
               }`}

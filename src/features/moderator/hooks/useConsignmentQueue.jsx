@@ -22,9 +22,10 @@ export function useConsignmentQueue() {
   const overdueOnly = search.get('overdue') === '1';
   const page = Math.max(0, Number(search.get('page')) || 0);
 
-  // Modal nhận việc & nhả việc (HQ-02-NhanViec & HQ-02-NhaViec)
+  // Modal nhận việc & nhả việc & chi tiết (HQ-02)
   const [claimTarget, setClaimTarget] = useState(null);
   const [releaseTarget, setReleaseTarget] = useState(null);
+  const [detailTarget, setDetailTarget] = useState(null);
   const [withdrawalCheckTarget, setWithdrawalCheckTarget] = useState(null);
   const [feedback, setFeedback] = useState(null);
 
@@ -160,6 +161,8 @@ export function useConsignmentQueue() {
     claimTarget,
     setClaimTarget,
     setReleaseTarget,
+    detailTarget,
+    setDetailTarget,
     page,
     releaseTarget,
     handleRelease,

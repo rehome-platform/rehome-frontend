@@ -111,10 +111,15 @@ describe('L-04 Phase 4: Mock API Integration Suite (APIs 68-72)', () => {
     expect(packingTab).toBeInTheDocument();
     expect(packingTab).toHaveAttribute('aria-selected', 'true');
 
-    // Bảng hàng đợi hiển thị đúng các đơn từ Mock API
-    await screen.findByText('DH-00244');
-    expect(screen.getByText('DH-00239')).toBeInTheDocument();
-    expect(screen.getByText('DH-00251')).toBeInTheDocument();
+    // Bảng hàng đợi hiển thị tên đối tượng từ Mock API, ẩn mã đơn và đưa vào Chi tiết (FE-02)
+    const ngoCell = await screen.findByText('Ngô Hải F');
+    expect(ngoCell).toBeInTheDocument();
+    expect(screen.getByText('Vũ Thanh H')).toBeInTheDocument();
+    expect(screen.getByText('Trần Minh K')).toBeInTheDocument();
+    expect(screen.queryByText('DH-00244')).not.toBeInTheDocument();
+    fireEvent.click(within(ngoCell.closest('tr')).getByRole('button', { name: 'Chi tiết' }));
+    expect(within(screen.getByRole('dialog')).getByText('DH-00244')).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: 'Đóng' })[0]);
     expect(screen.getAllByText('Đóng gói đơn hàng').length).toBeGreaterThan(0);
   });
 
@@ -149,7 +154,7 @@ describe('L-04 Phase 4: Mock API Integration Suite (APIs 68-72)', () => {
       </MemoryRouter>
     );
 
-    const dh244Cell = await screen.findByText('DH-00244');
+    const dh244Cell = await screen.findByText('Ngô Hải F');
     const dh244Row = dh244Cell.closest('tr');
 
     // Tìm dòng DH-00244 và bấm "Nhận việc" (API 29)
@@ -169,14 +174,12 @@ describe('L-04 Phase 4: Mock API Integration Suite (APIs 68-72)', () => {
     // Cập nhật trạng thái "Bạn đang nhận việc này"
     await screen.findByText('Bạn đang nhận việc này');
 
-    // Xuất hiện nút "Đóng gói →" và link mã đơn
+    // Xuất hiện nút "Đóng gói →" và không hiển thị link mã đơn thừa trong bảng (FE-02)
     const packLink = screen.getByRole('link', { name: 'Đóng gói →' });
     expect(packLink).toBeInTheDocument();
     expect(packLink.getAttribute('href')).toContain('/moderator/packing?orderId=DH-00244');
 
-    const codeLink = screen.getByRole('link', { name: 'DH-00244' });
-    expect(codeLink).toBeInTheDocument();
-    expect(codeLink.getAttribute('href')).toContain('/moderator/packing?orderId=DH-00244');
+    expect(screen.queryByRole('link', { name: 'DH-00244' })).not.toBeInTheDocument();
 
     // Bấm "Nhả việc" (API 30)
     const releaseBtn = screen.getByRole('button', { name: 'Nhả việc' });
