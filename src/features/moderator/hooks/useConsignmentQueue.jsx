@@ -1,4 +1,4 @@
-import { queueItemMeta, matchesQueueFilter, queueActionError } from '../models/queueModel.js';
+import { queueItemMeta, matchesQueueFilter, queueActionError, sortQueueItemsNewestFirst } from '../models/queueModel.js';
 
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -48,8 +48,8 @@ export function useConsignmentQueue() {
 
   const rawItems = listItems(resource.data);
 
-  // Tính số giờ đã chờ
-  const itemsWithMeta = rawItems.map(item => queueItemMeta(item, typeParam));
+  // Tính số giờ đã chờ và sắp xếp mới nhất lên trên
+  const itemsWithMeta = sortQueueItemsNewestFirst(rawItems).map(item => queueItemMeta(item, typeParam));
   const filteredItems = itemsWithMeta.filter(item => matchesQueueFilter(item, {
     overdueOnly, statusFilter, claimParam, userId: scope.userId,
   }));

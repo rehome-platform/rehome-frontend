@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { it, expect, vi, describe, beforeAll, afterAll, beforeEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
@@ -149,11 +149,14 @@ describe('L-04 Phase 4: Mock API Integration Suite (APIs 68-72)', () => {
       </MemoryRouter>
     );
 
-    await screen.findByText('DH-00244');
+    const dh244Cell = await screen.findByText('DH-00244');
+    const dh244Row = dh244Cell.closest('tr');
 
     // Tìm dòng DH-00244 và bấm "Nhận việc" (API 29)
-    const claimButtons = screen.getAllByRole('button', { name: 'Nhận việc' });
-    fireEvent.click(claimButtons[0]);
+    const claimBtn = dh244Row
+      ? within(dh244Row).getByRole('button', { name: 'Nhận việc' })
+      : screen.getAllByRole('button', { name: 'Nhận việc' })[0];
+    fireEvent.click(claimBtn);
 
     // Xử lý modal xác nhận nhận việc nếu có
     const modalClaimBtn = screen.getAllByRole('button', { name: 'Nhận việc' }).find(
