@@ -240,6 +240,11 @@ export function QueueTaskDetailModal({ target, onClose }) {
   );
 }
 
+export const QUEUE_ACTION_BTN_CLASS =
+  'h-8 px-3 py-0 text-xs font-semibold leading-none rounded-xl border shrink-0 whitespace-nowrap';
+export const QUEUE_PRIMARY_BTN_CLASS = `${QUEUE_ACTION_BTN_CLASS} border-transparent`;
+export const QUEUE_PRIMARY_LINK_CLASS = `${QUEUE_ACTION_BTN_CLASS} border-transparent bg-[#006B2C] text-white hover:bg-[#005523] hover:text-white inline-flex items-center justify-center shadow-sm transition-colors`;
+
 export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resource, handleClaim, setClaimTarget, linkTarget, setFeedback, setReleaseTarget, onCheckWithdrawal, onViewDetail }) {
   const rowRef = React.useRef(null);
   React.useEffect(() => {
@@ -289,13 +294,13 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
           <span>chưa ai nhận</span>
         )}
       </td>
-      <td className="py-3 px-3 text-right whitespace-nowrap">
-        <div className="flex items-center justify-end gap-2">
+      <td className="py-3 px-3 text-right whitespace-nowrap align-middle">
+        <div className="flex items-center justify-end gap-2 flex-nowrap">
           {onViewDetail && (
             <Button
               size="sm"
               variant="outline"
-              className="text-xs py-1.5 px-2.5 font-semibold whitespace-nowrap"
+              className={QUEUE_ACTION_BTN_CLASS}
               onClick={() => onViewDetail(item)}
             >
               Chi tiết
@@ -305,17 +310,30 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
             <Button
               size="sm"
               variant="outline"
-              className="text-xs py-1.5 px-2.5 font-semibold text-[#006B2C] border-[#006B2C] hover:bg-[#E8F5E9] whitespace-nowrap"
+              className={`${QUEUE_ACTION_BTN_CLASS} text-[#006B2C] border-[#006B2C] hover:bg-[#E8F5E9]`}
               onClick={() => onCheckWithdrawal(item)}
             >
               Check đơn
+            </Button>
+          )}
+          {isMine && (
+            <Button
+              size="sm"
+              variant="outline"
+              className={QUEUE_ACTION_BTN_CLASS}
+              onClick={() => {
+                setFeedback?.(null);
+                setReleaseTarget(item);
+              }}
+            >
+              Nhả việc
             </Button>
           )}
           {!item.claimedBy && (
             <Button
               size="sm"
               variant="primary"
-              className="whitespace-nowrap"
+              className={QUEUE_PRIMARY_BTN_CLASS}
               loading={resource.busy}
               onClick={() => (setClaimTarget ? setClaimTarget(item) : handleClaim(item))}
             >
@@ -323,43 +341,30 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
             </Button>
           )}
           {isMine && (
-            <>
-              {isPendingWithdrawalApproval && onCheckWithdrawal ? (
-                <Button
-                  size="sm"
-                  variant="primary"
-                  className="whitespace-nowrap"
-                  onClick={() => onCheckWithdrawal(item)}
-                >
-                  Duyệt yêu cầu
-                </Button>
-              ) : linkTarget && (
-                <Link
-                  to={linkTarget}
-                  className="text-xs py-1.5 px-3 bg-[#006B2C] text-white hover:bg-[#005523] hover:text-white font-semibold rounded-xl inline-flex items-center gap-1 shadow-sm transition-colors whitespace-nowrap"
-                >
-                  {item.type === 'PACKING' ? 'Đóng gói →' : 'Mở việc'}
-                </Link>
-              )}
+            isPendingWithdrawalApproval && onCheckWithdrawal ? (
               <Button
                 size="sm"
-                variant="outline"
-                className="whitespace-nowrap"
-                onClick={() => {
-                  setFeedback?.(null);
-                  setReleaseTarget(item);
-                }}
+                variant="primary"
+                className={QUEUE_PRIMARY_BTN_CLASS}
+                onClick={() => onCheckWithdrawal(item)}
               >
-                Nhả việc
+                Duyệt yêu cầu
               </Button>
-            </>
+            ) : linkTarget ? (
+              <Link
+                to={linkTarget}
+                className={QUEUE_PRIMARY_LINK_CLASS}
+              >
+                {item.type === 'PACKING' ? 'Đóng gói' : 'Mở việc'}
+              </Link>
+            ) : null
           )}
           {isClaimedByOther && (
             <Button
               size="sm"
               disabled
               variant="outline"
-              className="opacity-50 cursor-not-allowed whitespace-nowrap"
+              className={`${QUEUE_ACTION_BTN_CLASS} opacity-50 cursor-not-allowed`}
             >
               Đã có người nhận
             </Button>

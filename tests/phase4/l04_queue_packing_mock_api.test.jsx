@@ -145,7 +145,7 @@ describe('L-04 Phase 4: Mock API Integration Suite (APIs 68-72)', () => {
     });
   });
 
-  it('API 29 & API 30: Claims packing task, displays "Đóng gói →" link button, and allows releasing', async () => {
+  it('API 29 & API 30: Claims packing task, displays "Đóng gói" link button without arrow, and allows releasing', async () => {
     render(
       <MemoryRouter initialEntries={['/moderator/queue?type=PACKING&page=0']}>
         <Phase2Provider>
@@ -174,9 +174,12 @@ describe('L-04 Phase 4: Mock API Integration Suite (APIs 68-72)', () => {
     // Cập nhật trạng thái "Bạn đang nhận việc này"
     await screen.findByText('Bạn đang nhận việc này');
 
-    // Xuất hiện nút "Đóng gói →" và không hiển thị link mã đơn thừa trong bảng (FE-02)
-    const packLink = screen.getByRole('link', { name: 'Đóng gói →' });
+    // Xuất hiện nút "Đóng gói" (không có mũi tên) và không hiển thị link mã đơn thừa trong bảng (FE-02)
+    const packLink = screen.getByRole('link', { name: 'Đóng gói' });
     expect(packLink).toBeInTheDocument();
+    expect(packLink.textContent.trim()).toBe('Đóng gói');
+    expect(packLink.textContent).not.toContain('→');
+    expect(packLink.textContent).not.toContain('->');
     expect(packLink.getAttribute('href')).toContain('/moderator/packing?orderId=DH-00244');
 
     expect(screen.queryByRole('link', { name: 'DH-00244' })).not.toBeInTheDocument();

@@ -176,6 +176,75 @@ describe('HQ-01: Tab selection in place, Claim flow, and "Mở việc" without a
     await screen.findByText('Yêu cầu trả hàng');
     expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
   });
+
+  it('HQ-01: aligns Work Queue action buttons uniformly without arrows or awkward wrapping', async () => {
+    const claimedPacking = {
+      queueId: 'q-pack-1',
+      refId: 'ord-1',
+      orderId: 'ord-1',
+      type: 'PACKING',
+      typeLabel: 'Đóng gói đơn hàng',
+      name: 'Đơn #OD-01',
+      targetName: 'Đơn #OD-01',
+      subjectSubtitle: 'Nguyễn Văn B',
+      status: 'PAID',
+      claimedBy: 'mod-a',
+      createdAt: '2026-10-01T00:00:00Z',
+    };
+    const claimedWithdrawal = {
+      queueId: 'q-with-1',
+      refId: 'w-1',
+      type: 'WITHDRAWAL',
+      typeLabel: 'Rút hàng',
+      name: 'Áo thun',
+      targetName: 'Áo thun',
+      subjectSubtitle: 'Trần Thị C',
+      status: 'PENDING_APPROVAL',
+      claimedBy: 'mod-a',
+      createdAt: '2026-10-01T00:00:00Z',
+    };
+
+    vi.spyOn(queueService, 'list').mockImplementation(async () => [claimedPacking, claimedWithdrawal]);
+    renderQueueApp();
+
+    const packRow = (await screen.findByText('Nguyễn Văn B')).closest('tr');
+    const packActionsWrap = within(packRow).getByRole('button', { name: 'Chi tiết' }).parentElement;
+    expect(packActionsWrap.className).toContain('flex-nowrap');
+    expect(packActionsWrap.className).toContain('justify-end');
+    expect(packActionsWrap.className).toContain('gap-2');
+
+    const packButtons = Array.from(packActionsWrap.children);
+    expect(packButtons.map((el) => el.textContent.trim())).toEqual(['Chi tiết', 'Nhả việc', 'Đóng gói']);
+    packButtons.forEach((el) => {
+      expect(el.className).toContain('h-8');
+      expect(el.className).toContain('px-3');
+      expect(el.className).toContain('text-xs');
+      expect(el.className).toContain('font-semibold');
+      expect(el.className).toContain('whitespace-nowrap');
+      expect(el.className).toContain('shrink-0');
+      expect(el.textContent).not.toContain('→');
+      expect(el.textContent).not.toContain('->');
+    });
+
+    const withdrawRow = screen.getByText('Trần Thị C').closest('tr');
+    const withdrawActionsWrap = within(withdrawRow).getByRole('button', { name: 'Chi tiết' }).parentElement;
+    expect(withdrawActionsWrap.className).toContain('flex-nowrap');
+    const withdrawButtons = Array.from(withdrawActionsWrap.children);
+    expect(withdrawButtons.map((el) => el.textContent.trim())).toEqual([
+      'Chi tiết',
+      'Check đơn',
+      'Nhả việc',
+      'Duyệt yêu cầu',
+    ]);
+    withdrawButtons.forEach((el) => {
+      expect(el.className).toContain('h-8');
+      expect(el.className).toContain('px-3');
+      expect(el.className).toContain('text-xs');
+      expect(el.className).toContain('font-semibold');
+      expect(el.className).toContain('whitespace-nowrap');
+      expect(el.className).toContain('shrink-0');
+    });
+  });
 });
 
 describe('Design Tokens: Button & Badge components', () => {
