@@ -2,9 +2,12 @@ import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { formatCurrencyVND } from "../../../utils/formatters.js";
 import { formatDeadlineWithCountdown } from "../components/WarehouseUi.jsx";
-import { returnService, needsItemAction } from "../services/returnApi.js";
+import { returnService } from "../services/returnApi.js";
 import { inventoryService } from "../services/inventoryApi.js";
 import { useToast } from "../../../context/ToastContext.jsx";
+
+const isPendingDisposition = (item) =>
+  Boolean(item && item.rawStatus === 'VALID' && !item.itemAction && !item.outcome && !item.degraded);
 
 export function useReturnProcessing() {
   const toast = useToast();
@@ -126,7 +129,10 @@ export function useReturnProcessing() {
     try {
       setLoading(true);
       setError(null);
-      const res = await returnService.listForWorkspace();
+      const res =
+        typeof returnService.listForWorkspace === 'function'
+          ? await returnService.listForWorkspace()
+          : await returnService.list();
       setReturnRequests(res.data || []);
     } catch (err) {
       setError('Không thể tải danh sách yêu cầu trả hàng.');
@@ -151,7 +157,7 @@ export function useReturnProcessing() {
       if (found) {
         if (paramTab) {
           setActiveTab(paramTab);
-        } else if (needsItemAction(found)) {
+        } else if (isPendingDisposition(found)) {
           setActiveTab('PENDING_DISPOSITION');
         } else if (found.status) {
           setActiveTab(found.status);
@@ -171,7 +177,7 @@ export function useReturnProcessing() {
             setSelectedItem(item);
             if (paramTab) {
               setActiveTab(paramTab);
-            } else if (needsItemAction(item)) {
+            } else if (isPendingDisposition(item)) {
               setActiveTab('PENDING_DISPOSITION');
             } else if (item.status) {
               setActiveTab(item.status);
@@ -198,8 +204,8 @@ export function useReturnProcessing() {
     WAITING_BUYER_DISPATCH: returnRequests.filter((r) => r.status === 'WAITING_BUYER_DISPATCH').length,
     RETURNING: returnRequests.filter((r) => r.status === 'RETURNING').length,
     RECEIVED_INSPECT: returnRequests.filter((r) => r.status === 'RECEIVED_INSPECT').length,
-    PENDING_DISPOSITION: returnRequests.filter((r) => needsItemAction(r)).length,
-    RESOLVED: returnRequests.filter((r) => isResolvedStatus(r.status) && !needsItemAction(r)).length,
+    PENDING_DISPOSITION: returnRequests.filter((r) => isPendingDisposition(r)).length,
+    RESOLVED: returnRequests.filter((r) => isResolvedStatus(r.status) && !isPendingDisposition(r)).length,
   };
 
   const sortReturnsNewestFirst = (list) => {
@@ -230,9 +236,9 @@ export function useReturnProcessing() {
   const filteredRequests = sortReturnsNewestFirst(
     returnRequests.filter((r) => {
       if (activeTab === 'PENDING_DISPOSITION') {
-        if (!needsItemAction(r)) return false;
+        if (!isPendingDisposition(r)) return false;
       } else if (activeTab === 'RESOLVED') {
-        if (!isResolvedStatus(r.status) || needsItemAction(r)) return false;
+        if (!isResolvedStatus(r.status) || isPendingDisposition(r)) return false;
       } else {
         if (r.status !== activeTab) return false;
       }
@@ -241,7 +247,7 @@ export function useReturnProcessing() {
   );
 
   const historyRequests = sortReturnsNewestFirst(
-    returnRequests.filter((r) => isResolvedStatus(r.status) && !needsItemAction(r) && matchesReturnSearch(r))
+    returnRequests.filter((r) => isResolvedStatus(r.status) && !isPendingDisposition(r) && matchesReturnSearch(r))
   );
 
   const handleOpenReview = async (item) => {
@@ -417,7 +423,7 @@ export function useReturnProcessing() {
 
   const handleConfirmOutcome = async (outcome, extra = {}) => {
     if (!selectedItem || resolvingRef.current || outcomeSubmitting) return;
-    if (selectedItem.rawStatus === 'VALID' && !needsItemAction(selectedItem)) {
+    if (selectedItem.rawStatus === 'VALID' && !isPendingDisposition(selectedItem)) {
       notify('warn', 'Món hàng này đã được chọn phương án xử lý trước đó.');
       return;
     }
@@ -451,7 +457,7 @@ export function useReturnProcessing() {
   };
 
   const handleBackToQueue = () => {
-    if (needsItemAction(selectedItem)) {
+    if (isPendingDisposition(selectedItem)) {
       setActiveTab('PENDING_DISPOSITION');
     }
     setViewMode('QUEUE');

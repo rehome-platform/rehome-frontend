@@ -21,7 +21,6 @@ export const SUPPORTED_INVENTORY_STATUSES = [
   'WAREHOUSE',
   'RESERVED',
   'SOLD',
-  'RETURNED',
   'WITHDRAWN',
   'UNCLAIMED',
   'DONATED',
@@ -316,6 +315,7 @@ export default function WarehouseInventoryPage() {
               {Array.from(
                 new Set([
                   ...SUPPORTED_INVENTORY_STATUSES,
+                  'RETURNED',
                   ...(Array.isArray(enums.data?.inventoryStatuses) ? enums.data.inventoryStatuses : []),
                 ])
               ).map((value) => (
