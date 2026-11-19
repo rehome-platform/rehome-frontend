@@ -5,8 +5,9 @@ import Button from '../../../components/common/Button.jsx';
 import QRScannerModal from '../../../components/QRScannerModal.jsx';
 import { Page, ResourceState } from "../components/WarehouseUi.jsx";
 import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
+import { isFixtureMode } from '../config/warehouseContract.js';
 import { queueService } from '../services/warehouseApi.js';
-import { listItems } from "../models/warehouseModel.js";
+import { listItems, ownsClaim } from "../models/warehouseModel.js";
 import { formatOrderStatus } from "../models/packingModel.js";
 import { usePackingDetail } from '../hooks/usePackingDetail.jsx';
 import { PackingQueueItem } from '../components/packing/PackingQueueItem.jsx';
@@ -195,9 +196,18 @@ export default function PackingOrdersPage() {
 
   const apiItems = listItems(queue.data);
 
-  // Dữ liệu hàng đợi đóng gói 100% nạp từ API service (API 68), không còn fallback mock data tĩnh
+  const isAssignedToMe = (item) =>
+    ownsClaim(item, scope.userId) ||
+    item.claimedBy === 'CURRENT_USER' ||
+    Boolean(item.claimedByName && item.claimedByName.includes('Bạn đang giữ'));
+
+  // Dữ liệu hàng đợi đóng gói 100% nạp từ API service (API 68), lọc phạm vi Moderator & sắp xếp mới nhất lên đầu
   const items = useMemo(() => {
-    let source = apiItems;
+    let source = apiItems.filter((item) => {
+      const mine = isAssignedToMe(item);
+      if (item.claimedBy && !mine) return false;
+      return isFixtureMode ? true : mine;
+    });
     if (keyword.trim()) {
       const q = keyword.toLowerCase().trim();
       source = source.filter(
@@ -206,8 +216,17 @@ export default function PackingOrdersPage() {
           (i.buyerName || i.name || '').toLowerCase().includes(q)
       );
     }
-    return source;
-  }, [apiItems, keyword]);
+    return [...source].sort((a, b) => {
+      const rawA = a?.orderCreatedAt || a?.createdAt || a?.queuedAt;
+      const rawB = b?.orderCreatedAt || b?.createdAt || b?.queuedAt;
+      const tA = rawA ? Date.parse(rawA) : NaN;
+      const tB = rawB ? Date.parse(rawB) : NaN;
+      if (Number.isFinite(tA) && Number.isFinite(tB)) return tB - tA;
+      if (Number.isFinite(tB)) return 1;
+      if (Number.isFinite(tA)) return -1;
+      return (a?.waitingMinutes ?? Number.MAX_SAFE_INTEGER) - (b?.waitingMinutes ?? Number.MAX_SAFE_INTEGER);
+    });
+  }, [apiItems, keyword, scope.userId]);
 
   const handleClaim = async (queueId) => {
     setClaimError('');
