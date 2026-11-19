@@ -1,4 +1,4 @@
-import { queueItemMeta, matchesQueueFilter, queueActionError, sortQueueItemsNewestFirst } from '../models/queueModel.js';
+import { queueItemMeta, matchesQueueFilter, queueActionError, sortQueueItemsByDate } from '../models/queueModel.js';
 
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -18,6 +18,7 @@ export function useConsignmentQueue() {
   const focusedQueueId = search.get('queueId');
   const claimParam = search.get('claim') || '';
   const statusFilter = search.get('status') || '';
+  const sortParam = search.get('sort') === 'oldest' ? 'oldest' : 'newest';
   const overdueOnly = search.get('overdue') === '1';
   const page = Math.max(0, Number(search.get('page')) || 0);
 
@@ -48,8 +49,8 @@ export function useConsignmentQueue() {
 
   const rawItems = listItems(resource.data);
 
-  // Tính số giờ đã chờ và sắp xếp mới nhất lên trên
-  const itemsWithMeta = sortQueueItemsNewestFirst(rawItems).map(item => queueItemMeta(item, typeParam));
+  // Tính số giờ đã chờ và sắp xếp theo ngày (mới nhất hoặc cũ nhất)
+  const itemsWithMeta = sortQueueItemsByDate(rawItems, sortParam).map(item => queueItemMeta(item, typeParam));
   const filteredItems = itemsWithMeta.filter(item => matchesQueueFilter(item, {
     overdueOnly, statusFilter, claimParam, userId: scope.userId,
   }));
@@ -147,6 +148,7 @@ export function useConsignmentQueue() {
     typeParam,
     changeFilter,
     statusFilter,
+    sortParam,
     claimParam,
     toggleOverdue,
     overdueOnly,
@@ -166,7 +168,7 @@ export function useConsignmentQueue() {
     handleApproveWithdrawal,
     handleRejectWithdrawal,
     sections: {
-      QueueFilters: { statusFilter, changeFilter, claimParam, toggleOverdue, overdueOnly, filteredItems, rawItems },
+      QueueFilters: { statusFilter, sortParam, changeFilter, claimParam, toggleOverdue, overdueOnly, filteredItems, rawItems },
       QueueClaimDialog: { claimTarget, resource, setClaimTarget, handleClaim },
       QueueReleaseDialog: { releaseTarget, resource, setReleaseTarget, handleRelease },
     },

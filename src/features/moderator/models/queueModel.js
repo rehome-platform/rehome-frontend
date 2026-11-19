@@ -87,19 +87,26 @@ export function matchesQueueFilter(item, { overdueOnly, statusFilter, claimParam
 
 function queueItemCreatedTimestamp(item) {
   const raw = item?.createdAt || item?.queuedAt;
-  if (!raw) return Number.NEGATIVE_INFINITY;
+  if (!raw) return null;
   const parsed = Date.parse(raw);
-  return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
-export function sortQueueItemsNewestFirst(items) {
+export function sortQueueItemsByDate(items, sortOrder = 'newest') {
   if (!Array.isArray(items)) return [];
+  const isOldestFirst = sortOrder === 'oldest';
   return [...items].sort((a, b) => {
     const timeA = queueItemCreatedTimestamp(a);
     const timeB = queueItemCreatedTimestamp(b);
     if (timeA === timeB) return 0;
-    return timeB - timeA;
+    if (timeA === null) return 1;
+    if (timeB === null) return -1;
+    return isOldestFirst ? timeA - timeB : timeB - timeA;
   });
+}
+
+export function sortQueueItemsNewestFirst(items) {
+  return sortQueueItemsByDate(items, 'newest');
 }
 
 export function queueActionError(error) {
