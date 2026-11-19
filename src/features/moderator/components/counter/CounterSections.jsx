@@ -285,6 +285,43 @@ export function CounterMemberResults({ submitted, results, resultList, selected,
   );
 }
 
+const COUNTER_STEP_META = {
+  START_INSPECTION: {
+    header: 'Đã duyệt online — Tiếp nhận & Kiểm định',
+    actionLabel: 'Bắt đầu kiểm định',
+  },
+  INSPECTION: {
+    header: 'Đang kiểm định tại quầy',
+    actionLabel: 'Tiếp tục kiểm định',
+  },
+  AWAIT_MEMBER_CONFIRM: {
+    header: 'Đã lập biên nhận — Chờ Member xác nhận',
+    actionLabel: 'Xem biên nhận chờ xác nhận',
+  },
+  STOCK_IN: {
+    header: 'Member đã xác nhận — Sẵn sàng nhập kho',
+    actionLabel: 'Tiếp tục nhập kho',
+  },
+  REVIEW_FORM: {
+    header: 'Form ký gửi chờ duyệt',
+    actionLabel: 'Mở duyệt form',
+  },
+};
+
+function resolveCounterTaskAction(task) {
+  const hasProduct = Boolean(task.productStatus || task.productSku || task.resumeStep === 'COMPLETED');
+  if (hasProduct) {
+    return { header: 'Sản phẩm đã nhập kho', actionLabel: null };
+  }
+  if (task.resumeStep && COUNTER_STEP_META[task.resumeStep]) {
+    return COUNTER_STEP_META[task.resumeStep];
+  }
+  if (task.status === 'APPROVED') {
+    return COUNTER_STEP_META.START_INSPECTION;
+  }
+  return { header: 'Form ký gửi', actionLabel: null };
+}
+
 export function CounterConsignmentTasks({ taskGroups }) {
   return (
     <div className="space-y-3">
@@ -297,18 +334,24 @@ export function CounterConsignmentTasks({ taskGroups }) {
         </span>
       </div>
       {taskGroups.pendingForms.map((task) => {
-        const isReadyForInspection = task.status === 'APPROVED';
+        const { header, actionLabel } = resolveCounterTaskAction(task);
         return (
           <div
             key={task.formId}
             className="rounded-2xl border-2 border-[#2b2b2b] bg-white overflow-hidden shadow-sm"
           >
-            <div className="bg-[#f4f4f4] border-b border-[#8a8a8a] px-4 py-2.5 flex items-center justify-between">
+            <div className="bg-[#f4f4f4] border-b border-[#8a8a8a] px-4 py-2.5 flex items-center justify-between gap-2">
               <span className="text-xs font-bold text-[#191C19]">
-                {isReadyForInspection ? 'Đã duyệt online — Tiếp nhận & Kiểm định' : 'Form ký gửi'}
+                {header}
               </span>
-              <span className="text-[11px] text-[#5B6776]">
-                Form {task.formId} · <Status>{task.status}</Status>
+              <span className="text-[11px] text-[#5B6776] flex items-center gap-1.5 flex-wrap justify-end">
+                {task.productSku && (
+                  <span className="font-mono font-bold text-[#191C19] bg-white px-2 py-0.5 rounded border border-[#c4c4c4]">
+                    SKU: {task.productSku}
+                  </span>
+                )}
+                <span>Form {task.formId} ·</span>
+                <Status>{task.status}</Status>
               </span>
             </div>
             <div className="p-4 flex flex-wrap items-center justify-between gap-4">
@@ -316,15 +359,20 @@ export function CounterConsignmentTasks({ taskGroups }) {
                 <p className="font-bold text-sm text-[#191C19]">{task.name || task.productName || task.formId}</p>
                 <p className="text-xs text-[#5B6776] mt-0.5">
                   {task.desiredPrice ? `Giá mong muốn: ${money(task.desiredPrice)}` : 'Đang có mặt tại quầy'}
+                  {task.receiptId && (
+                    <span className="ml-2 text-[#191C19]">
+                      · {task.confirmedAt ? 'Biên nhận đã xác nhận' : 'Biên nhận chờ xác nhận'}
+                    </span>
+                  )}
                 </p>
               </div>
-              {isReadyForInspection && (
+              {actionLabel && (
                 <Link
                   to={`/moderator/consignments/${encodeURIComponent(task.formId)}`}
                   state={{ form: task, identified: true }}
                 >
                   <Button className="bg-[#2b2b2b] text-white hover:bg-black text-xs font-bold px-4 py-2">
-                    Bắt đầu kiểm định
+                    {actionLabel}
                   </Button>
                 </Link>
               )}
