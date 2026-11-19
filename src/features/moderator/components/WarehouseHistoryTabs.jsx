@@ -51,17 +51,18 @@ function detailLink(row) {
   let targetType = row.targetType;
   let targetId = row.targetId;
 
-  if (!targetType && row.target) {
+  if (row.target) {
     const parts = String(row.target).trim().split(/\s+/);
-    targetType = parts[0];
-    targetId = parts.slice(1).join(' ');
+    if (!targetType) targetType = parts[0];
+    if (!targetId) targetId = parts.slice(1).join(' ');
   }
 
+  const normalizedType = String(targetType || '').trim().toUpperCase();
   if (!targetId) return null;
-  const id = encodeURIComponent(targetId);
-  if (targetType === 'ORDER') return `/moderator/packing?orderId=${id}`;
-  if (targetType === 'CONSIGNMENT_FORM') return `/moderator/consignments/${id}`;
-  if (targetType === 'PRODUCT') return `/moderator/inventory/${id}`;
+  const id = encodeURIComponent(String(targetId).trim());
+  if (normalizedType === 'ORDER') return `/moderator/packing?orderId=${id}`;
+  if (normalizedType === 'CONSIGNMENT_FORM') return `/moderator/consignments/${id}`;
+  if (normalizedType === 'PRODUCT') return `/moderator/inventory/${id}`;
   return null;
 }
 

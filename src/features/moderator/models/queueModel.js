@@ -85,6 +85,23 @@ export function matchesQueueFilter(item, { overdueOnly, statusFilter, claimParam
   return true;
 }
 
+function queueItemCreatedTimestamp(item) {
+  const raw = item?.createdAt || item?.queuedAt;
+  if (!raw) return Number.NEGATIVE_INFINITY;
+  const parsed = Date.parse(raw);
+  return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+}
+
+export function sortQueueItemsNewestFirst(items) {
+  if (!Array.isArray(items)) return [];
+  return [...items].sort((a, b) => {
+    const timeA = queueItemCreatedTimestamp(a);
+    const timeB = queueItemCreatedTimestamp(b);
+    if (timeA === timeB) return 0;
+    return timeB - timeA;
+  });
+}
+
 export function queueActionError(error) {
   if (error.status === 409 || error.code === 'QUEUE_ITEM_ALREADY_CLAIMED') {
     return 'Công việc đã được người khác nhận trước. Hệ thống đã tải lại danh sách mới nhất.';

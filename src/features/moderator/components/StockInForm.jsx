@@ -65,11 +65,10 @@ export default function StockInForm({ receipt, form, onSuccess }) {
   const [name, setName] = useState(receipt?.productName || form?.productName || form?.name || '');
   const [size, setSize] = useState(receipt?.size || form?.size || '');
   const lockedCategoryId = receipt?.categoryId || form?.categoryId || '';
-  const lockedBrandId = receipt?.brandId || form?.brandId || '';
+  const initialBrandId = receipt?.brandId || form?.brandId || '';
   const isCategoryLocked = Boolean(lockedCategoryId);
-  const isBrandLocked = Boolean(lockedBrandId);
   const [categoryId, setCategory] = useState(lockedCategoryId);
-  const [brandId, setBrand] = useState(lockedBrandId);
+  const [brandId, setBrand] = useState(initialBrandId);
 
   const initialColor = (receipt?.color || form?.color || '').trim();
   const isPresetColor = COMMON_COLORS.includes(initialColor);
@@ -139,7 +138,7 @@ export default function StockInForm({ receipt, form, onSuccess }) {
             <Field label="Danh mục" error={errors.categoryId}><select required disabled={isCategoryLocked} value={categoryId} onChange={e => setCategory(e.target.value)}>
               <option value="">Chọn danh mục</option>{categories.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select></Field>
-            <Field label="Thương hiệu" error={errors.brandId}><select required disabled={isBrandLocked} value={brandId} onChange={e => setBrand(e.target.value)}>
+            <Field label="Thương hiệu" error={errors.brandId}><select required value={brandId} onChange={e => setBrand(e.target.value)}>
               <option value="">Chọn thương hiệu</option>{brands.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select></Field>
             <Field label="Màu sắc" error={errors.color}>
@@ -170,7 +169,7 @@ export default function StockInForm({ receipt, form, onSuccess }) {
               />
             )}
           </div>
-          <Button type="button" variant="outline" disabled={isBrandLocked} onClick={() => setQuickAdd(true)}>+ Thêm nhanh thương hiệu</Button>
+          <Button type="button" variant="outline" onClick={() => setQuickAdd(true)}>+ Thêm nhanh thương hiệu</Button>
           <Field label="Mô tả bán hàng" error={errors.description}><textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} /></Field>
           <p className="text-sm">Ghi chú kiểm định: {receipt.conditionNote || '—'}</p>
           <PhotoUpload disabled={operation.busy} onChange={onPhotos} />

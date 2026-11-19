@@ -7,6 +7,7 @@ import { consignmentService, queueService } from "../../services/warehouseApi.js
 import { Field, money, date } from "../WarehouseUi.jsx";
 
 import { CHECKLIST_ITEMS, SAMPLE_REASONS } from "../../pages/ConsignmentDetailPage.config.js";
+import { formatConditionLabel } from "../../models/consignmentModel.js";
 
 export function ConsignmentReturnPanel({ resource, formId, proof, returnReason, returnNote, setFeedback, setReturnReason, returnReasons, setReturnNote, errors, onClose }) {
   return (
@@ -95,7 +96,7 @@ export function ConsignmentReturnPanel({ resource, formId, proof, returnReason, 
   );
 }
 
-export function ConsignmentInspectionPanel({ allChecked, checkedCount, checklist, toggleCheck, price, term, conditionNote, resource, formId, proof, setFeedback, setReceiptId, setCondition, errors, setPrice, setTerm, termOptions, consignmentConfig, onOpenReturn }) {
+export function ConsignmentInspectionPanel({ allChecked, checkedCount, checklist, toggleCheck, price, term, conditionNote, declaredCondition, resource, formId, proof, setFeedback, setReceiptId, setCondition, errors, setPrice, setTerm, termOptions, consignmentConfig, onOpenReturn }) {
   return (
     <div className="rounded-2xl border-2 border-[#2b2b2b] bg-white p-5 space-y-5 shadow-sm">
       {/* Checklist 6 tiêu chí (KD-04) */}
@@ -133,6 +134,7 @@ export function ConsignmentInspectionPanel({ allChecked, checkedCount, checklist
         price={price}
         term={term}
         conditionNote={conditionNote}
+        declaredCondition={declaredCondition}
         allChecked={allChecked}
         resource={resource}
         formId={formId}
@@ -357,7 +359,7 @@ export function ConsignmentSummary({ form }) {
         </div>
         <div className="px-4 py-2.5 flex justify-between">
           <span className="text-[#5f5f5f] w-32">Tình trạng khai</span>
-          <span className="font-semibold text-[#191C19] flex-1 text-right">{form.condition || 'Như mới'}</span>
+          <span className="font-semibold text-[#191C19] flex-1 text-right">{formatConditionLabel(form.condition)}</span>
         </div>
         <div className="px-4 py-2.5 flex justify-between">
           <span className="text-[#5f5f5f] w-32">Giá mong muốn</span>

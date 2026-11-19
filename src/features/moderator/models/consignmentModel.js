@@ -1,5 +1,34 @@
 export const MIN_CONSIGNMENT_PRICE = 1000;
 
+export const CONDITION_LABELS = {
+  NEW_TAG: 'Mới, còn tem (100%)',
+  LIKE_NEW: 'Như mới (99%)',
+  GOOD: 'Tốt, có dấu hiệu dùng (90-95%)',
+  FLAW: 'Có lỗi nhỏ (80-85%)',
+};
+
+export function normalizeConditionLevel(value) {
+  if (!value) return 'LIKE_NEW';
+  const raw = String(value).trim();
+  if (!raw) return 'LIKE_NEW';
+  const upper = raw.toUpperCase();
+  if (CONDITION_LABELS[upper]) return upper;
+  const lower = raw.toLowerCase();
+  if (lower.includes('còn tem') || lower.includes('100%')) return 'NEW_TAG';
+  if (lower.includes('như mới') || lower.includes('99%')) return 'LIKE_NEW';
+  if (lower.includes('lỗi nhỏ') || lower.includes('80-85%')) return 'FLAW';
+  if (lower.includes('tốt') || lower.includes('dấu hiệu') || lower.includes('90-95%')) return 'GOOD';
+  return 'LIKE_NEW';
+}
+
+export function formatConditionLabel(value) {
+  if (value == null) return 'Chưa khai báo';
+  const raw = String(value).trim();
+  if (!raw) return 'Chưa khai báo';
+  const upper = raw.toUpperCase();
+  return CONDITION_LABELS[upper] || raw;
+}
+
 export function validMoney(value) {
   return /^\d+$/.test(String(value)) && Number.isSafeInteger(Number(value)) && Number(value) >= MIN_CONSIGNMENT_PRICE;
 }

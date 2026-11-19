@@ -12,6 +12,8 @@ import { consignmentService } from "../services/warehouseApi.js";
 import { phase2Contract, isFixtureMode } from "../config/warehouseContract.js";
 import { usePhase2, useResource } from "./warehouseHooks.jsx";
 import { ownsClaim, normalizeConsignmentForm } from "../models/warehouseModel.js";
+import { normalizeConditionLevel, formatConditionLabel } from "../models/consignmentModel.js";
+import { CONDITION_PRESETS } from "../components/consignment/ConsignmentInspectionForm.jsx";
 import {
   DEFAULT_SYSTEM_CONFIGS,
   readEffectiveConsignmentConfig,
@@ -59,6 +61,25 @@ export function useConsignmentDetail() {
   const [conditionNote, setCondition] = useState('');
   const [price, setPrice] = useState('');
   const [term, setTerm] = useState('');
+  const prefilledFormIdRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const currentId = form?.formId || form?.id;
+    if (!currentId || prefilledFormIdRef.current === currentId) return;
+    prefilledFormIdRef.current = currentId;
+
+    if (form.desiredPrice != null && Number(form.desiredPrice) > 0) {
+      setPrice((prev) => (prev ? prev : String(Math.round(Number(form.desiredPrice)))));
+    }
+    if (form.condition) {
+      const level = normalizeConditionLevel(form.condition);
+      const preset = CONDITION_PRESETS.find((p) => p.value === level);
+      const defaultNote = preset ? preset.noteTemplate : formatConditionLabel(form.condition);
+      if (defaultNote) {
+        setCondition((prev) => (prev ? prev : defaultNote));
+      }
+    }
+  }, [form?.formId, form?.id, form?.desiredPrice, form?.condition]);
 
   // Trả đồ tại chỗ
   const [returnReason, setReturnReason] = useState('');
@@ -290,7 +311,7 @@ export function useConsignmentDetail() {
       ConsignmentPhotoViewer: { photos, activePhotoIdx, photoUrl, setActivePhotoIdx },
       ConsignmentReviewPanel: { decision, setDecision, setRejectReason, rejectReason, errors, resource, formId, setFeedback },
       ConsignmentStartPanel: { resource, formId, proof, setFeedback },
-      ConsignmentInspectionPanel: { allChecked, checkedCount, checklist, toggleCheck, price, term, conditionNote, resource, formId, proof, setFeedback, setReceiptId: receiptCreated, setCondition, errors, setPrice, setTerm, termOptions, consignmentConfig },
+      ConsignmentInspectionPanel: { allChecked, checkedCount, checklist, toggleCheck, price, term, conditionNote, declaredCondition: form?.condition, resource, formId, proof, setFeedback, setReceiptId: receiptCreated, setCondition, errors, setPrice, setTerm, termOptions, consignmentConfig },
       ConsignmentReturnPanel: { resource, formId, proof, returnReason, returnNote, setFeedback, setReturnReason, returnReasons, setReturnNote, errors },
     },
   };

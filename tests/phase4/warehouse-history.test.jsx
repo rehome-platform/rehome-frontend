@@ -4,6 +4,9 @@ import { MemoryRouter } from 'react-router-dom';
 import { expect, it, vi } from 'vitest';
 import { WarehouseHistoryTabs } from '../../src/features/moderator/components/WarehouseHistoryTabs.jsx';
 import { warehouseHistoryService } from '../../src/features/moderator/services/warehouseHistoryApi.js';
+import { consignmentService } from '../../src/features/moderator/services/consignmentApi.js';
+import { inventoryService } from '../../src/features/moderator/services/inventoryApi.js';
+import baseApi from '../../src/services/baseApi.js';
 import { Phase2Provider } from '../../src/features/moderator/hooks/warehouseHooks.jsx';
 vi.mock('../../src/context/AuthContext.jsx', () => ({ useAuth: () => ({
   user: { id: 'mod', warehouseId: 'warehouse-a' }, isAuthenticated: true,
@@ -39,4 +42,96 @@ it('does not fetch history on the work tab; handles errors and retry without fak
   await screen.findByText('Không tải được lịch sử');
   fireEvent.click(screen.getByRole('button', { name: 'Tải lại lịch sử' }));
   await waitFor(() => expect(screen.getByText('Chưa có lịch sử thao tác.')).toBeInTheDocument());
+});
+
+it('prefers row.targetId over parsed row.target label when building detail links', async () => {
+  vi.spyOn(warehouseHistoryService, 'list').mockResolvedValueOnce({
+    content: [
+      {
+        id: 'evt-1',
+        action: 'APPROVE_FORM',
+        target: 'CONSIGNMENT_FORM CF-0099',
+        targetId: '550e8400-e29b-41d4-a716-446655440099',
+        actor: 'Nhân viên A',
+        timestamp: '2026-11-19T01:00:00Z',
+        result: 'APPROVED',
+      },
+    ],
+    totalPages: 1,
+  });
+
+  mount('/moderator/consignments?view=history');
+  const link = await screen.findByRole('link', { name: 'CONSIGNMENT_FORM CF-0099' });
+  expect(link).toHaveAttribute(
+    'href',
+    '/moderator/consignments/550e8400-e29b-41d4-a716-446655440099',
+  );
+});
+
+it('resolves non-UUID formNo in consignmentService.read when direct lookup returns 400/404', async () => {
+  const realUuid = '550e8400-e29b-41d4-a716-446655440012';
+  const reqSpy = vi.spyOn(baseApi, 'request').mockImplementation(async (cfg) => {
+    if (cfg.url.endsWith('/CF-0012')) {
+      const err = new Error('Invalid UUID');
+      err.response = { status: 400, data: { message: 'Invalid UUID' } };
+      throw err;
+    }
+    if (cfg.url.includes('/consignment-forms') && !cfg.url.endsWith(realUuid)) {
+      return {
+        data: {
+          data: {
+            content: [{ id: realUuid, formNo: 'CF-0012', productName: 'Áo sơ mi' }],
+          },
+        },
+      };
+    }
+    if (cfg.url.endsWith(realUuid)) {
+      return {
+        data: {
+          data: { id: realUuid, formNo: 'CF-0012', productName: 'Áo sơ mi', status: 'APPROVED' },
+        },
+      };
+    }
+    throw new Error(`Unexpected request: ${cfg.url}`);
+  });
+
+  const detail = await consignmentService.read('CF-0012');
+  expect(detail.id).toBe(realUuid);
+  expect(detail.formNo).toBe('CF-0012');
+  reqSpy.mockRestore();
+});
+
+it('resolves UUID productId in inventoryService.read when direct SKU lookup returns 404', async () => {
+  const realUuid = '550e8400-e29b-41d4-a716-446655440077';
+  const reqSpy = vi.spyOn(baseApi, 'request').mockImplementation(async (cfg) => {
+    if (cfg.url.endsWith(`/${realUuid}`)) {
+      const err = new Error('Product not found');
+      err.response = { status: 404, data: { message: 'Not found' } };
+      throw err;
+    }
+    if (cfg.url.includes('/inventory')) {
+      return {
+        data: {
+          data: {
+            content: [{ id: realUuid, sku: 'RH-SKU-077', name: 'Quần jean' }],
+          },
+        },
+      };
+    }
+    if (cfg.url.endsWith('/RH-SKU-077')) {
+      return {
+        data: {
+          data: { id: realUuid, sku: 'RH-SKU-077', name: 'Quần jean', status: 'ON_SALE' },
+        },
+      };
+    }
+    throw new Error(`Unexpected request: ${cfg.url}`);
+  });
+
+  const detail = await inventoryService.read(realUuid);
+  expect(detail.name).toBe('Quần jean');
+  expect(reqSpy).toHaveBeenCalledWith(
+    expect.objectContaining({ url: expect.stringContaining('RH-SKU-077') }),
+  );
+  reqSpy.mockRestore();
 });
