@@ -10,7 +10,7 @@ import {
   ReturnCompareDialog,
   DegradedCaseModal,
 } from '../../src/features/moderator/components/returns/ReturnSections.jsx';
-import { ReturnEvidence } from '../../src/features/moderator/components/returns/ReturnEvidence.jsx';
+import { ReturnEvidence, ReturnPhotoComparison } from '../../src/features/moderator/components/returns/ReturnEvidence.jsx';
 import { within } from '@testing-library/react';
 
 const item = { id: 'ret-1', code: 'YC-1', status: 'RECEIVED_INSPECT', itemName: 'Actual item', stockInPhotos: [], buyerPhotos: [] };
@@ -105,4 +105,36 @@ it.each([2, 3, 5])('renders %i inspection evidence photos in a consistent object
 
   fireEvent.click(within(dialog).getAllByRole('button', { name: /^Đóng$/i })[0]);
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
+it('renders ReturnPhotoComparison with separated Ảnh đóng gói and Ảnh người mua gửi panels and click-to-zoom lightbox', () => {
+  const packingUrl = 'https://photos.test/pack-1.jpg';
+  const buyerUrl = 'https://photos.test/buyer-1.jpg';
+  render(
+    <ReturnPhotoComparison
+      packingPhotos={[packingUrl]}
+      stockPhotos={['https://photos.test/stock-ref.jpg']}
+      buyerPhotos={[buyerUrl]}
+      compact
+    />
+  );
+
+  expect(screen.getByRole('heading', { name: /^Ảnh đóng gói$/i })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /^Ảnh người mua gửi$/i })).toBeInTheDocument();
+
+  const packImg = screen.getByAltText('Ảnh đóng gói 1');
+  const buyerImg = screen.getByAltText('Ảnh người mua 1');
+  expect(packImg.className).toContain('object-cover');
+  expect(buyerImg.className).toContain('object-cover');
+
+  fireEvent.click(packImg);
+  let dialog = screen.getByRole('dialog');
+  expect(within(dialog).getByText('Ảnh đóng gói')).toBeInTheDocument();
+  expect(within(dialog).getByRole('img')).toHaveAttribute('src', packingUrl);
+  fireEvent.click(within(dialog).getAllByRole('button', { name: /^Đóng$/i })[0]);
+
+  fireEvent.click(buyerImg);
+  dialog = screen.getByRole('dialog');
+  expect(within(dialog).getByText('Ảnh người mua gửi')).toBeInTheDocument();
+  expect(within(dialog).getByRole('img')).toHaveAttribute('src', buyerUrl);
 });
