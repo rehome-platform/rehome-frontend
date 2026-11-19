@@ -28,7 +28,9 @@ export function useReturnProcessing() {
 
   // Navigation states: 'QUEUE' | 'REVIEW' (TH-02) | 'INSPECT' (TH-03)
   const [viewMode, setViewMode] = useState('QUEUE');
+  const [activeSection, setActiveSection] = useState('WORK'); // 'WORK' | 'HISTORY'
   const [selectedItem, setSelectedItem] = useState(null);
+  const [quickDetailItem, setQuickDetailItem] = useState(null);
 
   // In-flight mutation lock (F13)
   const resolvingRef = useRef(false);
@@ -194,12 +196,21 @@ export function useReturnProcessing() {
     RESOLVED: returnRequests.filter((r) => isResolvedStatus(r.status)).length,
   };
 
-  const filteredRequests = returnRequests.filter((r) => {
-    if (activeTab === 'RESOLVED') {
-      if (!isResolvedStatus(r.status)) return false;
-    } else {
-      if (r.status !== activeTab) return false;
-    }
+  const sortReturnsNewestFirst = (list) => {
+    if (!Array.isArray(list)) return [];
+    return [...list].sort((a, b) => {
+      const rawA = a?.createdAt || a?.resolvedAt;
+      const rawB = b?.createdAt || b?.resolvedAt;
+      const tA = rawA ? Date.parse(rawA) : NaN;
+      const tB = rawB ? Date.parse(rawB) : NaN;
+      if (Number.isFinite(tA) && Number.isFinite(tB)) return tB - tA;
+      if (Number.isFinite(tB)) return 1;
+      if (Number.isFinite(tA)) return -1;
+      return 0;
+    });
+  };
+
+  const matchesReturnSearch = (r) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -208,7 +219,22 @@ export function useReturnProcessing() {
       (r.sku && r.sku.toLowerCase().includes(q)) ||
       (r.buyerName && r.buyerName.toLowerCase().includes(q))
     );
-  });
+  };
+
+  const filteredRequests = sortReturnsNewestFirst(
+    returnRequests.filter((r) => {
+      if (activeTab === 'RESOLVED') {
+        if (!isResolvedStatus(r.status)) return false;
+      } else {
+        if (r.status !== activeTab) return false;
+      }
+      return matchesReturnSearch(r);
+    })
+  );
+
+  const historyRequests = sortReturnsNewestFirst(
+    returnRequests.filter((r) => isResolvedStatus(r.status) && matchesReturnSearch(r))
+  );
 
   const handleOpenReview = async (item) => {
     const epoch = ++selectionEpoch.current;
@@ -579,12 +605,17 @@ export function useReturnProcessing() {
     ...evidenceProps,
     evidenceReady,
     viewMode,
+    activeSection,
+    setActiveSection,
     setActiveTab,
     activeTab,
     tabCounts,
     loading,
     error,
     filteredRequests,
+    historyRequests,
+    quickDetailItem,
+    setQuickDetailItem,
     searchQuery,
     setSearchQuery,
     handleOpenReview,
@@ -641,6 +672,7 @@ export function useReturnProcessing() {
         handleMarkLost,
         handleOpenDegradedCaseView,
         handleOpenOutcomeModal,
+        handleOpenQuickDetail: setQuickDetailItem,
       },
       ReturnReviewDecision: {
         selectedItem,

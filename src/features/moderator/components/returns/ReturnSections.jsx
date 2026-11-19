@@ -1238,17 +1238,137 @@ export function ReturnRequestDetails({ selectedItem, setIsCompareModalOpen }) {
   );
 }
 
-export function ReturnQueueTable({ loading, filteredRequests, activeTab, handleOpenReview, handleOpenInspect, handleMarkLost, handleOpenDegradedCaseView, handleOpenOutcomeModal }) {
+export function ReturnQuickDetailModal({ item, onClose, onOpenFullReview }) {
+  if (!item) return null;
+  const statusMap = {
+    PENDING_APPROVAL: 'Chờ duyệt',
+    WAITING_BUYER_DISPATCH: 'Chờ người mua gửi',
+    RETURNING: 'Đang về kho',
+    RECEIVED_INSPECT: 'Hàng đã về, chờ kiểm',
+    RESOLVED: needsItemAction(item) ? 'Đã hoàn tiền · Chờ xử lý món' : 'Đã xong',
+  };
+  return (
+    <Modal
+      isOpen={Boolean(item)}
+      onClose={onClose}
+      title="Chi tiết yêu cầu trả hàng"
+      size="md"
+    >
+      <div className="space-y-4 text-xs text-textSecondary font-sans">
+        <div className="rounded-xl border border-neutral bg-[#F6F9F4] p-3.5 space-y-2">
+          <div className="flex justify-between gap-4">
+            <span className="font-semibold shrink-0">Mã yêu cầu:</span>
+            <span className="font-mono font-bold text-text text-right">{item.code || item.id}</span>
+          </div>
+          {(item.orderNo || item.orderId) && (
+            <div className="flex justify-between gap-4">
+              <span className="font-semibold shrink-0">Mã đơn hàng:</span>
+              <span className="font-mono font-bold text-text text-right">{item.orderNo || item.orderId}</span>
+            </div>
+          )}
+          <div className="flex justify-between gap-4">
+            <span className="font-semibold shrink-0">Người mua:</span>
+            <span className="font-bold text-text text-right">{item.buyerName || '—'}</span>
+          </div>
+          {item.buyerPhone && (
+            <div className="flex justify-between gap-4">
+              <span className="font-semibold shrink-0">Số điện thoại:</span>
+              <span className="text-text text-right">{item.buyerPhone}</span>
+            </div>
+          )}
+          <div className="flex justify-between gap-4">
+            <span className="font-semibold shrink-0">Sản phẩm:</span>
+            <span className="font-semibold text-text text-right">{item.itemName || '—'}</span>
+          </div>
+          {item.sku && (
+            <div className="flex justify-between gap-4">
+              <span className="font-semibold shrink-0">Mã SKU:</span>
+              <span className="font-mono font-bold text-text text-right">{item.sku}</span>
+            </div>
+          )}
+          <div className="flex justify-between gap-4">
+            <span className="font-semibold shrink-0">Số món:</span>
+            <span className="text-text text-right">{item.itemCount ?? 1} món</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="font-semibold shrink-0">Số tiền:</span>
+            <span className="font-bold text-primary text-right">{formatCurrencyVND(item.refundAmount ?? item.amount ?? 0)}</span>
+          </div>
+          {(item.sellerName || item.consignorCode) && (
+            <div className="flex justify-between gap-4">
+              <span className="font-semibold shrink-0">Người ký gửi:</span>
+              <span className="text-text text-right">{item.sellerName || item.consignorCode}</span>
+            </div>
+          )}
+          <div className="flex justify-between gap-4">
+            <span className="font-semibold shrink-0">Gửi lúc:</span>
+            <span className="text-text text-right">{item.submittedAt || '—'}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="font-semibold shrink-0">Đã chờ:</span>
+            <span className="text-text text-right">{item.waitTime || '—'}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="font-semibold shrink-0">Trạng thái:</span>
+            <span className="font-bold text-text text-right">{statusMap[item.status] || item.carrierStatus || item.status}</span>
+          </div>
+          <div className="pt-2 border-t border-neutral">
+            <span className="font-semibold block mb-1">Lý do trả hàng:</span>
+            <p className="text-text font-medium leading-relaxed">{item.reason || '—'}</p>
+            {item.buyerNote && item.buyerNote.trim() !== (item.reason || '').trim() && (
+              <p className="mt-1 text-textSecondary italic">"{item.buyerNote}"</p>
+            )}
+          </div>
+          {item.rejectReason && (
+            <div className="pt-2 border-t border-neutral">
+              <span className="font-semibold text-error block mb-1">Lý do từ chối:</span>
+              <p className="text-text">{item.rejectReason}</p>
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={onClose} className="whitespace-nowrap">
+            Đóng
+          </Button>
+          {onOpenFullReview && (
+            <Button
+              variant="primary"
+              size="sm"
+              className="whitespace-nowrap"
+              onClick={() => {
+                onClose();
+                onOpenFullReview(item);
+              }}
+            >
+              Mở hồ sơ đầy đủ
+            </Button>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+export function ReturnQueueTable({
+  loading,
+  filteredRequests,
+  activeTab,
+  handleOpenReview,
+  handleOpenInspect,
+  handleMarkLost,
+  handleOpenDegradedCaseView,
+  handleOpenOutcomeModal,
+  handleOpenQuickDetail,
+  emptyText = 'Không có yêu cầu trả hàng nào trong mục này.',
+}) {
   return (
     <div className="bg-surface border border-neutral rounded-2xl overflow-hidden shadow-sm font-sans">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="bg-background border-b border-neutral text-[10px] uppercase font-bold text-textSecondary tracking-wider">
-              <th className="py-3 px-3.5">Mã yêu cầu</th>
-              <th className="py-3 px-3.5">Người mua</th>
+            <tr className="bg-background border-b border-neutral text-[10px] uppercase font-bold text-textSecondary tracking-wider whitespace-nowrap">
+              <th className="py-3 px-3.5">Tên người mua</th>
               <th className="py-3 px-3.5">Số món</th>
-              <th className="py-3 px-3.5">Lý do</th>
               <th className="py-3 px-3.5">Gửi lúc</th>
               <th className="py-3 px-3.5">Đã chờ</th>
               <th className="py-3 px-3.5">Trạng thái</th>
@@ -1258,15 +1378,15 @@ export function ReturnQueueTable({ loading, filteredRequests, activeTab, handleO
           <tbody className="divide-y divide-neutral">
             {loading && (
               <tr>
-                <td colSpan="8" className="py-8 text-center text-textSecondary">
+                <td colSpan="6" className="py-8 text-center text-textSecondary">
                   Đang tải danh sách yêu cầu trả hàng...
                 </td>
               </tr>
             )}
             {!loading && filteredRequests.length === 0 && (
               <tr>
-                <td colSpan="8" className="py-8 text-center text-textSecondary">
-                  Không có yêu cầu trả hàng nào trong mục này.
+                <td colSpan="6" className="py-8 text-center text-textSecondary">
+                  {emptyText}
                 </td>
               </tr>
             )}
@@ -1283,6 +1403,7 @@ export function ReturnQueueTable({ loading, filteredRequests, activeTab, handleO
                     handleMarkLost={handleMarkLost}
                     handleOpenDegradedCaseView={handleOpenDegradedCaseView}
                     handleOpenOutcomeModal={handleOpenOutcomeModal}
+                    handleOpenQuickDetail={handleOpenQuickDetail}
                   />
                 );
               })}
