@@ -3,19 +3,19 @@ export const TRYON_SLOT_CONFIG = {
     code: 'TOP',
     label: 'Áo (TOP)',
     description: 'Áo thun, sơ mi, áo khoác, áo len, áo kiểu...',
-    badgeClass: 'bg-sky-50 text-sky-700 border-sky-200',
+    badgeClass: 'bg-[#EFF8FF] text-[#175CD3] border-[#B2DDFF]',
   },
   BOTTOM: {
     code: 'BOTTOM',
     label: 'Quần / Váy (BOTTOM)',
     description: 'Quần jeans, quần tây, quần short, chân váy...',
-    badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    badgeClass: 'bg-[#F4F3FF] text-[#5925DC] border-[#D9D6FE]',
   },
   DRESS: {
     code: 'DRESS',
     label: 'Đầm / Liền thân (DRESS)',
     description: 'Đầm dạ hội, váy liền, jumpsuit, áo dài...',
-    badgeClass: 'bg-amber-50 text-amber-700 border-amber-200',
+    badgeClass: 'bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]',
   },
 };
 

@@ -385,7 +385,7 @@ export default function InventoryDetailPage() {
             <Modal
               isOpen={degradedModalOpen}
               onClose={() => !isSubmittingDegraded && setDegradedModalOpen(false)}
-              title="Lập biên bản hàng xuống cấp (TK-02)"
+              title="Lập biên bản hàng xuống cấp"
             >
               <div className="space-y-4 max-w-lg text-xs">
                 <div className="p-3 bg-[#fafafa] rounded-xl border border-[#e0e0e0] space-y-1">

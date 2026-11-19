@@ -317,13 +317,13 @@ export default function WarehouseInventoryPage() {
                           </span>
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className={`inline-block px-2.5 py-1 rounded text-[11px] font-bold ${item.decisionStatus === 'FULL_COMPENSATION'
-                              ? 'bg-[#E8F5E9] text-[#006B2C]'
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold ${item.decisionStatus === 'FULL_COMPENSATION'
+                              ? 'bg-[#ECFDF3] text-[#067647] border-[#ABEFC6]'
                               : (item.decisionStatus === 'PARTIAL_COMPENSATION' || item.decisionStatus === 'PARTIAL_WITH_ITEM_BACK')
-                                ? 'bg-[#E3F2FD] text-[#1565C0]'
+                                ? 'bg-[#EFF8FF] text-[#175CD3] border-[#B2DDFF]'
                                 : item.decisionStatus === 'UNCLAIMED'
-                                  ? 'bg-[#FFEBEE] text-[#C62828]'
-                                  : 'bg-[#FFF3E0] text-[#E65100]'
+                                  ? 'bg-[#FEF3F2] text-[#B42318] border-[#FECDCA]'
+                                  : 'bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]'
                             }`}>
                             {item.decisionStatusLabel || degradedCaseLabel(item)}
                           </span>

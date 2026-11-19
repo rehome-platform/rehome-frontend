@@ -113,9 +113,9 @@ export function PackingDetail({ orderId, onChanged }) {
               </p>
               <div className="pt-2 text-xs font-bold text-[#191C19] flex items-center gap-2">
                 <span>Tiến độ đối chiếu:</span>
-                <span className={`px-2.5 py-0.5 rounded-full font-mono text-xs font-bold ${model.scannedCount === model.totalCount
-                  ? 'bg-[#E8F5E9] text-[#006B2C]'
-                  : 'bg-[#FFF3E0] text-[#D97706]'
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full border font-mono text-xs font-semibold ${model.scannedCount === model.totalCount
+                  ? 'bg-[#ECFDF3] text-[#067647] border-[#ABEFC6]'
+                  : 'bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]'
                   }`}>
                   {`Đã quét ${model.scannedCount}/${model.totalCount} SKU`}
                 </span>

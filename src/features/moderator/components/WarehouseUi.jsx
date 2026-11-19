@@ -6,6 +6,7 @@ import Button from '../../../components/common/Button.jsx';
 import Spinner from '../../../components/common/Spinner.jsx';
 import { safeDocumentUrl } from '../models/warehouseModel.js';
 import { isFixtureMode } from '../config/warehouseContract.js';
+import { getStatusMeta } from '../config/statusTheme.js';
 
 export const money = (value) =>
   value == null
@@ -51,12 +52,12 @@ export function Page({ title, subtitle, children, actions, apiColors = true }) {
             trang sẽ đặt lại dữ liệu.
           </div>
         )}
-        <header className="flex flex-wrap justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold font-heading text-text">{title}</h1>
-            <p className="mt-2 text-sm text-textSecondary">{subtitle}</p>
+        <header className="flex flex-wrap items-start justify-between gap-4 pb-1">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold font-heading tracking-tight text-text">{title}</h1>
+            {subtitle && <p className="mt-1.5 text-sm text-textSecondary leading-relaxed">{subtitle}</p>}
           </div>
-          <div className="flex gap-2 items-start">{actions}</div>
+          {actions && <div className="flex flex-wrap gap-2 items-center shrink-0">{actions}</div>}
         </header>
         {children}
       </div>
@@ -65,10 +66,10 @@ export function Page({ title, subtitle, children, actions, apiColors = true }) {
 }
 export function Card({ title, actions, children }) {
   return (
-    <section className="rounded-2xl border border-neutral bg-white p-5 space-y-4">
+    <section className="rounded-2xl border border-neutral/80 bg-white p-5 sm:p-6 shadow-card space-y-4">
       {(title || actions) && (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          {title && <h2 className="text-lg font-semibold">{title}</h2>}
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
+          {title && <h2 className="text-base sm:text-lg font-semibold text-text tracking-tight">{title}</h2>}
           {actions && <div className="flex items-center gap-2">{actions}</div>}
         </div>
       )}
@@ -76,39 +77,14 @@ export function Card({ title, actions, children }) {
     </section>
   );
 }
-const statusLabels = {
-  PENDING: 'Chờ duyệt',
-  APPROVED: 'Đã duyệt',
-  REJECTED: 'Đã từ chối',
-  EXPIRED: 'Đã hết hạn',
-  CANCELLED: 'Đã huỷ',
-  INSPECTING: 'Đang kiểm định',
-  WAITING_CONFIRMATION: 'Chờ Member xác nhận',
-  WAITING_STOCK_IN: 'Chờ nhập kho',
-  STOCKED: 'Đã nhập kho',
-  ON_SALE: 'Đang bán',
-  WAREHOUSE: 'Lưu kho, tạm ngừng bán',
-  RESERVED: 'Đang giữ hàng',
-  SOLD: 'Đã bán',
-  WITHDRAWN: 'Đã rút hàng',
-  DESTROYED: 'Đã tiêu huỷ',
-  WAITING_END_OF_TERM: 'Chờ xử lý cuối kỳ',
-  UNCLAIMED: 'Vô thừa nhận',
-  DONATED: 'Đã quyên góp',
-  RETURNED: 'Đã bàn giao',
-  RETURNED_ONSITE: 'Đã trả tại chỗ',
-  PLATFORM_OWNED: 'Tài sản nền tảng',
-  REVIEW_FORM: 'Chờ duyệt',
-  START_INSPECTION: 'Đã duyệt',
-  INSPECTION: 'Đang kiểm định',
-  AWAIT_MEMBER_CONFIRM: 'Chờ Member xác nhận',
-  STOCK_IN: 'Chờ nhập kho',
-  COMPLETED: 'Hoàn tất',
-};
-export function Status({ children }) {
+export function Status({ children, label, showDot = true, className = '' }) {
+  const meta = getStatusMeta(children, label);
   return (
-    <span className="inline-block rounded-full bg-background px-3 py-1 text-xs font-semibold text-accent border border-neutral whitespace-nowrap">
-      {statusLabels[children] || children || '—'}
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold border whitespace-nowrap ${meta.badgeClass} ${className}`.trim()}
+    >
+      {showDot && <span aria-hidden="true" className={`w-1.5 h-1.5 rounded-full shrink-0 ${meta.dotClass}`} />}
+      <span>{meta.label}</span>
     </span>
   );
 }

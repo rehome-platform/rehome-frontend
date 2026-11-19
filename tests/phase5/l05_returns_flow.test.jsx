@@ -367,7 +367,7 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     fireEvent.click(screen.getByText(/Lưu kết luận/i));
 
     await waitFor(() => {
-      expect(screen.getByText(/Chọn phương án xử lý món hàng \(TH-04\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/Chọn phương án xử lý món hàng/i)).toBeInTheDocument();
       expect(screen.getByText(/ĐÃ HOÀN TIỀN NGƯỜI MUA/i)).toBeInTheDocument();
     });
     window.alert.mockClear();
@@ -922,7 +922,7 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     fireEvent.click(screen.getByText(/Lưu kết luận/i));
 
     // Step 1: resolve called with resolution = VALID and NO action; modal shows Bước 2 / 2
-    await screen.findByText(/Chọn phương án xử lý món hàng \(TH-04\)/i);
+    await screen.findByText(/Chọn phương án xử lý món hàng/i);
     expect(resolveCalls).toBe(1);
     expect(resolvePayload.resolution).toBe('VALID');
     expect(resolvePayload.action).toBeUndefined();
@@ -937,11 +937,11 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     expect(await screen.findByText(/Đã hoàn tiền · Chờ xử lý món/i)).toBeInTheDocument();
     const chooseActionBtns = screen.getAllByRole('button', { name: /Chọn xử lý món/i });
     expect(chooseActionBtns).toHaveLength(1);
-    expect(screen.getByRole('button', { name: /TH-07/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Biên bản xuống cấp/i })).toBeInTheDocument();
 
     // Resume Step 2 from queue -> POST /return-requests/:id/item-action with exact { action: 'RELIST' }
     fireEvent.click(chooseActionBtns[0]);
-    await screen.findByText(/Chọn phương án xử lý món hàng \(TH-04\)/i);
+    await screen.findByText(/Chọn phương án xử lý món hàng/i);
     fireEvent.click(screen.getByText(/Đăng bán lại \(Relist\)/i));
     fireEvent.click(screen.getByRole('button', { name: 'Xác nhận xử lý' }));
 

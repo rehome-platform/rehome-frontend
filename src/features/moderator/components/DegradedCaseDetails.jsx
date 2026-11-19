@@ -44,7 +44,7 @@ export function DegradedCaseSummary({ item, onNavigateToCounter }) {
             <>
               <p>Member đến Quầy tiếp nhận để nhận lại hàng, không mất phí rút.</p>
               {item.pickupDeadline && <p>Hạn nhận hàng: {formatDeadlineWithCountdown(item.pickupDeadline)}</p>}
-              {onNavigateToCounter && <Button variant="outline" onClick={onNavigateToCounter}>Mở Quầy tiếp nhận (BG-01) →</Button>}
+              {onNavigateToCounter && <Button variant="outline" onClick={onNavigateToCounter}>Mở Quầy tiếp nhận →</Button>}
             </>
           )}
         </div>

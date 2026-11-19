@@ -130,38 +130,53 @@ export default function ModeratorLayout({ children, apiColors = true }) {
   const onPath = (...prefixes) =>
     prefixes.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`));
 
-  // Điều hướng phẳng theo wireframe "Bảng điều khiển điểm kí gửi" (MA-04 / HQ-01 / KD-01).
-  const navItems = [
-    { to: '/moderator', label: 'Trang chủ điểm kí gửi', icon: 'dashboard', active: location.pathname === '/moderator' },
+  const navGroups = [
     {
-      to: '/moderator/queue',
-      label: 'Hàng đợi công việc',
-      icon: 'pending_actions',
-      active: onPath('/moderator/queue'),
+      label: 'Vận hành kho',
+      items: [
+        { to: '/moderator', label: 'Trang chủ điểm kí gửi', icon: 'dashboard', active: location.pathname === '/moderator' },
+        {
+          to: '/moderator/queue',
+          label: 'Hàng đợi công việc',
+          icon: 'pending_actions',
+          active: onPath('/moderator/queue'),
+        },
+        { to: '/moderator/counter', label: 'Quầy tiếp nhận', icon: 'storefront', active: onPath('/moderator/counter') },
+        {
+          to: '/moderator/consignments',
+          label: 'Kiểm định & nhập kho',
+          icon: 'fact_check',
+          active: location.pathname === '/moderator/consignments' || (location.pathname.startsWith('/moderator/consignments/') && !location.pathname.includes('print-queue')),
+        },
+        {
+          to: '/moderator/consignments/print-queue',
+          label: 'Hàng đợi in tem',
+          icon: 'print',
+          subItem: true,
+          active: onPath('/moderator/consignments/print-queue', '/moderator/print-queue'),
+        },
+        { to: '/moderator/inventory', label: 'Tồn kho', icon: 'inventory_2', active: onPath('/moderator/inventory', '/moderator/end-of-term') },
+      ],
     },
-    { to: '/moderator/counter', label: 'Quầy tiếp nhận', icon: 'storefront', active: onPath('/moderator/counter') },
     {
-      to: '/moderator/consignments',
-      label: 'Kiểm định & nhập kho',
-      icon: 'fact_check',
-      active: location.pathname === '/moderator/consignments' || (location.pathname.startsWith('/moderator/consignments/') && !location.pathname.includes('print-queue')),
+      label: 'Đơn hàng & Hậu mãi',
+      items: [
+        { to: '/moderator/packing', label: 'Đóng gói đơn hàng', icon: 'package_2', active: onPath('/moderator/packing') },
+        { to: '/moderator/returns', label: 'Yêu cầu trả hàng', icon: 'assignment_return', active: onPath('/moderator/returns') },
+      ],
     },
     {
-      to: '/moderator/consignments/print-queue',
-      label: 'Hàng đợi in tem',
-      icon: 'print',
-      subItem: true,
-      active: onPath('/moderator/consignments/print-queue', '/moderator/print-queue'),
+      label: 'Cộng đồng & Danh mục',
+      items: [
+        { to: '/moderator/donations', label: 'Quyên góp', icon: 'volunteer_activism', active: onPath('/moderator/donations') },
+        { to: '/moderator/verifications', label: 'Hồ sơ tổ chức', icon: 'verified_user', active: onPath('/moderator/verifications') },
+        { to: '/moderator/reports', label: 'Báo cáo vi phạm', icon: 'flag', active: onPath('/moderator/reports') },
+        { to: '/moderator/categories', label: 'Danh mục & thương hiệu', icon: 'category', active: onPath('/moderator/categories') },
+        { to: '/moderator/inbox', label: 'Hộp thư điểm kí gửi', icon: 'chat', active: onPath('/moderator/inbox') },
+      ],
     },
-    { to: '/moderator/inventory', label: 'Tồn kho', icon: 'inventory_2', active: onPath('/moderator/inventory', '/moderator/end-of-term') },
-    { to: '/moderator/packing', label: 'Đóng gói đơn hàng', icon: 'package_2', active: onPath('/moderator/packing') },
-    { to: '/moderator/returns', label: 'Yêu cầu trả hàng', icon: 'assignment_return', active: onPath('/moderator/returns') },
-    { to: '/moderator/donations', label: 'Quyên góp', icon: 'volunteer_activism', active: onPath('/moderator/donations') },
-    { to: '/moderator/verifications', label: 'Hồ sơ tổ chức', icon: 'verified_user', active: onPath('/moderator/verifications') },
-    { to: '/moderator/reports', label: 'Báo cáo vi phạm', icon: 'flag', active: onPath('/moderator/reports') },
-    { to: '/moderator/categories', label: 'Danh mục & thương hiệu', icon: 'category', active: onPath('/moderator/categories') },
-    { to: '/moderator/inbox', label: 'Hộp thư điểm kí gửi', icon: 'chat', active: onPath('/moderator/inbox') },
   ];
+  const navItems = navGroups.flatMap((group) => group.items);
   const currentLabel = navItems.find((item) => item.active)?.label || 'Bảng điều khiển điểm kí gửi';
   const submitSearch = (event) => {
     event.preventDefault();
@@ -210,45 +225,55 @@ export default function ModeratorLayout({ children, apiColors = true }) {
         </div>
 
         {/* Navigation list */}
-        <nav aria-label="Điều hướng điểm kí gửi" className={`flex-1 ${isSidebarCollapsed ? 'p-4 lg:px-2.5 lg:py-4' : 'p-4'} space-y-1.5 overflow-y-auto overflow-x-hidden`}>
-          {navItems.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              aria-current={item.active ? 'page' : undefined}
-              title={item.label}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`group flex items-center min-h-[40px] ${
-                isSidebarCollapsed
-                  ? 'lg:justify-center lg:px-0 px-3.5 py-2.5 text-xs'
-                  : item.subItem
-                    ? 'pl-7 pr-3 py-2 text-[11px]'
-                    : 'px-3.5 py-2.5 text-xs'
-              } rounded-xl font-semibold transition-colors duration-150 ${
-                item.active
-                  ? 'bg-[#006B2C] text-white shadow-sm'
-                  : 'text-text hover:bg-[#F6F9F4] hover:text-[#006B2C]'
-              }`}
-            >
-              <span
-                aria-hidden="true"
-                className={`material-symbols-outlined shrink-0 ${
-                  isSidebarCollapsed
-                    ? 'text-[20px] mr-3 lg:mr-0'
-                    : item.subItem
-                      ? 'text-[18px] mr-2.5'
-                      : 'text-[20px] mr-3'
-                } ${item.active ? 'text-white' : 'text-textSecondary group-hover:text-[#006B2C]'}`}
-              >
-                {item.icon}
-              </span>
-              <span
+        <nav aria-label="Điều hướng điểm kí gửi" className={`flex-1 ${isSidebarCollapsed ? 'p-4 lg:px-2.5 lg:py-4' : 'p-4'} space-y-4 overflow-y-auto overflow-x-hidden`}>
+          {navGroups.map((group, groupIndex) => (
+            <div key={group.label} className={groupIndex > 0 && isSidebarCollapsed ? 'lg:pt-3 lg:border-t lg:border-neutral/70 space-y-1' : 'space-y-1'}>
+              <p
                 data-sidebar-label
-                className={`truncate ${isSidebarCollapsed ? 'lg:hidden' : ''}`}
+                className={`px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-textSecondary/80 ${isSidebarCollapsed ? 'lg:hidden' : ''}`}
               >
-                {item.label}
-              </span>
-            </Link>
+                {group.label}
+              </p>
+              {group.items.map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  aria-current={item.active ? 'page' : undefined}
+                  title={item.label}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`group flex items-center min-h-[38px] ${
+                    isSidebarCollapsed
+                      ? 'lg:justify-center lg:px-0 px-3.5 py-2 text-xs'
+                      : item.subItem
+                        ? 'pl-7 pr-3 py-1.5 text-[11px]'
+                        : 'px-3.5 py-2 text-xs'
+                  } rounded-xl font-semibold transition-all duration-150 ${
+                    item.active
+                      ? 'bg-[#006B2C] text-white shadow-sm'
+                      : 'text-text hover:bg-[#F6F9F4] hover:text-[#006B2C]'
+                  }`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`material-symbols-outlined shrink-0 ${
+                      isSidebarCollapsed
+                        ? 'text-[20px] mr-3 lg:mr-0'
+                        : item.subItem
+                          ? 'text-[17px] mr-2.5'
+                          : 'text-[19px] mr-3'
+                    } ${item.active ? 'text-white' : 'text-textSecondary group-hover:text-[#006B2C]'}`}
+                  >
+                    {item.icon}
+                  </span>
+                  <span
+                    data-sidebar-label
+                    className={`truncate ${isSidebarCollapsed ? 'lg:hidden' : ''}`}
+                  >
+                    {item.label}
+                  </span>
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
 
@@ -289,7 +314,7 @@ export default function ModeratorLayout({ children, apiColors = true }) {
         ref={mainWrapperRef}
         className={`${isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72'} flex-1 flex flex-col min-w-0`}
       >
-        <header className="h-16 bg-surface border-b border-neutral px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+        <header className="h-16 bg-surface/95 backdrop-blur-sm border-b border-neutral/80 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
           <div className="flex items-center space-x-3 min-w-0">
             <button
               className="lg:hidden p-2 rounded-xl border border-neutral hover:bg-[#F6F9F4] transition-colors"

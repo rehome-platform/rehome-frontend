@@ -450,7 +450,7 @@ export default function CategoryBrandPage() {
             Bạn có chắc chắn muốn xóa {deleting?.kind === 'category' ? 'danh mục' : 'thương hiệu'} “<strong>{deleting?.item.name}</strong>”?
           </p>
           <div className="rounded-xl border border-[#DDE5D9] bg-[#FAFBF9] p-3 text-[11px] text-[#5B6776] leading-relaxed">
-            <strong className="text-[#191C19] block mb-1">Quy định bảo toàn dữ liệu (F-145):</strong>
+            <strong className="text-[#191C19] block mb-1">Quy định bảo toàn dữ liệu:</strong>
             Nếu mục này chưa có sản phẩm nào tham chiếu, hệ thống sẽ xóa vĩnh viễn. Nếu đã có sản phẩm hoặc phiếu ký gửi lịch sử, hệ thống sẽ tự động chuyển sang chế độ <strong>Ẩn</strong> để bảo toàn thông tin sản phẩm cũ.
           </div>
           <ResourceState resource={resource} />

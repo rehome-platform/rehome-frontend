@@ -458,7 +458,7 @@ export function PackingItemTable({ items, pickedItems, scannedProductIds, toggle
                     {item.size || 'M'}
                   </td>
                   <td className="py-3 px-3 text-right">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isScanned ? 'bg-[#E8F5E9] text-[#006B2C]' : 'bg-[#FFF3E0] text-[#D97706]'}`}>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-[11px] font-semibold ${isScanned ? 'bg-[#ECFDF3] text-[#067647] border-[#ABEFC6]' : 'bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]'}`}>
                       {isScanned ? 'Đã khớp' : 'Chờ quét'}
                     </span>
                   </td>

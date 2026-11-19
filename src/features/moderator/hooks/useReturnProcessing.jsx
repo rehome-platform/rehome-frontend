@@ -506,7 +506,7 @@ export function useReturnProcessing() {
       });
       resolving = true;
       const resolved = await returnService.resolveValid(source.id, undefined, {
-        resolutionNote: 'Hàng xuống cấp, chuyển sang quy trình bồi thường (KG-16)',
+        resolutionNote: 'Hàng xuống cấp, chuyển sang quy trình bồi thường',
       });
       showResolved(resolved);
       await fetchReturns();

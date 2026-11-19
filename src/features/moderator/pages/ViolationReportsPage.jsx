@@ -22,9 +22,9 @@ const TYPE_OPTIONS = [
 ];
 
 const TARGET_TYPE_MAP = {
-  POST: { label: 'Bài viết', color: 'bg-blue-50 text-blue-700 border-blue-200' },
-  CAMPAIGN: { label: 'Chiến dịch', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-  ORGANIZATION_ACCOUNT: { label: 'Tổ chức', color: 'bg-purple-50 text-purple-700 border-purple-200' },
+  POST: { label: 'Bài viết', color: 'bg-[#EFF8FF] text-[#175CD3] border-[#B2DDFF]' },
+  CAMPAIGN: { label: 'Chiến dịch', color: 'bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]' },
+  ORGANIZATION_ACCOUNT: { label: 'Tổ chức', color: 'bg-[#F4F3FF] text-[#5925DC] border-[#D9D6FE]' },
 };
 
 const ACTION_LABEL_MAP = {
@@ -518,7 +518,7 @@ export default function ViolationReportsPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-textSecondary">Kiểm duyệt vi phạm · </span>
                     <span className="text-base font-bold font-heading text-text">
-                      Chi tiết báo cáo & quyết định (VP-02)
+                      Chi tiết báo cáo & quyết định
                     </span>
                   </div>
                   {selectedReport && (
