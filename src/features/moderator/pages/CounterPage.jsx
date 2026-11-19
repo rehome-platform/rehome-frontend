@@ -9,15 +9,78 @@ import {
   CounterIdentityPanel,
   CounterLookupForm,
 } from '../components/counter/CounterSections.jsx';
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { Link } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import QRScannerModal from '../../../components/QRScannerModal.jsx';
 
 import { Page, ResourceState } from "../components/WarehouseUi.jsx";
 
+const COUNTER_TASK_FILTERS = [
+  { key: 'ALL', label: 'Tất cả' },
+  { key: 'INSPECTING', label: 'Đang kiểm định' },
+  { key: 'PENDING', label: 'Chờ duyệt' },
+  { key: 'ON_SALE', label: 'Đang bán' },
+  { key: 'SOLD', label: 'Đã bán' },
+  { key: 'HANDOVER', label: 'Bàn giao / Nhận lại' },
+  { key: 'OTHER', label: 'Trạng thái khác' },
+];
+
+function matchesCounterFormFilter(task, filterKey) {
+  if (filterKey === 'ALL') return true;
+  const status = String(task?.status || '').toUpperCase();
+  const resumeStep = String(task?.resumeStep || '').toUpperCase();
+  if (filterKey === 'INSPECTING') {
+    return (
+      ['INSPECTING', 'WAITING_CONFIRMATION', 'WAITING_STOCK_IN'].includes(status) ||
+      ['START_INSPECTION', 'INSPECTION', 'AWAIT_MEMBER_CONFIRM', 'STOCK_IN'].includes(resumeStep)
+    );
+  }
+  if (filterKey === 'PENDING') {
+    return ['PENDING', 'APPROVED'].includes(status) || resumeStep === 'REVIEW_FORM';
+  }
+  if (filterKey === 'ON_SALE') {
+    return status === 'ON_SALE';
+  }
+  if (filterKey === 'SOLD') {
+    return status === 'SOLD';
+  }
+  if (filterKey === 'HANDOVER') {
+    return status === 'WITHDRAWN';
+  }
+  if (filterKey === 'OTHER') {
+    const known =
+      matchesCounterFormFilter(task, 'INSPECTING') ||
+      matchesCounterFormFilter(task, 'PENDING') ||
+      matchesCounterFormFilter(task, 'ON_SALE') ||
+      matchesCounterFormFilter(task, 'SOLD') ||
+      matchesCounterFormFilter(task, 'HANDOVER');
+    return !known;
+  }
+  return true;
+}
+
 export default function CounterPage() {
   const model = useCounter();
+  const [statusFilter, setStatusFilter] = useState('ALL');
+
+  const filteredGroups = useMemo(() => {
+    const groups = model.taskGroups;
+    const forms = (groups.pendingForms || []).filter((t) => matchesCounterFormFilter(t, statusFilter));
+    const showHandovers = statusFilter === 'ALL' || statusFilter === 'HANDOVER';
+    const withdrawals = showHandovers ? (groups.pendingWithdrawals || []) : [];
+    const endOfTerm = showHandovers ? (groups.pendingEndOfTerm || []) : [];
+    const invalidReturns = showHandovers ? (groups.pendingInvalidReturns || []) : [];
+    const degradedItems = showHandovers ? (groups.pendingDegradedItems || []) : [];
+    return {
+      pendingForms: forms,
+      pendingWithdrawals: withdrawals,
+      pendingEndOfTerm: endOfTerm,
+      pendingInvalidReturns: invalidReturns,
+      pendingDegradedItems: degradedItems,
+      filteredCount: forms.length + withdrawals.length + endOfTerm.length + invalidReturns.length + degradedItems.length,
+    };
+  }, [model.taskGroups, statusFilter]);
   return (
     <Page
       title={
@@ -87,22 +150,50 @@ export default function CounterPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-base font-bold text-[#191C19]">Việc cần xử lý tại quầy hôm nay</h3>
-                  <span className="text-xs font-semibold text-[#5B6776]">
+                  <span className="text-xs font-semibold text-[#5B6776] whitespace-nowrap">
                     {model.taskGroups.totalCount ? `${model.taskGroups.totalCount} việc đang chờ` : 'Không có việc chờ'}
                   </span>
                 </div>
 
+                {model.taskGroups.totalCount > 0 && (
+                  <div className="flex flex-wrap gap-2" role="group" aria-label="Lọc việc tại quầy theo trạng thái">
+                    {COUNTER_TASK_FILTERS.map((f) => {
+                      const active = statusFilter === f.key;
+                      return (
+                        <button
+                          key={f.key}
+                          type="button"
+                          onClick={() => setStatusFilter(f.key)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors whitespace-nowrap cursor-pointer ${
+                            active
+                              ? 'border-[#006B2C] bg-[#006B2C] text-white shadow-sm'
+                              : 'border-neutral bg-white text-textSecondary hover:bg-[#F6F9F4] hover:text-text'
+                          }`}
+                        >
+                          {f.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
                 <ResourceState resource={model.tasks} empty={model.taskGroups.totalCount === 0}>
                   <div className="space-y-4">
+                    {model.taskGroups.totalCount > 0 && filteredGroups.filteredCount === 0 && (
+                      <p className="rounded-xl border border-neutral bg-white p-4 text-xs text-textSecondary text-center">
+                        Không có công việc nào khớp bộ lọc trạng thái đã chọn.
+                      </p>
+                    )}
+
                     {/* 1. Form ký gửi */}
-                    {model.taskGroups.pendingForms.length > 0 && (
-                      <CounterConsignmentTasks taskGroups={model.taskGroups} />
+                    {filteredGroups.pendingForms.length > 0 && (
+                      <CounterConsignmentTasks taskGroups={filteredGroups} />
                     )}
 
                     {/* 2. Rút hàng giữa kỳ */}
-                    {model.taskGroups.pendingWithdrawals.length > 0 && (
+                    {filteredGroups.pendingWithdrawals.length > 0 && (
                       <CounterHandoverTasks
-                        items={model.taskGroups.pendingWithdrawals}
+                        items={filteredGroups.pendingWithdrawals}
                         context="ITEM_WITHDRAWAL"
                         setConfirmHandover={model.setConfirmHandover}
                         activeRefId={model.activeRefId}
@@ -110,9 +201,9 @@ export default function CounterPage() {
                     )}
 
                     {/* 3. Nhận lại hàng cuối kỳ */}
-                    {model.taskGroups.pendingEndOfTerm.length > 0 && (
+                    {filteredGroups.pendingEndOfTerm.length > 0 && (
                       <CounterHandoverTasks
-                        items={model.taskGroups.pendingEndOfTerm}
+                        items={filteredGroups.pendingEndOfTerm}
                         context="END_OF_TERM_TAKE_BACK"
                         setConfirmHandover={model.setConfirmHandover}
                         activeRefId={model.activeRefId}
@@ -120,9 +211,9 @@ export default function CounterPage() {
                     )}
 
                     {/* 4. Nhận lại hàng trả không hợp lệ (L-05 RT-04 WAREHOUSE_PICKUP) */}
-                    {model.taskGroups.pendingInvalidReturns?.length > 0 && (
+                    {filteredGroups.pendingInvalidReturns?.length > 0 && (
                       <CounterHandoverTasks
-                        items={model.taskGroups.pendingInvalidReturns}
+                        items={filteredGroups.pendingInvalidReturns}
                         context="INVALID_RETURN_PICKUP"
                         setConfirmHandover={model.setConfirmHandover}
                         activeRefId={model.activeRefId}
@@ -130,9 +221,9 @@ export default function CounterPage() {
                     )}
 
                     {/* 5. Nhận lại hàng xuống cấp (F-036 / API 95 PARTIAL_WITH_ITEM_BACK) */}
-                    {model.taskGroups.pendingDegradedItems?.length > 0 && (
+                    {filteredGroups.pendingDegradedItems?.length > 0 && (
                       <CounterHandoverTasks
-                        items={model.taskGroups.pendingDegradedItems}
+                        items={filteredGroups.pendingDegradedItems}
                         context="DEGRADED_ITEM_PICKUP"
                         setConfirmHandover={model.setConfirmHandover}
                         activeRefId={model.activeRefId}

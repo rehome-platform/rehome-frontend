@@ -95,13 +95,43 @@ function normalizeReferencedTask(task) {
   return { ...task, id, refId: id };
 }
 
+function taskTimestamp(item) {
+  const raw =
+    item?.createdAt ||
+    item?.submittedAt ||
+    item?.updatedAt ||
+    item?.confirmedAt ||
+    item?.stockedAt ||
+    item?.queuedAt ||
+    item?.pickupDeadline ||
+    item?.deadline ||
+    null;
+  if (!raw) return null;
+  const parsed = Date.parse(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function sortTasksNewestFirst(list) {
+  if (!Array.isArray(list)) return [];
+  return [...list].sort((a, b) => {
+    const tA = taskTimestamp(a);
+    const tB = taskTimestamp(b);
+    if (tA === tB) return 0;
+    if (tA === null) return 1;
+    if (tB === null) return -1;
+    return tB - tA;
+  });
+}
+
 export function normalizeMemberTasks(data) {
   const [forms, withdrawals, endOfTerm, invalidReturns = [], degradedItems = []] = taskGroups(data);
-  const pendingForms = Array.isArray(data) ? data.map(normalizeLegacyForm) : forms.map(normalizeTaskForm);
-  const pendingWithdrawals = withdrawals.map(normalizeReferencedTask);
-  const pendingEndOfTerm = endOfTerm.map(normalizeReferencedTask);
-  const pendingInvalidReturns = invalidReturns.map(normalizeReferencedTask);
-  const pendingDegradedItems = degradedItems.map(normalizeReferencedTask);
+  const pendingForms = sortTasksNewestFirst(
+    Array.isArray(data) ? data.map(normalizeLegacyForm) : forms.map(normalizeTaskForm),
+  );
+  const pendingWithdrawals = sortTasksNewestFirst(withdrawals.map(normalizeReferencedTask));
+  const pendingEndOfTerm = sortTasksNewestFirst(endOfTerm.map(normalizeReferencedTask));
+  const pendingInvalidReturns = sortTasksNewestFirst(invalidReturns.map(normalizeReferencedTask));
+  const pendingDegradedItems = sortTasksNewestFirst(degradedItems.map(normalizeReferencedTask));
   return {
     pendingForms,
     pendingWithdrawals,
