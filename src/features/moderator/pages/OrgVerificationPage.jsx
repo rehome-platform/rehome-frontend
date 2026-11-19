@@ -257,7 +257,7 @@ export default function OrgVerificationPage() {
                     : 'bg-surface text-textSecondary border border-neutral hover:bg-background hover:text-text'
                   }`}
               >
-                Hồ sơ tổ chức ({model.orgsQueue.length})
+                Hồ sơ tổ chức ({model.orgsQueue.filter((o) => (o.status || 'PENDING') === 'PENDING').length})
               </button>
               <button
                 type="button"
@@ -375,31 +375,44 @@ export default function OrgVerificationPage() {
                 </div>
 
                 {/* Footer Buttons TC-02 */}
-                <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
-                  <button
-                    type="button"
-                    disabled={!model.isChecklistComplete}
-                    onClick={model.handleApproveOrg}
-                    className={`py-2.5 px-6 rounded-xl text-xs font-bold transition-all ${model.isChecklistComplete
-                        ? 'bg-primary text-white hover:bg-primary-hover shadow-sm cursor-pointer'
-                        : 'bg-neutral-light text-textSecondary border border-neutral cursor-not-allowed'
-                      }`}
-                  >
-                    Xác thực tổ chức
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => model.setIsRejectModalOpen(true)}
-                    className="py-2.5 px-4 rounded-xl border border-error text-error hover:bg-error-light text-xs font-semibold transition-colors"
-                  >
-                    Từ chối kèm lý do
-                  </button>
-                  {!model.isChecklistComplete && (
-                    <span className="text-xs text-error font-medium">
-                      Còn {model.mandatoryItemsLeft} bước bắt buộc chưa tích — nút Xác thực đang khóa
-                    </span>
-                  )}
-                </div>
+                {model.selectedOrg.status === 'REJECTED' ? (
+                  <div className="p-3.5 rounded-xl border border-error/30 bg-error-light text-xs text-error space-y-1">
+                    <div className="font-bold">Hồ sơ này đã bị từ chối</div>
+                    {model.selectedOrg.rejectReason && (
+                      <div className="text-textSecondary">Lý do: {model.selectedOrg.rejectReason}</div>
+                    )}
+                  </div>
+                ) : model.selectedOrg.status === 'APPROVED' || model.selectedOrg.status === 'VERIFIED' ? (
+                  <div className="p-3.5 rounded-xl border border-primary/30 bg-success-light text-xs text-primary font-bold">
+                    Hồ sơ này đã được xác thực thành công.
+                  </div>
+                ) : (
+                  <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
+                    <button
+                      type="button"
+                      disabled={!model.isChecklistComplete}
+                      onClick={model.handleApproveOrg}
+                      className={`py-2.5 px-6 rounded-xl text-xs font-bold transition-all ${model.isChecklistComplete
+                          ? 'bg-primary text-white hover:bg-primary-hover shadow-sm cursor-pointer'
+                          : 'bg-neutral-light text-textSecondary border border-neutral cursor-not-allowed'
+                        }`}
+                    >
+                      Xác thực tổ chức
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => model.setIsRejectModalOpen(true)}
+                      className="py-2.5 px-4 rounded-xl border border-error text-error hover:bg-error-light text-xs font-semibold transition-colors"
+                    >
+                      Từ chối kèm lý do
+                    </button>
+                    {!model.isChecklistComplete && (
+                      <span className="text-xs text-error font-medium">
+                        Còn {model.mandatoryItemsLeft} bước bắt buộc chưa tích — nút Xác thực đang khóa
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

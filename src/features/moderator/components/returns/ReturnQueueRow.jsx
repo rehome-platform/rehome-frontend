@@ -1,4 +1,5 @@
 import React from "react";
+import { needsItemAction } from "../../services/returnApi.js";
 
 export function ReturnQueueRow({
   r,
@@ -7,7 +8,9 @@ export function ReturnQueueRow({
   handleOpenInspect,
   handleMarkLost,
   handleOpenDegradedCaseView,
+  handleOpenOutcomeModal,
 }) {
+  const pendingItemAction = needsItemAction(r);
   return (
     <tr
       key={r.id}
@@ -26,13 +29,23 @@ export function ReturnQueueRow({
         {r.waitTime}
       </td>
       <td className="py-3 px-3">
-        <span className="font-semibold text-text">
-          {r.status === 'PENDING_APPROVAL' && 'Chờ duyệt'}
-          {r.status === 'WAITING_BUYER_DISPATCH' && 'Chờ người mua gửi'}
-          {r.status === 'RETURNING' && 'Đang về kho'}
-          {r.status === 'RECEIVED_INSPECT' && 'Hàng đã về, chờ kiểm'}
-          {r.status === 'RESOLVED' && 'Đã xong'}
-        </span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="font-semibold text-text">
+            {r.status === 'PENDING_APPROVAL' && 'Chờ duyệt'}
+            {r.status === 'WAITING_BUYER_DISPATCH' && 'Chờ người mua gửi'}
+            {r.status === 'RETURNING' && 'Đang về kho'}
+            {r.status === 'RECEIVED_INSPECT' && 'Hàng đã về, chờ kiểm'}
+            {r.status === 'RESOLVED' && (pendingItemAction ? 'Đã hoàn tiền · Chờ xử lý món' : 'Đã xong')}
+          </span>
+          {r.ghnFallbackUsed && (r.status === 'WAITING_BUYER_DISPATCH' || r.status === 'RETURNING') && (
+            <span
+              className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300"
+              title={r.ghnReturnTrackingCode || 'Mã thu hồi nội bộ'}
+            >
+              GHN fallback
+            </span>
+          )}
+        </div>
       </td>
       <td className="py-3 px-3 text-right space-x-1.5 whitespace-nowrap">
         {r.status === 'PENDING_APPROVAL' && (
@@ -85,6 +98,16 @@ export function ReturnQueueRow({
         )}
         {r.status === 'RESOLVED' && (
           <div className="flex items-center justify-end gap-1.5">
+            {pendingItemAction && handleOpenOutcomeModal && (
+              <button
+                type="button"
+                onClick={() => handleOpenOutcomeModal(r)}
+                className="text-[11px] font-bold px-2.5 py-1.5 rounded-xl bg-primary text-white hover:bg-primary-hover shadow-sm transition-colors"
+                title="Chọn phương án xử lý món hàng (TH-04)"
+              >
+                Chọn xử lý món
+              </button>
+            )}
             <button
               type="button"
               onClick={() => handleOpenReview(r)}

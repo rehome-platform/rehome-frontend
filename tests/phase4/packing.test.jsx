@@ -143,3 +143,61 @@ it('never auto-retries createWaybill on ECONNABORTED timeout and keeps shipment 
   expect(shipment).toHaveBeenCalledTimes(1);
   await waitFor(() => expect(screen.getByRole('button', { name: 'Tạo vận đơn GHN' })).toBeDisabled());
 });
+
+it('shows PACKED label and allows confirming handover to GHN, transitioning to SHIPPING with handedOverAt', async () => {
+  const handedOverAt = '2026-11-19T06:30:00.000Z';
+  const order = orderFixture();
+  order.status = 'PACKED';
+  order.ghnTrackingCode = 'GHN-PACKED-01';
+  order.shipmentOutcome = 'CREATED';
+  order.scannedProductIds = ['sku-a', 'SKU-B'];
+  order.scannedCount = 2;
+
+  vi.spyOn(packingService, 'read').mockImplementation(async () => structuredClone(order));
+  const handover = vi.spyOn(packingService, 'handoverOrder').mockImplementation(async () => {
+    order.status = 'SHIPPING';
+    order.handedOverAt = handedOverAt;
+    return { id: order.orderId, status: 'SHIPPING', handedOverAt };
+  });
+
+  mount();
+  await screen.findByText('GHN-PACKED-01');
+  expect(screen.getByText('Đã đóng gói')).toBeInTheDocument();
+
+  const handoverBtn = screen.getByRole('button', { name: 'Xác nhận bàn giao GHN' });
+  expect(handoverBtn).toBeEnabled();
+  fireEvent.click(handoverBtn);
+
+  await waitFor(() => expect(handover).toHaveBeenCalledTimes(1));
+  await screen.findByText('Đã bàn giao cho GHN');
+  expect(screen.getByText('Đang vận chuyển')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Xác nhận bàn giao GHN' })).not.toBeInTheDocument();
+});
+
+it('shows already-handed-over badge for SHIPPING orders and hides handover button', async () => {
+  const order = orderFixture();
+  order.status = 'SHIPPING';
+  order.ghnTrackingCode = 'GHN-SHIP-02';
+  order.shipmentOutcome = 'CREATED';
+  order.handedOverAt = '2026-11-19T06:00:00.000Z';
+
+  vi.spyOn(packingService, 'read').mockImplementation(async () => structuredClone(order));
+
+  mount();
+  await screen.findByText('GHN-SHIP-02');
+  expect(screen.getByText('Đã bàn giao cho GHN')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Xác nhận bàn giao GHN' })).not.toBeInTheDocument();
+});
+
+it('does not show handover button when order is not PACKED', async () => {
+  const order = orderFixture();
+  order.status = 'PACKING';
+  order.ghnTrackingCode = 'GHN-PACKING-03';
+  order.shipmentOutcome = 'CREATED';
+
+  vi.spyOn(packingService, 'read').mockImplementation(async () => structuredClone(order));
+
+  mount();
+  await screen.findByText('GHN-PACKING-03');
+  expect(screen.queryByRole('button', { name: 'Xác nhận bàn giao GHN' })).not.toBeInTheDocument();
+});

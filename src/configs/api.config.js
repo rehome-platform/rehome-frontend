@@ -120,7 +120,9 @@ export const API_ENDPOINTS = {
     // Đóng gói & GHN
     // Packing work is listed through QUEUES with params: { type: 'PACKING' }.
     SCAN_PACKING_PRODUCT: (orderId) => `/orders/${moderatorId(orderId)}/pack/scan`,
+    UPDATE_PACKING_PHOTOS: (orderId) => `/orders/${moderatorId(orderId)}/pack/photos`,
     CREATE_GHN_SHIPMENT: (orderId) => `/orders/${moderatorId(orderId)}/shipment`,
+    HANDOVER_ORDER: (orderId) => `/orders/${moderatorId(orderId)}/handover`,
 
     // Xử lý hàng trả
     RETURNS: "/return-requests/queue",

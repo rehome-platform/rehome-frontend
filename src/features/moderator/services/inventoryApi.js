@@ -174,7 +174,7 @@ export const inventoryService = {
     return inventoryDetail(res, sku);
   },
 
-  // Upload file lên /uploads?folder=PRODUCTS
+  // Upload file lên /uploads?folder={folder} (mặc định PRODUCTS, vd ORDER_PACKING)
   upload: async (file, options) => {
     const fallback = async () => {
       const { fixtureRequest } = await import('../fixtures/warehouseFixtures.js');
@@ -187,11 +187,12 @@ export const inventoryService = {
 
     const formData = new FormData();
     formData.append('file', file);
+    const folder = encodeURIComponent(options?.folder || 'PRODUCTS');
 
     const res = await callBackend(
       {
         method: 'post',
-        url: `${API_ENDPOINTS.MODERATOR.UPLOADS}?folder=PRODUCTS`,
+        url: `${API_ENDPOINTS.MODERATOR.UPLOADS}?folder=${folder}`,
         data: formData,
         onUploadProgress: options?.onUploadProgress,
       },

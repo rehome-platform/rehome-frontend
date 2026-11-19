@@ -256,7 +256,16 @@ export function useReturnProcessing() {
       const handoverNotice = approved?.handoverDeadline
         ? ` Hạn người mua bàn giao cho GHN: ${formatDeadlineWithCountdown(approved.handoverDeadline)}.`
         : '';
-      notify('success', `Đã duyệt yêu cầu trả hàng ${selectedItem.code}! Vận đơn thu hồi GHN đã được tự động tạo và gửi tới người mua.${handoverNotice}`);
+      const trackingCode = approved?.ghnReturnTrackingCode || approved?.waybillCode || '';
+      if (approved?.ghnFallbackUsed) {
+        notify(
+          'warn',
+          `Đã duyệt yêu cầu trả hàng ${selectedItem.code} với mã thu hồi nội bộ ${trackingCode} (GHN Sandbox tạm lỗi).${handoverNotice}`
+        );
+      } else {
+        const codeNotice = trackingCode ? ` Mã vận đơn: ${trackingCode}.` : '';
+        notify('success', `Đã duyệt yêu cầu trả hàng ${selectedItem.code}! Vận đơn thu hồi GHN đã được tự động tạo và gửi tới người mua.${codeNotice}${handoverNotice}`);
+      }
       setViewMode('QUEUE');
       setSelectedItem(null);
     } catch (err) {
@@ -333,10 +342,13 @@ export function useReturnProcessing() {
                   id: prev.id,
                   rawStatus: 'VALID',
                   status: 'RESOLVED',
+                  itemAction: null,
+                  outcome: null,
                   refundAmount: refundedAmount,
                 }
               : prev
           );
+          await fetchReturns();
           notify(
             'success',
             `Đã kết luận hợp lệ và hoàn ${formatCurrencyVND(refundedAmount)} cho người mua! Vui lòng chọn phương án xử lý món hàng.`
@@ -348,6 +360,24 @@ export function useReturnProcessing() {
       notify('error', 'Có lỗi xảy ra khi lưu kết luận: ' + (err.message || ''));
     } finally {
       resolvingRef.current = false;
+    }
+  };
+
+  const handleOpenOutcomeModal = async (item) => {
+    const target = item || selectedItem;
+    if (!target || resolvingRef.current) return;
+    if (selectedItem?.id === target.id) {
+      setIsOutcomeModalOpen(true);
+      return;
+    }
+    const epoch = ++selectionEpoch.current;
+    try {
+      const detail = await returnService.detail(target.id);
+      if (epoch !== selectionEpoch.current) return;
+      setSelectedItem(detail);
+      setIsOutcomeModalOpen(true);
+    } catch (error) {
+      notify('error', 'Không thể tải chi tiết yêu cầu trả hàng: ' + error.message);
     }
   };
 
@@ -610,17 +640,20 @@ export function useReturnProcessing() {
         handleOpenInspect,
         handleMarkLost,
         handleOpenDegradedCaseView,
+        handleOpenOutcomeModal,
       },
       ReturnReviewDecision: {
         selectedItem,
         handleApproveAndCreateWaybill,
         setIsRejectModalOpen,
+        handleOpenOutcomeModal,
       },
       ReturnInspectionProduct: {
         ...evidenceProps,
         selectedItem,
         checklist,
         setChecklist,
+        setIsCompareModalOpen,
       },
       ReturnInspectionVerdict: {
         evidenceReady,

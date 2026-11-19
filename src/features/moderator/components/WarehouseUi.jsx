@@ -98,6 +98,12 @@ const statusLabels = {
   RETURNED: 'Đã bàn giao',
   RETURNED_ONSITE: 'Đã trả tại chỗ',
   PLATFORM_OWNED: 'Tài sản nền tảng',
+  REVIEW_FORM: 'Chờ duyệt',
+  START_INSPECTION: 'Đã duyệt',
+  INSPECTION: 'Đang kiểm định',
+  AWAIT_MEMBER_CONFIRM: 'Chờ Member xác nhận',
+  STOCK_IN: 'Chờ nhập kho',
+  COMPLETED: 'Hoàn tất',
 };
 export function Status({ children }) {
   return (

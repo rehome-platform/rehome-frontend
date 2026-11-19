@@ -168,11 +168,11 @@ function LegalDocumentPreviewModal({ doc, onClose }) {
   );
 }
 
-export function VerificationRejectDialog({ isRejectModalOpen, setIsRejectModalOpen, rejectReason, setRejectReason, handleConfirmReject }) {
+export function VerificationRejectDialog({ isRejectModalOpen, setIsRejectModalOpen, rejectReason, setRejectReason, handleConfirmReject, rejectingOrg = false }) {
   return (
     <Modal
       isOpen={isRejectModalOpen}
-      onClose={() => setIsRejectModalOpen(false)}
+      onClose={() => { if (!rejectingOrg) setIsRejectModalOpen(false); }}
       title="Từ chối hồ sơ tổ chức"
     >
       <div className="space-y-4 text-xs">
@@ -184,17 +184,24 @@ export function VerificationRejectDialog({ isRejectModalOpen, setIsRejectModalOp
           <textarea
             rows="3"
             value={rejectReason}
+            disabled={rejectingOrg}
             onChange={(e) => setRejectReason(e.target.value)}
             placeholder="Ví dụ: Giấy phép hết hiệu lực, ảnh CCCD bị mờ không đọc được số, con dấu không rõ..."
             className="w-full p-2.5 border border-neutral rounded-xl text-text focus:outline-none focus:border-primary"
           />
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <Button size="sm" variant="outline" onClick={() => setIsRejectModalOpen(false)} className="rounded-xl">
+          <Button size="sm" variant="outline" disabled={rejectingOrg} onClick={() => setIsRejectModalOpen(false)} className="rounded-xl">
             Hủy
           </Button>
-          <Button size="sm" variant="danger" onClick={handleConfirmReject} className="rounded-xl bg-error text-white hover:bg-red-700">
-            Xác nhận từ chối
+          <Button
+            size="sm"
+            variant="danger"
+            disabled={rejectingOrg || !rejectReason.trim()}
+            onClick={handleConfirmReject}
+            className="rounded-xl bg-error text-white hover:bg-red-700 disabled:opacity-50"
+          >
+            {rejectingOrg ? 'Đang xử lý...' : 'Xác nhận từ chối'}
           </Button>
         </div>
       </div>
@@ -540,6 +547,47 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
   const toast = useToast();
   const [selectedChangeModal, setSelectedChangeModal] = React.useState(null);
   const [previewDoc, setPreviewDoc] = React.useState(null);
+  const [rejectModalTarget, setRejectModalTarget] = React.useState(null);
+  const [legalRejectReason, setLegalRejectReason] = React.useState('');
+  const [approveModalTarget, setApproveModalTarget] = React.useState(null);
+  const [submittingAction, setSubmittingAction] = React.useState(false);
+
+  const openRejectModal = (chg) => {
+    setRejectModalTarget(chg);
+    setLegalRejectReason('');
+  };
+
+  const confirmRejectLegalChange = async () => {
+    if (!rejectModalTarget || submittingAction) return;
+    const trimmed = legalRejectReason.trim();
+    if (!trimmed) {
+      toast.warn('Vui lòng nhập lý do từ chối yêu cầu đổi pháp lý.');
+      return;
+    }
+    const targetRequestId = rejectModalTarget.requestId || rejectModalTarget.refId || rejectModalTarget.id;
+    setSubmittingAction(true);
+    try {
+      await handleRejectLegalChange?.(targetRequestId, trimmed);
+      setRejectModalTarget(null);
+      setLegalRejectReason('');
+      setSelectedChangeModal(null);
+    } finally {
+      setSubmittingAction(false);
+    }
+  };
+
+  const confirmApproveLegalChange = async () => {
+    if (!approveModalTarget || submittingAction) return;
+    const targetRequestId = approveModalTarget.requestId || approveModalTarget.refId || approveModalTarget.id;
+    setSubmittingAction(true);
+    try {
+      await handleApproveLegalChange?.(targetRequestId);
+      setApproveModalTarget(null);
+      setSelectedChangeModal(null);
+    } finally {
+      setSubmittingAction(false);
+    }
+  };
 
   return (
     <div className="bg-surface border border-neutral rounded-2xl overflow-hidden shadow-sm">
@@ -596,25 +644,14 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
                           <>
                             <button
                               type="button"
-                              onClick={() => {
-                                const reason = typeof window !== 'undefined' && window.prompt
-                                  ? window.prompt('Nhập lý do từ chối yêu cầu đổi pháp lý:', 'Thông tin pháp lý không hợp lệ')
-                                  : 'Thông tin pháp lý không hợp lệ';
-                                if (reason !== null && reason.trim()) {
-                                  handleRejectLegalChange?.(targetRequestId, reason.trim());
-                                }
-                              }}
+                              onClick={() => openRejectModal(chg)}
                               className="text-xs font-medium px-3 py-1.5 rounded-xl bg-error text-white hover:bg-red-700 transition-colors shadow-sm"
                             >
                               Từ chối
                             </button>
                             <button
                               type="button"
-                              onClick={() => {
-                                if (typeof window === 'undefined' || !window.confirm || window.confirm(`Bạn có chắc muốn duyệt thay đổi pháp lý cho ${chg.orgName || 'tổ chức này'}?`)) {
-                                  handleApproveLegalChange?.(targetRequestId);
-                                }
-                              }}
+                              onClick={() => setApproveModalTarget(chg)}
                               className="text-xs font-medium px-3 py-1.5 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors shadow-sm"
                             >
                               Duyệt đổi pháp lý
@@ -725,15 +762,7 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
                 <>
                   <Button
                     variant="danger"
-                    onClick={() => {
-                      const reason = typeof window !== 'undefined' && window.prompt
-                        ? window.prompt('Nhập lý do từ chối yêu cầu đổi pháp lý:', 'Thông tin pháp lý không hợp lệ')
-                        : 'Thông tin pháp lý không hợp lệ';
-                      if (reason !== null && reason.trim()) {
-                        handleRejectLegalChange?.(selectedChangeModal.requestId || selectedChangeModal.refId || selectedChangeModal.id, reason.trim());
-                        setSelectedChangeModal(null);
-                      }
-                    }}
+                    onClick={() => openRejectModal(selectedChangeModal)}
                     className="rounded-xl bg-error text-white hover:bg-red-700"
                   >
                     Từ chối
@@ -754,6 +783,87 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
           </div>
         </Modal>
       )}
+
+      {/* MODAL TỪ CHỐI YÊU CẦU ĐỔI PHÁP LÝ */}
+      <Modal
+        isOpen={Boolean(rejectModalTarget)}
+        onClose={() => { if (!submittingAction) setRejectModalTarget(null); }}
+        title="Từ chối yêu cầu đổi pháp lý"
+      >
+        <div className="space-y-4 text-xs font-sans">
+          <p className="text-textSecondary">
+            Từ chối yêu cầu cập nhật thông tin pháp lý của{' '}
+            <strong className="text-text">{rejectModalTarget?.orgName || rejectModalTarget?.name || 'tổ chức này'}</strong>.
+            Lý do sẽ được gửi tới tổ chức:
+          </p>
+          <div>
+            <label className="block font-bold text-text mb-1">Lý do từ chối *</label>
+            <textarea
+              rows="3"
+              value={legalRejectReason}
+              disabled={submittingAction}
+              onChange={(e) => setLegalRejectReason(e.target.value)}
+              placeholder="Nhập lý do từ chối yêu cầu đổi thông tin pháp lý..."
+              className="w-full p-2.5 border border-neutral rounded-xl text-text focus:outline-none focus:border-primary"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2 border-t border-neutral">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={submittingAction}
+              onClick={() => setRejectModalTarget(null)}
+              className="rounded-xl"
+            >
+              Hủy
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              disabled={submittingAction || !legalRejectReason.trim()}
+              onClick={confirmRejectLegalChange}
+              className="rounded-xl bg-error text-white hover:bg-red-700 disabled:opacity-50"
+            >
+              {submittingAction ? 'Đang xử lý...' : 'Xác nhận từ chối'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* MODAL XÁC NHẬN DUYỆT ĐỔI PHÁP LÝ */}
+      <Modal
+        isOpen={Boolean(approveModalTarget)}
+        onClose={() => { if (!submittingAction) setApproveModalTarget(null); }}
+        title="Xác nhận duyệt yêu cầu đổi pháp lý"
+      >
+        <div className="space-y-4 text-xs font-sans">
+          <p className="text-textSecondary leading-relaxed">
+            Bạn có chắc muốn duyệt thay đổi thông tin pháp lý cho{' '}
+            <strong className="text-text">{approveModalTarget?.orgName || approveModalTarget?.name || 'tổ chức này'}</strong>?
+            Thông tin mới sẽ được áp dụng ngay lên hồ sơ tổ chức và ghi nhận vào Audit Log.
+          </p>
+          <div className="flex justify-end gap-2 pt-2 border-t border-neutral">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={submittingAction}
+              onClick={() => setApproveModalTarget(null)}
+              className="rounded-xl"
+            >
+              Hủy
+            </Button>
+            <Button
+              size="sm"
+              variant="primary"
+              disabled={submittingAction}
+              onClick={confirmApproveLegalChange}
+              className="rounded-xl bg-primary text-white hover:bg-primary-hover font-bold"
+            >
+              {submittingAction ? 'Đang duyệt...' : 'Xác nhận duyệt'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <LegalDocumentPreviewModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />
     </div>
@@ -846,12 +956,12 @@ export function VerificationQueueTable({ loading, orgsQueue = [], handleOpenDeta
                         type="button"
                         onClick={() => handleOpenDetail(org)}
                         className={`text-xs font-medium px-3.5 py-1.5 rounded-xl transition-colors ${
-                          idx === 0
+                          idx === 0 && activeQueueTab === 'PENDING'
                             ? 'bg-primary text-white hover:bg-primary-hover shadow-sm'
                             : 'border border-neutral text-text hover:bg-background'
                         }`}
                       >
-                        Xác minh
+                        {activeQueueTab === 'PENDING' ? 'Xác minh' : 'Xem chi tiết'}
                       </button>
                     </td>
                   </tr>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { orgVerificationService } from "../services/orgVerificationApi.js";
 import { useToast } from "../../../context/ToastContext.jsx";
 
@@ -59,7 +59,9 @@ export function useOrgVerification() {
   // Modals
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [rejectingOrg, setRejectingOrg] = useState(false);
   const [viewingDoc, setViewingDoc] = useState(null); // TC-03 viewer
+  const handledDeepLinkRef = useRef(null);
 
   const fetchExistingOrgs = async (params = {}) => {
     try {
@@ -160,20 +162,22 @@ export function useOrgVerification() {
     }
   };
 
-  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
-
   useEffect(() => {
     loadData();
     fetchExistingOrgs();
   }, []);
 
   useEffect(() => {
-    const paramId = searchParams.get('id');
-    const paramTab = searchParams.get('tab');
-    if (paramTab === 'LEGAL_CHANGES') {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const paramId = params.get('id');
+    const paramTab = params.get('tab');
+    if (paramTab === 'LEGAL_CHANGES' && handledDeepLinkRef.current !== `tab:${paramTab}`) {
       setActiveMainTab('LEGAL_CHANGES');
+      if (!paramId) handledDeepLinkRef.current = `tab:${paramTab}`;
     }
-    if (!loading && paramId) {
+    if (!loading && paramId && handledDeepLinkRef.current !== paramId) {
+      handledDeepLinkRef.current = paramId;
       const found = orgsQueue.find(
         (o) => String(o.id) === String(paramId) || String(o.refId) === String(paramId) || String(o.targetId) === String(paramId)
       );
@@ -183,7 +187,7 @@ export function useOrgVerification() {
         handleOpenDetail({ id: paramId, refId: paramId, targetId: paramId, name: 'Hồ sơ tổ chức' });
       }
     }
-  }, [loading, orgsQueue, searchParams]);
+  }, [loading, orgsQueue]);
 
   const handleOpenDetail = (org) => {
     setSelectedOrg(org);
@@ -258,15 +262,21 @@ export function useOrgVerification() {
   };
 
   const handleConfirmReject = async () => {
-    if (!rejectReason.trim() || !selectedOrg) return;
+    if (!selectedOrg || rejectingOrg) return;
+    const trimmedReason = rejectReason.trim();
+    if (!trimmedReason) {
+      notify('warn', 'Vui lòng nhập lý do từ chối hồ sơ tổ chức.');
+      return;
+    }
     const orgId = selectedOrg.refId || selectedOrg.targetId || selectedOrg.organizationId || selectedOrg.id;
+    setRejectingOrg(true);
     try {
-      await orgVerificationService.rejectOrg(orgId, rejectReason);
+      await orgVerificationService.rejectOrg(orgId, trimmedReason);
       setOrgsQueue((prev) =>
         prev.map((item) => {
           const itemId = item.refId || item.targetId || item.organizationId || item.id;
           return String(itemId) === String(orgId)
-            ? { ...item, status: 'REJECTED', rejectReason }
+            ? { ...item, status: 'REJECTED', rejectReason: trimmedReason }
             : item;
         }),
       );
@@ -279,6 +289,8 @@ export function useOrgVerification() {
       console.error('Lỗi khi từ chối hồ sơ:', err);
       const serverMsg = err?.message || err?.response?.data?.message;
       notify('error', serverMsg ? `Có lỗi xảy ra khi từ chối hồ sơ:\n${serverMsg}` : 'Có lỗi xảy ra khi từ chối hồ sơ.');
+    } finally {
+      setRejectingOrg(false);
     }
   };
 
@@ -286,7 +298,12 @@ export function useOrgVerification() {
     try {
       await orgVerificationService.approveLegalChange(changeId);
       setLegalChanges((prev) =>
-        prev.map((item) => (String(item.id) === String(changeId) ? { ...item, status: 'APPROVED' } : item)),
+        prev.map((item) => {
+          const itemReqId = item.requestId || item.refId || item.id;
+          return String(itemReqId) === String(changeId) || String(item.id) === String(changeId)
+            ? { ...item, status: 'APPROVED' }
+            : item;
+        }),
       );
       notify('success', 'Đã duyệt yêu cầu đổi thông tin pháp lý thành công! Ghi nhận vào Audit Log hệ thống.');
       setViewMode('LIST');
@@ -302,9 +319,12 @@ export function useOrgVerification() {
     try {
       await orgVerificationService.rejectLegalChange(changeId, reason);
       setLegalChanges((prev) =>
-        prev.map((item) =>
-          String(item.id) === String(changeId) ? { ...item, status: 'REJECTED', rejectReason: reason } : item,
-        ),
+        prev.map((item) => {
+          const itemReqId = item.requestId || item.refId || item.id;
+          return String(itemReqId) === String(changeId) || String(item.id) === String(changeId)
+            ? { ...item, status: 'REJECTED', rejectReason: reason }
+            : item;
+        }),
       );
       notify('success', 'Đã từ chối yêu cầu đổi thông tin pháp lý.');
       setViewMode('LIST');
@@ -352,7 +372,7 @@ export function useOrgVerification() {
       VerificationQueueTabs: { setActiveQueueTab, activeQueueTab, orgsQueue },
       VerificationQueueTable: { loading, orgsQueue, handleOpenDetail, activeQueueTab },
       VerificationChecklist: { checklist, setChecklist, isEnterprise, selectedOrg },
-      VerificationRejectDialog: { isRejectModalOpen, setIsRejectModalOpen, rejectReason, setRejectReason, handleConfirmReject },
+      VerificationRejectDialog: { isRejectModalOpen, setIsRejectModalOpen, rejectReason, setRejectReason, handleConfirmReject, rejectingOrg },
     },
   };
 }
