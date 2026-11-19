@@ -151,7 +151,7 @@ export function ReturnOutcomeDialog({
               {selectedItem?.code || 'YC-00084'} · Quyết định xử lý món hàng
             </div>
             <p className="text-[11px] text-textSecondary mt-0.5">
-              Người mua đã được hoàn tiền. Chọn 1 trong 3 phương án xử lý món hàng bên dưới.
+              Người mua đã được hoàn tiền. Chọn 1 trong 2 phương án xử lý món hàng bên dưới.
             </p>
           </div>
           <span className="text-[10px] font-extrabold px-3 py-1 bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7] rounded-full tracking-wide uppercase self-start sm:self-auto">
@@ -161,7 +161,7 @@ export function ReturnOutcomeDialog({
 
         {/* 2-Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Cột trái (7 cols): 3 Lựa chọn phương án */}
+          {/* Cột trái (7 cols): 2 Lựa chọn phương án */}
           <div className="lg:col-span-7 space-y-3">
             <div className="font-bold text-sm text-[#191C19] flex items-center justify-between">
               <span>Món hàng này xử lý thế nào</span>
@@ -199,10 +199,6 @@ export function ReturnOutcomeDialog({
                   </div>
                 </div>
               </button>
-              <div className="mt-2.5 ml-6 p-2.5 bg-surface rounded-lg border border-neutral text-[11px] leading-relaxed text-[#4a4a4a]">
-                Kỳ và hoa hồng <strong className="font-bold text-[#191C19]">tiếp tục từ chỗ đang dở</strong>
-                {currentTerm != null ? ` (kỳ ${currentTerm}${daysInTerm != null ? `, ngày thứ ${daysInTerm}` : ''})` : ''}, không tính lại từ đầu — nếu tính lại thì người ký gửi được lợi từ một giao dịch hỏng. Giữ nguyên SKU và tem cũ, không in lại.
-              </div>
             </div>
 
             {/* Option 2: RETURN_TO_SELLER */}
@@ -236,59 +232,6 @@ export function ReturnOutcomeDialog({
                   </div>
                 </div>
               </button>
-              <div className="mt-2.5 ml-6 p-2.5 bg-surface rounded-lg border border-neutral text-[11px] leading-relaxed text-[#4a4a4a]">
-                Member nhận thông báo và có <strong className="font-bold text-[#191C19]">30 ngày</strong> tới kho lấy, như hàng cuối kỳ. Quá hạn thì thành hàng vô chủ theo quy định mục 11.
-              </div>
-            </div>
-
-            {/* Option 3: DISCARD */}
-            <div
-              className={`p-3.5 rounded-xl border-2 transition-all ${
-                selectedOutcome === 'DISCARD'
-                  ? 'border-[#2b2b2b] bg-[#fafafa] shadow-sm'
-                  : 'border-neutral bg-surface hover:bg-background'
-              }`}
-            >
-              <button
-                type="button"
-                onClick={() => setSelectedOutcome('DISCARD')}
-                className="w-full text-left"
-              >
-                <div className="flex items-start gap-2.5">
-                  <span
-                    className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                      selectedOutcome === 'DISCARD' ? 'border-[#2b2b2b]' : 'border-[#8a8a8a]'
-                    }`}
-                  >
-                    {selectedOutcome === 'DISCARD' && (
-                      <span className="w-2 h-2 rounded-full bg-[#2b2b2b]" />
-                    )}
-                  </span>
-                  <div className="flex-1">
-                    <div className="font-bold text-sm text-error">Tiêu huỷ</div>
-                    <p className="text-[11px] text-textSecondary mt-0.5 leading-relaxed">
-                      Hàng hỏng nặng, mất vệ sinh, hoặc xác định là hàng giả.
-                    </p>
-                  </div>
-                </div>
-              </button>
-              <div className="mt-2.5 ml-6 p-2.5 bg-surface rounded-lg border border-neutral text-[11px] leading-relaxed text-[#4a4a4a]">
-                Phải có <strong className="font-bold text-[#191C19]">lý do và ảnh</strong>, và Member được báo kèm ảnh đó. Ca hàng giả bắt buộc hai Moderator cùng kết luận trước khi tới bước này.
-              </div>
-              {selectedOutcome === 'DISCARD' && (
-                <div className="mt-3 ml-6 space-y-1.5 pt-2 border-t border-neutral">
-                  <label className="block text-[11px] font-bold text-error">
-                    Lý do tiêu huỷ (bắt buộc):
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={discardReason}
-                    onChange={(e) => setDiscardReason(e.target.value)}
-                    placeholder="Ghi rõ tình trạng hỏng hóc hoặc lý do bắt buộc tiêu huỷ..."
-                    className="w-full p-2 text-xs border border-neutral rounded-lg focus:outline-none focus:border-error bg-surface"
-                  />
-                </div>
-              )}
             </div>
           </div>
 
@@ -425,7 +368,7 @@ export function ReturnOutcomeDialog({
           </Button>
           <Button
             type="button"
-            disabled={!selectedOutcome || (selectedOutcome === 'DISCARD' && !discardReason.trim())}
+            disabled={!selectedOutcome}
             className="rounded-xl bg-[#2b2b2b] text-white hover:bg-black text-xs font-bold px-5 py-2 shadow-sm disabled:opacity-50"
             onClick={onConfirm}
           >
@@ -926,58 +869,27 @@ export function ReturnInspectionVerdict({
   );
 }
 
-export function ReturnInspectionChecklist({ checklist, setChecklist, selectedItem }) {
+export function ReturnInspectionChecklist() {
+  const items = [
+    'Còn nguyên tem SKU trên sản phẩm',
+    'Không có hư hỏng mới so với ảnh nhập kho',
+    'Không có dấu vết đã qua sử dụng thêm',
+    'Đủ phụ kiện đi kèm nếu có',
+  ];
+
   return (
     <div className="border border-neutral rounded-2xl overflow-hidden bg-surface text-xs font-sans shadow-sm">
       <div className="p-3 bg-background border-b border-neutral text-[10px] uppercase font-bold text-textSecondary">
         Bước 2 · Đối chiếu từng mục
       </div>
-      <div className="divide-y divide-neutral">
-        <label className="p-3.5 flex items-start gap-3 cursor-pointer hover:bg-background transition-colors">
-          <input
-            type="checkbox"
-            checked={Boolean(checklist?.labelIntact)}
-            onChange={(e) => setChecklist({ ...checklist, labelIntact: e.target.checked })}
-            className="mt-0.5 rounded border-neutral text-primary focus:ring-primary"
-          />
-          <div>
-            <span className="font-semibold text-text">Còn nguyên tem SKU trên sản phẩm</span>
-          </div>
-        </label>
-        <label className="p-3.5 flex items-start gap-3 cursor-pointer hover:bg-background transition-colors">
-          <input
-            type="checkbox"
-            checked={checklist?.noNewDamage}
-            onChange={(e) => setChecklist({ ...checklist, noNewDamage: e.target.checked })}
-            className="mt-0.5 rounded border-neutral text-primary focus:ring-primary"
-          />
-          <div>
-            <span className="font-semibold text-text">Không có hư hỏng mới so với ảnh nhập kho</span>
-          </div>
-        </label>
-        <label className="p-3.5 flex items-start gap-3 cursor-pointer hover:bg-background transition-colors">
-          <input
-            type="checkbox"
-            checked={checklist?.noUsageSign}
-            onChange={(e) => setChecklist({ ...checklist, noUsageSign: e.target.checked })}
-            className="mt-0.5 rounded border-neutral text-primary focus:ring-primary"
-          />
-          <div>
-            <span className="font-semibold text-text">Không có dấu vết đã qua sử dụng thêm</span>
-          </div>
-        </label>
-        <label className="p-3.5 flex items-start gap-3 cursor-pointer hover:bg-background transition-colors">
-          <input
-            type="checkbox"
-            checked={checklist?.accessoriesComplete}
-            onChange={(e) => setChecklist({ ...checklist, accessoriesComplete: e.target.checked })}
-            className="mt-0.5 rounded border-neutral text-primary focus:ring-primary"
-          />
-          <div>
-            <span className="font-semibold text-text">Đủ phụ kiện đi kèm nếu có</span>
-          </div>
-        </label>
-      </div>
+      <ul className="divide-y divide-neutral">
+        {items.map((label) => (
+          <li key={label} className="p-3.5 flex items-start gap-2.5">
+            <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-textSecondary/70 shrink-0" aria-hidden="true" />
+            <span className="font-semibold text-text">{label}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -1126,7 +1038,11 @@ export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybi
           <div className="flex-1 min-w-0">
             <div className="text-xs font-bold text-text">{selectedItem?.sku}</div>
             <div className="text-xs text-textSecondary">{selectedItem?.itemName}</div>
-            <div className="text-[10px] text-textSecondary">{selectedItem?.itemDetails}</div>
+            {selectedItem?.itemDetails &&
+              selectedItem.itemDetails.trim().toLowerCase() !==
+                (selectedItem?.itemName || '').trim().toLowerCase() && (
+                <div className="text-[10px] text-textSecondary">{selectedItem.itemDetails}</div>
+              )}
           </div>
           <div className="text-xs font-bold text-primary">
             {formatCurrencyVND(selectedItem?.amount || 0)}
@@ -1154,9 +1070,6 @@ export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybi
           <span className="text-textSecondary">Tiền đã chia</span>
           <span className="font-semibold text-primary">{selectedItem?.payoutStatus}</span>
         </div>
-        <p className="text-[10px] text-textSecondary pt-1">
-          Tiền người ký gửi chỉ chia sau khi hết cửa sổ trả hàng. Nhờ vậy không phải đòi lại tiền đã trả.
-        </p>
       </div>
     
       {/* Box vận đơn trả */}
@@ -1168,9 +1081,6 @@ export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybi
           Lấy tại <strong className="font-semibold">{selectedItem?.buyerName} · {selectedItem?.buyerPhone}</strong>
           <br />
           {selectedItem?.buyerAddress}
-        </div>
-        <div className="p-2.5 bg-background rounded-xl text-[10px] text-textSecondary">
-          Địa chỉ do người mua nhập. Bấm duyệt là GHN nhận thông tin này và <strong className="font-semibold text-text">hai bên đều không sửa được nữa</strong> — đọc lại trước khi bấm.
         </div>
         {selectedItem?.ghnReturnTrackingCode && (
           <div className="pt-2 border-t border-neutral space-y-1.5 text-[11px]">
@@ -1250,13 +1160,16 @@ export function ReturnRequestDetails({ selectedItem, setIsCompareModalOpen }) {
   const hasPackingPhotos = packingPhotos.length > 0;
   const referencePhotos = hasPackingPhotos ? packingPhotos : stockPhotos;
 
+  const trimmedReason = (selectedItem?.reason || '').trim();
+  const trimmedBuyerNote = (selectedItem?.buyerNote || '').trim();
+  const showBuyerNote =
+    Boolean(trimmedBuyerNote) &&
+    trimmedBuyerNote.toLowerCase() !== trimmedReason.toLowerCase();
+
   return (
     <div className="lg:col-span-7 space-y-4 border-r border-neutral pr-0 lg:pr-6 font-sans">
       <div>
         <h2 className="text-base font-bold text-text">Người mua nói gì</h2>
-        <p className="text-xs text-textSecondary">
-          Bạn chưa thấy hàng thật. Duyệt ở đây nghĩa là <strong className="font-semibold text-text">đáng nhận hàng về xem</strong>, không phải đồng ý hoàn tiền.
-        </p>
       </div>
     
       <div className="border border-neutral rounded-2xl p-4 bg-surface space-y-2 shadow-sm">
@@ -1265,9 +1178,11 @@ export function ReturnRequestDetails({ selectedItem, setIsCompareModalOpen }) {
           <span>Gửi lúc {selectedItem?.submittedAt}</span>
         </div>
         <div className="text-sm font-bold text-text">{selectedItem?.reason}</div>
-        <div className="text-xs text-text leading-relaxed bg-background p-3 rounded-xl border border-neutral">
-          "{selectedItem?.buyerNote}"
-        </div>
+        {showBuyerNote && (
+          <div className="text-xs text-text leading-relaxed bg-background p-3 rounded-xl border border-neutral">
+            "{trimmedBuyerNote}"
+          </div>
+        )}
       </div>
     
       <div className="space-y-2">
