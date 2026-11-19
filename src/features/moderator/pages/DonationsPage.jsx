@@ -475,6 +475,7 @@ export default function DonationsPage() {
           onClick={() => {
             campaignsResource.refresh();
             donationsResource.refresh();
+            onHoldDonationsResource.refresh();
           }}
         >
           Tải lại
@@ -883,9 +884,9 @@ export default function DonationsPage() {
                   className="rounded-xl border border-neutral bg-white px-3 py-1.5 text-xs font-semibold text-text focus:border-[#006B2C] focus:outline-none"
                 >
                   <option value="">Mọi trạng thái</option>
-                  <option value="PENDING_PICKUP">Chờ lấy (PENDING_PICKUP)</option>
-                  <option value="ON_HOLD">Tạm giữ (ON_HOLD)</option>
-                  <option value="HANDED_OVER">Đã bàn giao (HANDED_OVER)</option>
+                  <option value="PENDING_PICKUP">Chờ lấy</option>
+                  <option value="ON_HOLD">Tạm giữ</option>
+                  <option value="HANDED_OVER">Đã bàn giao</option>
                 </select>
 
                 <span className="ml-auto text-xs text-textSecondary">
@@ -1457,7 +1458,7 @@ export default function DonationsPage() {
             <ul className="max-h-48 overflow-y-auto rounded-xl border border-neutral bg-white divide-y divide-neutral">
               {selectedRows.map((row) => (
                 <li key={row.id} className="p-2.5 flex items-start justify-between gap-3">
-                  <span className="text-text font-medium">{row.note || row.productName || 'Không có ghi chú'}</span>
+                  <span className="text-text font-medium">{getDonationRowDetails(row).cleanText || row.productName || 'Không có ghi chú'}</span>
                   {row.sku && (
                     <span className="font-mono font-bold text-[11px] text-[#006B2C] bg-[#E8F5E9] px-2 py-0.5 rounded flex-shrink-0">
                       {row.sku}

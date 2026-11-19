@@ -6,7 +6,7 @@ import Modal from "../../../../components/common/Modal.jsx";
 import { WORK_TYPES } from "../../pages/ConsignmentQueuePage.config.js";
 import { formatElapsedHours, withdrawalCounterLink } from '../../models/queueModel.js';
 import { inventoryService } from '../../services/inventoryApi.js';
-import { money, formatDeadlineWithCountdown } from "../WarehouseUi.jsx";
+import { money, formatDeadlineWithCountdown, Status } from "../WarehouseUi.jsx";
 import { ReturnImageLightbox } from "../returns/ReturnEvidence.jsx";
 
 export function QueueClaimDialog({ claimTarget, resource, setClaimTarget, handleClaim }) {
@@ -39,6 +39,7 @@ export function QueueClaimDialog({ claimTarget, resource, setClaimTarget, handle
             <Button
               variant="outline"
               className="flex-1 py-2 text-sm"
+              disabled={resource?.busy}
               onClick={() => setClaimTarget(null)}
             >
               Hủy
@@ -92,6 +93,7 @@ export function QueueReleaseDialog({ releaseTarget, resource, setReleaseTarget, 
             <Button
               variant="outline"
               className="flex-1 py-2 text-sm"
+              disabled={resource?.busy}
               onClick={() => setReleaseTarget(null)}
             >
               Hủy
@@ -231,9 +233,11 @@ export function QueueTaskDetailModal({ target, onClose, busy = false, onApproveW
               </span>
             </div>
           )}
-          <div className="flex justify-between gap-4">
+          <div className="flex justify-between gap-4 items-center">
             <span className="font-semibold text-textSecondary shrink-0">Trạng thái:</span>
-            <span className="font-semibold text-text text-right">{statusLabel}</span>
+            <span className="font-semibold text-text text-right">
+              {target.status ? <Status>{target.status}</Status> : statusLabel}
+            </span>
           </div>
           {target.formattedTime && (
             <div className="flex justify-between gap-4">

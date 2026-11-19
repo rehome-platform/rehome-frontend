@@ -28,12 +28,17 @@ export function DegradedCaseSummary({ item, onNavigateToCounter }) {
           <p className="text-primary font-bold">{amount(item.compensationAmount)}</p>
         </div>
         <div className="rounded-xl border border-neutral p-4 space-y-1">
-          <p className="font-semibold">Nhận đền một phần{rate != null ? ` (${Number(rate) * 100}%)` : ''} và nhận lại hàng</p>
+          <p className="font-semibold">
+            Nhận đền một phần
+            {rate != null && Number.isFinite(Number(rate))
+              ? ` (${Number(rate) <= 1 ? Number((Number(rate) * 100).toPrecision(15)) : Number(rate)}%)`
+              : ''} và nhận lại hàng
+          </p>
           <p className="text-primary font-bold">{amount(partialCompensation(item))}</p>
         </div>
       </div>
       {item.paidAmount != null && decision !== 'UNCLAIMED' && <p>Đã cộng vào ví: {amount(item.paidAmount)}</p>}
-      {decision === 'FULL_COMPENSATION' && <p>Hàng thuộc tài sản nền tảng (PLATFORM_OWNED).</p>}
+      {decision === 'FULL_COMPENSATION' && <p>Hàng thuộc tài sản nền tảng.</p>}
       {decision === 'PARTIAL_WITH_ITEM_BACK' && (
         <div className="space-y-2">
           {item.pickedUpAt ? (

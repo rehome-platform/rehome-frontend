@@ -170,6 +170,8 @@ export default function WarehouseInboxPage() {
   }, []);
 
   useEffect(() => {
+    setInputText('');
+    setPendingImages([]);
     if (selectedConv?.id) {
       activeConvIdRef.current = selectedConv.id;
       fetchMessages(selectedConv.id, selectedConv.messages || [], { page: 0, append: false });
@@ -227,10 +229,12 @@ export default function WarehouseInboxPage() {
 
   useConversationTopic(selectedConv?.id, handleWebSocketMessage);
 
+  const isUnansweredConv = (c) => (Number(c?.unreadCount) > 0) || c?.status === 'UNANSWERED';
+
   const filteredConversations = [...(conversations || [])]
     .filter((c) => {
-      if (activeTab === 'UNANSWERED') return c?.status === 'UNANSWERED';
-      if (activeTab === 'DONE') return c?.status === 'DONE';
+      if (activeTab === 'UNANSWERED') return isUnansweredConv(c);
+      if (activeTab === 'DONE') return c?.status === 'DONE' || (!isUnansweredConv(c) && Boolean(c?.lastMessage));
       return true;
     })
     .sort((a, b) => {
@@ -244,7 +248,7 @@ export default function WarehouseInboxPage() {
       return 0;
     });
 
-  const unansweredCount = (conversations || []).filter((c) => c?.status === 'UNANSWERED').length;
+  const unansweredCount = (conversations || []).filter(isUnansweredConv).length;
 
   // Chọn ảnh để đính kèm
   const handleImageSelect = async (e) => {
@@ -352,6 +356,10 @@ export default function WarehouseInboxPage() {
       }
     } catch (err) {
       console.error('Failed to send message:', err);
+      if (String(activeConvIdRef.current) === String(targetConvId)) {
+        setInputText(text);
+        setPendingImages(imagesToSend);
+      }
       toast.error('Có lỗi xảy ra khi gửi tin nhắn.');
     } finally {
       setSending(false);
@@ -581,11 +589,12 @@ export default function WarehouseInboxPage() {
                       (selectedConv?.counterpart?.id && m?.senderId && String(m.senderId) !== String(selectedConv.counterpart.id));
 
                     const msgText = m?.content || m?.text || '';
-                    const msgImages = Array.isArray(m?.imageUrls) ? m.imageUrls : [];
+                    const msgImages = Array.isArray(m?.imageUrls) ? m.imageUrls.filter(Boolean) : [];
+                    const parsedMsgDate = m?.createdAt ? new Date(m.createdAt) : null;
                     const msgTime =
                       m?.time ||
-                      (m?.createdAt
-                        ? new Date(m.createdAt).toLocaleTimeString('vi-VN', {
+                      (parsedMsgDate && !Number.isNaN(parsedMsgDate.getTime())
+                        ? parsedMsgDate.toLocaleTimeString('vi-VN', {
                             hour: '2-digit',
                             minute: '2-digit',
                           })

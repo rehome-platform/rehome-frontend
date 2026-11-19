@@ -235,9 +235,12 @@ export function useOrgVerification() {
     }
   };
 
+  const [approvingOrg, setApprovingOrg] = useState(false);
+
   // Required checks logic
-  const hasTax = selectedOrg?.taxCode && selectedOrg.taxCode !== 'không có';
-  const isEnterprise = selectedOrg?.type?.includes('Doanh nghiệp');
+  const hasTax = Boolean(selectedOrg?.taxCode && selectedOrg.taxCode !== 'không có');
+  const rawOrgType = String(selectedOrg?.orgType || selectedOrg?.type || '');
+  const isEnterprise = rawOrgType.toUpperCase().includes('ENTERPRISE') || rawOrgType.includes('Doanh nghiệp');
   const mandatoryItemsLeft = [
     hasTax && !checklist.taxChecked,
     isEnterprise && !checklist.businessChecked,
@@ -250,8 +253,9 @@ export function useOrgVerification() {
   const isChecklistComplete = mandatoryItemsLeft === 0;
 
   const handleApproveOrg = async () => {
-    if (!selectedOrg || !isChecklistComplete) return;
+    if (!selectedOrg || !isChecklistComplete || approvingOrg) return;
     const orgId = selectedOrg.refId || selectedOrg.targetId || selectedOrg.organizationId || selectedOrg.id;
+    setApprovingOrg(true);
     try {
       await orgVerificationService.approveOrg(orgId, auditNote);
       // Optimistic UI: cập nhật trực tiếp trạng thái dòng trong state, không reload toàn bộ bảng
@@ -264,10 +268,13 @@ export function useOrgVerification() {
       notify('success', `Đã xác thực tổ chức ${selectedOrg.name} thành công! Tổ chức đã được cấp quyền tạo chiến dịch tiếp nhận quyên góp.`);
       setViewMode('LIST');
       setSelectedOrg(null);
+      fetchExistingOrgs();
     } catch (err) {
       console.error('Lỗi khi xác thực tổ chức:', err);
       const serverMsg = err?.message || err?.response?.data?.message;
       notify('error', serverMsg ? `Có lỗi xảy ra khi xác thực tổ chức:\n${serverMsg}` : 'Có lỗi xảy ra khi xác thực tổ chức.');
+    } finally {
+      setApprovingOrg(false);
     }
   };
 
@@ -361,6 +368,8 @@ export function useOrgVerification() {
     setActiveQueueTab,
     activeQueueTab,
     loading,
+    error,
+    approvingOrg,
     handleOpenDetail,
     handleApproveLegalChange,
     handleRejectLegalChange,

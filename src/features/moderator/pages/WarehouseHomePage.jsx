@@ -113,8 +113,8 @@ export default function WarehouseHomePage() {
   const loading = [...queues, ...stocks].some((r) => r.loading);
   const firstError = [...queues, ...stocks].find((r) => r.error);
   const today = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
-  const refresh = () => {
-    setFeedback(null);
+  const refresh = (clearFeedback = true) => {
+    if (clearFeedback) setFeedback(null);
     [...queues, ...stocks].forEach((r) => r.refresh());
   };
 
@@ -122,11 +122,15 @@ export default function WarehouseHomePage() {
     setFeedback(null);
     task.source.mutate((o) => queueService.claim(task.queueId, o), {
       onSuccess: () => {
+        setClaimTarget(null);
         setFeedback({
           type: 'success',
           message: `Đã nhận việc "${task.kindLabel}" (${task.formId || task.orderId || task.queueId}) thành công.`,
         });
-        refresh();
+        refresh(false);
+      },
+      onError: () => {
+        setClaimTarget(null);
       },
     });
   };
@@ -295,10 +299,7 @@ export default function WarehouseHomePage() {
         claimTarget={claimTarget}
         resource={claimTarget?.source || review}
         setClaimTarget={setClaimTarget}
-        handleClaim={(task) => {
-          handleClaim(task);
-          setClaimTarget(null);
-        }}
+        handleClaim={handleClaim}
       />
       <QueueTaskDetailModal target={detailTarget} onClose={() => setDetailTarget(null)} />
     </Page>

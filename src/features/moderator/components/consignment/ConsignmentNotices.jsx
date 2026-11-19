@@ -20,7 +20,7 @@ export function ConsignmentClaimBanner({ form, owned, resource }) {
             Nhận việc
           </Button>
         )}
-        {owned && form.queueId && (
+        {form.claimedBy && owned && form.queueId && (
           <Button variant="outline" loading={resource.busy} onClick={() => resource.mutate((opts) => queueService.release(form.queueId, opts))}>
             Nhả việc
           </Button>

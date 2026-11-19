@@ -65,9 +65,10 @@ function Negotiation({ sku }) {
     }
     const price = Number(proposedPrice);
     await resource.mutate(async options => {
-      const { floorPricePercent } = resolveInventoryTermAndRates(product);
+      const { floorPricePercent, termLengthDays } = resolveInventoryTermAndRates(product);
       const result = await endTermService.proposeReConsignPrice(request.decisionId, {
       agreedPrice: price, floorPrice: Math.round(price * (floorPricePercent / 100)),
+      termLengthDays,
       conditionNote: product.conditionNote, moderatorNote: moderatorNote.trim() || undefined,
       }, options);
       rememberProposal({ productId: product.id || sku, decisionId: request.decisionId,

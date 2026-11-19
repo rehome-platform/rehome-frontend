@@ -113,7 +113,7 @@ export function mapReturnItem(raw) {
     status,
     rawStatus: raw.status,
     carrierStatus: raw.carrierStatus || (
-      status === 'PENDING_APPROVAL' ? 'Chờ duyệt · Còn 9 giờ' :
+      status === 'PENDING_APPROVAL' ? 'Chờ duyệt' :
       status === 'WAITING_BUYER_DISPATCH' ? (
         raw.handoverDeadline
           ? `Đã duyệt${raw.ghnFallbackUsed ? ' (mã thu hồi nội bộ)' : ''} · Hạn bàn giao GHN: ${formatDeadlineWithCountdown(raw.handoverDeadline)}`

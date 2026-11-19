@@ -6,7 +6,7 @@ import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
 import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
 import { consignmentService } from '../services/warehouseApi.js';
-import { listItems } from '../models/warehouseModel.js';
+import { listItems, formatConditionLabel } from '../models/warehouseModel.js';
 import { sortQueueItemsNewestFirst } from '../models/queueModel.js';
 
 const TABS = [
@@ -306,7 +306,7 @@ export default function ConsignmentListPage() {
                 {detailForm.condition && (
                   <div className="flex justify-between gap-4">
                     <span className="font-semibold shrink-0">Tình trạng khai báo:</span>
-                    <span className="text-text text-right">{detailForm.condition}</span>
+                    <span className="text-text text-right">{formatConditionLabel(detailForm.condition)}</span>
                   </div>
                 )}
                 <div className="flex justify-between gap-4">

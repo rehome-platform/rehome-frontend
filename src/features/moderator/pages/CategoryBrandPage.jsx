@@ -105,8 +105,11 @@ export default function CategoryBrandPage() {
     );
   };
 
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
   const handleDeleteConfirm = async () => {
-    if (!deleting) return;
+    if (!deleting || deleteBusy) return;
+    setDeleteBusy(true);
     const target = deleting;
     const label = target.kind === 'category' ? 'danh mục' : 'thương hiệu';
     try {
@@ -137,6 +140,8 @@ export default function CategoryBrandPage() {
       } else {
         toast.error(err.message || `Có lỗi xảy ra khi xóa ${label}.`);
       }
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -230,9 +235,9 @@ export default function CategoryBrandPage() {
           </div>
         </div>
 
-        {/* Thanh bộ lọc đa tiêu chí cho Danh mục (DM-01) */}
-        {isCategory && (
-          <div className="flex flex-wrap items-center gap-4 pt-1">
+        {/* Thanh bộ lọc đa tiêu chí (DM-01) */}
+        <div className="flex flex-wrap items-center gap-4 pt-1">
+          {isCategory && (
             <div className="flex items-center gap-1.5 text-xs text-[#5B6776]">
               <label htmlFor="category-slot-filter" className="font-semibold text-[#191C19]">
                 Slot thử đồ AI:
@@ -245,45 +250,45 @@ export default function CategoryBrandPage() {
                 className="rounded-xl border border-neutral bg-white px-2.5 py-1.5 text-xs font-semibold text-text focus:border-[#006B2C] focus:outline-none"
               >
                 <option value="ALL">Tất cả slot</option>
-                <option value="TOP">TOP · Áo</option>
-                <option value="BOTTOM">BOTTOM · Quần</option>
-                <option value="DRESS">DRESS · Đầm</option>
-                <option value="NONE">NONE · Không có slot</option>
+                <option value="TOP">Áo</option>
+                <option value="BOTTOM">Quần / Váy</option>
+                <option value="DRESS">Đầm / Liền thân</option>
+                <option value="NONE">Không có slot</option>
               </select>
             </div>
+          )}
 
-            <div className="flex items-center gap-1.5 text-xs text-textSecondary">
-              <label htmlFor="category-status-filter" className="font-semibold text-text">
-                Trạng thái:
-              </label>
-              <select
-                id="category-status-filter"
-                aria-label="Lọc trạng thái"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="rounded-xl border border-neutral bg-white px-2.5 py-1.5 text-xs font-semibold text-text focus:border-[#006B2C] focus:outline-none"
-              >
-                <option value="ALL">Tất cả trạng thái</option>
-                <option value="ACTIVE">Đang hiện (ACTIVE)</option>
-                <option value="HIDDEN">Đã ẩn (HIDDEN)</option>
-              </select>
-            </div>
-
-            {(keyword || slotFilter !== 'ALL' || statusFilter !== 'ALL') && (
-              <button
-                type="button"
-                onClick={() => {
-                  setKeyword('');
-                  setSlotFilter('ALL');
-                  setStatusFilter('ALL');
-                }}
-                className="text-xs font-bold text-primary hover:underline ml-auto"
-              >
-                Đặt lại bộ lọc
-              </button>
-            )}
+          <div className="flex items-center gap-1.5 text-xs text-textSecondary">
+            <label htmlFor="category-status-filter" className="font-semibold text-text">
+              Trạng thái:
+            </label>
+            <select
+              id="category-status-filter"
+              aria-label="Lọc trạng thái"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="rounded-xl border border-neutral bg-white px-2.5 py-1.5 text-xs font-semibold text-text focus:border-[#006B2C] focus:outline-none"
+            >
+              <option value="ALL">Tất cả trạng thái</option>
+              <option value="ACTIVE">Đang hiện</option>
+              <option value="HIDDEN">Đã ẩn</option>
+            </select>
           </div>
-        )}
+
+          {(keyword || slotFilter !== 'ALL' || statusFilter !== 'ALL') && (
+            <button
+              type="button"
+              onClick={() => {
+                setKeyword('');
+                setSlotFilter('ALL');
+                setStatusFilter('ALL');
+              }}
+              className="text-xs font-bold text-primary hover:underline ml-auto"
+            >
+              Đặt lại bộ lọc
+            </button>
+          )}
+        </div>
       </div>
 
       <ResourceState resource={resource} empty={!items.length && !keyword} />
@@ -450,7 +455,7 @@ export default function CategoryBrandPage() {
       <Modal
         isOpen={!!deleting}
         onClose={() => {
-          if (!resource.busy) setDeleting(null);
+          if (!deleteBusy) setDeleting(null);
         }}
         title="Xác nhận xóa"
       >
@@ -469,14 +474,15 @@ export default function CategoryBrandPage() {
               variant="outline"
               className="flex-1 py-2"
               onClick={() => setDeleting(null)}
-              disabled={resource.busy}
+              disabled={deleteBusy}
             >
               Hủy
             </Button>
             <Button
               variant="danger"
               className="flex-1 py-2 font-bold"
-              loading={resource.busy}
+              loading={deleteBusy}
+              disabled={deleteBusy}
               onClick={handleDeleteConfirm}
             >
               Xác nhận xóa

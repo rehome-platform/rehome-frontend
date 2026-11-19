@@ -234,7 +234,7 @@ export default function InventoryDetailPage() {
                       Đăng bán lại
                     </Button>
                   )}
-                  {['ON_SALE', 'WAREHOUSE'].includes(data.status) && (
+                  {data.status === 'ON_SALE' && (
                     <Button
                       onClick={() => setEditModalOpen(true)}
                       variant="outline"

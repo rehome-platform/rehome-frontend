@@ -90,9 +90,17 @@ export default function WarehouseInventoryPage() {
           },
           options,
         );
+        const keyword = sku.trim().toLowerCase();
+        const filtered = keyword
+          ? enriched.filter(
+              (item) =>
+                String(item.sku || '').toLowerCase().includes(keyword) ||
+                String(item.name || '').toLowerCase().includes(keyword)
+            )
+          : enriched;
         return {
-          content: enriched,
-          totalElements: enriched.length,
+          content: filtered,
+          totalElements: filtered.length,
           totalPages: 1,
         };
       }
@@ -200,7 +208,7 @@ export default function WarehouseInventoryPage() {
       // Check specific warehouse products or call API
       const res = await inventoryService.read(code).catch((err) => {
         if (err.status === 403 || err.code === 'PRODUCT_NOT_IN_YOUR_WAREHOUSE') {
-          return { errorType: 'OTHER_WAREHOUSE', sku: code, warehouseName: 'Kho Thủ Đức' };
+          return { errorType: 'OTHER_WAREHOUSE', sku: code, warehouseName: err?.data?.warehouseName || 'kho khác' };
         }
         return null;
       });
@@ -208,7 +216,7 @@ export default function WarehouseInventoryPage() {
       if (!res) {
         setLookupResult({ type: 'NOT_FOUND', sku: code });
       } else if (res.errorType === 'OTHER_WAREHOUSE') {
-        setLookupResult({ type: 'OTHER_WAREHOUSE', sku: code, warehouseName: res.warehouseName || 'Kho Thủ Đức' });
+        setLookupResult({ type: 'OTHER_WAREHOUSE', sku: code, warehouseName: res.warehouseName || 'kho khác' });
       } else {
         setLookupResult({ type: 'FOUND', data: res });
       }
@@ -360,7 +368,9 @@ export default function WarehouseInventoryPage() {
                           )}
                         </td>
                         <td className="py-3.5 px-4 text-[#5f5f5f] whitespace-nowrap">
-                          {item.degradedDate ? new Date(item.degradedDate).toLocaleDateString('vi-VN') : '—'}
+                          {item.degradedDate && !Number.isNaN(new Date(item.degradedDate).getTime())
+                            ? new Date(item.degradedDate).toLocaleDateString('vi-VN')
+                            : '—'}
                         </td>
                         <td className="py-3.5 px-4 max-w-xs truncate" title={item.degradedReason || item.conditionNote}>
                           <span className="font-medium text-[#191C19]">
@@ -563,9 +573,21 @@ export default function WarehouseInventoryPage() {
                 TÌM THẤY
               </span>
               <div className="flex gap-4 items-start pt-2">
-                <div className="w-16 h-16 rounded-lg border border-[#c4c4c4] bg-[#f9f9f9] flex items-center justify-center font-bold text-xs text-[#8a8a8a]">
-                  Ảnh
-                </div>
+                {(() => {
+                  const firstPhoto = Array.isArray(lookupResult.data.photos) ? lookupResult.data.photos[0] : null;
+                  const photoSrc = typeof firstPhoto === 'string' ? firstPhoto : firstPhoto?.url || firstPhoto?.imageUrl || lookupResult.data.photoUrl || null;
+                  return photoSrc ? (
+                    <img
+                      src={photoSrc}
+                      alt={lookupResult.data.name || lookupResult.data.sku}
+                      className="w-16 h-16 rounded-lg border border-[#c4c4c4] object-cover bg-[#f9f9f9] shrink-0"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-lg border border-[#c4c4c4] bg-[#f9f9f9] flex items-center justify-center font-bold text-xs text-[#8a8a8a] shrink-0">
+                      Ảnh
+                    </div>
+                  );
+                })()}
                 <div className="flex-1 min-w-0 space-y-1">
                   <h4 className="font-bold text-sm text-[#191C19]">{lookupResult.data.name}</h4>
                   <p className="text-[11px] text-[#5f5f5f]">
@@ -575,10 +597,10 @@ export default function WarehouseInventoryPage() {
                         : lookupResult.data.brand && lookupResult.data.brand.trim().toLowerCase() !== 'rehome'
                           ? lookupResult.data.brand
                           : null,
-                      `Size ${lookupResult.data.size || 'M'}`,
+                      lookupResult.data.size ? `Size ${lookupResult.data.size}` : null,
                     ]
                       .filter(Boolean)
-                      .join(' · ')}
+                      .join(' · ') || '—'}
                   </p>
                   <p className="text-[11px] text-[#5f5f5f]">
                     Trạng thái: <Status>{lookupResult.data.status}</Status>

@@ -84,7 +84,9 @@ export default function StockInForm({ receipt, form, onSuccess }) {
   const [photosPending, setPhotosPending] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const onPhotos = useCallback((urls, pending) => { setPhotos(urls); setPhotosPending(pending); }, []);
-  const categories = catalog.data?.categories?.filter(item => !item.hidden) || [];
+  const categories = (catalog.data?.categories || []).filter(
+    (item) => !item.hidden || (isCategoryLocked && item.id === lockedCategoryId)
+  );
   const brands = [...(catalog.data?.brands || []), ...(addedBrand ? [addedBrand] : [])]
     .filter((item, i, all) => !item.hidden && all.findIndex(other => other.id === item.id) === i);
   const valid = canStockIn(receipt) && verification.data && !verification.data.alreadyStockedIn && !verification.error &&

@@ -167,7 +167,7 @@ export function safeDocumentUrl(value) {
   if (!value) return null;
   try {
     const url = new URL(value, window.location.origin);
-    return ['https:', 'http:'].includes(url.protocol) ? url.href : null;
+    return ['https:', 'http:', 'blob:'].includes(url.protocol) ? url.href : null;
   } catch {
     return null;
   }
