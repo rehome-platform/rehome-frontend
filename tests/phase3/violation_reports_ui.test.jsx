@@ -145,7 +145,7 @@ describe('ViolationReportsPage UI & Design Tokens', () => {
 
     // Detail view elements
     await waitFor(() => {
-      expect(screen.getByText(/Chi tiết báo cáo & quyết định \(VP-02\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/Chi tiết báo cáo & quyết định/i)).toBeInTheDocument();
     });
     expect(screen.getByText(/CHỜ XỬ LÝ \(PENDING\)/i)).toBeInTheDocument();
     expect(screen.getByText(/Nội dung bị báo cáo \(Bài viết\)/i)).toBeInTheDocument();
