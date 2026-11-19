@@ -241,15 +241,15 @@ export function QueueTaskDetailModal({ target, onClose }) {
 }
 
 export const QUEUE_ACTION_BTN_CLASS =
-  'h-8 px-2.5 py-0 text-xs font-semibold leading-none rounded-lg border border-transparent shrink-0 whitespace-nowrap justify-center';
-export const QUEUE_GHOST_BTN_CLASS =
-  `${QUEUE_ACTION_BTN_CLASS} min-w-[68px] text-textSecondary hover:bg-[#F3F6F3] hover:text-text`;
-export const QUEUE_CLAIM_SLOT_CLASS =
-  'h-8 min-w-[96px] px-3 py-0 text-xs font-semibold leading-none rounded-lg border shrink-0 whitespace-nowrap justify-center';
+  'h-8 px-3 py-0 text-xs font-semibold leading-none rounded-xl border shrink-0 whitespace-nowrap';
+export const QUEUE_TEXT_LINK_CLASS =
+  'h-8 px-2 py-0 text-xs font-medium leading-none rounded-xl border border-transparent bg-transparent text-textSecondary hover:bg-transparent hover:text-[#006B2C] hover:underline shrink-0 whitespace-nowrap';
+export const QUEUE_SECONDARY_BTN_CLASS =
+  `${QUEUE_ACTION_BTN_CLASS} border-neutral bg-white text-text hover:bg-[#F6F9F4] hover:border-[#006B2C]`;
 export const QUEUE_PRIMARY_BTN_CLASS =
-  'h-8 min-w-[96px] px-3 py-0 text-xs font-semibold leading-none rounded-lg border border-transparent shrink-0 whitespace-nowrap justify-center';
+  `${QUEUE_ACTION_BTN_CLASS} border-transparent`;
 export const QUEUE_PRIMARY_LINK_CLASS =
-  `${QUEUE_PRIMARY_BTN_CLASS} bg-[#006B2C] text-white hover:bg-[#005523] hover:text-white inline-flex items-center shadow-sm transition-colors`;
+  `${QUEUE_ACTION_BTN_CLASS} border-transparent bg-[#006B2C] text-white hover:bg-[#005523] hover:text-white inline-flex items-center justify-center shadow-sm transition-colors`;
 
 export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resource, handleClaim, setClaimTarget, linkTarget, setFeedback, setReleaseTarget, onCheckWithdrawal, onViewDetail }) {
   const rowRef = React.useRef(null);
@@ -300,20 +300,31 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
           <span>chưa ai nhận</span>
         )}
       </td>
-      <td className="py-3 px-4 text-left whitespace-nowrap align-middle">
-        <div className="flex items-center justify-start gap-2 flex-nowrap">
-          {/* 1. Chi tiết */}
+      <td className="py-3 px-4 text-right whitespace-nowrap align-middle">
+        <div className="flex items-center justify-end gap-2 flex-nowrap">
+          {/* 1. Chi tiết (text link) */}
           {onViewDetail && (
             <Button
               size="sm"
               variant="ghost"
-              className={QUEUE_GHOST_BTN_CLASS}
+              className={QUEUE_TEXT_LINK_CLASS}
               onClick={() => onViewDetail(item)}
             >
               Chi tiết
             </Button>
           )}
-          {/* 2. Nhận việc / Nhả việc / Đã có người nhận */}
+          {/* 2. Check đơn (secondary outline) */}
+          {isWithdrawal && onCheckWithdrawal && (
+            <Button
+              size="sm"
+              variant="outline"
+              className={QUEUE_SECONDARY_BTN_CLASS}
+              onClick={() => onCheckWithdrawal(item)}
+            >
+              Check đơn
+            </Button>
+          )}
+          {/* 3. Nhận việc (primary) / Nhả việc (secondary outline) / Đã có người nhận */}
           {!item.claimedBy && (
             <Button
               size="sm"
@@ -329,7 +340,7 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
             <Button
               size="sm"
               variant="outline"
-              className={`${QUEUE_CLAIM_SLOT_CLASS} border-neutral bg-white text-textSecondary hover:bg-red-50 hover:text-red-700 hover:border-red-200`}
+              className={QUEUE_SECONDARY_BTN_CLASS}
               onClick={() => {
                 setFeedback?.(null);
                 setReleaseTarget(item);
@@ -343,22 +354,12 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
               size="sm"
               disabled
               variant="outline"
-              className={`${QUEUE_CLAIM_SLOT_CLASS} border-neutral bg-background text-textSecondary opacity-70 cursor-not-allowed`}
+              className={`${QUEUE_ACTION_BTN_CLASS} opacity-50 cursor-not-allowed`}
             >
               Đã có người nhận
             </Button>
           )}
-          {/* 3. Check đơn / Mở việc / Đóng gói / Duyệt yêu cầu */}
-          {isWithdrawal && onCheckWithdrawal && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 px-2.5 py-0 text-xs font-semibold leading-none rounded-lg border border-[#C6E1CE] bg-[#F6F9F4] text-[#006B2C] hover:bg-[#E8F5E9] hover:border-[#006B2C] shrink-0 whitespace-nowrap"
-              onClick={() => onCheckWithdrawal(item)}
-            >
-              Check đơn
-            </Button>
-          )}
+          {/* 4. Mở việc / Đóng gói / Duyệt yêu cầu (primary solid green) */}
           {isMine && (
             isPendingWithdrawalApproval && onCheckWithdrawal ? (
               <Button
