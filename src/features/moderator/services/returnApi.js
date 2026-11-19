@@ -17,9 +17,30 @@ export function needsItemAction(item) {
     item &&
     item.rawStatus === 'VALID' &&
     !item.itemAction &&
-    !item.outcome &&
     !item.degraded
   );
+}
+
+/**
+ * Dựng yêu cầu trả hàng tối thiểu từ pendingReturnRequestId của Tồn kho (GET /inventory, GET /products/{id})
+ * để mở modal chọn phương án xử lý mà không phải gọi chéo return-requests.
+ */
+export function pendingReturnFromInventory(item) {
+  const id = item?.pendingReturnRequestId;
+  if (!id) return null;
+  return {
+    id,
+    code: `YC-${String(id).replace(/-/g, '').substring(0, 8).toUpperCase()}`,
+    rawStatus: 'VALID',
+    status: 'RESOLVED',
+    itemAction: null,
+    degraded: false,
+    sku: item.sku || item.id || null,
+    productId: item.productId || item.id || item.sku || null,
+    itemName: item.name || item.itemName || 'Sản phẩm ký gửi',
+    brand: item.brandName || item.brand || null,
+    size: item.size || null,
+  };
 }
 
 /**
@@ -28,7 +49,7 @@ export function needsItemAction(item) {
 export function mapReturnItem(raw) {
   if (!raw) return null;
   const id = raw.id || raw.returnId;
-  const shortId = id ? String(id).substring(0, 5).toUpperCase() : '00000';
+  const shortId = id ? String(id).replace(/-/g, '').substring(0, 8).toUpperCase() : '00000';
   const code = raw.code || (raw.returnCode ? raw.returnCode : `YC-${shortId}`);
 
   // Mapping status: Backend uses PENDING, APPROVED, SHIPPED_BACK, INSPECTING, VALID, INVALID, LOST, CANCELLED
@@ -121,7 +142,7 @@ export function mapReturnItem(raw) {
       ) :
       status === 'RETURNING' ? 'Đang chuyển về kho qua GHN' :
       status === 'RECEIVED_INSPECT' ? 'Hàng đã về kho · Chờ kiểm tra' :
-      raw.status === 'VALID' && !raw.itemAction && !raw.outcome && !raw.degraded
+      raw.status === 'VALID' && !raw.itemAction && !raw.degraded
         ? 'Đã hoàn tiền · Chờ chọn phương án xử lý' :
       raw.status === 'INVALID' ? (
         raw.pickupDeadline
