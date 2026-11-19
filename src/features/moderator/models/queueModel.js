@@ -85,6 +85,30 @@ export function matchesQueueFilter(item, { overdueOnly, statusFilter, claimParam
   return true;
 }
 
+function queueItemCreatedTimestamp(item) {
+  const raw = item?.createdAt || item?.queuedAt;
+  if (!raw) return null;
+  const parsed = Date.parse(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function sortQueueItemsByDate(items, sortOrder = 'newest') {
+  if (!Array.isArray(items)) return [];
+  const isOldestFirst = sortOrder === 'oldest';
+  return [...items].sort((a, b) => {
+    const timeA = queueItemCreatedTimestamp(a);
+    const timeB = queueItemCreatedTimestamp(b);
+    if (timeA === timeB) return 0;
+    if (timeA === null) return 1;
+    if (timeB === null) return -1;
+    return isOldestFirst ? timeA - timeB : timeB - timeA;
+  });
+}
+
+export function sortQueueItemsNewestFirst(items) {
+  return sortQueueItemsByDate(items, 'newest');
+}
+
 export function queueActionError(error) {
   if (error.status === 409 || error.code === 'QUEUE_ITEM_ALREADY_CLAIMED') {
     return 'Công việc đã được người khác nhận trước. Hệ thống đã tải lại danh sách mới nhất.';

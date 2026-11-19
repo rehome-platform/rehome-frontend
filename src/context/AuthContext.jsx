@@ -3,6 +3,8 @@ import baseApi, {
   getUser,
   saveUser,
   getToken,
+  getRefreshToken,
+  refreshAccessToken,
   removeTokens,
   isTokenExpired,
 } from '../services/baseApi.js';
@@ -12,7 +14,7 @@ export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => getUser());
-  const [isAuthenticated, setIsAuthenticated] = useState(() => !!getToken());
+  const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(getToken() || getRefreshToken()));
   const [loading, setLoading] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -20,7 +22,8 @@ export const AuthProvider = ({ children }) => {
   // Khôi phục và đồng bộ phiên đăng nhập từ backend khi load lại trang
   const refreshAuth = useCallback(async () => {
     const token = getToken();
-    if (!token) {
+    const refreshToken = getRefreshToken();
+    if (!token && !refreshToken) {
       setUser(null);
       setIsAuthenticated(false);
       setIsInitializing(false);
@@ -28,6 +31,9 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
+      if ((!token || isTokenExpired(token)) && refreshToken) {
+        await refreshAccessToken();
+      }
       const freshUser = await authService.getCurrentUser();
       if (freshUser) {
         setUser(freshUser);
@@ -37,10 +43,14 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(false);
         removeTokens();
       }
-    } catch {
-      setUser(null);
-      setIsAuthenticated(false);
-      removeTokens();
+    } catch (err) {
+      const status = err?.response?.status;
+      const isAuthFailure = status === 401 || status === 403 || !getRefreshToken();
+      if (isAuthFailure) {
+        setUser(null);
+        setIsAuthenticated(false);
+        removeTokens();
+      }
     } finally {
       setIsInitializing(false);
     }

@@ -22,6 +22,7 @@ export const WebSocketProvider = ({
   // Lấy AuthContext nếu có (an toàn khi chạy test độc lập ngoài AuthProvider)
   const auth = useContext(AuthContext);
   const isAuthenticated = auth?.isAuthenticated;
+  const isInitializing = auth?.isInitializing;
 
   const [status, setStatus] = useState(() =>
     customService ? customService.getStatus() : 'DISCONNECTED'
@@ -59,14 +60,14 @@ export const WebSocketProvider = ({
 
   // Vòng đời kết nối theo trạng thái Authentication
   useEffect(() => {
-    if (!autoConnect || !service) return;
+    if (!autoConnect || !service || isInitializing) return;
 
     if (isAuthenticated) {
       service.connect();
     } else if (isAuthenticated === false) {
       service.disconnect();
     }
-  }, [isAuthenticated, autoConnect, service]);
+  }, [isAuthenticated, isInitializing, autoConnect, service]);
 
   // Dọn dẹp khi unmount
   useEffect(() => {

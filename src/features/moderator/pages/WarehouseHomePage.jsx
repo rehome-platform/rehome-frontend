@@ -16,11 +16,6 @@ const QUEUE_TYPES = [
   { type: 'PACKING', label: 'Đóng gói đơn hàng' },
   { type: 'WITHDRAWAL', label: 'Yêu cầu rút hàng', to: '/moderator/queue?type=WITHDRAWAL' },
 ];
-const STOCK_ROWS = [
-  { status: 'ON_SALE', label: 'Đang bán' },
-  { status: 'WAITING_END_OF_TERM', label: 'Chờ xử lý cuối kỳ', to: '/moderator/end-of-term', unavailable: true },
-  { status: 'UNCLAIMED', label: 'Vô thừa nhận', to: '/moderator/end-of-term' },
-];
 
 const countOf = (data) => data?.totalElements ?? listItems(data).length;
 const waitedHours = (item) => {
@@ -82,9 +77,8 @@ export default function WarehouseHomePage() {
   const packing = useResource((o) => queueService.list({ type: 'PACKING' }, o), []);
   const withdrawal = useResource((o) => queueService.list({ type: 'WITHDRAWAL' }, o), []);
   const onSale = useResource((o) => inventoryService.list({ status: 'ON_SALE' }, o), []);
-  const unclaimed = useResource((o) => inventoryService.list({ status: 'UNCLAIMED' }, o), []);
   const queues = [review, inspection, packing, withdrawal];
-  const stocks = [onSale, unclaimed];
+  const stocks = [onSale];
 
   const conflictError = queues.find(
     (q) =>
@@ -179,7 +173,7 @@ export default function WarehouseHomePage() {
         <Stat label="Tồn kho đang bán" value={countOf(onSale.data)} icon="inventory_2" tone="success" to="/moderator/inventory?status=ON_SALE" />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px] items-start">
+      <div className="grid gap-6">
         <Card
           title="Việc cần làm sớm nhất"
           actions={
@@ -265,34 +259,6 @@ export default function WarehouseHomePage() {
               </table>
             </div>
           )}
-        </Card>
-
-        <Card title="Tồn kho theo trạng thái">
-          <ul className="space-y-2.5 text-sm">
-            {STOCK_ROWS.map((row) => {
-              const dotColor =
-                row.status === 'ON_SALE'
-                  ? 'bg-[#12B76A]'
-                  : row.status === 'WAITING_END_OF_TERM'
-                    ? 'bg-[#F79009]'
-                    : 'bg-[#667085]';
-              return (
-                <li key={row.status} className={`flex items-center justify-between gap-2 ${row.status === 'UNCLAIMED' ? 'border-t border-neutral pt-2.5 font-semibold' : ''}`}>
-                  <span className="flex items-center gap-2 min-w-0">
-                    <span aria-hidden="true" className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
-                    {row.to ? <Link className="text-textSecondary hover:text-primary hover:underline truncate" to={row.to}>{row.label}</Link> : <span className="text-textSecondary truncate">{row.label}</span>}
-                  </span>
-                  <span className="font-semibold text-text tabular-nums" title={row.unavailable ? 'Chưa hỗ trợ thống kê từ API' : undefined}>
-                    {row.status === 'ON_SALE'
-                      ? countOf(onSale.data)
-                      : row.status === 'UNCLAIMED'
-                      ? countOf(unclaimed.data)
-                      : '—'}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
         </Card>
       </div>
 

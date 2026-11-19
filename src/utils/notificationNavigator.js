@@ -108,6 +108,7 @@ export function resolveNotificationUrl(notification, userRole) {
     case 'DONATION_RECORDED':
     case 'DONATION_HANDOVER':
     case 'DONATION_PICKUP':
+    case 'DONATION_PREP':
     case 'DONATION_REASSIGNED':
       return id
         ? `/moderator/donations?donationId=${encodeURIComponent(id)}`

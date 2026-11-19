@@ -159,11 +159,37 @@ export function usePackingDetail({ orderId, onChanged }) {
 
     try {
       await resource.mutate(options => packingService.scan(orderId, code, options), {
+        skipRefresh: true,
         onSuccess: result => {
           if (result.matched) {
-            setMessage('Đã đối chiếu SKU. Tiến độ được tải lại từ server.');
+            setMessage('Đã đối chiếu SKU. Tiến độ đã được cập nhật.');
             setScanLogs(prev => [{ time: timeStr, code, status: 'Khớp — món thành công', matched: true }, ...prev]);
             setWrongItem(null);
+            resource.setData(prev => {
+              if (!prev) return prev;
+              const matchedId = result.scannedProductId;
+              const prevScannedIds = Array.isArray(prev.scannedProductIds) ? prev.scannedProductIds : [];
+              const nextScannedIds =
+                matchedId && !prevScannedIds.includes(matchedId)
+                  ? [...prevScannedIds, matchedId]
+                  : prevScannedIds;
+              const nextItems = Array.isArray(prev.items)
+                ? prev.items.map(item => {
+                    const isMatch =
+                      (matchedId && (item.productId === matchedId || item.id === matchedId)) ||
+                      (item.sku && item.sku.toUpperCase() === code.toUpperCase());
+                    return isMatch ? { ...item, scanned: true } : item;
+                  })
+                : prev.items;
+              return {
+                ...prev,
+                scannedProductIds: nextScannedIds,
+                scannedCount: result.scannedCount ?? nextScannedIds.length,
+                totalCount: result.totalCount ?? prev.totalCount,
+                items: nextItems,
+              };
+            });
+            resource.silentRefresh?.();
           } else {
             setMessage('SKU không thuộc đơn.');
             setScanLogs(prev => [{ time: timeStr, code, status: 'Không có mã này — nhập lại', matched: false }, ...prev]);

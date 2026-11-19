@@ -4,6 +4,7 @@ import Button from "../../../../components/common/Button.jsx";
 import { consignmentService } from "../../services/warehouseApi.js";
 
 import { validMoney } from "../../models/warehouseModel.js";
+import { normalizeConditionLevel } from "../../models/consignmentModel.js";
 import { Field, money } from "../WarehouseUi.jsx";
 
 export const CONDITION_PRESETS = [
@@ -13,10 +14,20 @@ export const CONDITION_PRESETS = [
   { value: 'FLAW', label: 'Có lỗi nhỏ (80-85%)', noteTemplate: 'Có lỗi nhỏ ở viền/khuy, tổng thể 85% còn tốt' },
 ];
 
-export function ConsignmentInspectionForm({ price, term, conditionNote, allChecked, resource, formId, proof, setFeedback, setReceiptId, setCondition, errors, setPrice, setTerm, termOptions, consignmentConfig, onOpenReturn }) {
-  const [selectedConditionLevel, setSelectedConditionLevel] = React.useState('LIKE_NEW');
+export function ConsignmentInspectionForm({ price, term, conditionNote, declaredCondition, allChecked, resource, formId, proof, setFeedback, setReceiptId, setCondition, errors, setPrice, setTerm, termOptions, consignmentConfig, onOpenReturn }) {
+  const [selectedConditionLevel, setSelectedConditionLevel] = React.useState(() =>
+    normalizeConditionLevel(declaredCondition),
+  );
+  const manualConditionRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!manualConditionRef.current && declaredCondition) {
+      setSelectedConditionLevel(normalizeConditionLevel(declaredCondition));
+    }
+  }, [declaredCondition]);
 
   const handleSelectConditionLevel = (lvl) => {
+    manualConditionRef.current = true;
     setSelectedConditionLevel(lvl);
     const preset = CONDITION_PRESETS.find((p) => p.value === lvl);
     if (preset) {

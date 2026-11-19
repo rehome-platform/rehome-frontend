@@ -6,7 +6,9 @@ import { API_BASE_URL, API_ENDPOINTS } from "../configs/api.config.js";
 
 export const TOKEN_KEY = "rehome_token";
 export const REFRESH_TOKEN_KEY = "rehome_refresh_token";
+export const REFRESH_EXPIRES_AT_KEY = "rehome_refresh_expires_at";
 export const USER_KEY = "rehome_user";
+export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -17,16 +19,29 @@ export function saveToken(token) {
 }
 
 export function getRefreshToken() {
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
+  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+  if (!refreshToken) return null;
+
+  const expiresAtRaw = localStorage.getItem(REFRESH_EXPIRES_AT_KEY);
+  if (expiresAtRaw) {
+    const expiresAt = Number(expiresAtRaw);
+    if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
+      removeTokens();
+      return null;
+    }
+  }
+  return refreshToken;
 }
 
 export function saveRefreshToken(refreshToken) {
   localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  localStorage.setItem(REFRESH_EXPIRES_AT_KEY, String(Date.now() + SESSION_TTL_MS));
 }
 
 export function removeTokens() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_EXPIRES_AT_KEY);
   localStorage.removeItem(USER_KEY);
 }
 
@@ -85,13 +100,92 @@ function isCredentialExchange(url) {
     .some(endpoint => path.endsWith(endpoint));
 }
 
-// Request Interceptor: đính kèm Bearer token
+// Single-flight refresh token exchange shared across request interceptor, 401 handler, and AuthContext
+let refreshPromise = null;
+
+export async function refreshAccessToken() {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) {
+    removeTokens();
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("auth:expired"));
+    }
+    throw new Error("Phiên đăng nhập đã hết hạn");
+  }
+
+  refreshPromise = (async () => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}${API_ENDPOINTS.AUTH.REFRESH}`, {
+        refreshToken,
+      });
+      // Spring ApiResponse wraps AuthResponse in result. Keep legacy envelopes
+      // compatible without changing the Axios response returned to callers.
+      const tokens = res.data?.result ?? res.data?.data ?? res.data;
+      const newAccessToken = tokens?.accessToken || tokens?.token;
+      const newRefreshToken = tokens?.refreshToken;
+
+      if (!newAccessToken) {
+        throw new Error("Không nhận được access token mới từ máy chủ");
+      }
+
+      saveToken(newAccessToken);
+      if (newRefreshToken) {
+        saveRefreshToken(newRefreshToken);
+      }
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("auth:token_refreshed", {
+            detail: { token: newAccessToken },
+          })
+        );
+      }
+      return newAccessToken;
+    } catch (refreshErr) {
+      const status = refreshErr?.response?.status;
+      // Clear local session on explicit auth failure or missing token payload
+      if (!status || status === 400 || status === 401 || status === 403) {
+        removeTokens();
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("auth:expired"));
+        }
+      }
+      throw refreshErr;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+function hasExpiredJwtClaim(token) {
+  const payload = parseJwt(token);
+  if (!payload || !payload.exp) return false;
+  return payload.exp * 1000 <= Date.now() + 10000;
+}
+
+// Request Interceptor: đính kèm Bearer token (tự động đổi refresh_token nếu rehome_token hết hạn hoặc thiếu)
 baseApi.interceptors.request.use(
-  (config) => {
-    const token = getToken();
+  async (config) => {
     if (isCredentialExchange(config.url)) {
       delete config.headers.Authorization;
-    } else if (token && !config.headers.Authorization) {
+      return config;
+    }
+
+    let token = getToken();
+    if ((!token || hasExpiredJwtClaim(token)) && getRefreshToken()) {
+      try {
+        token = await refreshAccessToken();
+      } catch {
+        token = getToken();
+      }
+    }
+
+    if (token && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -100,20 +194,6 @@ baseApi.interceptors.request.use(
 );
 
 // Response Interceptor: xử lý tự động Refresh Token khi 401
-let isRefreshing = false;
-let failedQueue = [];
-
-const processQueue = (error, token = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-  failedQueue = [];
-};
-
 baseApi.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -124,64 +204,22 @@ baseApi.interceptors.response.use(
 
     if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute) {
       originalRequest._retry = true;
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            if (originalRequest.noReplay) {
-              return Promise.reject(error);
-            }
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            return baseApi(originalRequest);
-          })
-          .catch((err) => Promise.reject(err));
-      }
-
-      const refreshToken = getRefreshToken();
-      if (!refreshToken) {
+      if (!getRefreshToken()) {
         removeTokens();
-        window.dispatchEvent(new CustomEvent("auth:expired"));
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("auth:expired"));
+        }
         return Promise.reject(error);
       }
-
-      isRefreshing = true;
       try {
-        const res = await axios.post(`${API_BASE_URL}${API_ENDPOINTS.AUTH.REFRESH}`, {
-          refreshToken,
-        });
-        // Spring ApiResponse wraps AuthResponse in result. Keep legacy envelopes
-        // compatible without changing the Axios response returned to callers.
-        const tokens = res.data?.result ?? res.data?.data ?? res.data;
-        const newAccessToken = tokens?.accessToken || tokens?.token;
-        const newRefreshToken = tokens?.refreshToken;
-
-        if (newAccessToken) {
-          saveToken(newAccessToken);
-          if (newRefreshToken) {
-            saveRefreshToken(newRefreshToken);
-          }
-          window.dispatchEvent(
-            new CustomEvent("auth:token_refreshed", {
-              detail: { token: newAccessToken },
-            })
-          );
-          processQueue(null, newAccessToken);
-          if (originalRequest.noReplay) {
-            return Promise.reject(error);
-          }
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          return baseApi(originalRequest);
-        } else {
-          throw new Error("Không nhận được access token mới từ máy chủ");
+        const newAccessToken = await refreshAccessToken();
+        if (originalRequest.noReplay) {
+          return Promise.reject(error);
         }
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        return baseApi(originalRequest);
       } catch (refreshErr) {
-        processQueue(refreshErr, null);
-        removeTokens();
-        window.dispatchEvent(new CustomEvent("auth:expired"));
         return Promise.reject(refreshErr);
-      } finally {
-        isRefreshing = false;
       }
     }
 

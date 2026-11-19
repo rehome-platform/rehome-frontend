@@ -127,6 +127,23 @@ export function useResource(
     setState({ data: null, loading: true, error: null });
     setVersion((value) => value + 1);
   }, [cacheKey, session]);
+  const silentRefresh = useCallback(async () => {
+    if (!enabled || session.signal.aborted) return;
+    if (cacheKey && session?.cache) {
+      session.cache.delete(cacheKey);
+    }
+    const current = epoch.current;
+    try {
+      const data = await loaderRef.current({ signal: session.signal, scope: session.scope });
+      if (session.signal.aborted || current !== epoch.current) return;
+      if (cacheKey && session?.cache) {
+        session.cache.set(cacheKey, data);
+      }
+      setState({ data, loading: false, error: null });
+    } catch {
+      // Silent background sync keeps existing UI data intact on transient failure
+    }
+  }, [cacheKey, enabled, session]);
   useEffect(() => {
     window.addEventListener('warehouse:changed', refresh);
     return () => window.removeEventListener('warehouse:changed', refresh);
@@ -275,6 +292,7 @@ export function useResource(
     clearActionError: () => setActionError(null),
     setData,
     refresh,
+    silentRefresh,
     mutate,
     busy,
     pollExpired,

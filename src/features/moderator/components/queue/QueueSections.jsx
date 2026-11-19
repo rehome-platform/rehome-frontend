@@ -81,12 +81,12 @@ export function QueueReleaseDialog({ releaseTarget, resource, setReleaseTarget, 
               {releaseTarget.targetName || releaseTarget.name || releaseTarget.memberName || '—'} · Bạn đang nhận việc này {formatElapsedHours(heldHours)}
             </p>
           </div>
-    
+
           <p className="text-xs text-textSecondary leading-relaxed">
             Việc quay lại hàng đợi ở trạng thái <strong className="text-text">chưa ai nhận</strong> — Moderator khác (kể cả bạn) nhận lại được bình thường.
             Dùng khi nhận nhầm hoặc không đủ thông tin để xử lý tiếp.
           </p>
-    
+
           <div className="flex gap-3 pt-2">
             <Button
               variant="outline"
@@ -126,9 +126,8 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
     <tr
       ref={rowRef}
       key={item.queueId}
-      className={`transition-colors hover:bg-[#F6F9F4] ${
-        item.isOverdue ? 'border-l-4 border-l-[#006B2C] bg-[#F6F9F4]' : ''
-      } ${isFocused ? 'bg-[#EBF1E8] ring-2 ring-inset ring-primary' : ''}`}
+      className={`transition-colors hover:bg-[#F6F9F4] ${item.isOverdue ? 'border-l-4 border-l-[#006B2C] bg-[#F6F9F4]' : ''
+        } ${isFocused ? 'bg-[#EBF1E8] ring-2 ring-inset ring-primary' : ''}`}
     >
       <td className="py-3 px-4 font-semibold text-text">
         <div>{item.typeLabel}</div>
@@ -274,7 +273,7 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
   );
 }
 
-export function QueueFilters({ statusFilter, changeFilter, claimParam, toggleOverdue, overdueOnly, filteredItems, rawItems }) {
+export function QueueFilters({ statusFilter, sortParam = 'newest', changeFilter, claimParam, toggleOverdue, overdueOnly, filteredItems, rawItems }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
       {/* Bộ lọc trạng thái */}
@@ -285,14 +284,14 @@ export function QueueFilters({ statusFilter, changeFilter, claimParam, toggleOve
         className="rounded-xl border border-neutral bg-white px-3 py-1.5 text-xs font-semibold text-text focus:border-[#006B2C] focus:outline-none"
       >
         <option value="">Mọi trạng thái</option>
-        <option value="PENDING">Chờ duyệt (PENDING)</option>
-        <option value="PENDING_APPROVAL">Chờ duyệt rút hàng (PENDING_APPROVAL)</option>
-        <option value="PENDING_PICKUP">Chờ nhận tại quầy (PENDING_PICKUP)</option>
-        <option value="PROCESSING">Đang xử lý (PROCESSING)</option>
-        <option value="APPROVED">Đã duyệt (APPROVED)</option>
-        <option value="INSPECTING">Đang kiểm định (INSPECTING)</option>
+        <option value="PENDING">Chờ duyệt</option>
+        <option value="PENDING_APPROVAL">Chờ duyệt rút hàng</option>
+        <option value="PENDING_PICKUP">Chờ nhận tại quầy</option>
+        <option value="PROCESSING">Đang xử lý </option>
+        <option value="APPROVED">Đã duyệt </option>
+        <option value="INSPECTING">Đang kiểm định </option>
       </select>
-    
+
       {/* Bộ lọc người nhận */}
       <select
         value={claimParam}
@@ -304,21 +303,31 @@ export function QueueFilters({ statusFilter, changeFilter, claimParam, toggleOve
         <option value="mine">Việc của tôi</option>
         <option value="unclaimed">Chưa ai nhận</option>
       </select>
-    
+
+      {/* Bộ lọc sắp xếp theo ngày */}
+      <select
+        value={sortParam}
+        onChange={(e) => changeFilter('sort', e.target.value === 'newest' ? '' : e.target.value)}
+        aria-label="Sắp xếp theo ngày"
+        className="rounded-xl border border-neutral bg-white px-3 py-1.5 text-xs font-semibold text-text focus:border-[#006B2C] focus:outline-none"
+      >
+        <option value="newest">Mới nhất</option>
+        <option value="oldest">Cũ nhất</option>
+      </select>
+
       {/* Nút toggle: Chỉ việc quá hạn (HQ-01) */}
       <button
         type="button"
         onClick={toggleOverdue}
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${
-          overdueOnly
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${overdueOnly
             ? 'border-2 border-[#006B2C] bg-[#006B2C] text-white'
             : 'border border-neutral bg-white text-text hover:bg-[#F6F9F4]'
-        }`}
+          }`}
       >
         <span>Chỉ việc quá hạn</span>
         {overdueOnly && <span>✕</span>}
       </button>
-    
+
       <span className="ml-auto text-xs text-textSecondary">
         Hiển thị {filteredItems.length} / {rawItems.length} việc
       </span>
@@ -349,11 +358,10 @@ export function QueueTabs({ typeParam, changeFilter }) {
             role="tab"
             aria-selected={isSelected}
             onClick={() => changeFilter('type', tab.key === 'ALL' ? '' : tab.key)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
-              isSelected
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${isSelected
                 ? 'border-[#006B2C] bg-[#006B2C] text-white shadow-sm'
                 : 'border-neutral bg-white text-textSecondary hover:bg-[#F6F9F4] hover:text-[#006B2C]'
-            }`}
+              }`}
           >
             {tab.label}
           </button>
@@ -383,7 +391,7 @@ function WithdrawalModalContent({ target, busy, onApprove, onReject, onClose }) 
     const controller = new AbortController();
     inventoryService.read(target.sku, { signal: controller.signal })
       .then((res) => setDetail(res))
-      .catch(() => {});
+      .catch(() => { });
     return () => controller.abort();
   }, [target.sku, existingImage]);
 

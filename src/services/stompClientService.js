@@ -47,8 +47,8 @@ export class StompClientService {
     const newToken = event?.detail?.token;
     if (newToken) {
       this.currentAccessToken = newToken;
-      // Chỉ tự động reconnect nếu client đang kết nối hoặc đã kết nối
-      if (this.status === 'CONNECTED' || this.status === 'CONNECTING') {
+      // Tự động reconnect nếu client đang kết nối, đã kết nối, hoặc bị lỗi (ví dụ token cũ hết hạn)
+      if (this.status === 'CONNECTED' || this.status === 'CONNECTING' || this.status === 'ERROR') {
         this.reconnectWithToken(newToken);
       }
     }
