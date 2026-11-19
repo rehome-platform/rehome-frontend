@@ -1,5 +1,5 @@
 import React, { StrictMode } from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Phase2Provider } from '../../src/features/moderator/hooks/warehouseHooks.jsx';
@@ -67,22 +67,29 @@ describe('ConsignmentListPage & Flow separation', () => {
     expect(screen.getByRole('tab', { name: 'Nhập kho hôm nay' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Đã từ chối' })).toBeInTheDocument();
 
-    // Khung lưu ý hướng dẫn duyệt trên ảnh (KD-01)
+    // Không còn khung lưu ý hướng dẫn duyệt trên ảnh (FE-04)
     expect(
-      screen.getByText(/Ở bước này bạn duyệt trên ảnh, chưa thấy hàng thật/i)
-    ).toBeInTheDocument();
+      screen.queryByText(/Ở bước này bạn duyệt trên ảnh, chưa thấy hàng thật/i)
+    ).not.toBeInTheDocument();
 
-    // Bảng dữ liệu form ký gửi
-    expect(screen.getByText('KG-F-002318')).toBeInTheDocument();
+    // Bảng dữ liệu form ký gửi (ẩn mã form, sắp xếp mới nhất trước)
+    expect(screen.queryByText('KG-F-002318')).not.toBeInTheDocument();
     expect(screen.getByText('Áo khoác dạ nữ')).toBeInTheDocument();
     expect(screen.getByText('Uniqlo')).toBeInTheDocument();
     expect(screen.getByText('Lê Minh C')).toBeInTheDocument();
-    expect(screen.getByText('Bạn đang nhận việc này')).toBeInTheDocument();
 
-    // Nút "Mở duyệt"
+    // Nút "Mở duyệt" (KG-F-002319 mới hơn nằm trên KG-F-002318)
     const openButtons = screen.getAllByRole('link', { name: 'Mở duyệt' });
     expect(openButtons).toHaveLength(2);
-    expect(openButtons[0]).toHaveAttribute('href', '/moderator/consignments/KG-F-002318');
+    expect(openButtons[0]).toHaveAttribute('href', '/moderator/consignments/KG-F-002319');
+    expect(openButtons[1]).toHaveAttribute('href', '/moderator/consignments/KG-F-002318');
+
+    // Nút "Chi tiết" hiển thị đầy đủ mã form và trạng thái nhận việc
+    const targetRow = screen.getByText('Áo khoác dạ nữ').closest('tr');
+    fireEvent.click(within(targetRow).getByRole('button', { name: 'Chi tiết' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('KG-F-002318')).toBeInTheDocument();
+    expect(within(dialog).getByText('Bạn đang nhận việc này')).toBeInTheDocument();
 
     // Ghi chú chân trang thừa đã được gỡ bỏ để giữ giao diện gọn gàng
     expect(
