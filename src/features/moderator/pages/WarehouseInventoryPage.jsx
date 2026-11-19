@@ -124,6 +124,7 @@ export default function WarehouseInventoryPage() {
     { label: 'Đang giữ', value: 'RESERVED' },
     { label: 'Đã bán, chờ đóng gói', value: 'SOLD' },
     { label: 'Chờ xử lý cuối kỳ', value: 'WAITING_END_OF_TERM' },
+    { label: 'Gửi về người bán', value: 'WITHDRAWN' },
     { label: 'Vô thừa nhận', value: 'UNCLAIMED' },
     { label: 'Hàng xuống cấp', value: 'DEGRADED' },
   ];

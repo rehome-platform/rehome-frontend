@@ -309,7 +309,7 @@ export function useReturnProcessing() {
         await returnService.inspect(selectedItem.id, {
           evidenceImageUrls,
           matchesOriginal: false,
-          degraded: checklist.noNewDamage === false,
+          degraded: false,
           counterfeitSuspected: false,
           conditionNote: invalidReason,
         });

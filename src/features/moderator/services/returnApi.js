@@ -85,7 +85,7 @@ export function mapReturnItem(raw) {
     buyerName: raw.buyerName || null,
     buyerPhone: raw.buyerPhone || null,
     buyerAddress: raw.buyerAddress || 'Kho ReHome nhận hàng trả tại bưu cục GHN',
-    buyerNote: raw.buyerNote || raw.conditionNote || raw.reason || 'Sản phẩm không đúng như mô tả trên đơn',
+    buyerNote: raw.buyerNote || raw.conditionNote || '',
     consignorName: raw.sellerName || raw.consignorName || null,
     consignorCode: sellerCode || raw.consignorCode || senderCode,
     sellerCode,
@@ -237,7 +237,7 @@ export const returnService = {
             mapped.size = firstItem.size || mapped.size;
             mapped.condition = firstItem.condition || mapped.condition;
             mapped.amount = firstItem.priceAtOrder ?? firstItem.price ?? mapped.amount;
-            mapped.itemDetails = [firstItem.name, firstItem.brandName, firstItem.size].filter(Boolean).join(' · ');
+            mapped.itemDetails = [firstItem.brandName, firstItem.size].filter(Boolean).join(' · ');
           }
           const fullAddress = [order.shippingAddressDetail, order.shippingWardName, order.shippingProvinceName]
             .filter(Boolean)

@@ -42,6 +42,7 @@ export function ConsignmentReturnPanel({ resource, formId, proof, returnReason, 
                   type: 'success',
                   message: 'Đã xác nhận trả đồ tại chỗ cho Member.',
                 });
+                onClose?.();
               },
             },
           );

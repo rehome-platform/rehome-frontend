@@ -353,11 +353,11 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
       expect(screen.getByText(/2 \/ 5 ảnh đã tải lên/i)).toBeInTheDocument();
     });
 
-    // Check checklist items
-    fireEvent.click(screen.getByLabelText(/Còn nguyên tem SKU trên sản phẩm/i));
-    fireEvent.click(screen.getByLabelText(/Không có hư hỏng mới so với ảnh nhập kho/i));
-    fireEvent.click(screen.getByLabelText(/Không có dấu vết đã qua sử dụng thêm/i));
-    fireEvent.click(screen.getByLabelText(/Đủ phụ kiện đi kèm nếu có/i));
+    // Verify checklist guidance items are rendered (without checkboxes)
+    expect(screen.getByText(/Còn nguyên tem SKU trên sản phẩm/i)).toBeInTheDocument();
+    expect(screen.getByText(/Không có hư hỏng mới so với ảnh nhập kho/i)).toBeInTheDocument();
+    expect(screen.getByText(/Không có dấu vết đã qua sử dụng thêm/i)).toBeInTheDocument();
+    expect(screen.getByText(/Đủ phụ kiện đi kèm nếu có/i)).toBeInTheDocument();
 
     // Select "Hợp lệ"
     const validRadio = screen.getByLabelText(/Hợp lệ — hoàn tiền cho người mua/i);
