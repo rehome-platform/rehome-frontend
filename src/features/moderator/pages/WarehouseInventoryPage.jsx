@@ -103,7 +103,14 @@ export default function WarehouseInventoryPage() {
     [],
   );
 
-  const items = listItems(resource.data);
+  const rawItems = listItems(resource.data);
+  const items = useMemo(() => {
+    return [...rawItems].sort((a, b) => {
+      const tA = Date.parse(a?.createdAt || a?.stockedAt || a?.updatedAt || a?.degradedDate || '') || 0;
+      const tB = Date.parse(b?.createdAt || b?.stockedAt || b?.updatedAt || b?.degradedDate || '') || 0;
+      return tB - tA;
+    });
+  }, [rawItems]);
 
   const change = (key, value) =>
     setSearch(
@@ -178,7 +185,6 @@ export default function WarehouseInventoryPage() {
           </span>
         </div>
       }
-      subtitle="Chỉ hàng trong kho đang làm việc. Moderator không xem được kho khác."
       actions={
         <div className="flex gap-2">
           <Button
@@ -188,14 +194,14 @@ export default function WarehouseInventoryPage() {
               setLookupResult(null);
               setLookupInput('');
             }}
-            className="text-xs font-bold border-[#2b2b2b] text-[#2b2b2b]"
+            className="text-xs font-bold border-[#2b2b2b] text-[#2b2b2b] whitespace-nowrap"
           >
             Tra cứu SKU
           </Button>
-          <Button variant="outline" onClick={() => setScanner(true)}>
+          <Button variant="outline" className="whitespace-nowrap" onClick={() => setScanner(true)}>
             Quét QR SKU
           </Button>
-          <Button variant="outline" onClick={resource.refresh}>
+          <Button variant="outline" className="whitespace-nowrap" onClick={resource.refresh}>
             Tải lại
           </Button>
         </div>
@@ -285,10 +291,9 @@ export default function WarehouseInventoryPage() {
           <div className="rounded-2xl border border-[#8a8a8a] bg-white overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               {status === 'DEGRADED' ? (
-                <table className="min-w-[760px] w-full text-left text-xs">
+                <table className="min-w-[700px] w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-[#FFF8E1] border-b border-[#FFE082] text-[10px] font-bold uppercase tracking-wider text-[#B78103]">
-                      <th className="py-3 px-4 w-32">Mã SKU</th>
+                    <tr className="bg-[#FFF8E1] border-b border-[#FFE082] text-[10px] font-bold uppercase tracking-wider text-[#B78103] whitespace-nowrap">
                       <th className="py-3 px-4">Sản phẩm</th>
                       <th className="py-3 px-4 w-28">Ngày báo</th>
                       <th className="py-3 px-4">Lý do xuống cấp</th>
@@ -297,19 +302,19 @@ export default function WarehouseInventoryPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#e0e0e0]">
-                    {items.map((item) => (
+                    {items.map((item) => {
+                      const rawBrand = item.brandName || item.brand;
+                      const cleanBrand = rawBrand && rawBrand.trim().toLowerCase() !== 'rehome' ? rawBrand.trim() : '';
+                      const subMeta = [cleanBrand, item.size ? `Size ${item.size}` : ''].filter(Boolean).join(' · ');
+                      return (
                       <tr key={item.sku || item.id} className="hover:bg-[#FFFDF5] transition-colors">
-                        <td className="py-3.5 px-4 font-mono font-bold text-[#191C19]">
-                          {item.sku || item.id}
-                        </td>
                         <td className="py-3.5 px-4">
                           <p className="font-semibold text-[#191C19]">{item.name}</p>
-                          <p className="text-[11px] text-[#717971]">
-                            {item.brandName || item.brand || 'ReHome'}
-                            {item.size ? ` · Size ${item.size}` : ''}
-                          </p>
+                          {subMeta && (
+                            <p className="text-[11px] text-[#717971]">{subMeta}</p>
+                          )}
                         </td>
-                        <td className="py-3.5 px-4 text-[#5f5f5f]">
+                        <td className="py-3.5 px-4 text-[#5f5f5f] whitespace-nowrap">
                           {item.degradedDate ? new Date(item.degradedDate).toLocaleDateString('vi-VN') : '—'}
                         </td>
                         <td className="py-3.5 px-4 max-w-xs truncate" title={item.degradedReason || item.conditionNote}>
@@ -317,7 +322,7 @@ export default function WarehouseInventoryPage() {
                             {item.degradedReason || item.conditionNote || 'Hàng trả về có dấu hiệu xuống cấp'}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4">
+                        <td className="py-3.5 px-4 whitespace-nowrap">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold ${item.decisionStatus === 'FULL_COMPENSATION'
                               ? 'bg-[#ECFDF3] text-[#067647] border-[#ABEFC6]'
                               : (item.decisionStatus === 'PARTIAL_COMPENSATION' || item.decisionStatus === 'PARTIAL_WITH_ITEM_BACK')
@@ -329,25 +334,24 @@ export default function WarehouseInventoryPage() {
                             {item.decisionStatusLabel || degradedCaseLabel(item)}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 text-right">
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
                           <Button
                             type="button"
                             variant="outline"
-                            className="text-xs py-1 px-3 border-[#006B2C] text-[#006B2C] hover:bg-[#E8F5E9] font-semibold"
+                            className="text-xs py-1.5 px-3 border-[#006B2C] text-[#006B2C] hover:bg-[#E8F5E9] font-semibold whitespace-nowrap"
                             onClick={() => setDegradedModalItem(item)}
                           >
-                            Xem biên bản & ảnh →
+                            Xem biên bản & ảnh
                           </Button>
                         </td>
                       </tr>
-                    ))}
+                    );})}
                   </tbody>
                 </table>
               ) : (
-                <table className="min-w-[760px] w-full text-left text-xs">
+                <table className="min-w-[700px] w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-[#f4f4f4] border-b border-[#8a8a8a] text-[10px] font-bold uppercase tracking-wider text-[#5f5f5f]">
-                      <th className="py-2.5 px-4 w-32">Mã SKU</th>
+                    <tr className="bg-[#f4f4f4] border-b border-[#8a8a8a] text-[10px] font-bold uppercase tracking-wider text-[#5f5f5f] whitespace-nowrap">
                       <th className="py-2.5 px-4">Sản phẩm</th>
                       <th className="py-2.5 px-4">Trạng thái</th>
                       <th className="py-2.5 px-4">Kỳ ký gửi</th>
@@ -361,6 +365,9 @@ export default function WarehouseInventoryPage() {
                         item.status === 'WAITING_END_OF_TERM' ||
                         item.status === 'UNCLAIMED' ||
                         (item.status === 'WAREHOUSE' && (item.decisionId || item.pricingEligible));
+                      const rawBrand = item.brandName || item.brand;
+                      const cleanBrand = rawBrand && rawBrand.trim().toLowerCase() !== 'rehome' ? rawBrand.trim() : '';
+                      const subMeta = [cleanBrand, item.size ? `Size ${item.size}` : ''].filter(Boolean).join(' · ');
 
                       return (
                         <tr
@@ -370,22 +377,13 @@ export default function WarehouseInventoryPage() {
                             : 'hover:bg-[#fcfdfc]'
                             }`}
                         >
-                          <td className="py-3.5 px-4 font-mono font-bold text-[#191C19]">
-                            <Link
-                              className="text-primary hover:underline"
-                              to={`/moderator/inventory/${encodeURIComponent(item.sku)}`}
-                            >
-                              {item.sku}
-                            </Link>
-                          </td>
                           <td className="py-3.5 px-4">
                             <p className="font-semibold text-[#191C19]">{item.name}</p>
-                            <p className="text-[11px] text-[#717971]">
-                              {item.brandName || item.brand || 'ReHome'}
-                              {item.size ? ` · Size ${item.size}` : ''}
-                            </p>
+                            {subMeta && (
+                              <p className="text-[11px] text-[#717971]">{subMeta}</p>
+                            )}
                           </td>
-                          <td className="py-3.5 px-4">
+                          <td className="py-3.5 px-4 whitespace-nowrap">
                             {item.status === 'WAITING_END_OF_TERM' ? (
                               <span className="font-bold text-[#2b2b2b]">Chờ xử lý cuối kỳ</span>
                             ) : item.status === 'UNCLAIMED' ? (
@@ -406,27 +404,27 @@ export default function WarehouseInventoryPage() {
                               </span>
                             )}
                           </td>
-                          <td className="py-3.5 px-4 text-[#5f5f5f]">
+                          <td className="py-3.5 px-4 text-[#5f5f5f] whitespace-nowrap">
                             {item.currentTerm ? `Kỳ ${item.currentTerm} · ngày ${item.daysIntoTerm ?? 1}${item.termLengthDays ? ` / ${item.termLengthDays}` : ''}` : '—'}
                           </td>
-                          <td className="py-3.5 px-4 font-bold text-[#191C19] text-right">
+                          <td className="py-3.5 px-4 font-bold text-[#191C19] text-right whitespace-nowrap">
                             {item.currentPrice != null ? money(item.currentPrice) : (item.agreedPrice != null ? money(item.agreedPrice) : '—')}
                           </td>
-                          <td className="py-3.5 px-4 text-right">
-                            <div className="flex items-center justify-end gap-2.5">
+                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-2">
                               {(item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT') && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(item.status) && (
                                 <Link
                                   to={`/moderator/inventory/${encodeURIComponent(item.sku)}/re-consign`}
-                                  className="text-xs font-bold text-[#006B2C] hover:underline bg-[#E8F5E9] px-2 py-1 rounded border border-[#C8E6C9]"
+                                  className="inline-flex items-center justify-center text-xs font-semibold text-[#006B2C] bg-[#E8F5E9] hover:bg-[#D1FADF] px-3 py-1.5 rounded-xl border border-[#A5D6A7] transition-colors whitespace-nowrap"
                                 >
-                                  {item.reConsignStatus === 'PROPOSAL_SENT' ? 'Theo dõi xác nhận →' : 'Đàm phán giá →'}
+                                  {item.reConsignStatus === 'PROPOSAL_SENT' ? 'Theo dõi xác nhận' : 'Đàm phán giá'}
                                 </Link>
                               )}
                               <Link
-                                className="text-xs text-primary hover:underline font-semibold"
+                                className="inline-flex items-center justify-center text-xs font-semibold py-1.5 px-3 bg-[#006B2C] text-white hover:bg-[#005523] rounded-xl shadow-sm transition-colors whitespace-nowrap"
                                 to={`/moderator/inventory/${encodeURIComponent(item.sku)}`}
                               >
-                                Chi tiết →
+                                Chi tiết
                               </Link>
                             </div>
                           </td>
@@ -508,7 +506,16 @@ export default function WarehouseInventoryPage() {
                 <div className="flex-1 min-w-0 space-y-1">
                   <h4 className="font-bold text-sm text-[#191C19]">{lookupResult.data.name}</h4>
                   <p className="text-[11px] text-[#5f5f5f]">
-                    {lookupResult.data.brandName || lookupResult.data.brand || 'ReHome'} · Size {lookupResult.data.size || 'M'}
+                    {[
+                      lookupResult.data.brandName && lookupResult.data.brandName.trim().toLowerCase() !== 'rehome'
+                        ? lookupResult.data.brandName
+                        : lookupResult.data.brand && lookupResult.data.brand.trim().toLowerCase() !== 'rehome'
+                          ? lookupResult.data.brand
+                          : null,
+                      `Size ${lookupResult.data.size || 'M'}`,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </p>
                   <p className="text-[11px] text-[#5f5f5f]">
                     Trạng thái: <Status>{lookupResult.data.status}</Status>

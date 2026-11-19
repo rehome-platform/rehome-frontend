@@ -142,7 +142,8 @@ describe('Phase 2 No-Shelf Regression', () => {
 
     render(<WarehouseInventoryPage />, { wrapper: Wrapper });
 
-    await screen.findByText('Q7-AO-001');
+    await screen.findByText('Áo sơ mi trắng');
+    expect(screen.queryByText('Q7-AO-001')).not.toBeInTheDocument();
     expect(screen.queryByText(/vị trí kệ/i)).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText(/kệ/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: /kệ|vị trí/i })).not.toBeInTheDocument();
