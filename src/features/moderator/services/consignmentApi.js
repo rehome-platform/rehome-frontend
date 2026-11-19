@@ -7,6 +7,8 @@ import { callBackend } from './warehouseTransport.js';
 import { queueService } from './queueApi.js';
 import { enrichListRows } from './listDetailEnrichment.js';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const consignmentService = {
   // KD-01: Moderator form list is independent from queue membership.
   listForms: async (params, options) => {
@@ -56,14 +58,57 @@ export const consignmentService = {
       return normalizeConsignmentForm(res, options?.scope?.userId);
     };
 
-    const res = await callBackend(
-      {
-        method: 'get',
-        url: API_ENDPOINTS.MODERATOR.CONSIGNMENT_FORM_DETAIL(formId),
-      },
-      { fallback, signal: options?.signal }
-    );
-    return normalizeConsignmentForm(res);
+    try {
+      const res = await callBackend(
+        {
+          method: 'get',
+          url: API_ENDPOINTS.MODERATOR.CONSIGNMENT_FORM_DETAIL(formId),
+        },
+        { fallback, signal: options?.signal }
+      );
+      return normalizeConsignmentForm(res);
+    } catch (err) {
+      const rawId = String(formId || '').trim();
+      const shouldResolveByCode =
+        !isFixtureMode &&
+        rawId &&
+        !UUID_RE.test(rawId) &&
+        (err?.status === 400 || err?.status === 404) &&
+        !options?.signal?.aborted;
+      if (!shouldResolveByCode) throw err;
+
+      try {
+        const listRes = await callBackend(
+          {
+            method: 'get',
+            url: API_ENDPOINTS.MODERATOR.CONSIGNMENT_FORMS,
+            params: { page: 0, size: 100 },
+          },
+          { signal: options?.signal }
+        );
+        const rows = Array.isArray(listRes)
+          ? listRes
+          : (listRes?.content || listRes?.items || []);
+        const targetLower = rawId.toLowerCase();
+        const match = rows.find((item) => {
+          const code = String(item?.formNo || '').trim().toLowerCase();
+          return code && code === targetLower;
+        });
+        const resolvedId = match?.id || match?.formId;
+        if (!resolvedId || resolvedId === rawId) throw err;
+
+        const detailRes = await callBackend(
+          {
+            method: 'get',
+            url: API_ENDPOINTS.MODERATOR.CONSIGNMENT_FORM_DETAIL(resolvedId),
+          },
+          { signal: options?.signal }
+        );
+        return normalizeConsignmentForm(detailRes);
+      } catch {
+        throw err;
+      }
+    }
   },
 
   // API 33: POST /consignment-forms/{id}/inspection/start

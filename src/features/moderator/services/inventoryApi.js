@@ -10,6 +10,8 @@ import { Phase2Error } from "../models/warehouseModel.js";
 import { callBackend } from './warehouseTransport.js';
 import { enrichListRows } from './listDetailEnrichment.js';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const inventoryService = {
   // API 40: GET /inventory
   list: async (params, options) => {
@@ -126,6 +128,40 @@ export const inventoryService = {
       return inventoryDetail(res, sku);
     } catch (err) {
       if (isFixtureMode && fallback) return fallback();
+      const rawKey = String(sku || '').trim();
+      const shouldResolveUuid =
+        rawKey &&
+        UUID_RE.test(rawKey) &&
+        (err?.status === 400 || err?.status === 404) &&
+        !options?.signal?.aborted;
+      if (shouldResolveUuid) {
+        try {
+          const listRes = await callBackend(
+            {
+              method: 'get',
+              url: API_ENDPOINTS.MODERATOR.INVENTORY,
+              params: { page: 0, size: 100 },
+            },
+            { signal: options?.signal }
+          );
+          const rows = Array.isArray(listRes)
+            ? listRes
+            : (listRes?.content || listRes?.items || []);
+          const match = rows.find((item) => String(item?.id || '').toLowerCase() === rawKey.toLowerCase());
+          if (match?.sku) {
+            const detailRes = await callBackend(
+              {
+                method: 'get',
+                url: API_ENDPOINTS.MODERATOR.PRODUCT_BY_SKU(match.sku),
+              },
+              { signal: options?.signal }
+            );
+            return inventoryDetail(detailRes, match.sku);
+          }
+        } catch {
+          // Fall through to rethrow original error
+        }
+      }
       throw err;
     }
   },
