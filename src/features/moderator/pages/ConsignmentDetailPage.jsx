@@ -85,9 +85,6 @@ export default function ConsignmentDetailPage() {
               BẠN ĐANG NHẬN VIỆC NÀY
             </span>
           )}
-          <Link to={`/moderator/consignments?status=${backStatus}`}>
-            <Button variant="outline">← Tab {backLabel}</Button>
-          </Link>
           <Button
             variant="outline"
             onClick={() => {
