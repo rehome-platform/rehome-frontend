@@ -7,7 +7,7 @@ import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
 import { listItems, ownsClaim } from '../models/warehouseModel.js';
 import { Page, Card, ResourceState } from '../components/WarehouseUi.jsx';
 import {
-  QUEUE_ACTION_BTN_CLASS,
+  QUEUE_GHOST_BTN_CLASS,
   QUEUE_PRIMARY_BTN_CLASS,
   QUEUE_PRIMARY_LINK_CLASS,
   QueueClaimDialog,
@@ -250,11 +250,11 @@ export default function WarehouseHomePage() {
                           )}
                         </td>
                         <td className="py-3 px-3.5 text-right whitespace-nowrap align-middle">
-                          <div className="flex items-center justify-end gap-2 flex-nowrap">
+                          <div className="inline-flex items-center justify-end gap-2 flex-nowrap">
                             <Button
                               size="sm"
-                              variant="outline"
-                              className={QUEUE_ACTION_BTN_CLASS}
+                              variant="ghost"
+                              className={QUEUE_GHOST_BTN_CLASS}
                               onClick={() => setDetailTarget(task)}
                             >
                               Chi tiết
@@ -275,7 +275,7 @@ export default function WarehouseHomePage() {
                                 size="sm"
                                 disabled
                                 variant="outline"
-                                className={`${QUEUE_ACTION_BTN_CLASS} opacity-50 cursor-not-allowed`}
+                                className={`${QUEUE_PRIMARY_BTN_CLASS} border-neutral bg-background text-textSecondary opacity-70 cursor-not-allowed`}
                               >
                                 Đã có người nhận
                               </Button>
