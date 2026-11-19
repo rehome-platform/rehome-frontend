@@ -241,11 +241,13 @@ export function QueueTaskDetailModal({ target, onClose }) {
 }
 
 export const QUEUE_ACTION_BTN_CLASS =
-  'h-8 px-2.5 py-0 text-xs font-semibold leading-none rounded-lg border border-transparent shrink-0 whitespace-nowrap';
+  'h-8 px-2.5 py-0 text-xs font-semibold leading-none rounded-lg border border-transparent shrink-0 whitespace-nowrap justify-center';
 export const QUEUE_GHOST_BTN_CLASS =
-  `${QUEUE_ACTION_BTN_CLASS} text-textSecondary hover:bg-[#F3F6F3] hover:text-text`;
+  `${QUEUE_ACTION_BTN_CLASS} min-w-[68px] text-textSecondary hover:bg-[#F3F6F3] hover:text-text`;
+export const QUEUE_CLAIM_SLOT_CLASS =
+  'h-8 min-w-[96px] px-3 py-0 text-xs font-semibold leading-none rounded-lg border shrink-0 whitespace-nowrap justify-center';
 export const QUEUE_PRIMARY_BTN_CLASS =
-  'h-8 min-w-[104px] ml-1 px-3 py-0 text-xs font-semibold leading-none rounded-lg border border-transparent shrink-0 whitespace-nowrap justify-center';
+  'h-8 min-w-[96px] px-3 py-0 text-xs font-semibold leading-none rounded-lg border border-transparent shrink-0 whitespace-nowrap justify-center';
 export const QUEUE_PRIMARY_LINK_CLASS =
   `${QUEUE_PRIMARY_BTN_CLASS} bg-[#006B2C] text-white hover:bg-[#005523] hover:text-white inline-flex items-center shadow-sm transition-colors`;
 
@@ -298,8 +300,9 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
           <span>chưa ai nhận</span>
         )}
       </td>
-      <td className="py-3 px-4 text-right whitespace-nowrap align-middle">
-        <div className="inline-flex items-center justify-end gap-2 flex-nowrap">
+      <td className="py-3 px-4 text-left whitespace-nowrap align-middle">
+        <div className="flex items-center justify-start gap-2 flex-nowrap">
+          {/* 1. Chi tiết */}
           {onViewDetail && (
             <Button
               size="sm"
@@ -310,29 +313,7 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
               Chi tiết
             </Button>
           )}
-          {isWithdrawal && onCheckWithdrawal && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 px-2.5 py-0 text-xs font-semibold leading-none rounded-lg border border-[#C6E1CE] bg-[#F6F9F4] text-[#006B2C] hover:bg-[#E8F5E9] hover:border-[#006B2C] shrink-0 whitespace-nowrap"
-              onClick={() => onCheckWithdrawal(item)}
-            >
-              Check đơn
-            </Button>
-          )}
-          {isMine && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className={`${QUEUE_ACTION_BTN_CLASS} text-textSecondary hover:bg-red-50 hover:text-red-700`}
-              onClick={() => {
-                setFeedback?.(null);
-                setReleaseTarget(item);
-              }}
-            >
-              Nhả việc
-            </Button>
-          )}
+          {/* 2. Nhận việc / Nhả việc / Đã có người nhận */}
           {!item.claimedBy && (
             <Button
               size="sm"
@@ -342,6 +323,40 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
               onClick={() => (setClaimTarget ? setClaimTarget(item) : handleClaim(item))}
             >
               Nhận việc
+            </Button>
+          )}
+          {isMine && (
+            <Button
+              size="sm"
+              variant="outline"
+              className={`${QUEUE_CLAIM_SLOT_CLASS} border-neutral bg-white text-textSecondary hover:bg-red-50 hover:text-red-700 hover:border-red-200`}
+              onClick={() => {
+                setFeedback?.(null);
+                setReleaseTarget(item);
+              }}
+            >
+              Nhả việc
+            </Button>
+          )}
+          {isClaimedByOther && (
+            <Button
+              size="sm"
+              disabled
+              variant="outline"
+              className={`${QUEUE_CLAIM_SLOT_CLASS} border-neutral bg-background text-textSecondary opacity-70 cursor-not-allowed`}
+            >
+              Đã có người nhận
+            </Button>
+          )}
+          {/* 3. Check đơn / Mở việc / Đóng gói / Duyệt yêu cầu */}
+          {isWithdrawal && onCheckWithdrawal && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 px-2.5 py-0 text-xs font-semibold leading-none rounded-lg border border-[#C6E1CE] bg-[#F6F9F4] text-[#006B2C] hover:bg-[#E8F5E9] hover:border-[#006B2C] shrink-0 whitespace-nowrap"
+              onClick={() => onCheckWithdrawal(item)}
+            >
+              Check đơn
             </Button>
           )}
           {isMine && (
@@ -362,16 +377,6 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
                 {item.type === 'PACKING' ? 'Đóng gói' : 'Mở việc'}
               </Link>
             ) : null
-          )}
-          {isClaimedByOther && (
-            <Button
-              size="sm"
-              disabled
-              variant="outline"
-              className={`${QUEUE_PRIMARY_BTN_CLASS} border-neutral bg-background text-textSecondary opacity-70 cursor-not-allowed`}
-            >
-              Đã có người nhận
-            </Button>
           )}
         </div>
       </td>

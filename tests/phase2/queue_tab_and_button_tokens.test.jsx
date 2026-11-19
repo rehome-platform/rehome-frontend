@@ -210,7 +210,7 @@ describe('HQ-01: Tab selection in place, Claim flow, and "Mở việc" without a
     const packRow = (await screen.findByText('Nguyễn Văn B')).closest('tr');
     const packActionsWrap = within(packRow).getByRole('button', { name: 'Chi tiết' }).parentElement;
     expect(packActionsWrap.className).toContain('flex-nowrap');
-    expect(packActionsWrap.className).toContain('justify-end');
+    expect(packActionsWrap.className).toContain('justify-start');
     expect(packActionsWrap.className).toContain('gap-2');
 
     const packButtons = Array.from(packActionsWrap.children);
@@ -232,8 +232,8 @@ describe('HQ-01: Tab selection in place, Claim flow, and "Mở việc" without a
     const withdrawButtons = Array.from(withdrawActionsWrap.children);
     expect(withdrawButtons.map((el) => el.textContent.trim())).toEqual([
       'Chi tiết',
-      'Check đơn',
       'Nhả việc',
+      'Check đơn',
       'Duyệt yêu cầu',
     ]);
     withdrawButtons.forEach((el) => {
