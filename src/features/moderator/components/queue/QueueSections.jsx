@@ -273,7 +273,7 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
   );
 }
 
-export function QueueFilters({ statusFilter, changeFilter, claimParam, toggleOverdue, overdueOnly, filteredItems, rawItems }) {
+export function QueueFilters({ statusFilter, sortParam = 'newest', changeFilter, claimParam, toggleOverdue, overdueOnly, filteredItems, rawItems }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
       {/* Bộ lọc trạng thái */}
@@ -302,6 +302,17 @@ export function QueueFilters({ statusFilter, changeFilter, claimParam, toggleOve
         <option value="">Mọi người nhận</option>
         <option value="mine">Việc của tôi</option>
         <option value="unclaimed">Chưa ai nhận</option>
+      </select>
+
+      {/* Bộ lọc sắp xếp theo ngày */}
+      <select
+        value={sortParam}
+        onChange={(e) => changeFilter('sort', e.target.value === 'newest' ? '' : e.target.value)}
+        aria-label="Sắp xếp theo ngày"
+        className="rounded-xl border border-neutral bg-white px-3 py-1.5 text-xs font-semibold text-text focus:border-[#006B2C] focus:outline-none"
+      >
+        <option value="newest">Mới nhất</option>
+        <option value="oldest">Cũ nhất</option>
       </select>
 
       {/* Nút toggle: Chỉ việc quá hạn (HQ-01) */}
