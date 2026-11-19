@@ -199,6 +199,7 @@ describe('HQ-01: Tab selection in place, Claim flow, and "Mở việc" without a
       name: 'Áo thun',
       targetName: 'Áo thun',
       subjectSubtitle: 'Trần Thị C',
+      productImageUrl: 'https://cdn.rehome.test/ao-thun.jpg',
       status: 'PENDING_APPROVAL',
       claimedBy: 'mod-a',
       createdAt: '2026-10-01T00:00:00Z',
@@ -208,13 +209,19 @@ describe('HQ-01: Tab selection in place, Claim flow, and "Mở việc" without a
     renderQueueApp();
 
     const packRow = (await screen.findByText('Nguyễn Văn B')).closest('tr');
-    const packActionsWrap = within(packRow).getByRole('button', { name: 'Chi tiết' }).parentElement;
+    // 7 columns in exact order: Loại việc, Đối tượng, Tạo lúc, Đã chờ, Người nhận, Chi tiết, Hành động
+    const headers = screen.getAllByRole('columnheader').map((th) => th.textContent.trim());
+    expect(headers).toEqual(['Loại việc', 'Đối tượng', 'Tạo lúc', 'Đã chờ', 'Người nhận', 'Chi tiết', 'Hành động']);
+    const packDetailBtn = within(packRow).getByRole('button', { name: 'Chi tiết' });
+    const packActionsWrap = within(packRow).getByRole('button', { name: 'Nhả việc' }).parentElement;
+    // Chi tiết is in its own dedicated cell, separate from Hành động
+    expect(packDetailBtn.closest('td')).not.toBe(packActionsWrap.closest('td'));
     expect(packActionsWrap.className).toContain('flex-nowrap');
     expect(packActionsWrap.className).toContain('justify-end');
     expect(packActionsWrap.className).toContain('gap-2');
 
     const packButtons = Array.from(packActionsWrap.children);
-    expect(packButtons.map((el) => el.textContent.trim())).toEqual(['Chi tiết', 'Nhả việc', 'Đóng gói']);
+    expect(packButtons.map((el) => el.textContent.trim())).toEqual(['Nhả việc', 'Đóng gói']);
     packButtons.forEach((el) => {
       expect(el.className).toContain('h-8');
       expect(el.className).toContain('px-3');
@@ -227,12 +234,18 @@ describe('HQ-01: Tab selection in place, Claim flow, and "Mở việc" without a
     });
 
     const withdrawRow = screen.getByText('Trần Thị C').closest('tr');
-    const withdrawActionsWrap = within(withdrawRow).getByRole('button', { name: 'Chi tiết' }).parentElement;
+    // Check đơn button is removed; withdrawal thumbnail is rendered in Loại việc column
+    expect(within(withdrawRow).queryByRole('button', { name: 'Check đơn' })).not.toBeInTheDocument();
+    const thumbImg = within(withdrawRow).getByAltText('Áo thun');
+    expect(thumbImg).toHaveAttribute('src', 'https://cdn.rehome.test/ao-thun.jpg');
+    expect(within(packRow).queryByRole('img')).not.toBeInTheDocument();
+
+    const withdrawDetailBtn = within(withdrawRow).getByRole('button', { name: 'Chi tiết' });
+    const withdrawActionsWrap = within(withdrawRow).getByRole('button', { name: 'Nhả việc' }).parentElement;
+    expect(withdrawDetailBtn.closest('td')).not.toBe(withdrawActionsWrap.closest('td'));
     expect(withdrawActionsWrap.className).toContain('flex-nowrap');
     const withdrawButtons = Array.from(withdrawActionsWrap.children);
     expect(withdrawButtons.map((el) => el.textContent.trim())).toEqual([
-      'Chi tiết',
-      'Check đơn',
       'Nhả việc',
       'Duyệt yêu cầu',
     ]);

@@ -113,6 +113,7 @@ export default function ConsignmentQueuePage() {
                   <th className="py-2.5 px-3">Tạo lúc</th>
                   <th className="py-2.5 px-3">Đã chờ</th>
                   <th className="py-2.5 px-3">Người nhận</th>
+                  <th className="py-2.5 px-3 text-center w-24">Chi tiết</th>
                   <th className="py-2.5 px-4 text-right">Hành động</th>
                 </tr>
               </thead>
@@ -158,7 +159,13 @@ export default function ConsignmentQueuePage() {
       {/* 4. MODAL NHẬN VIỆC (HQ-02-NhanViec.dc.html) & MODAL NHẢ VIỆC (HQ-02-NhaViec.dc.html) */}
       <QueueClaimDialog {...model.sections.QueueClaimDialog} />
       <QueueReleaseDialog {...model.sections.QueueReleaseDialog} />
-      <QueueTaskDetailModal target={model.detailTarget} onClose={() => model.setDetailTarget(null)} />
+      <QueueTaskDetailModal
+        target={model.detailTarget}
+        busy={model.resource?.busy}
+        onApproveWithdrawal={model.handleApproveWithdrawal}
+        onRejectWithdrawal={model.handleRejectWithdrawal}
+        onClose={() => model.setDetailTarget(null)}
+      />
       <WithdrawalCheckModal
         target={model.withdrawalCheckTarget}
         busy={model.resource?.busy}

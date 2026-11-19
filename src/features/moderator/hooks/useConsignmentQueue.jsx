@@ -118,12 +118,14 @@ export function useConsignmentQueue() {
         const msg = 'Đã duyệt yêu cầu rút hàng. Yêu cầu đã chuyển sang bước bàn giao tại quầy.';
         setFeedback({ type: 'success', message: msg });
         toast.success(msg);
-        setWithdrawalCheckTarget((prev) => (prev ? {
+        const applyApproved = (prev) => (prev ? {
           ...prev,
           status: updated?.status || 'PENDING_PICKUP',
           pickupDeadline: updated?.pickupDeadline ?? prev.pickupDeadline,
           feeCharged: updated?.feeCharged ?? prev.feeCharged,
-        } : null));
+        } : null);
+        setWithdrawalCheckTarget(applyApproved);
+        setDetailTarget((prev) => (prev && (prev.refId === withdrawalId || prev.id === withdrawalId) ? applyApproved(prev) : prev));
       },
     });
   };
@@ -138,6 +140,7 @@ export function useConsignmentQueue() {
         setFeedback({ type: 'success', message: msg });
         toast.success(msg);
         setWithdrawalCheckTarget(null);
+        setDetailTarget((prev) => (prev && (prev.refId === withdrawalId || prev.id === withdrawalId) ? null : prev));
       },
     });
   };
