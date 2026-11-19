@@ -132,7 +132,17 @@ export function useOrgVerification() {
         })
       );
 
-      setOrgsQueue(enrichedQueue);
+      const sortedOrgs = [...enrichedQueue].sort((a, b) => {
+        const rawA = a?.createdAt || a?.submittedAt;
+        const rawB = b?.createdAt || b?.submittedAt;
+        const tA = rawA ? Date.parse(rawA) : NaN;
+        const tB = rawB ? Date.parse(rawB) : NaN;
+        if (Number.isFinite(tA) && Number.isFinite(tB)) return tB - tA;
+        if (Number.isFinite(tB)) return 1;
+        if (Number.isFinite(tA)) return -1;
+        return 0;
+      });
+      setOrgsQueue(sortedOrgs);
       const rawChanges = changesRes?.data || [];
       const enrichedLegalChanges = rawChanges.map((item) => {
         const changeRequestId = item.requestId || item.refId || item.id;
