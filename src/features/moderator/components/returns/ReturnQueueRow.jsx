@@ -30,13 +30,24 @@ export function ReturnQueueRow({
       </td>
       <td className="py-3 px-3.5 whitespace-nowrap">
         <div className="flex items-center gap-1.5">
-          <span className="font-semibold text-text">
-            {r.status === 'PENDING_APPROVAL' && 'Chờ duyệt'}
-            {r.status === 'WAITING_BUYER_DISPATCH' && 'Chờ người mua gửi'}
-            {r.status === 'RETURNING' && 'Đang về kho'}
-            {r.status === 'RECEIVED_INSPECT' && 'Hàng đã về, chờ kiểm'}
-            {r.status === 'RESOLVED' && (pendingItemAction ? 'Đã hoàn tiền · Chờ xử lý món' : 'Đã xong')}
-          </span>
+          {r.status === 'PENDING_APPROVAL' && <span className="font-semibold text-text">Chờ duyệt</span>}
+          {r.status === 'WAITING_BUYER_DISPATCH' && <span className="font-semibold text-text">Chờ người mua gửi</span>}
+          {r.status === 'RETURNING' && <span className="font-semibold text-text">Đang về kho</span>}
+          {r.status === 'RECEIVED_INSPECT' && <span className="font-semibold text-text">Hàng đã về, chờ kiểm</span>}
+          {r.status === 'RESOLVED' && (
+            pendingItemAction ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#ECFDF3] text-[#067647] border border-[#ABEFC6]">
+                  Đã hoàn tiền
+                </span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#FFFAEB] text-[#B54708] border border-[#FEDF89]">
+                  Chờ chọn phương án xử lý
+                </span>
+              </div>
+            ) : (
+              <span className="font-semibold text-text">Đã xong</span>
+            )
+          )}
           {r.ghnFallbackUsed && (r.status === 'WAITING_BUYER_DISPATCH' || r.status === 'RETURNING') && (
             <span
               className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 whitespace-nowrap"

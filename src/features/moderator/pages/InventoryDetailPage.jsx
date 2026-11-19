@@ -14,6 +14,8 @@ import { pricingForProduct } from '../services/endTermPricingApi.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
 import { listItems, resolveInventoryTermAndRates } from '../models/warehouseModel.js';
 import { Page, Card, Photos, Status, ResourceState, date, money } from '../components/WarehouseUi.jsx';
+import { ReturnOutcomeDialog } from '../components/returns/ReturnSections.jsx';
+import { useToast } from '../../../context/ToastContext.jsx';
 
 export default function InventoryDetailPage() {
   const { sku } = useParams();
@@ -40,12 +42,17 @@ export default function InventoryDetailPage() {
   const [submittedCase, setSubmittedCase] = useState(null);
   const [caseDetailsOpen, setCaseDetailsOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [relistModalOpen, setRelistModalOpen] = useState(false);
+  const [relistSubmitting, setRelistSubmitting] = useState(false);
   const degradedLock = useRef(false);
+  const relistLock = useRef(false);
+  const toast = useToast();
   useEffect(() => {
     setSubmittedCase(null);
     setCaseDetailsOpen(false);
     setDegradedModalOpen(false);
     setEditModalOpen(false);
+    setRelistModalOpen(false);
     setDegradedNotes('');
     setDegradedPhotos([]);
   }, [sku]);
@@ -74,8 +81,14 @@ export default function InventoryDetailPage() {
   const pricing = useResource(options => endTermService.pendingPricing(options), [sku], {
     enabled: Boolean(data && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(data.status)), refreshInterval: 30000,
   });
+  const pendingReturn = useResource(
+    (options) => returnService.findPendingDispositionBySku(data.sku, options).catch(() => null),
+    [data?.sku, data?.status],
+    { enabled: Boolean(data?.sku && data?.status === 'RETURNED'), refreshInterval: 30000 }
+  );
   const pricingRequest = pricingForProduct(pricing.data || [], data?.id || sku);
   const canNegotiate = Boolean(pricingRequest?.decisionId && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(data?.status));
+  const canReportDegraded = Boolean(['ON_SALE', 'RETURNED'].includes(data?.status) && !submittedCase && !activeCase);
 
   const handleCopySku = () => {
     if (!sku) return;
@@ -88,7 +101,7 @@ export default function InventoryDetailPage() {
   const termAndRates = resolveInventoryTermAndRates(data);
 
   const handleSendDegradedProposal = async () => {
-    if (degradedLock.current || degradedUploadPending || data?.status !== 'ON_SALE' || submittedCase || !data?.id) return;
+    if (degradedLock.current || degradedUploadPending || !['ON_SALE', 'RETURNED'].includes(data?.status) || submittedCase || !data?.id) return;
     if (!degradedNotes.trim()) {
       alert('Vui lòng nhập mô tả chi tiết hư hỏng hoặc nguyên nhân xuống cấp.');
       return;
@@ -113,6 +126,25 @@ export default function InventoryDetailPage() {
     } finally {
       degradedLock.current = false;
       setIsSubmittingDegraded(false);
+    }
+  };
+
+  const handleConfirmRelist = async (outcome) => {
+    const targetReturn = pendingReturn.data;
+    if (!targetReturn?.id || relistLock.current) return;
+    relistLock.current = true;
+    setRelistSubmitting(true);
+    try {
+      await returnService.applyItemAction(targetReturn.id, outcome);
+      toast.success(`Đã đăng bán lại sản phẩm ${data?.sku || sku} lên sàn.`);
+      setRelistModalOpen(false);
+      product.refresh();
+      pendingReturn.refresh();
+    } catch (err) {
+      toast.error(err?.message || 'Không thể đăng bán lại sản phẩm. Vui lòng thử lại.');
+    } finally {
+      relistLock.current = false;
+      setRelistSubmitting(false);
     }
   };
 
@@ -193,6 +225,15 @@ export default function InventoryDetailPage() {
               </div>
 
                 <div className="flex flex-wrap items-center gap-3">
+                  {data.status === 'RETURNED' && pendingReturn.data && (
+                    <Button
+                      onClick={() => setRelistModalOpen(true)}
+                      variant="outline"
+                      className="border-[#006B2C] text-[#006B2C] hover:bg-[#E8F5E9] font-bold py-2 px-4 shadow-sm"
+                    >
+                      Đăng bán lại
+                    </Button>
+                  )}
                   {['ON_SALE', 'WAREHOUSE'].includes(data.status) && (
                     <Button
                       onClick={() => setEditModalOpen(true)}
@@ -202,7 +243,7 @@ export default function InventoryDetailPage() {
                       Chỉnh sửa thông tin
                     </Button>
                   )}
-                  {data.status === 'ON_SALE' && !submittedCase && <Button
+                  {canReportDegraded && <Button
                     onClick={() => setDegradedModalOpen(true)}
                     variant="outline"
                     className="border-red-600 text-red-600 hover:bg-red-50 font-bold py-2 px-4 shadow-sm"
@@ -272,6 +313,29 @@ export default function InventoryDetailPage() {
                 </div>
               )}
             </div>
+
+            {data.status === 'RETURNED' && (
+              <div className="rounded-xl border border-[#FEDF89] bg-[#FFFAEB] p-4 text-xs space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-bold text-[#B54708]">
+                    Hàng đã bàn giao về kho (chưa mở bán lại · không thuộc sở hữu nền tảng)
+                  </span>
+                  {pendingReturn.data && (
+                    <Link
+                      to={`/moderator/returns?id=${encodeURIComponent(pendingReturn.data.id)}`}
+                      className="font-semibold text-[#006B2C] underline whitespace-nowrap"
+                    >
+                      Xem yêu cầu trả hàng
+                    </Link>
+                  )}
+                </div>
+                <p className="text-[#414942] leading-relaxed">
+                  {pendingReturn.data
+                    ? 'Người mua đã được hoàn tiền · Món hàng đang chờ chọn phương án xử lý (Đăng bán lại) hoặc báo hàng xuống cấp nếu phát hiện hư hỏng.'
+                    : 'Sản phẩm đang ở trạng thái Đã bàn giao tại kho. Nếu phát hiện hư hỏng thực tế, bạn có thể lập biên bản hàng xuống cấp.'}
+                </p>
+              </div>
+            )}
 
             {data.status === 'WAREHOUSE' && (
               <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">
@@ -374,6 +438,17 @@ export default function InventoryDetailPage() {
             onClose={() => setEditModalOpen(false)}
             item={data}
             onUpdated={() => product.refresh()}
+          />
+
+          {/* Modal Đăng bán lại từ chi tiết tồn kho */}
+          <ReturnOutcomeDialog
+            isOutcomeModalOpen={relistModalOpen}
+            setIsOutcomeModalOpen={(open) => {
+              if (!open && !relistLock.current) setRelistModalOpen(false);
+            }}
+            selectedItem={pendingReturn.data}
+            submitting={relistSubmitting}
+            handleConfirmOutcome={handleConfirmRelist}
           />
 
           {/* Modal Lập biên bản hàng xuống cấp tại kho (TK-02) */}

@@ -6,7 +6,14 @@ import { queueService, inventoryService } from '../services/warehouseApi.js';
 import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
 import { listItems, ownsClaim } from '../models/warehouseModel.js';
 import { Page, Card, ResourceState } from '../components/WarehouseUi.jsx';
-import { QueueClaimDialog, QueueTaskDetailModal, extractQueueSubjectName } from '../components/queue/QueueSections.jsx';
+import {
+  QUEUE_ACTION_BTN_CLASS,
+  QUEUE_PRIMARY_BTN_CLASS,
+  QUEUE_PRIMARY_LINK_CLASS,
+  QueueClaimDialog,
+  QueueTaskDetailModal,
+  extractQueueSubjectName,
+} from '../components/queue/QueueSections.jsx';
 import { formatElapsedHours, sortQueueItemsNewestFirst } from '../models/queueModel.js';
 
 const OVERDUE_HOURS = 48;
@@ -242,23 +249,23 @@ export default function WarehouseHomePage() {
                             </span>
                           )}
                         </td>
-                        <td className="py-3 px-3.5 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-2">
+                        <td className="py-3 px-3.5 text-right whitespace-nowrap align-middle">
+                          <div className="flex items-center justify-end gap-2 flex-nowrap">
                             <Button
                               size="sm"
                               variant="outline"
-                              className="whitespace-nowrap"
+                              className={QUEUE_ACTION_BTN_CLASS}
                               onClick={() => setDetailTarget(task)}
                             >
                               Chi tiết
                             </Button>
                             {!task.claimedBy ? (
-                              <Button size="sm" className="whitespace-nowrap" loading={task.source.busy} onClick={() => setClaimTarget(task)}>
+                              <Button size="sm" className={QUEUE_PRIMARY_BTN_CLASS} loading={task.source.busy} onClick={() => setClaimTarget(task)}>
                                 Nhận việc
                               </Button>
                             ) : mine ? (
                               <Link
-                                className="inline-flex items-center justify-center rounded-xl bg-[#006B2C] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#005523] shadow-sm transition-colors whitespace-nowrap"
+                                className={QUEUE_PRIMARY_LINK_CLASS}
                                 to={link}
                               >
                                 Mở
@@ -268,7 +275,7 @@ export default function WarehouseHomePage() {
                                 size="sm"
                                 disabled
                                 variant="outline"
-                                className="opacity-50 cursor-not-allowed whitespace-nowrap"
+                                className={`${QUEUE_ACTION_BTN_CLASS} opacity-50 cursor-not-allowed`}
                               >
                                 Đã có người nhận
                               </Button>

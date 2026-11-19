@@ -133,7 +133,7 @@ export default function ReturnProcessingPage() {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => model.setViewMode('QUEUE')}
+                  onClick={model.handleBackToQueue}
                   className="w-8 h-8 flex items-center justify-center rounded-xl border border-neutral text-sm text-text hover:bg-background transition-colors"
                   title="Quay lại hàng đợi"
                 >
@@ -175,7 +175,7 @@ export default function ReturnProcessingPage() {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => model.setViewMode('QUEUE')}
+                  onClick={model.handleBackToQueue}
                   className="w-8 h-8 flex items-center justify-center rounded-xl border border-neutral text-sm text-text hover:bg-background transition-colors"
                   title="Quay lại hàng đợi"
                 >

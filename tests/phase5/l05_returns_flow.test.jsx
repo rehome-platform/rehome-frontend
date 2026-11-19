@@ -372,8 +372,8 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     });
     window.alert.mockClear();
 
-    // Click "Đăng bán lại (Relist)" should only select, not auto-submit
-    fireEvent.click(screen.getByText(/Đăng bán lại \(Relist\)/i));
+    // Click "Đăng bán lại (Đăng bán liền)" should only select, not auto-submit
+    fireEvent.click(screen.getByText(/Đăng bán lại \(Đăng bán liền\)/i));
     expect(window.alert).not.toHaveBeenCalled();
 
     // Confirm explicitly
@@ -932,22 +932,188 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Để sau/i }));
     fireEvent.click(screen.getByTitle('Quay lại hàng đợi'));
 
-    // Switch to RESOLVED tab: RET-2STEP-01 shows "Chọn xử lý món"; degraded RET-DEG-VALID does NOT
-    fireEvent.click(await screen.findByText(/Đã xong tuần này · 2/i));
-    expect(await screen.findByText(/Đã hoàn tiền · Chờ xử lý món/i)).toBeInTheDocument();
+    // Switch to Chờ xử lý món tab: RET-2STEP-01 shows "Chọn xử lý món" (separated from RESOLVED / Đã xong tuần này)
+    fireEvent.click(await screen.findByText(/Chờ xử lý món · 1/i));
+    expect(await screen.findByText(/Đã hoàn tiền/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Chờ chọn phương án xử lý/i)).toBeInTheDocument();
     const chooseActionBtns = screen.getAllByRole('button', { name: /Chọn xử lý món/i });
     expect(chooseActionBtns).toHaveLength(1);
-    expect(screen.getByRole('button', { name: /Biên bản xuống cấp/i })).toBeInTheDocument();
 
-    // Resume Step 2 from queue -> POST /return-requests/:id/item-action with exact { action: 'RELIST' }
-    fireEvent.click(chooseActionBtns[0]);
+    // Degraded RET-DEG-VALID stays in RESOLVED ("Đã xong tuần này · 1") and does NOT show "Chọn xử lý món"
+    fireEvent.click(screen.getByText(/Đã xong tuần này · 1/i));
+    expect(await screen.findByRole('button', { name: /Biên bản xuống cấp/i })).toBeInTheDocument();
+
+    // Switch back to Chờ xử lý món and resume Step 2 -> POST /return-requests/:id/item-action with exact { action: 'RELIST' }
+    fireEvent.click(screen.getByText(/Chờ xử lý món · 1/i));
+    fireEvent.click(screen.getAllByRole('button', { name: /Chọn xử lý món/i })[0]);
     await screen.findByText(/Chọn phương án xử lý món hàng/i);
-    fireEvent.click(screen.getByText(/Đăng bán lại \(Relist\)/i));
+    expect(screen.queryByText(/Hoàn trả cho người ký gửi/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Đăng bán lại \(Đăng bán liền\)/i));
     fireEvent.click(screen.getByRole('button', { name: 'Xác nhận xử lý' }));
 
     await waitFor(() => {
       expect(itemActionPayload).toEqual({ action: 'RELIST' });
     });
     expect(resolveCalls).toBe(1);
+  });
+
+  it('persists refunded items awaiting disposition across screen exit/reload when backend filters default queue to OPEN_STATUSES and blocks duplicate submissions', async () => {
+    window.alert = vi.fn();
+    let resolveCalls = 0;
+    let itemActionCalls = 0;
+    let db = [
+      {
+        id: 'RET-PERSIST-01',
+        code: 'YC-PERSIST',
+        orderId: 'ORD-PERSIST-01',
+        sku: 'RH-PERSIST-01',
+        status: 'INSPECTING',
+        itemAction: null,
+        degraded: false,
+        buyerName: 'Nguyễn Thanh P',
+        productName: 'Áo sơ mi trắng',
+        amount: 420000,
+        refundAmount: 420000,
+      },
+    ];
+
+    const OPEN_STATUSES = ['PENDING', 'APPROVED', 'SHIPPED_BACK', 'INSPECTING'];
+
+    server.use(
+      http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.RETURNS}`, async ({ request }) => {
+        const url = new URL(request.url);
+        const statusParam = url.searchParams.get('status');
+        const rows = statusParam
+          ? db.filter((r) => r.status === statusParam)
+          : db.filter((r) => OPEN_STATUSES.includes(r.status));
+        return HttpResponse.json({
+          result: {
+            content: rows,
+            totalElements: rows.length,
+            page: 0,
+            totalPages: 1,
+          },
+          isSuccess: true,
+          statusCode: 200,
+        });
+      }),
+      http.get(`${API_BASE_URL}/return-requests/RET-PERSIST-01/detail`, async () => {
+        return HttpResponse.json({ result: db[0], isSuccess: true, statusCode: 200 });
+      }),
+      http.post(`${API_BASE_URL}/return-requests/RET-PERSIST-01/resolve`, async () => {
+        resolveCalls += 1;
+        db = db.map((r) =>
+          r.id === 'RET-PERSIST-01'
+            ? { ...r, status: 'VALID', itemAction: null, resolvedAt: new Date().toISOString() }
+            : r
+        );
+        return HttpResponse.json({ result: db[0], isSuccess: true, statusCode: 200 });
+      }),
+      http.post(`${API_BASE_URL}/return-requests/RET-PERSIST-01/item-action`, async ({ request }) => {
+        itemActionCalls += 1;
+        const body = await request.json();
+        await new Promise((r) => setTimeout(r, 40));
+        db = db.map((r) =>
+          r.id === 'RET-PERSIST-01' ? { ...r, status: 'VALID', itemAction: body.action } : r
+        );
+        return HttpResponse.json({ result: db[0], isSuccess: true, statusCode: 200 });
+      })
+    );
+
+    const view = render(
+      <MemoryRouter initialEntries={['/moderator/returns']}>
+        <Routes>
+          <Route path="/moderator/returns" element={<ReturnProcessingPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // Complete Step 1 refund without picking disposition
+    fireEvent.click(await screen.findByText(/Hàng đã về, chờ kiểm · 1/i));
+    fireEvent.click(await screen.findByRole('button', { name: /Kiểm tra hàng/i }));
+    const fileInput = await screen.findByLabelText(/Tải ảnh bằng chứng kiểm hàng/i);
+    fireEvent.change(fileInput, {
+      target: {
+        files: [
+          new File(['a'], 'ev1.jpg', { type: 'image/jpeg' }),
+          new File(['b'], 'ev2.jpg', { type: 'image/jpeg' }),
+        ],
+      },
+    });
+    await screen.findByText(/2 \/ 5 ảnh đã tải lên/i);
+    fireEvent.click(screen.getByLabelText(/Hợp lệ — hoàn tiền cho người mua/i));
+    fireEvent.click(screen.getByText(/Lưu kết luận/i));
+    await screen.findByText(/Chọn phương án xử lý món hàng/i);
+    fireEvent.click(screen.getByRole('button', { name: /Để sau/i }));
+
+    // Simulate Moderator leaving screen and returning (full unmount + remount)
+    view.unmount();
+    render(
+      <MemoryRouter initialEntries={['/moderator/returns']}>
+        <Routes>
+          <Route path="/moderator/returns" element={<ReturnProcessingPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // Must persist in "Chờ xử lý món · 1" and NOT be in "Đã xong tuần này" or "Lịch sử"
+    const pendingTab = await screen.findByText(/Chờ xử lý món · 1/i);
+    expect(screen.getByText(/Đã xong tuần này · 0/i)).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Lịch sử \(0\)/i })).toBeInTheDocument();
+
+    fireEvent.click(pendingTab);
+    expect(await screen.findByText('Nguyễn Thanh P')).toBeInTheDocument();
+    expect(screen.getByText(/Chờ chọn phương án xử lý/i)).toBeInTheDocument();
+
+    // Open disposition modal & double-click confirm rapidly -> only 1 item-action call, 0 extra resolve calls
+    fireEvent.click(screen.getByRole('button', { name: /Chọn xử lý món/i }));
+    await screen.findByText(/Chọn phương án xử lý món hàng/i);
+    expect(screen.queryByText(/Hoàn trả cho người ký gửi/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Đăng bán lại \(Đăng bán liền\)/i));
+
+    const confirmBtn = screen.getByRole('button', { name: 'Xác nhận xử lý' });
+    fireEvent.click(confirmBtn);
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(itemActionCalls).toBe(1);
+    });
+    expect(resolveCalls).toBe(1);
+    await screen.findByText(/Chờ xử lý món · 0/i);
+    expect(screen.getByText(/Đã xong tuần này · 1/i)).toBeInTheDocument();
+  });
+
+  it('returnService.listPendingDispositions paginates through totalPages to find VALID returns without itemAction', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.RETURNS}`, async ({ request }) => {
+        const url = new URL(request.url);
+        const page = Number(url.searchParams.get('page') || 0);
+        if (page === 0) {
+          return HttpResponse.json({
+            result: {
+              content: [{ id: 'RET-P0', status: 'VALID', itemAction: 'RELIST', degraded: false, sku: 'SKU-0' }],
+              totalElements: 2,
+              page: 0,
+              totalPages: 2,
+            },
+            isSuccess: true,
+            statusCode: 200,
+          });
+        }
+        return HttpResponse.json({
+          result: {
+            content: [{ id: 'RET-P1', status: 'VALID', itemAction: null, degraded: false, sku: 'SKU-1' }],
+            totalElements: 2,
+            page: 1,
+            totalPages: 2,
+          },
+          isSuccess: true,
+          statusCode: 200,
+        });
+      })
+    );
+
+    const pending = await returnService.listPendingDispositions();
+    expect(pending.map((r) => r.id)).toEqual(['RET-P1']);
   });
 });

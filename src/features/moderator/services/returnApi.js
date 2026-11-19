@@ -121,6 +121,8 @@ export function mapReturnItem(raw) {
       ) :
       status === 'RETURNING' ? 'Đang chuyển về kho qua GHN' :
       status === 'RECEIVED_INSPECT' ? 'Hàng đã về kho · Chờ kiểm tra' :
+      raw.status === 'VALID' && !raw.itemAction && !raw.outcome && !raw.degraded
+        ? 'Đã hoàn tiền · Chờ chọn phương án xử lý' :
       raw.status === 'INVALID' ? (
         raw.pickupDeadline
           ? `Hàng không hợp lệ · Hạn nhận lại: ${formatDeadlineWithCountdown(raw.pickupDeadline)}`
@@ -197,6 +199,83 @@ export const returnService = {
       };
     }
     throw new Error('Invalid response structure from return queue');
+  },
+
+  /**
+   * Tải toàn bộ các trang của hàng đợi theo một trạng thái (hoặc hàng đợi mở mặc định khi bỏ trống status)
+   */
+  listAllByStatus: async (status, options = {}) => {
+    const collected = [];
+    let page = 0;
+    let totalPages = 1;
+    const maxPages = 10;
+
+    while (page < Math.min(totalPages, maxPages)) {
+      if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+      const res = await returnService.list(
+        { ...(status ? { status } : {}), page, size: 100 },
+        options
+      );
+      const rows = Array.isArray(res?.data) ? res.data : [];
+      collected.push(...rows);
+      totalPages = Number(res?.totalPages) || 1;
+      if (rows.length === 0 || page + 1 >= totalPages) break;
+      page += 1;
+    }
+    return collected;
+  },
+
+  /**
+   * Danh sách yêu cầu đã hoàn tiền (VALID) nhưng chưa chọn phương án xử lý món (itemAction == null, !degraded)
+   */
+  listPendingDispositions: async (options = {}) => {
+    const validRows = await returnService.listAllByStatus('VALID', options);
+    return validRows.filter(needsItemAction);
+  },
+
+  /**
+   * Tìm yêu cầu trả hàng đang chờ chọn phương án xử lý theo SKU sản phẩm
+   */
+  findPendingDispositionBySku: async (sku, options = {}) => {
+    const targetSku = String(sku || '').trim().toUpperCase();
+    if (!targetSku) return null;
+    const pending = await returnService.listPendingDispositions(options);
+    return (
+      pending.find(
+        (item) => String(item?.sku || item?.productId || '').trim().toUpperCase() === targetSku
+      ) || null
+    );
+  },
+
+  /**
+   * Tải tổng hợp cho workspace Moderator: hàng đợi mở + các đơn VALID (bao gồm đơn chờ xử lý món) + lịch sử
+   */
+  listForWorkspace: async (options = {}) => {
+    if (isFixtureMode) {
+      return returnService.list({}, options);
+    }
+
+    const [openRows, validRows] = await Promise.all([
+      returnService.listAllByStatus(undefined, options),
+      returnService.listAllByStatus('VALID', options).catch(() => []),
+    ]);
+
+    const historySettled = await Promise.allSettled(
+      ['INVALID', 'LOST', 'CANCELLED'].map((st) => returnService.listAllByStatus(st, options))
+    );
+    const historyRows = historySettled.flatMap((entry) =>
+      entry.status === 'fulfilled' && Array.isArray(entry.value) ? entry.value : []
+    );
+
+    const mergedMap = new Map();
+    for (const item of [...openRows, ...validRows, ...historyRows]) {
+      if (!item?.id) continue;
+      const key = String(item.id);
+      const existing = mergedMap.get(key);
+      mergedMap.set(key, existing ? { ...existing, ...item } : item);
+    }
+    const merged = Array.from(mergedMap.values());
+    return { data: merged, total: merged.length, page: 0, totalPages: 1 };
   },
 
   /**
