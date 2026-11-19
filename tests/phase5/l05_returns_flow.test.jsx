@@ -568,4 +568,386 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     expect(screen.getByText(/430\.000/)).toBeInTheDocument();
     expect(screen.queryByText(/530\.000/)).not.toBeInTheDocument();
   });
+
+  it('uses packingPhotoUrls to compare against buyer return photos in review, compare modal, and inspection screens, with stock-in fallback for legacy orders', async () => {
+    const packingUrl = 'https://storage.rehome.test/order-packing/pack-1.jpg';
+    const buyerUrl = 'https://storage.rehome.test/return-buyer/buyer-1.jpg';
+    const stockUrl = 'https://storage.rehome.test/products/stock-1.jpg';
+
+    server.use(
+      http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.RETURNS}`, async () => {
+        return HttpResponse.json({
+          result: {
+            content: [
+              {
+                id: 'RET-PACK-01',
+                code: 'YC-PACK01',
+                orderId: 'ORD-PACK-01',
+                status: 'PENDING',
+                buyerName: 'Lê Hoàng P',
+                productName: 'Áo khoác kaki',
+                photoUrls: [buyerUrl],
+                packingPhotoUrls: [packingUrl],
+                initialConsignmentPhotoUrls: [stockUrl],
+              },
+              {
+                id: 'RET-LEGACY-01',
+                code: 'YC-LEG01',
+                orderId: 'ORD-LEG-01',
+                status: 'INSPECTING',
+                buyerName: 'Trần Thị L',
+                productName: 'Váy đơn cũ',
+                photoUrls: [buyerUrl],
+                packingPhotoUrls: [],
+                initialConsignmentPhotoUrls: [stockUrl],
+              },
+            ],
+            totalElements: 2,
+            page: 0,
+            size: 20,
+          },
+          isSuccess: true,
+          statusCode: 200,
+        });
+      }),
+      http.get(`${API_BASE_URL}/return-requests/RET-PACK-01/detail`, async () => {
+        return HttpResponse.json({
+          result: {
+            id: 'RET-PACK-01',
+            code: 'YC-PACK01',
+            orderId: 'ORD-PACK-01',
+            status: 'PENDING',
+            buyerName: 'Lê Hoàng P',
+            productName: 'Áo khoác kaki',
+            photoUrls: [buyerUrl],
+            packingPhotoUrls: [packingUrl],
+            initialConsignmentPhotoUrls: [stockUrl],
+          },
+          isSuccess: true,
+          statusCode: 200,
+        });
+      }),
+      http.get(`${API_BASE_URL}/return-requests/RET-LEGACY-01/detail`, async () => {
+        return HttpResponse.json({
+          result: {
+            id: 'RET-LEGACY-01',
+            code: 'YC-LEG01',
+            orderId: 'ORD-LEG-01',
+            status: 'INSPECTING',
+            buyerName: 'Trần Thị L',
+            productName: 'Váy đơn cũ',
+            photoUrls: [buyerUrl],
+            packingPhotoUrls: [],
+            initialConsignmentPhotoUrls: [stockUrl],
+          },
+          isSuccess: true,
+          statusCode: 200,
+        });
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/moderator/returns']}>
+        <Routes>
+          <Route path="/moderator/returns" element={<ReturnProcessingPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // 1. Màn hình duyệt (TH-02) hiển thị ảnh đóng gói đối chiếu với ảnh người mua trả về
+    const reviewBtn = await screen.findByRole('button', { name: /Duyệt yêu cầu/i });
+    fireEvent.click(reviewBtn);
+
+    expect(await screen.findByText(/So với ảnh đóng gói lúc xuất kho/i)).toBeInTheDocument();
+    const packingThumb = screen.getByAltText('Ảnh đóng gói 1');
+    expect(packingThumb).toHaveAttribute('src', packingUrl);
+
+    // Mở modal so sánh cạnh nhau
+    fireEvent.click(screen.getByRole('button', { name: /Mở so sánh/i }));
+    expect(await screen.findByText(/So sánh ảnh đóng gói vs ảnh người mua trả về/i)).toBeInTheDocument();
+    const modalPackingImgs = screen.getAllByAltText('Ảnh đóng gói 1');
+    expect(modalPackingImgs.some((img) => img.getAttribute('src') === packingUrl)).toBe(true);
+    const modalBuyerImgs = screen.getAllByAltText('Ảnh người mua 1');
+    expect(modalBuyerImgs.some((img) => img.getAttribute('src') === buyerUrl)).toBe(true);
+
+    // Đóng modal và quay lại hàng đợi
+    fireEvent.click(screen.getAllByRole('button', { name: /^Đóng$/i })[0]);
+    fireEvent.click(screen.getByTitle('Quay lại hàng đợi'));
+
+    // 2. Đơn cũ không có packingPhotoUrls ở màn kiểm hàng (TH-03) vẫn fallback sang ảnh nhập kho
+    fireEvent.click(await screen.findByText(/Hàng đã về, chờ kiểm ·/i));
+    fireEvent.click(await screen.findByRole('button', { name: /Kiểm tra hàng/i }));
+
+    expect(await screen.findByText(/Chưa có ảnh đóng gói/i)).toBeInTheDocument();
+    expect(screen.getByAltText('Ảnh nhập kho 1')).toHaveAttribute('src', stockUrl);
+  });
+
+  it('BUG-E2E-010: handles GHN sandbox fallback on approve with LOCAL-RT code, handoverDeadline, and fallback badge', async () => {
+    window.alert = vi.fn();
+    const handoverFuture = new Date(Date.now() + 2 * 24 * 3600000).toISOString();
+    let approvedState = false;
+
+    server.use(
+      http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.RETURNS}`, async () => {
+        return HttpResponse.json({
+          result: {
+            content: [
+              {
+                id: 'RET-FB-01',
+                code: 'YC-FB01',
+                orderId: 'ORD-FB-01',
+                status: approvedState ? 'APPROVED' : 'PENDING',
+                buyerName: 'Nguyễn Văn F',
+                productName: 'Áo sơ mi linen',
+                ghnReturnTrackingCode: approvedState ? 'LOCAL-RT-12345678' : null,
+                ghnFallbackUsed: approvedState,
+                handoverDeadline: approvedState ? handoverFuture : null,
+              },
+            ],
+            totalElements: 1,
+            page: 0,
+            size: 20,
+          },
+          isSuccess: true,
+          statusCode: 200,
+        });
+      }),
+      http.get(`${API_BASE_URL}/return-requests/RET-FB-01/detail`, async () => {
+        return HttpResponse.json({
+          result: {
+            id: 'RET-FB-01',
+            code: 'YC-FB01',
+            orderId: 'ORD-FB-01',
+            status: approvedState ? 'APPROVED' : 'PENDING',
+            buyerName: 'Nguyễn Văn F',
+            productName: 'Áo sơ mi linen',
+            ghnReturnTrackingCode: approvedState ? 'LOCAL-RT-12345678' : null,
+            ghnFallbackUsed: approvedState,
+            handoverDeadline: approvedState ? handoverFuture : null,
+          },
+          isSuccess: true,
+          statusCode: 200,
+        });
+      }),
+      http.post(`${API_BASE_URL}/return-requests/RET-FB-01/approve`, async () => {
+        approvedState = true;
+        return HttpResponse.json({
+          result: {
+            id: 'RET-FB-01',
+            status: 'APPROVED',
+            ghnReturnTrackingCode: 'LOCAL-RT-12345678',
+            ghnFallbackUsed: true,
+            handoverDeadline: handoverFuture,
+          },
+          isSuccess: true,
+          statusCode: 200,
+        });
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/moderator/returns']}>
+        <Routes>
+          <Route path="/moderator/returns" element={<ReturnProcessingPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    const reviewBtn = await screen.findByRole('button', { name: /Duyệt yêu cầu/i });
+    fireEvent.click(reviewBtn);
+
+    const approveBtn = await screen.findByRole('button', { name: /Duyệt & tạo vận đơn trả/i });
+    fireEvent.click(approveBtn);
+
+    await waitFor(() => {
+      expect(window.alert).toHaveBeenCalledWith(expect.stringContaining('LOCAL-RT-12345678'));
+    });
+
+    // Switch to WAITING_BUYER_DISPATCH tab and verify fallback badge in row & detail view
+    fireEvent.click(await screen.findByText(/Chờ người mua gửi · 1/i));
+    expect(await screen.findByText(/GHN fallback/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Theo dõi/i }));
+    expect(await screen.findByText('LOCAL-RT-12345678')).toBeInTheDocument();
+    expect(screen.getByText(/Mã thu hồi nội bộ \(GHN fallback\)/i)).toBeInTheDocument();
+  });
+
+  it('BUG-E2E-010: surfaces error and stays in review view when approve returns 502 (fallback disabled)', async () => {
+    window.alert = vi.fn();
+
+    server.use(
+      http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.RETURNS}`, async () => {
+        return HttpResponse.json({
+          result: {
+            content: [
+              {
+                id: 'RET-502-01',
+                code: 'YC-502',
+                orderId: 'ORD-502-01',
+                status: 'PENDING',
+                buyerName: 'Trần Thị E',
+                productName: 'Túi đeo chéo',
+              },
+            ],
+            totalElements: 1,
+            page: 0,
+            size: 20,
+          },
+          isSuccess: true,
+          statusCode: 200,
+        });
+      }),
+      http.get(`${API_BASE_URL}/return-requests/RET-502-01/detail`, async () => {
+        return HttpResponse.json({
+          result: {
+            id: 'RET-502-01',
+            code: 'YC-502',
+            orderId: 'ORD-502-01',
+            status: 'PENDING',
+            buyerName: 'Trần Thị E',
+            productName: 'Túi đeo chéo',
+          },
+          isSuccess: true,
+          statusCode: 200,
+        });
+      }),
+      http.post(`${API_BASE_URL}/return-requests/RET-502-01/approve`, async () => {
+        return HttpResponse.json(
+          { isSuccess: false, statusCode: 502, message: 'GHN_ERROR: cannot create return shipment.' },
+          { status: 502 }
+        );
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/moderator/returns']}>
+        <Routes>
+          <Route path="/moderator/returns" element={<ReturnProcessingPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Duyệt yêu cầu/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Duyệt & tạo vận đơn trả/i }));
+
+    await waitFor(() => {
+      expect(window.alert).toHaveBeenCalledWith(expect.stringMatching(/Có lỗi xảy ra khi duyệt yêu cầu/i));
+    });
+    expect(screen.getByRole('button', { name: /Duyệt & tạo vận đơn trả/i })).toBeInTheDocument();
+  });
+
+  it('API 88 + item-action 2-step flow: refunds without action, allows deferring with Để sau, and resumes Step 2 with exact { action } payload', async () => {
+    window.alert = vi.fn();
+    let resolvePayload = null;
+    let resolveCalls = 0;
+    let itemActionPayload = null;
+    let state = {
+      id: 'RET-2STEP-01',
+      code: 'YC-2STEP',
+      orderId: 'ORD-2STEP-01',
+      status: 'INSPECTING',
+      itemAction: null,
+      degraded: false,
+      buyerName: 'Lê Minh T',
+      productName: 'Áo blazer xám',
+      amount: 600000,
+      refundAmount: 600000,
+    };
+
+    server.use(
+      http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.RETURNS}`, async () => {
+        return HttpResponse.json({
+          result: {
+            content: [
+              state,
+              {
+                id: 'RET-DEG-VALID',
+                code: 'YC-DEG',
+                orderId: 'ORD-DEG-01',
+                status: 'VALID',
+                itemAction: null,
+                degraded: true,
+                buyerName: 'Phạm Thị D',
+                productName: 'Túi da xuống cấp',
+              },
+            ],
+            totalElements: 2,
+            page: 0,
+            size: 20,
+          },
+          isSuccess: true,
+          statusCode: 200,
+        });
+      }),
+      http.get(`${API_BASE_URL}/return-requests/RET-2STEP-01/detail`, async () => {
+        return HttpResponse.json({ result: state, isSuccess: true, statusCode: 200 });
+      }),
+      http.post(`${API_BASE_URL}/return-requests/RET-2STEP-01/resolve`, async ({ request }) => {
+        resolveCalls += 1;
+        resolvePayload = await request.json();
+        state = { ...state, status: 'VALID', itemAction: null };
+        return HttpResponse.json({ result: state, isSuccess: true, statusCode: 200 });
+      }),
+      http.post(`${API_BASE_URL}/return-requests/RET-2STEP-01/item-action`, async ({ request }) => {
+        itemActionPayload = await request.json();
+        state = { ...state, status: 'VALID', itemAction: itemActionPayload.action };
+        return HttpResponse.json({ result: state, isSuccess: true, statusCode: 200 });
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/moderator/returns']}>
+        <Routes>
+          <Route path="/moderator/returns" element={<ReturnProcessingPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // Go to RECEIVED_INSPECT and inspect RET-2STEP-01
+    fireEvent.click(await screen.findByText(/Hàng đã về, chờ kiểm · 1/i));
+    fireEvent.click(await screen.findByRole('button', { name: /Kiểm tra hàng/i }));
+
+    const fileInput = await screen.findByLabelText(/Tải ảnh bằng chứng kiểm hàng/i);
+    fireEvent.change(fileInput, {
+      target: {
+        files: [
+          new File(['a'], 'ev1.jpg', { type: 'image/jpeg' }),
+          new File(['b'], 'ev2.jpg', { type: 'image/jpeg' }),
+        ],
+      },
+    });
+    await screen.findByText(/2 \/ 5 ảnh đã tải lên/i);
+
+    fireEvent.click(screen.getByLabelText(/Hợp lệ — hoàn tiền cho người mua/i));
+    fireEvent.click(screen.getByText(/Lưu kết luận/i));
+
+    // Step 1: resolve called with resolution = VALID and NO action; modal shows Bước 2 / 2
+    await screen.findByText(/Chọn phương án xử lý món hàng \(TH-04\)/i);
+    expect(resolveCalls).toBe(1);
+    expect(resolvePayload.resolution).toBe('VALID');
+    expect(resolvePayload.action).toBeUndefined();
+    expect(screen.getByText(/Bước 2 \/ 2/i)).toBeInTheDocument();
+
+    // Defer Step 2 with "Để sau" and return to queue
+    fireEvent.click(screen.getByRole('button', { name: /Để sau/i }));
+    fireEvent.click(screen.getByTitle('Quay lại hàng đợi'));
+
+    // Switch to RESOLVED tab: RET-2STEP-01 shows "Chọn xử lý món"; degraded RET-DEG-VALID does NOT
+    fireEvent.click(await screen.findByText(/Đã xong tuần này · 2/i));
+    expect(await screen.findByText(/Đã hoàn tiền · Chờ xử lý món/i)).toBeInTheDocument();
+    const chooseActionBtns = screen.getAllByRole('button', { name: /Chọn xử lý món/i });
+    expect(chooseActionBtns).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /TH-07/i })).toBeInTheDocument();
+
+    // Resume Step 2 from queue -> POST /return-requests/:id/item-action with exact { action: 'RELIST' }
+    fireEvent.click(chooseActionBtns[0]);
+    await screen.findByText(/Chọn phương án xử lý món hàng \(TH-04\)/i);
+    fireEvent.click(screen.getByText(/Đăng bán lại \(Relist\)/i));
+    fireEvent.click(screen.getByRole('button', { name: 'Xác nhận xử lý' }));
+
+    await waitFor(() => {
+      expect(itemActionPayload).toEqual({ action: 'RELIST' });
+    });
+    expect(resolveCalls).toBe(1);
+  });
 });

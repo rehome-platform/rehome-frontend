@@ -1,6 +1,7 @@
 import DegradedCaseDetails from '../DegradedCaseDetails.jsx';
 import { DEGRADED_DECISION_POLICY } from '../../models/degradedCaseModel.js';
 import { ReturnQueueRow } from './ReturnQueueRow.jsx';
+import { needsItemAction } from '../../services/returnApi.js';
 import React from "react";
 import { Button, Modal } from "../../../../components/common/index.js";
 import { formatCurrencyVND } from "../../../../utils/formatters.js";
@@ -10,36 +11,46 @@ import { useToast } from "../../../../context/ToastContext.jsx";
 
 export function ReturnCompareDialog({ isCompareModalOpen, setIsCompareModalOpen, selectedItem }) {
   if (!selectedItem) return null;
+  const packingPhotos = selectedItem.packingPhotoUrls || [];
   const stockPhotos = selectedItem.stockInPhotos || [];
   const buyerPhotos = selectedItem.buyerPhotos || [];
+  const hasPackingPhotos = packingPhotos.length > 0;
+  const referencePhotos = hasPackingPhotos ? packingPhotos : stockPhotos;
 
   return (
     <Modal
       isOpen={isCompareModalOpen}
       onClose={() => setIsCompareModalOpen(false)}
-      title="So sánh ảnh nhập kho vs ảnh người mua gửi"
+      title="So sánh ảnh đóng gói vs ảnh người mua trả về"
     >
       <div className="space-y-4 font-sans text-xs">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <div className="font-bold text-text mb-2">Ảnh lưu trữ khi nhập kho</div>
-            {stockPhotos.length > 0 ? (
+            <div className="font-bold text-text mb-2">
+              {hasPackingPhotos ? 'Ảnh đóng gói lúc xuất kho' : 'Ảnh nhập kho ban đầu (chưa có ảnh đóng gói)'}
+            </div>
+            {!hasPackingPhotos && (
+              <p className="text-[11px] text-textSecondary mb-2">
+                Đơn hàng chưa có ảnh đóng gói — đang đối chiếu bằng ảnh nhập kho ban đầu.
+              </p>
+            )}
+            {referencePhotos.length > 0 ? (
               <div className="flex flex-wrap gap-2">
-                {stockPhotos.map((src, i) => (
+                {referencePhotos.map((src, i) => (
                   <img
                     key={i}
                     src={src}
-                    alt={`Ảnh nhập kho ${i + 1}`}
+                    alt={hasPackingPhotos ? `Ảnh đóng gói ${i + 1}` : `Ảnh nhập kho ${i + 1}`}
                     className="w-full h-64 object-contain rounded-xl border border-neutral bg-background"
                   />
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-[#717971]">Chưa có ảnh nhập kho</p>
+              <p className="text-xs text-[#717971]">Chưa có ảnh đóng gói hoặc ảnh nhập kho</p>
             )}
           </div>
           <div>
-            <div className="font-bold text-text mb-2">Ảnh người mua chụp gửi</div>
+            <div className="font-bold text-text mb-2">Ảnh người mua trả về</div>
             {buyerPhotos.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {buyerPhotos.map((src, i) => (
@@ -56,6 +67,23 @@ export function ReturnCompareDialog({ isCompareModalOpen, setIsCompareModalOpen,
             )}
           </div>
         </div>
+        {hasPackingPhotos && stockPhotos.length > 0 && (
+          <div className="pt-3 border-t border-neutral space-y-2">
+            <div className="text-[10px] uppercase font-bold text-textSecondary tracking-wider">
+              Tham khảo thêm · Ảnh nhập kho ban đầu
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {stockPhotos.map((src, i) => (
+                <img
+                  key={i}
+                  src={src}
+                  alt={`Ảnh nhập kho ${i + 1}`}
+                  className="w-20 h-20 object-cover rounded-xl border border-neutral bg-background"
+                />
+              ))}
+            </div>
+          </div>
+        )}
         <div className="text-right">
           <Button size="sm" variant="outline" className="rounded-xl border-neutral" onClick={() => setIsCompareModalOpen(false)}>
             Đóng
@@ -137,7 +165,7 @@ export function ReturnOutcomeDialog({
           <div className="lg:col-span-7 space-y-3">
             <div className="font-bold text-sm text-[#191C19] flex items-center justify-between">
               <span>Món hàng này xử lý thế nào</span>
-              <span className="text-[11px] font-semibold text-textSecondary">Bước 1 / 2</span>
+              <span className="text-[11px] font-semibold text-textSecondary">Bước 2 / 2</span>
             </div>
 
             {/* Option 1: RELIST */}
@@ -431,11 +459,13 @@ export function DegradedCaseModal({
       ? Number(fullCompensation) * Number(selectedItem.degradedCompensationRate) : null);
   const showAmount = value => value == null ? 'Backend sẽ xác định khi mở ca' : formatCurrencyVND(value);
 
-  const stockPhotos = selectedItem.stockInPhotos?.length
-    ? selectedItem.stockInPhotos
-    : (selectedItem.initialConsignmentPhotoUrls?.length
-      ? selectedItem.initialConsignmentPhotoUrls
-      : (selectedItem.productPhotos || []));
+  const stockPhotos = selectedItem.packingPhotoUrls?.length
+    ? selectedItem.packingPhotoUrls
+    : (selectedItem.stockInPhotos?.length
+      ? selectedItem.stockInPhotos
+      : (selectedItem.initialConsignmentPhotoUrls?.length
+        ? selectedItem.initialConsignmentPhotoUrls
+        : (selectedItem.productPhotos || [])));
 
   const allDamagedPhotos = evidenceImageUrls;
   const removePhoto = idx => removeEvidence?.(idx);
@@ -956,6 +986,7 @@ export function ReturnInspectionProduct({
   selectedItem,
   checklist,
   setChecklist,
+  setIsCompareModalOpen,
   evidenceImageUrls = [],
   evidenceUploading = false,
   evidenceError = '',
@@ -963,44 +994,74 @@ export function ReturnInspectionProduct({
   retryEvidence,
   removeEvidence,
 }) {
+  const packingPhotos = selectedItem?.packingPhotoUrls || [];
   const stockPhotos = selectedItem?.stockInPhotos || [];
   const buyerPhotos = selectedItem?.buyerPhotos || [];
+  const hasPackingPhotos = packingPhotos.length > 0;
+  const referencePhotos = hasPackingPhotos ? packingPhotos : stockPhotos;
 
   return (
     <div className="lg:col-span-6 space-y-4 border-r border-neutral pr-0 lg:pr-6 font-sans">
-      <div>
-        <h2 className="text-base font-bold text-text">
-          Đối chiếu hàng về với ảnh nhập kho
-        </h2>
-        <p className="text-xs text-textSecondary">
-          Mốc chuẩn là ảnh kho tự chụp ngày {selectedItem?.stockInDate || 'trước đó'}, không phải ảnh người mua gửi.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h2 className="text-base font-bold text-text">
+            {hasPackingPhotos
+              ? 'Đối chiếu hàng về với ảnh đóng gói lúc xuất kho'
+              : 'Đối chiếu hàng về với ảnh nhập kho'}
+          </h2>
+          <p className="text-xs text-textSecondary">
+            {hasPackingPhotos
+              ? 'Mốc chuẩn là ảnh đóng gói lúc xuất kho, đối chiếu trực tiếp với ảnh người mua trả về.'
+              : 'Chưa có ảnh đóng gói cho đơn này — đối chiếu bằng ảnh nhập kho ban đầu.'}
+          </p>
+        </div>
+        {setIsCompareModalOpen && (
+          <button
+            type="button"
+            onClick={() => setIsCompareModalOpen(true)}
+            className="text-xs font-semibold px-3 py-1.5 border border-accent text-accent rounded-xl hover:bg-background transition-colors shrink-0 cursor-pointer"
+          >
+            So sánh lớn
+          </button>
+        )}
       </div>
-    
+
       {/* So sánh ảnh */}
       <div className="grid grid-cols-2 gap-3">
         <div>
           <div className="text-[10px] uppercase font-bold text-textSecondary mb-1.5">
-            Ảnh nhập kho · {selectedItem?.stockInDate || 'Kho'}
+            {hasPackingPhotos
+              ? `Ảnh đóng gói lúc xuất kho · ${packingPhotos.length} ảnh`
+              : `Ảnh nhập kho (dự phòng) · ${selectedItem?.stockInDate || 'Kho'}`}
           </div>
-          {stockPhotos.length > 0 ? (
+          {referencePhotos.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {stockPhotos.map((src, i) => (
-                <img key={i} src={src} alt="Điểm kí gửi" className="w-20 h-24 object-cover rounded-xl border border-neutral bg-background" />
+              {referencePhotos.map((src, i) => (
+                <img
+                  key={i}
+                  src={src}
+                  alt={hasPackingPhotos ? `Ảnh đóng gói ${i + 1}` : `Ảnh nhập kho ${i + 1}`}
+                  className="w-20 h-24 object-cover rounded-xl border border-neutral bg-background"
+                />
               ))}
             </div>
           ) : (
-            <p className="text-xs text-[#717971]">Chưa có ảnh nhập kho</p>
+            <p className="text-xs text-[#717971]">Chưa có ảnh đóng gói / chưa có ảnh nhập kho</p>
           )}
         </div>
         <div>
           <div className="text-[10px] uppercase font-bold text-textSecondary mb-1.5">
-            Ảnh người mua gửi
+            Ảnh người mua trả về
           </div>
           {buyerPhotos.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {buyerPhotos.map((src, i) => (
-                <img key={i} src={src} alt="Khách" className="w-20 h-24 object-cover rounded-xl border border-neutral bg-background" />
+                <img
+                  key={i}
+                  src={src}
+                  alt={`Ảnh người mua ${i + 1}`}
+                  className="w-20 h-24 object-cover rounded-xl border border-neutral bg-background"
+                />
               ))}
             </div>
           ) : (
@@ -1008,6 +1069,24 @@ export function ReturnInspectionProduct({
           )}
         </div>
       </div>
+
+      {hasPackingPhotos && stockPhotos.length > 0 && (
+        <div className="rounded-xl border border-neutral bg-background/60 p-3 space-y-1.5">
+          <div className="text-[10px] uppercase font-bold text-textSecondary">
+            Tham khảo · Ảnh nhập kho ban đầu
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {stockPhotos.map((src, i) => (
+              <img
+                key={i}
+                src={src}
+                alt={`Ảnh nhập kho ${i + 1}`}
+                className="w-16 h-16 object-cover rounded-lg border border-neutral bg-white"
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {uploadEvidence && (
         <ReturnEvidence
@@ -1026,7 +1105,7 @@ export function ReturnInspectionProduct({
   );
 }
 
-export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybill, setIsRejectModalOpen }) {
+export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybill, setIsRejectModalOpen, handleOpenOutcomeModal }) {
   return (
     <div className="lg:col-span-5 space-y-4 font-sans">
       <div>
@@ -1093,6 +1172,19 @@ export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybi
         <div className="p-2.5 bg-background rounded-xl text-[10px] text-textSecondary">
           Địa chỉ do người mua nhập. Bấm duyệt là GHN nhận thông tin này và <strong className="font-semibold text-text">hai bên đều không sửa được nữa</strong> — đọc lại trước khi bấm.
         </div>
+        {selectedItem?.ghnReturnTrackingCode && (
+          <div className="pt-2 border-t border-neutral space-y-1.5 text-[11px]">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-textSecondary">Mã thu hồi:</span>
+              <span className="font-mono font-bold text-text">{selectedItem.ghnReturnTrackingCode}</span>
+            </div>
+            {selectedItem?.ghnFallbackUsed && (
+              <div className="p-2 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-[10px] font-semibold">
+                Mã thu hồi nội bộ (GHN fallback) — GHN Sandbox tạm lỗi khi tạo vận đơn, yêu cầu vẫn đã được duyệt.
+              </div>
+            )}
+          </div>
+        )}
         {(selectedItem?.returnDeadline || selectedItem?.handoverDeadline || selectedItem?.pickupDeadline) && (
           <div className="pt-2 border-t border-neutral space-y-1 text-[11px]">
             {selectedItem?.returnDeadline && (
@@ -1136,13 +1228,27 @@ export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybi
           </button>
         </div>
       )}
+      {needsItemAction(selectedItem) && handleOpenOutcomeModal && (
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={() => handleOpenOutcomeModal(selectedItem)}
+            className="w-full py-2.5 px-4 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-hover shadow-sm transition-colors"
+          >
+            Chọn phương án xử lý món hàng (TH-04)
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
 export function ReturnRequestDetails({ selectedItem, setIsCompareModalOpen }) {
   const buyerPhotos = selectedItem?.buyerPhotos || [];
+  const packingPhotos = selectedItem?.packingPhotoUrls || [];
   const stockPhotos = selectedItem?.stockInPhotos || [];
+  const hasPackingPhotos = packingPhotos.length > 0;
+  const referencePhotos = hasPackingPhotos ? packingPhotos : stockPhotos;
 
   return (
     <div className="lg:col-span-7 space-y-4 border-r border-neutral pr-0 lg:pr-6 font-sans">
@@ -1166,14 +1272,14 @@ export function ReturnRequestDetails({ selectedItem, setIsCompareModalOpen }) {
     
       <div className="space-y-2">
         <div className="text-[10px] uppercase font-bold text-textSecondary tracking-wider">
-          Ảnh người mua gửi · {buyerPhotos.length} ảnh
+          Ảnh người mua trả về · {buyerPhotos.length} ảnh
         </div>
         <div className="flex gap-3 overflow-x-auto pb-2">
           {buyerPhotos.map((src, i) => (
             <img
               key={i}
               src={src}
-              alt="Ảnh người mua"
+              alt={`Ảnh người mua ${i + 1}`}
               className="w-36 h-36 object-cover rounded-xl border border-neutral"
             />
           ))}
@@ -1182,34 +1288,42 @@ export function ReturnRequestDetails({ selectedItem, setIsCompareModalOpen }) {
     
       <div className="border border-neutral rounded-2xl p-4 bg-surface space-y-3 shadow-sm">
         <div className="text-[10px] uppercase font-bold text-textSecondary tracking-wider">
-          So với ảnh kiểm định lúc nhập kho · {selectedItem?.stockInDate}
+          {hasPackingPhotos
+            ? `So với ảnh đóng gói lúc xuất kho · ${packingPhotos.length} ảnh`
+            : `Chưa có ảnh đóng gói — so với ảnh kiểm định lúc nhập kho · ${selectedItem?.stockInDate || 'Kho'}`}
         </div>
-        <div className="flex items-center gap-3">
-          {stockPhotos.map((src, i) => (
-            <img
-              key={i}
-              src={src}
-              alt="Ảnh nhập kho"
-              className="w-20 h-20 object-cover rounded-xl border border-neutral"
-            />
-          ))}
+        <div className="flex flex-wrap items-center gap-3">
+          {referencePhotos.length > 0 ? (
+            referencePhotos.map((src, i) => (
+              <img
+                key={i}
+                src={src}
+                alt={hasPackingPhotos ? `Ảnh đóng gói ${i + 1}` : `Ảnh nhập kho ${i + 1}`}
+                className="w-20 h-20 object-cover rounded-xl border border-neutral"
+              />
+            ))
+          ) : (
+            <p className="text-xs text-[#717971]">Chưa có ảnh đóng gói / chưa có ảnh nhập kho</p>
+          )}
           <button
             type="button"
             onClick={() => setIsCompareModalOpen(true)}
-            className="text-xs font-semibold px-3.5 py-2 border border-accent text-accent rounded-xl hover:bg-background transition-colors"
+            className="text-xs font-semibold px-3.5 py-2 border border-accent text-accent rounded-xl hover:bg-background transition-colors cursor-pointer"
           >
             Mở so sánh<br />cạnh nhau
           </button>
         </div>
         <p className="text-[10px] text-textSecondary leading-relaxed">
-          Ảnh kho tự chụp lúc nhập, là mốc chuẩn để đối chiếu — không phải ảnh người bán cung cấp.
+          {hasPackingPhotos
+            ? 'Ảnh đóng gói do kho chụp trước khi bàn giao GHN — dùng làm mốc chuẩn đối chiếu với ảnh người mua trả về.'
+            : 'Đơn hàng cũ chưa có ảnh đóng gói, dùng ảnh kho tự chụp lúc nhập làm mốc chuẩn đối chiếu.'}
         </p>
       </div>
     </div>
   );
 }
 
-export function ReturnQueueTable({ loading, filteredRequests, activeTab, handleOpenReview, handleOpenInspect, handleMarkLost, handleOpenDegradedCaseView }) {
+export function ReturnQueueTable({ loading, filteredRequests, activeTab, handleOpenReview, handleOpenInspect, handleMarkLost, handleOpenDegradedCaseView, handleOpenOutcomeModal }) {
   return (
     <div className="bg-surface border border-neutral rounded-2xl overflow-hidden shadow-sm font-sans">
       <div className="overflow-x-auto">
@@ -1253,6 +1367,7 @@ export function ReturnQueueTable({ loading, filteredRequests, activeTab, handleO
                     handleOpenInspect={handleOpenInspect}
                     handleMarkLost={handleMarkLost}
                     handleOpenDegradedCaseView={handleOpenDegradedCaseView}
+                    handleOpenOutcomeModal={handleOpenOutcomeModal}
                   />
                 );
               })}
