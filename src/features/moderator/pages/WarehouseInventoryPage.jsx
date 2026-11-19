@@ -1,23 +1,27 @@
 import { WarehouseHistoryTabs } from '../components/WarehouseHistoryTabs.jsx';
 import DegradedCaseDetails from '../components/DegradedCaseDetails.jsx';
 import { degradedCaseLabel, degradedInventoryItem } from '../models/degradedCaseModel.js';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
 import QRScannerModal from '../../../components/QRScannerModal.jsx';
 import { inventoryService } from '../services/warehouseApi.js';
+import { returnService } from '../services/returnApi.js';
 import { enrichListRows } from '../services/listDetailEnrichment.js';
 import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
 import { listItems } from '../models/warehouseModel.js';
 import { Page, Status, Pager, ResourceState, money } from '../components/WarehouseUi.jsx';
+import { ReturnOutcomeDialog } from '../components/returns/ReturnSections.jsx';
+import { useToast } from '../../../context/ToastContext.jsx';
 
 export const SUPPORTED_INVENTORY_STATUSES = [
   'ON_SALE',
   'WAREHOUSE',
   'RESERVED',
   'SOLD',
+  'RETURNED',
   'WITHDRAWN',
   'UNCLAIMED',
   'DONATED',
@@ -35,7 +39,7 @@ export const INVENTORY_STATUS_LABELS = {
   UNCLAIMED: 'Vô thừa nhận',
   DONATED: 'Đã quyên góp',
   DESTROYED: 'Đã tiêu huỷ',
-  RETURNED: 'Đã hoàn trả',
+  RETURNED: 'Đã bàn giao',
   PLATFORM_OWNED: 'Tài sản nền tảng',
 };
 
@@ -48,6 +52,10 @@ export default function WarehouseInventoryPage() {
   const [lookupResult, setLookupResult] = useState(null); // { type: 'FOUND'|'NOT_FOUND'|'OTHER_WAREHOUSE', data?: any }
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [degradedModalItem, setDegradedModalItem] = useState(null);
+  const [relistTarget, setRelistTarget] = useState(null);
+  const [relistSubmitting, setRelistSubmitting] = useState(false);
+  const relistLock = useRef(false);
+  const toast = useToast();
 
   const page = Math.max(0, Number(search.get('page')) || 0);
   const sku = search.get('sku') || '';
@@ -112,6 +120,42 @@ export default function WarehouseInventoryPage() {
     });
   }, [rawItems]);
 
+  const hasReturnedItems = useMemo(() => items.some((item) => item.status === 'RETURNED'), [items]);
+  const pendingDispositions = useResource(
+    (options) => returnService.listPendingDispositions(options).catch(() => []),
+    [hasReturnedItems],
+    { enabled: hasReturnedItems, refreshInterval: 30000 }
+  );
+
+  const pendingReturnBySku = useMemo(() => {
+    const map = new Map();
+    for (const ret of pendingDispositions.data || []) {
+      const key = String(ret?.sku || ret?.productId || '').trim().toUpperCase();
+      if (key && !map.has(key)) {
+        map.set(key, ret);
+      }
+    }
+    return map;
+  }, [pendingDispositions.data]);
+
+  const handleConfirmRelist = async (outcome) => {
+    if (!relistTarget || relistLock.current) return;
+    relistLock.current = true;
+    setRelistSubmitting(true);
+    try {
+      await returnService.applyItemAction(relistTarget.id, outcome);
+      toast.success(`Đã đăng bán lại sản phẩm ${relistTarget.sku || relistTarget.itemName || ''} lên sàn.`);
+      setRelistTarget(null);
+      resource.refresh();
+      pendingDispositions.refresh();
+    } catch (err) {
+      toast.error(err?.message || 'Không thể đăng bán lại sản phẩm. Vui lòng thử lại.');
+    } finally {
+      relistLock.current = false;
+      setRelistSubmitting(false);
+    }
+  };
+
   const change = (key, value) =>
     setSearch(
       (previous) => {
@@ -130,6 +174,7 @@ export default function WarehouseInventoryPage() {
     { label: 'Lưu kho', value: 'WAREHOUSE' },
     { label: 'Đang giữ', value: 'RESERVED' },
     { label: 'Đã bán, chờ đóng gói', value: 'SOLD' },
+    { label: 'Đã bàn giao', value: 'RETURNED' },
     { label: 'Chờ xử lý cuối kỳ', value: 'WAITING_END_OF_TERM' },
     { label: 'Gửi về người bán', value: 'WITHDRAWN' },
     { label: 'Vô thừa nhận', value: 'UNCLAIMED' },
@@ -361,9 +406,12 @@ export default function WarehouseInventoryPage() {
                   </thead>
                   <tbody className="divide-y divide-[#e0e0e0]">
                     {items.map((item) => {
+                      const skuKey = String(item.sku || item.id || '').trim().toUpperCase();
+                      const pendingReturn = item.status === 'RETURNED' ? pendingReturnBySku.get(skuKey) || null : null;
                       const isActionNeeded =
                         item.status === 'WAITING_END_OF_TERM' ||
                         item.status === 'UNCLAIMED' ||
+                        Boolean(pendingReturn) ||
                         (item.status === 'WAREHOUSE' && (item.decisionId || item.pricingEligible));
                       const rawBrand = item.brandName || item.brand;
                       const cleanBrand = rawBrand && rawBrand.trim().toLowerCase() !== 'rehome' ? rawBrand.trim() : '';
@@ -391,6 +439,11 @@ export default function WarehouseInventoryPage() {
                             ) : (
                               <Status>{item.status}</Status>
                             )}
+                            {pendingReturn && (
+                              <span className="block text-[10px] text-[#B54708] font-semibold mt-0.5">
+                                Chờ chọn phương án xử lý
+                              </span>
+                            )}
                             {item.pricingEligible && item.status === 'WAREHOUSE' && (
                               <span className="block text-[10px] text-[#006B2C] font-semibold mt-0.5">
                                 Member yêu cầu ký gửi lại
@@ -411,7 +464,17 @@ export default function WarehouseInventoryPage() {
                             {item.currentPrice != null ? money(item.currentPrice) : (item.agreedPrice != null ? money(item.agreedPrice) : '—')}
                           </td>
                           <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                            <div className="flex items-center justify-end gap-2">
+                            <div className="flex items-center justify-end gap-2 flex-nowrap">
+                              {pendingReturn && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs border-[#006B2C] text-[#006B2C] hover:bg-[#E8F5E9] font-semibold whitespace-nowrap"
+                                  onClick={() => setRelistTarget(pendingReturn)}
+                                >
+                                  Đăng bán lại
+                                </Button>
+                              )}
                               {(item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT') && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(item.status) && (
                                 <Link
                                   to={`/moderator/inventory/${encodeURIComponent(item.sku)}/re-consign`}
@@ -592,6 +655,17 @@ export default function WarehouseInventoryPage() {
           />
         </Modal>
       )}
+
+      {/* MODAL CHỌN ĐĂNG BÁN LẠI MÓN HÀNG ĐÃ BÀN GIAO */}
+      <ReturnOutcomeDialog
+        isOutcomeModalOpen={Boolean(relistTarget)}
+        setIsOutcomeModalOpen={(open) => {
+          if (!open && !relistLock.current) setRelistTarget(null);
+        }}
+        selectedItem={relistTarget}
+        submitting={relistSubmitting}
+        handleConfirmOutcome={handleConfirmRelist}
+      />
       </WarehouseHistoryTabs>
     </Page>
   );
