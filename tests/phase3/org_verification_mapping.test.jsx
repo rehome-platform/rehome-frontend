@@ -459,7 +459,9 @@ describe('Organization Verification Data Mapping & Design Tokens', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Duyệt đổi pháp lý' }));
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(screen.getByText(/Xác nhận duyệt yêu cầu đổi pháp lý/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Xác nhận duyệt' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Xác nhận duyệt' }));
+    });
     expect(handleApprove).toHaveBeenCalledWith('req-uuid-abc');
 
     // Reject via custom popup modal (no window.prompt)
@@ -468,7 +470,9 @@ describe('Organization Verification Data Mapping & Design Tokens', () => {
     expect(screen.getByText(/Từ chối yêu cầu đổi pháp lý/i)).toBeInTheDocument();
     const reasonInput = screen.getByPlaceholderText(/Nhập lý do từ chối/i);
     fireEvent.change(reasonInput, { target: { value: 'Lý do kiểm thử' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Xác nhận từ chối' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Xác nhận từ chối' }));
+    });
     expect(handleReject).toHaveBeenCalledWith('req-uuid-abc', 'Lý do kiểm thử');
   });
 
