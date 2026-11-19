@@ -44,14 +44,13 @@ export function ReturnOutcomeDialog({
   setIsOutcomeModalOpen,
   handleConfirmOutcome,
   selectedItem,
+  submitting = false,
 }) {
   const [selectedOutcome, setSelectedOutcome] = React.useState(null);
-  const [discardReason, setDiscardReason] = React.useState('');
 
   React.useEffect(() => {
     if (isOutcomeModalOpen) {
       setSelectedOutcome(null);
-      setDiscardReason('');
     }
   }, [isOutcomeModalOpen]);
 
@@ -72,19 +71,17 @@ export function ReturnOutcomeDialog({
     selectedItem?.photos?.[0] ||
     null;
 
+  const alreadyProcessed = Boolean(selectedItem?.rawStatus === 'VALID' && !needsItemAction(selectedItem));
+
   const onConfirm = () => {
-    if (!selectedOutcome) return;
-    if (selectedOutcome === 'DISCARD' && !discardReason.trim()) {
-      alert('Vui lòng nhập lý do tiêu huỷ món hàng.');
-      return;
-    }
-    handleConfirmOutcome(selectedOutcome, selectedOutcome === 'DISCARD' ? { discardReason: discardReason.trim() } : undefined);
+    if (!selectedOutcome || submitting || alreadyProcessed) return;
+    handleConfirmOutcome(selectedOutcome);
   };
 
   return (
     <Modal
       isOpen={isOutcomeModalOpen}
-      onClose={() => setIsOutcomeModalOpen(false)}
+      onClose={() => { if (!submitting) setIsOutcomeModalOpen(false); }}
       title="Chọn phương án xử lý món hàng"
       size="xl"
     >
@@ -96,7 +93,7 @@ export function ReturnOutcomeDialog({
               {selectedItem?.code || 'YC-00084'} · Quyết định xử lý món hàng
             </div>
             <p className="text-[11px] text-textSecondary mt-0.5">
-              Người mua đã được hoàn tiền. Chọn 1 trong 2 phương án xử lý món hàng bên dưới.
+              Người mua đã được hoàn tiền. Xác nhận phương án xử lý món hàng bên dưới.
             </p>
           </div>
           <span className="text-[10px] font-extrabold px-3 py-1 bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7] rounded-full tracking-wide uppercase self-start sm:self-auto">
@@ -106,7 +103,7 @@ export function ReturnOutcomeDialog({
 
         {/* 2-Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Cột trái (7 cols): 2 Lựa chọn phương án */}
+          {/* Cột trái (7 cols): Phương án duy nhất hiện được hỗ trợ */}
           <div className="lg:col-span-7 space-y-3">
             <div className="font-bold text-sm text-[#191C19] flex items-center justify-between">
               <span>Món hàng này xử lý thế nào</span>
@@ -117,62 +114,30 @@ export function ReturnOutcomeDialog({
             <div
               className={`p-3.5 rounded-xl border-2 transition-all ${
                 selectedOutcome === 'RELIST'
-                  ? 'border-[#2b2b2b] bg-[#fafafa] shadow-sm'
+                  ? 'border-[#006B2C] bg-[#F6F9F4] shadow-sm'
                   : 'border-neutral bg-surface hover:bg-background'
               }`}
             >
               <button
                 type="button"
+                disabled={submitting || alreadyProcessed}
                 onClick={() => setSelectedOutcome('RELIST')}
-                className="w-full text-left"
+                className="w-full text-left disabled:opacity-60"
               >
                 <div className="flex items-start gap-2.5">
                   <span
                     className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                      selectedOutcome === 'RELIST' ? 'border-[#2b2b2b]' : 'border-[#8a8a8a]'
+                      selectedOutcome === 'RELIST' ? 'border-[#006B2C]' : 'border-[#8a8a8a]'
                     }`}
                   >
                     {selectedOutcome === 'RELIST' && (
-                      <span className="w-2 h-2 rounded-full bg-[#2b2b2b]" />
+                      <span className="w-2 h-2 rounded-full bg-[#006B2C]" />
                     )}
                   </span>
                   <div className="flex-1">
-                    <div className="font-bold text-sm text-primary">Đăng bán lại (Relist)</div>
+                    <div className="font-bold text-sm text-primary">Đăng bán lại (Đăng bán liền)</div>
                     <p className="text-[11px] text-textSecondary mt-0.5 leading-relaxed">
-                      Món còn tốt, đủ điều kiện lên sàn. Quay về trạng thái ký gửi của chủ cũ.
-                    </p>
-                  </div>
-                </div>
-              </button>
-            </div>
-
-            {/* Option 2: RETURN_TO_SELLER */}
-            <div
-              className={`p-3.5 rounded-xl border-2 transition-all ${
-                selectedOutcome === 'RETURN_TO_SELLER'
-                  ? 'border-[#2b2b2b] bg-[#fafafa] shadow-sm'
-                  : 'border-neutral bg-surface hover:bg-background'
-              }`}
-            >
-              <button
-                type="button"
-                onClick={() => setSelectedOutcome('RETURN_TO_SELLER')}
-                className="w-full text-left"
-              >
-                <div className="flex items-start gap-2.5">
-                  <span
-                    className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                      selectedOutcome === 'RETURN_TO_SELLER' ? 'border-[#2b2b2b]' : 'border-[#8a8a8a]'
-                    }`}
-                  >
-                    {selectedOutcome === 'RETURN_TO_SELLER' && (
-                      <span className="w-2 h-2 rounded-full bg-[#2b2b2b]" />
-                    )}
-                  </span>
-                  <div className="flex-1">
-                    <div className="font-bold text-sm text-[#191C19]">Hoàn trả cho người ký gửi</div>
-                    <p className="text-[11px] text-textSecondary mt-0.5 leading-relaxed">
-                      Món không còn bán được nhưng vẫn là tài sản của họ.
+                      Món còn tốt, đủ điều kiện lên sàn. Đưa sản phẩm quay lại trạng thái đang bán ngay trên sàn.
                     </p>
                   </div>
                 </div>
@@ -180,7 +145,7 @@ export function ReturnOutcomeDialog({
             </div>
           </div>
 
-          {/* Cột phải (5 cols): Tóm tắt món đồ & Hệ quả theo Wireframe TH-04 */}
+          {/* Cột phải (5 cols): Tóm tắt món đồ & Hệ quả */}
           <div className="lg:col-span-5 space-y-3.5">
             {/* Box 1: Thông tin món */}
             <div className="border border-neutral rounded-xl overflow-hidden bg-surface shadow-sm">
@@ -221,16 +186,15 @@ export function ReturnOutcomeDialog({
               </div>
             </div>
 
-            {/* Box 2: Tùy biến theo Phương án được chọn */}
             {!selectedOutcome && (
               <div className="border border-dashed border-neutral rounded-xl p-3.5 bg-[#FAFBF9] text-[11px] text-textSecondary">
-                Vui lòng chọn 1 trong 3 phương án xử lý bên trái, sau đó bấm <strong>Xác nhận xử lý</strong>.
+                Chọn phương án bên trái, sau đó bấm <strong>Xác nhận xử lý</strong>.
               </div>
             )}
 
             {selectedOutcome === 'RELIST' && (
-              <div className="border-2 border-[#2b2b2b] rounded-xl p-3.5 bg-[#FAFBF9] space-y-2">
-                <div className="text-[10px] uppercase font-bold text-textSecondary tracking-wider">
+              <div className="border-2 border-[#006B2C] rounded-xl p-3.5 bg-[#F6F9F4] space-y-2">
+                <div className="text-[10px] uppercase font-bold text-[#006B2C] tracking-wider">
                   NẾU ĐĂNG BÁN LẠI
                 </div>
                 <div className="space-y-1.5 text-[11px]">
@@ -254,49 +218,8 @@ export function ReturnOutcomeDialog({
               </div>
             )}
 
-            {selectedOutcome === 'RETURN_TO_SELLER' && (
-              <div className="border-2 border-[#2b2b2b] rounded-xl p-3.5 bg-[#FAFBF9] space-y-2">
-                <div className="text-[10px] uppercase font-bold text-textSecondary tracking-wider">
-                  NẾU HOÀN TRẢ NGƯỜI KÝ GỬI
-                </div>
-                <div className="space-y-1.5 text-[11px]">
-                  <div className="flex justify-between">
-                    <span className="text-textSecondary">Thời hạn lấy:</span>
-                    <span className="font-bold text-[#191C19]">30 ngày tại quầy</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-textSecondary">Phí lưu kho:</span>
-                    <span className="font-semibold text-primary">Miễn phí 30 ngày đầu</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-textSecondary">Trạng thái:</span>
-                    <span className="font-bold text-[#191C19]">Chờ khách đến lấy</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {selectedOutcome === 'DISCARD' && (
-              <div className="border-2 border-error rounded-xl p-3.5 bg-error-light/20 space-y-2">
-                <div className="text-[10px] uppercase font-bold text-error tracking-wider">
-                  NẾU TIÊU HUỶ
-                </div>
-                <div className="space-y-1.5 text-[11px]">
-                  <div className="flex justify-between">
-                    <span className="text-textSecondary">Phân loại:</span>
-                    <span className="font-bold text-error">Hàng hỏng nặng / giả</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-textSecondary">Hồ sơ:</span>
-                    <span className="font-semibold text-[#191C19]">Lưu lý do vào ca</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Box 3: Ghi chú dashed */}
             <div className="p-3 border border-dashed border-[#9a9a9a] rounded-xl text-[11px] leading-relaxed text-[#4a4a4a] bg-surface">
-              Member nhận thông báo món đã trở lại sàn kèm lý do. Họ thấy món bị trả một lần trong lịch sử, nhưng <strong className="font-bold text-[#191C19]">người mua khác không thấy</strong> — món bị trả vì tranh chấp mô tả không phải lỗi của món.
+              Member nhận thông báo món đã trở lại sàn. Họ thấy món bị trả một lần trong lịch sử, nhưng <strong className="font-bold text-[#191C19]">người mua khác không thấy</strong> — món bị trả vì tranh chấp mô tả không phải lỗi của món.
             </div>
           </div>
         </div>
@@ -306,6 +229,7 @@ export function ReturnOutcomeDialog({
           <Button
             type="button"
             variant="outline"
+            disabled={submitting}
             className="rounded-xl border-neutral text-xs px-4 py-2"
             onClick={() => setIsOutcomeModalOpen(false)}
           >
@@ -313,8 +237,10 @@ export function ReturnOutcomeDialog({
           </Button>
           <Button
             type="button"
-            disabled={!selectedOutcome}
-            className="rounded-xl bg-[#2b2b2b] text-white hover:bg-black text-xs font-bold px-5 py-2 shadow-sm disabled:opacity-50"
+            variant="primary"
+            loading={submitting}
+            disabled={!selectedOutcome || submitting || alreadyProcessed}
+            className="text-xs font-bold px-5 py-2 shadow-sm"
             onClick={onConfirm}
           >
             Xác nhận xử lý
@@ -1329,6 +1255,18 @@ export function ReturnQueueTabs({ setActiveTab, activeTab, tabCounts }) {
         }`}
       >
         Hàng đã về, chờ kiểm · {tabCounts.RECEIVED_INSPECT}
+      </button>
+      <button
+        onClick={() => setActiveTab('PENDING_DISPOSITION')}
+        className={`text-xs font-bold px-4 py-2 rounded-xl transition-all ${
+          activeTab === 'PENDING_DISPOSITION'
+            ? 'bg-primary text-white shadow-sm'
+            : (tabCounts.PENDING_DISPOSITION ?? 0) > 0
+              ? 'bg-[#FFFAEB] text-[#B54708] border border-[#FEDF89] hover:bg-[#FEF0C7]'
+              : 'bg-surface text-textSecondary border border-neutral hover:bg-background'
+        }`}
+      >
+        Chờ xử lý món · {tabCounts.PENDING_DISPOSITION ?? 0}
       </button>
       <button
         onClick={() => setActiveTab('RESOLVED')}

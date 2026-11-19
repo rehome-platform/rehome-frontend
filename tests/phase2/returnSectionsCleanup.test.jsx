@@ -81,7 +81,7 @@ describe('Task 5: Return request detail, inspection checklist & post-refund outc
     expect(screen.getByText('Đủ phụ kiện đi kèm nếu có')).toBeTruthy();
   });
 
-  it('ReturnOutcomeDialog removes DISCARD option and the two unwanted notes', () => {
+  it('ReturnOutcomeDialog limits disposition to single Đăng bán lại (Đăng bán liền) option and removes unsupported options', () => {
     render(
       <ReturnOutcomeDialog
         isOutcomeModalOpen={true}
@@ -93,18 +93,14 @@ describe('Task 5: Return request detail, inspection checklist & post-refund outc
           amount: 300000,
           stockInPhotos: [],
         }}
-        selectedOutcome="RELIST"
-        setSelectedOutcome={() => {}}
-        discardReason=""
-        setDiscardReason={() => {}}
-        onConfirm={() => {}}
+        handleConfirmOutcome={() => {}}
       />
     );
 
     expect(screen.queryByText(/^Tiêu huỷ$/i)).toBeNull();
+    expect(screen.queryByText(/Hoàn trả cho người ký gửi/i)).toBeNull();
     expect(screen.queryByText(/không in lại/i)).toBeNull();
     expect(screen.queryByText(/theo quy định mục 11/i)).toBeNull();
-    expect(screen.getByText(/Đăng bán lại/i)).toBeTruthy();
-    expect(screen.getByText(/Hoàn trả cho người ký gửi/i)).toBeTruthy();
+    expect(screen.getByText(/Đăng bán lại \(Đăng bán liền\)/i)).toBeTruthy();
   });
 });

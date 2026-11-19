@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { formatCurrencyVND } from "../../../utils/formatters.js";
 import { formatDeadlineWithCountdown } from "../components/WarehouseUi.jsx";
-import { returnService } from "../services/returnApi.js";
+import { returnService, needsItemAction } from "../services/returnApi.js";
 import { inventoryService } from "../services/inventoryApi.js";
 import { useToast } from "../../../context/ToastContext.jsx";
 
@@ -50,8 +50,9 @@ export function useReturnProcessing() {
   const [inspectionVerdict, setInspectionVerdict] = useState(''); // 'VALID' | 'INVALID'
   const [invalidReason, setInvalidReason] = useState('');
 
-  // TH-04 Outcome Modal (Relist vs Return Seller)
+  // TH-04 Outcome Modal (Relist)
   const [isOutcomeModalOpen, setIsOutcomeModalOpen] = useState(false);
+  const [outcomeSubmitting, setOutcomeSubmitting] = useState(false);
 
   // Compare side-by-side modal
   const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
@@ -125,7 +126,7 @@ export function useReturnProcessing() {
     try {
       setLoading(true);
       setError(null);
-      const res = await returnService.list();
+      const res = await returnService.listForWorkspace();
       setReturnRequests(res.data || []);
     } catch (err) {
       setError('Không thể tải danh sách yêu cầu trả hàng.');
@@ -150,6 +151,8 @@ export function useReturnProcessing() {
       if (found) {
         if (paramTab) {
           setActiveTab(paramTab);
+        } else if (needsItemAction(found)) {
+          setActiveTab('PENDING_DISPOSITION');
         } else if (found.status) {
           setActiveTab(found.status);
         }
@@ -168,6 +171,8 @@ export function useReturnProcessing() {
             setSelectedItem(item);
             if (paramTab) {
               setActiveTab(paramTab);
+            } else if (needsItemAction(item)) {
+              setActiveTab('PENDING_DISPOSITION');
             } else if (item.status) {
               setActiveTab(item.status);
             }
@@ -193,7 +198,8 @@ export function useReturnProcessing() {
     WAITING_BUYER_DISPATCH: returnRequests.filter((r) => r.status === 'WAITING_BUYER_DISPATCH').length,
     RETURNING: returnRequests.filter((r) => r.status === 'RETURNING').length,
     RECEIVED_INSPECT: returnRequests.filter((r) => r.status === 'RECEIVED_INSPECT').length,
-    RESOLVED: returnRequests.filter((r) => isResolvedStatus(r.status)).length,
+    PENDING_DISPOSITION: returnRequests.filter((r) => needsItemAction(r)).length,
+    RESOLVED: returnRequests.filter((r) => isResolvedStatus(r.status) && !needsItemAction(r)).length,
   };
 
   const sortReturnsNewestFirst = (list) => {
@@ -223,8 +229,10 @@ export function useReturnProcessing() {
 
   const filteredRequests = sortReturnsNewestFirst(
     returnRequests.filter((r) => {
-      if (activeTab === 'RESOLVED') {
-        if (!isResolvedStatus(r.status)) return false;
+      if (activeTab === 'PENDING_DISPOSITION') {
+        if (!needsItemAction(r)) return false;
+      } else if (activeTab === 'RESOLVED') {
+        if (!isResolvedStatus(r.status) || needsItemAction(r)) return false;
       } else {
         if (r.status !== activeTab) return false;
       }
@@ -233,7 +241,7 @@ export function useReturnProcessing() {
   );
 
   const historyRequests = sortReturnsNewestFirst(
-    returnRequests.filter((r) => isResolvedStatus(r.status) && matchesReturnSearch(r))
+    returnRequests.filter((r) => isResolvedStatus(r.status) && !needsItemAction(r) && matchesReturnSearch(r))
   );
 
   const handleOpenReview = async (item) => {
@@ -408,28 +416,26 @@ export function useReturnProcessing() {
   };
 
   const handleConfirmOutcome = async (outcome, extra = {}) => {
-    if (!selectedItem || resolvingRef.current) return;
+    if (!selectedItem || resolvingRef.current || outcomeSubmitting) return;
+    if (selectedItem.rawStatus === 'VALID' && !needsItemAction(selectedItem)) {
+      notify('warn', 'Món hàng này đã được chọn phương án xử lý trước đó.');
+      return;
+    }
     resolvingRef.current = true;
+    setOutcomeSubmitting(true);
     try {
-      const actionFn =
-        selectedItem.rawStatus === 'VALID' && typeof returnService.applyItemAction === 'function'
-          ? returnService.applyItemAction
-          : returnService.resolveValid;
       const res =
-        Object.keys(extra || {}).length > 0
-          ? await actionFn(selectedItem.id, outcome, extra)
-          : await actionFn(selectedItem.id, outcome);
+        selectedItem.rawStatus === 'VALID'
+          ? await returnService.applyItemAction(selectedItem.id, outcome, extra)
+          : Object.keys(extra || {}).length > 0
+            ? await returnService.resolveValid(selectedItem.id, outcome, extra)
+            : await returnService.resolveValid(selectedItem.id, outcome);
       await fetchReturns();
       setIsOutcomeModalOpen(false);
       setViewMode('QUEUE');
       setSelectedItem(null);
       const confirmedRefund = res?.refundAmount ?? res?.result?.refundAmount ?? selectedItem.refundAmount ?? selectedItem.amount ?? 0;
-      const outcomeLabel =
-        outcome === 'RELIST'
-          ? 'Đăng bán lại'
-          : outcome === 'DISCARD'
-          ? 'Tiêu huỷ (hàng hỏng/giả)'
-          : 'Trả người ký gửi';
+      const outcomeLabel = outcome === 'RELIST' ? 'Đăng bán lại' : 'Xử lý món hàng';
       notify(
         'success',
         `Đã hoàn tất xử lý món hàng (${outcomeLabel})! Khoản hoàn ${formatCurrencyVND(
@@ -440,7 +446,16 @@ export function useReturnProcessing() {
       notify('error', 'Có lỗi xảy ra khi xác nhận phương án: ' + (err.message || ''));
     } finally {
       resolvingRef.current = false;
+      setOutcomeSubmitting(false);
     }
+  };
+
+  const handleBackToQueue = () => {
+    if (needsItemAction(selectedItem)) {
+      setActiveTab('PENDING_DISPOSITION');
+    }
+    setViewMode('QUEUE');
+    setSelectedItem(null);
   };
 
   // 2-Moderator Counterfeit Verdict Handlers (F-134, F-135)
@@ -622,6 +637,7 @@ export function useReturnProcessing() {
     handleOpenInspect,
     selectedItem,
     setViewMode,
+    handleBackToQueue,
     setIsCompareModalOpen,
     handleApproveAndCreateWaybill,
     setIsRejectModalOpen,
@@ -718,6 +734,7 @@ export function useReturnProcessing() {
         setIsOutcomeModalOpen,
         handleConfirmOutcome,
         selectedItem,
+        submitting: outcomeSubmitting,
       },
       ReturnCompareDialog: {
         isCompareModalOpen,
