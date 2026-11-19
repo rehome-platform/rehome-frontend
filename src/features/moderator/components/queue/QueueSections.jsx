@@ -340,24 +340,24 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
           <span className="text-textSecondary">—</span>
         )}
       </td>
-      <td className="py-3 px-3 text-center whitespace-nowrap align-middle">
-        <div className="inline-flex items-center justify-center flex-nowrap">
-          {!item.claimedBy && (
+      <td className="py-3 px-4 text-left align-middle whitespace-nowrap">
+        <div className="grid grid-cols-[140px_112px] items-center justify-items-start gap-2">
+          {/* Slot 1: Nhận việc / Nhả việc / Đã có người nhận */}
+          {!item.claimedBy ? (
             <Button
               size="sm"
               variant="primary"
-              className={QUEUE_PRIMARY_BTN_CLASS}
+              className={`${QUEUE_PRIMARY_BTN_CLASS} w-full`}
               loading={resource.busy}
               onClick={() => (setClaimTarget ? setClaimTarget(item) : handleClaim(item))}
             >
               Nhận việc
             </Button>
-          )}
-          {isMine && (
+          ) : isMine ? (
             <Button
               size="sm"
               variant="outline"
-              className={QUEUE_SECONDARY_BTN_CLASS}
+              className={`${QUEUE_SECONDARY_BTN_CLASS} w-full`}
               onClick={() => {
                 setFeedback?.(null);
                 setReleaseTarget(item);
@@ -365,43 +365,32 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
             >
               Nhả việc
             </Button>
-          )}
-          {isClaimedByOther && (
+          ) : (
             <Button
               size="sm"
               disabled
               variant="outline"
-              className={`${QUEUE_ACTION_BTN_CLASS} opacity-50 cursor-not-allowed`}
+              className={`${QUEUE_ACTION_BTN_CLASS} w-full opacity-50 cursor-not-allowed`}
             >
               Đã có người nhận
             </Button>
           )}
-        </div>
-      </td>
-      <td className="py-3 px-4 text-right whitespace-nowrap align-middle">
-        <div className="flex items-center justify-end gap-2 flex-nowrap">
-          {isMine ? (
-            isPendingWithdrawalApproval && onCheckWithdrawal ? (
-              <Button
-                size="sm"
-                variant="primary"
-                className={QUEUE_PRIMARY_BTN_CLASS}
-                onClick={() => onCheckWithdrawal(item)}
-              >
-                Duyệt yêu cầu
-              </Button>
-            ) : linkTarget ? (
-              <Link
-                to={linkTarget}
-                className={QUEUE_PRIMARY_LINK_CLASS}
-              >
-                {item.type === 'PACKING' ? 'Đóng gói' : 'Mở việc'}
-              </Link>
-            ) : (
-              <span className="text-textSecondary">—</span>
-            )
+          {/* Slot 2: thao tác nghiệp vụ (chỉ người đang nhận) */}
+          {isMine && isPendingWithdrawalApproval && onCheckWithdrawal ? (
+            <Button
+              size="sm"
+              variant="primary"
+              className={`${QUEUE_PRIMARY_BTN_CLASS} w-full`}
+              onClick={() => onCheckWithdrawal(item)}
+            >
+              Duyệt yêu cầu
+            </Button>
+          ) : isMine && linkTarget ? (
+            <Link to={linkTarget} className={`${QUEUE_PRIMARY_LINK_CLASS} w-full`}>
+              {item.type === 'PACKING' ? 'Đóng gói' : 'Mở việc'}
+            </Link>
           ) : (
-            <span className="text-textSecondary">—</span>
+            <span aria-hidden="true" />
           )}
         </div>
       </td>

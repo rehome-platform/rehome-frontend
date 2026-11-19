@@ -209,19 +209,20 @@ describe('HQ-01: Tab selection in place, Claim flow, and "Mở việc" without a
     renderQueueApp();
 
     const packRow = (await screen.findByText('Nguyễn Văn B')).closest('tr');
-    // 8 columns: Loại việc, Đối tượng, Tạo lúc, Đã chờ, Người nhận, Chi tiết, Nhận / Nhả việc, Hành động
+    // 7 columns: Nhận/Nhả việc được gộp vào cột Hành động (căn trái)
     const headers = screen.getAllByRole('columnheader').map((th) => th.textContent.trim());
-    expect(headers).toEqual(['Loại việc', 'Đối tượng', 'Tạo lúc', 'Đã chờ', 'Người nhận', 'Chi tiết', 'Nhận / Nhả việc', 'Hành động']);
+    expect(headers).toEqual(['Loại việc', 'Đối tượng', 'Tạo lúc', 'Đã chờ', 'Người nhận', 'Chi tiết', 'Hành động']);
 
     const packDetailBtn = within(packRow).getByRole('button', { name: 'Chi tiết' });
     const packReleaseBtn = within(packRow).getByRole('button', { name: 'Nhả việc' });
     const packActionLink = within(packRow).getByRole('link', { name: 'Đóng gói' });
     const packActionsWrap = packActionLink.parentElement;
-    // Chi tiết, Nhận / Nhả việc, and Hành động are in 3 distinct cells
+    // Nhả việc + Mở việc nằm cùng ô Hành động, căn trái, lưới cố định
     expect(packDetailBtn.closest('td')).not.toBe(packReleaseBtn.closest('td'));
-    expect(packReleaseBtn.closest('td')).not.toBe(packActionLink.closest('td'));
-    expect(packActionsWrap.className).toContain('flex-nowrap');
-    expect(packActionsWrap.className).toContain('justify-end');
+    expect(packReleaseBtn.closest('td')).toBe(packActionLink.closest('td'));
+    expect(packActionLink.closest('td').className).toContain('text-left');
+    expect(packActionsWrap.className).toContain('grid');
+    expect(packActionsWrap.className).toContain('justify-items-start');
     expect(packActionsWrap.className).toContain('gap-2');
 
     [packReleaseBtn, packActionLink].forEach((el) => {
@@ -244,7 +245,7 @@ describe('HQ-01: Tab selection in place, Claim flow, and "Mở việc" without a
     const withdrawReleaseBtn = within(withdrawRow).getByRole('button', { name: 'Nhả việc' });
     const withdrawApproveBtn = within(withdrawRow).getByRole('button', { name: 'Duyệt yêu cầu' });
     expect(withdrawDetailBtn.closest('td')).not.toBe(withdrawReleaseBtn.closest('td'));
-    expect(withdrawReleaseBtn.closest('td')).not.toBe(withdrawApproveBtn.closest('td'));
+    expect(withdrawReleaseBtn.closest('td')).toBe(withdrawApproveBtn.closest('td'));
     [withdrawReleaseBtn, withdrawApproveBtn].forEach((el) => {
       expect(el.className).toContain('h-8');
       expect(el.className).toContain('px-3');
