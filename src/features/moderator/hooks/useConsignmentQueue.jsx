@@ -90,7 +90,7 @@ export function useConsignmentQueue() {
           : isWithdrawal
             ? item.status === 'PENDING_APPROVAL'
               ? `Đã nhận việc "${item.typeLabel}" (${item.refId || item.queueId}) thành công! Vui lòng mở yêu cầu để duyệt hoặc từ chối.`
-              : `Đã nhận việc "${item.typeLabel}" (${item.formId || item.orderId || item.refId || item.queueId}) thành công! Bạn có thể mở Quầy tiếp nhận (BG-01) để bàn giao cho khách khi khách đến quầy.`
+              : `Đã nhận việc "${item.typeLabel}" (${item.formId || item.orderId || item.refId || item.queueId}) thành công! Bạn có thể mở Quầy tiếp nhận để bàn giao cho khách khi khách đến quầy.`
             : isReturn
               ? `Đã nhận việc "${item.typeLabel}" (${item.returnId || item.refId || item.queueId}) thành công! Bạn có thể mở trang "Trả hàng" để duyệt và xử lý yêu cầu.`
             : isViolationReport

@@ -58,7 +58,7 @@ export function EndTermReconsignPanel({ sku, price, setPrice, resource, term, se
   return (
     <div className="space-y-3 rounded-xl border border-neutral p-4 bg-background">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-text">Tái ký gửi lại cuối kỳ (KD-11)</h3>
+        <h3 className="font-semibold text-text">Tái ký gửi lại cuối kỳ</h3>
         <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-[#006B2C] text-white rounded">
           HẾT KỲ 3
         </span>
@@ -69,7 +69,7 @@ export function EndTermReconsignPanel({ sku, price, setPrice, resource, term, se
       <div className="pt-1">
         <Link to={`/moderator/inventory/${encodeURIComponent(sku)}/re-consign`}>
           <Button variant="primary" className="text-xs py-2 px-4 font-bold bg-[#006B2C] hover:bg-[#005523]">
-            Mở màn hình đàm phán giá mới (KD-11) →
+            Mở màn hình đàm phán giá mới →
           </Button>
         </Link>
       </div>

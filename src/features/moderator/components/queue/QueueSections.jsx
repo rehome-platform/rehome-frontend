@@ -552,7 +552,7 @@ function WithdrawalModalContent({ target, busy, onApprove, onReject, onClose }) 
           <div className="rounded-xl border border-neutral bg-white p-3 space-y-1 leading-relaxed">
             <p className="font-bold text-text">Lưu ý nghiệp vụ trước khi ra Quầy:</p>
             <p>• Moderator kiểm tra hiện vật trong kho theo mã SKU, chuẩn bị sẵn để chờ giao.</p>
-            <p>• Khi Member tới, vào <strong>Quầy tiếp nhận (BG-01)</strong> đối chiếu danh tính và quét mã SKU để bàn giao.</p>
+            <p>• Khi Member tới, vào <strong>Quầy tiếp nhận</strong> đối chiếu danh tính và quét mã SKU để bàn giao.</p>
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -564,7 +564,7 @@ function WithdrawalModalContent({ target, busy, onApprove, onReject, onClose }) 
               className="flex-1"
             >
               <Button variant="primary" className="w-full py-2 text-xs font-bold bg-[#006B2C] hover:bg-[#005523] text-white">
-                Đến Quầy bàn giao (BG-01)
+                Đến Quầy bàn giao
               </Button>
             </Link>
           </div>
@@ -582,7 +582,7 @@ export function WithdrawalCheckModal({ target, busy, onApprove, onReject, onClos
       onClose={() => {
         if (!busy) onClose?.();
       }}
-      title={target.status === 'PENDING_APPROVAL' ? 'Duyệt yêu cầu rút hàng' : 'Kiểm tra yêu cầu rút hàng (HQ-01)'}
+      title={target.status === 'PENDING_APPROVAL' ? 'Duyệt yêu cầu rút hàng' : 'Kiểm tra yêu cầu rút hàng'}
       size="md"
     >
       <WithdrawalModalContent

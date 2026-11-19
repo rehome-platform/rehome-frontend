@@ -34,7 +34,7 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
               {reasonLabels[context] || 'Bàn giao tại quầy'}
             </span>
             <h3 className="text-base font-bold text-[#191C19] mt-1">
-              <span className="text-[#5B6776] mr-1">BG-01 ·</span>Xác nhận bàn giao hiện vật tại quầy
+              Xác nhận bàn giao hiện vật tại quầy
             </h3>
           </div>
           <span className="text-xs font-semibold text-[#5B6776]">
