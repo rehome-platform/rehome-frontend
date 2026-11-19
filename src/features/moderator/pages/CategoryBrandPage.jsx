@@ -37,7 +37,7 @@ export default function CategoryBrandPage() {
   const brands = resource.data?.brands || [];
   const rawItems = isCategory ? categories : brands;
 
-  // Lọc đa chiều: từ khóa tìm kiếm + slot thử đồ + trạng thái (DM-01)
+  // Lọc đa chiều: từ khóa tìm kiếm + slot thử đồ + trạng thái (DM-01) + mới nhất lên đầu
   const items = useMemo(() => {
     let result = rawItems;
     if (keyword.trim()) {
@@ -56,7 +56,16 @@ export default function CategoryBrandPage() {
         return statusFilter === 'HIDDEN' ? isHidden : !isHidden;
       });
     }
-    return result;
+    return [...result].sort((a, b) => {
+      const rawA = a?.createdAt || a?.updatedAt;
+      const rawB = b?.createdAt || b?.updatedAt;
+      const tA = rawA ? Date.parse(rawA) : NaN;
+      const tB = rawB ? Date.parse(rawB) : NaN;
+      if (Number.isFinite(tA) && Number.isFinite(tB)) return tB - tA;
+      if (Number.isFinite(tB)) return 1;
+      if (Number.isFinite(tA)) return -1;
+      return 0;
+    });
   }, [rawItems, keyword, slotFilter, statusFilter, isCategory]);
 
   const handleUnhide = (item) => {
@@ -330,24 +339,24 @@ export default function CategoryBrandPage() {
                         </td>
                       )}
 
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-4 whitespace-nowrap">
                         {isHidden ? (
-                          <span className="text-[9px] font-bold px-2 py-0.5 border border-[#a8a8a8] bg-[#f0f0f0] text-[#7a7a7a] rounded uppercase">
+                          <span className="inline-flex items-center justify-center text-[11px] font-bold px-3 py-1 border border-[#FECDCA] bg-[#FEF3F2] text-[#B42318] rounded-lg uppercase whitespace-nowrap">
                             ĐÃ ẨN
                           </span>
                         ) : (
-                          <span className="text-[9px] font-bold px-2 py-0.5 border border-[#2b2b2b] text-[#2b2b2b] bg-white rounded uppercase">
+                          <span className="inline-flex items-center justify-center text-[11px] font-bold px-3 py-1 border border-[#A5D6A7] bg-[#E8F5E9] text-[#006B2C] rounded-lg uppercase whitespace-nowrap">
                             HIỆN
                           </span>
                         )}
                       </td>
 
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-3 text-xs">
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-2 text-xs whitespace-nowrap">
                           <button
                             type="button"
                             onClick={() => setEditor({ kind, item })}
-                            className="font-semibold text-primary underline hover:opacity-80"
+                            className="px-3 py-1.5 rounded-lg border border-neutral bg-white text-[#191C19] hover:bg-[#F6F9F4] font-semibold transition-colors cursor-pointer whitespace-nowrap"
                           >
                             Sửa
                           </button>
@@ -355,7 +364,7 @@ export default function CategoryBrandPage() {
                             <button
                               type="button"
                               onClick={() => setHiding({ kind, item })}
-                              className="font-semibold text-[#7a7a7a] hover:text-[#BA1A1A] underline"
+                              className="px-3 py-1.5 rounded-lg border border-[#FECDCA] bg-[#FEF3F2] text-[#B42318] hover:bg-[#FEE4E2] font-semibold transition-colors cursor-pointer whitespace-nowrap"
                             >
                               Ẩn
                             </button>
@@ -363,7 +372,7 @@ export default function CategoryBrandPage() {
                             <button
                               type="button"
                               onClick={() => handleUnhide(item)}
-                              className="font-semibold text-[#006B2C] hover:underline"
+                              className="px-3 py-1.5 rounded-lg border border-[#A5D6A7] bg-[#E8F5E9] text-[#006B2C] hover:bg-[#D1FADF] font-semibold transition-colors cursor-pointer whitespace-nowrap"
                             >
                               Hiện lại
                             </button>
@@ -371,7 +380,7 @@ export default function CategoryBrandPage() {
                           <button
                             type="button"
                             onClick={() => setDeleting({ kind, item })}
-                            className="font-semibold text-[#D92D20] hover:underline"
+                            className="px-3 py-1.5 rounded-lg border border-[#D92D20] bg-[#D92D20] text-white hover:bg-[#B42318] font-semibold transition-colors cursor-pointer whitespace-nowrap"
                           >
                             Xóa
                           </button>
