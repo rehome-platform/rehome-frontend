@@ -150,7 +150,7 @@ export function CounterHandoverTask({ item, context, setConfirmHandover, activeR
           type="button"
           className={`${
             isMatched ? 'bg-[#006B2C] hover:bg-[#005523]' : 'bg-[#2b2b2b] hover:bg-black'
-          } text-white text-xs font-bold py-2 px-3.5`}
+          } text-white text-xs font-bold py-2 px-3.5 whitespace-nowrap shrink-0`}
           onClick={() => setConfirmHandover({ item, context })}
         >
           Bàn giao cho khách

@@ -95,12 +95,13 @@ describe('ViolationReportsPage UI & Design Tokens', () => {
 
     // Wait for data load
     await waitFor(() => {
-      expect(screen.getByText('2 nhóm')).toBeInTheDocument();
+      expect(screen.getByText('5 báo cáo')).toBeInTheDocument();
     });
 
-    // Check table elements
-    expect(screen.getByText(/Spam \/ Lừa đảo quảng cáo đánh bạc/i)).toBeInTheDocument();
-    expect(screen.getByText(/Nghi ngờ thông tin chiến dịch không minh bạch/i)).toBeInTheDocument();
+    // Redundant group count pill, callout, and sampleReason column removed per FE-13
+    expect(screen.queryByText('2 nhóm')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Hệ thống tự động gom các báo cáo trùng/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Spam \/ Lừa đảo quảng cáo đánh bạc/i)).not.toBeInTheDocument();
 
     // High priority badge (reportCount = 5) has bg-error, rounded-full
     const highPriorityBadge = screen.getByText('5 báo cáo');
@@ -112,15 +113,13 @@ describe('ViolationReportsPage UI & Design Tokens', () => {
     expect(normalPriorityBadge.className).toContain('rounded-full');
     expect(normalPriorityBadge.className).toContain('border-neutral');
 
+    // Detail action buttons rendered per FE-13
+    expect(screen.getAllByRole('button', { name: 'Chi tiết' })).toHaveLength(2);
+
     // Filter buttons rendered
     expect(screen.getByRole('button', { name: 'Chờ xử lý' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Đã xử lý' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Bác bỏ' })).toBeInTheDocument();
-
-    // Note callout has rounded-xl and border-neutral
-    const callout = screen.getByText(/Hệ thống tự động gom các báo cáo trùng/i).closest('div');
-    expect(callout.className).toContain('rounded-xl');
-    expect(callout.className).toContain('border-neutral');
   });
 
   it('navigates to detail view with standardized Design Tokens on click', async () => {
@@ -128,7 +127,9 @@ describe('ViolationReportsPage UI & Design Tokens', () => {
       data: mockReports,
       total: 2,
     });
-    vi.mocked(violationReportService.getDetail).mockResolvedValueOnce(mockDetail);
+    vi.mocked(violationReportService.getDetail).mockImplementation(async (id) =>
+      id === 'REP-01' ? mockDetail : null,
+    );
 
     render(
       <MemoryRouter>
@@ -137,11 +138,11 @@ describe('ViolationReportsPage UI & Design Tokens', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Spam \/ Lừa đảo quảng cáo đánh bạc/i)).toBeInTheDocument();
+      expect(screen.getByText('5 báo cáo')).toBeInTheDocument();
     });
 
-    // Click on row to open detail
-    fireEvent.click(screen.getByText(/Spam \/ Lừa đảo quảng cáo đánh bạc/i));
+    // Click on row of REP-01 ("5 báo cáo") to open detail
+    fireEvent.click(screen.getByText('5 báo cáo').closest('tr'));
 
     // Detail view elements
     await waitFor(() => {
@@ -162,16 +163,18 @@ describe('ViolationReportsPage UI & Design Tokens', () => {
     const backBtn = screen.getByTitle('Quay lại danh sách hàng đợi');
     fireEvent.click(backBtn);
     await waitFor(() => {
-      expect(screen.getByText('2 nhóm')).toBeInTheDocument();
+      expect(screen.getByText('5 báo cáo')).toBeInTheDocument();
     });
   });
 
-  it('enriches VP-01 queue rows with targetSnapshot organization name and content preview from getDetail', async () => {
+  it('enriches VP-01 queue rows with targetSnapshot organization name while keeping content preview in detail view', async () => {
     vi.mocked(violationReportService.list).mockResolvedValueOnce({
       data: [mockReports[0]],
       total: 1,
     });
-    vi.mocked(violationReportService.getDetail).mockResolvedValueOnce(mockDetail);
+    vi.mocked(violationReportService.getDetail).mockImplementation(async (id) =>
+      id === 'REP-01' ? mockDetail : null,
+    );
 
     render(
       <MemoryRouter>
@@ -182,7 +185,9 @@ describe('ViolationReportsPage UI & Design Tokens', () => {
     await waitFor(() => {
       expect(screen.getByText('Mái ấm Tình Thương Q7')).toBeInTheDocument();
     });
-    expect(screen.getByText(/Bài viết quảng cáo đánh bạc trái phép/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Bài viết quảng cáo đánh bạc trái phép/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Chi tiết' }));
+    expect(await screen.findByText(/Bài viết quảng cáo đánh bạc trái phép/i)).toBeInTheDocument();
   });
 });
 

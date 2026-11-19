@@ -99,21 +99,30 @@ describe('HQ-01: Tab selection in place, Claim flow, and "Mở việc" without a
     const returnTab = screen.getByRole('tab', { name: 'Trả hàng' });
     await user.click(returnTab);
     expect(screen.getByTestId('location')).toHaveTextContent('/moderator/queue?type=RETURN');
-    expect(await screen.findByText('Đơn hàng hoàn RET-101')).toBeInTheDocument();
+    expect(await screen.findByText('Lý do: Hàng lỗi kỹ thuật')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Chi tiết' }));
+    expect(within(screen.getByRole('dialog')).getByText('Đơn hàng hoàn RET-101')).toBeInTheDocument();
+    await user.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: 'Đóng' })[0]);
     expect(screen.getByRole('button', { name: 'Nhận việc' })).toBeInTheDocument();
 
     // 2. Click tab "Xác minh tổ chức" (ORG_VERIFICATION)
     const orgTab = screen.getByRole('tab', { name: 'Xác minh tổ chức' });
     await user.click(orgTab);
     expect(screen.getByTestId('location')).toHaveTextContent('/moderator/queue?type=ORG_VERIFICATION');
-    expect(await screen.findByText('Quỹ Nụ Cười Xanh')).toBeInTheDocument();
+    expect(await screen.findByText('Tổ chức từ thiện')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Chi tiết' }));
+    expect(within(screen.getByRole('dialog')).getByText('Quỹ Nụ Cười Xanh')).toBeInTheDocument();
+    await user.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: 'Đóng' })[0]);
     expect(screen.getByRole('button', { name: 'Nhận việc' })).toBeInTheDocument();
 
     // 3. Click tab "Vi phạm" (VIOLATION_REPORT)
     const reportTab = screen.getByRole('tab', { name: 'Vi phạm' });
     await user.click(reportTab);
     expect(screen.getByTestId('location')).toHaveTextContent('/moderator/queue?type=VIOLATION_REPORT');
-    expect(await screen.findByText('Bài đăng nghi vấn gian lận')).toBeInTheDocument();
+    expect(await screen.findByText('3 báo cáo vi phạm nội dung')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Chi tiết' }));
+    expect(within(screen.getByRole('dialog')).getByText('Bài đăng nghi vấn gian lận')).toBeInTheDocument();
+    await user.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: 'Đóng' })[0]);
     expect(screen.getByRole('button', { name: 'Nhận việc' })).toBeInTheDocument();
   });
 
@@ -133,7 +142,8 @@ describe('HQ-01: Tab selection in place, Claim flow, and "Mở việc" without a
     renderQueueApp('/moderator/queue?type=RETURN');
 
     // Unclaimed state
-    expect(await screen.findByText('Đơn hàng hoàn RET-101')).toBeInTheDocument();
+    expect(await screen.findByText('Lý do: Hàng lỗi kỹ thuật')).toBeInTheDocument();
+    expect(screen.queryByText('Đơn hàng hoàn RET-101')).not.toBeInTheDocument();
     expect(screen.getByText('chưa ai nhận')).toBeInTheDocument();
 
     // The unclaimed item title should not be a navigation link

@@ -159,8 +159,8 @@ describe('Luồng 2 - Bước 3: Quầy tiếp nhận, Kiểm định tại qu�
       await user.click(await screen.findByRole('button', { name: /Tôi đã đối chiếu đúng Member/i }));
 
       expect(await screen.findByText('Đầm suông Zara hoa nhí')).toBeInTheDocument();
-      expect(screen.getByText('Đang bán')).toBeInTheDocument();
-      expect(screen.getByText('Chờ duyệt')).toBeInTheDocument();
+      expect(screen.getAllByText('Đang bán').length).toBeGreaterThanOrEqual(2);
+      expect(screen.getAllByText('Chờ duyệt').length).toBeGreaterThanOrEqual(2);
       expect(screen.getByText('Đã duyệt')).toBeInTheDocument();
 
       // Chỉ có đúng 1 nút "Bắt đầu kiểm định" cho sản phẩm có status APPROVED chưa kiểm định
@@ -264,7 +264,7 @@ describe('Luồng 2 - Bước 3: Quầy tiếp nhận, Kiểm định tại qu�
       expect(screen.getByText('Đã duyệt')).toBeInTheDocument();
       expect(screen.getByText('Chờ Member xác nhận')).toBeInTheDocument();
       expect(screen.getByText('Chờ nhập kho')).toBeInTheDocument();
-      expect(screen.getByText('Đang bán')).toBeInTheDocument();
+      expect(screen.getAllByText('Đang bán').length).toBeGreaterThanOrEqual(2);
 
       // Hiển thị mã SKU cho sản phẩm đã nhập kho
       expect(screen.getByText(/HCM-V-000108/)).toBeInTheDocument();

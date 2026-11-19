@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -100,7 +100,11 @@ describe('Open dashboard tasks in the queue', () => {
     renderApp('/moderator/queue?type=FORM_REVIEW&queueId=gone');
     expect(await screen.findByText('Công việc không còn trong hàng đợi hiện tại')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Tải lại', exact: true })).toBeEnabled();
-    if (items.length) expect(screen.getByText('form-1')).toBeInTheDocument();
+    if (items.length) {
+      expect(screen.queryByText('form-1')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Chi tiết' }));
+      expect(within(screen.getByRole('dialog')).getByText('form-1')).toBeInTheDocument();
+    }
     expect(consignmentService.read).not.toHaveBeenCalled();
   });
 

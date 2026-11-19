@@ -22,6 +22,7 @@ export default function WarehouseInboxPage() {
   const [conversations, setConversations] = useState([]);
   const [activeTab, setActiveTab] = useState('ALL'); // Mặc định mở tab 'Tất cả' ('ALL' | 'DONE' | 'UNANSWERED')
   const [selectedConv, setSelectedConv] = useState(null);
+  const [showMemberInfo, setShowMemberInfo] = useState(true);
 
   // Tin nhắn của hội thoại đang chọn
   const [messages, setMessages] = useState([]);
@@ -226,11 +227,22 @@ export default function WarehouseInboxPage() {
 
   useConversationTopic(selectedConv?.id, handleWebSocketMessage);
 
-  const filteredConversations = (conversations || []).filter((c) => {
-    if (activeTab === 'UNANSWERED') return c?.status === 'UNANSWERED';
-    if (activeTab === 'DONE') return c?.status === 'DONE';
-    return true;
-  });
+  const filteredConversations = [...(conversations || [])]
+    .filter((c) => {
+      if (activeTab === 'UNANSWERED') return c?.status === 'UNANSWERED';
+      if (activeTab === 'DONE') return c?.status === 'DONE';
+      return true;
+    })
+    .sort((a, b) => {
+      const rawA = a?.lastMessage?.createdAt || a?.updatedAt || a?.createdAt;
+      const rawB = b?.lastMessage?.createdAt || b?.updatedAt || b?.createdAt;
+      const tA = rawA ? Date.parse(rawA) : NaN;
+      const tB = rawB ? Date.parse(rawB) : NaN;
+      if (Number.isFinite(tA) && Number.isFinite(tB)) return tB - tA;
+      if (Number.isFinite(tB)) return 1;
+      if (Number.isFinite(tA)) return -1;
+      return 0;
+    });
 
   const unansweredCount = (conversations || []).filter((c) => c?.status === 'UNANSWERED').length;
 
@@ -366,21 +378,18 @@ export default function WarehouseInboxPage() {
               Hộp thư điểm kí gửi
             </h1>
           </div>
-          <div className="text-xs text-textSecondary font-medium">
-            Hộp thư chung — mọi Moderator trong điểm kí gửi đều thấy
-          </div>
         </div>
 
         {/* Khung giao diện 3 cột MC-01 / MC-02 */}
         <div className="bg-surface border border-neutral rounded-2xl shadow-sm flex flex-col lg:flex-row min-h-[640px] overflow-hidden">
-          {/* CỘT 1 (360px): DANH SÁCH HỘI THOẠI */}
-          <div className="w-full lg:w-[360px] border-r border-neutral flex flex-col shrink-0">
+          {/* CỘT 1 (340px): DANH SÁCH HỘI THOẠI */}
+          <div className="w-full lg:w-[340px] border-r border-neutral flex flex-col shrink-0 min-w-0">
             {/* Tabs: Thứ tự Tất cả -> Đã xong -> Chưa trả lời */}
             <div className="flex border-b border-neutral text-xs font-semibold bg-background">
               <button
                 type="button"
                 onClick={() => setActiveTab('ALL')}
-                className={`py-2.5 px-3.5 transition-all ${
+                className={`py-2.5 px-3.5 transition-all whitespace-nowrap ${
                   activeTab === 'ALL'
                     ? 'border-b-2 border-primary text-primary font-bold bg-surface'
                     : 'text-textSecondary hover:text-text'
@@ -391,7 +400,7 @@ export default function WarehouseInboxPage() {
               <button
                 type="button"
                 onClick={() => setActiveTab('DONE')}
-                className={`py-2.5 px-3.5 transition-all ${
+                className={`py-2.5 px-3.5 transition-all whitespace-nowrap ${
                   activeTab === 'DONE'
                     ? 'border-b-2 border-primary text-primary font-bold bg-surface'
                     : 'text-textSecondary hover:text-text'
@@ -402,7 +411,7 @@ export default function WarehouseInboxPage() {
               <button
                 type="button"
                 onClick={() => setActiveTab('UNANSWERED')}
-                className={`py-2.5 px-3.5 transition-all ${
+                className={`py-2.5 px-3.5 transition-all whitespace-nowrap ${
                   activeTab === 'UNANSWERED'
                     ? 'border-b-2 border-primary text-primary font-bold bg-surface'
                     : 'text-textSecondary hover:text-text'
@@ -410,11 +419,6 @@ export default function WarehouseInboxPage() {
               >
                 Chưa trả lời · {unansweredCount}
               </button>
-            </div>
-
-            {/* Subheader note */}
-            <div className="p-2.5 px-3.5 text-[10px] text-textSecondary border-b border-neutral bg-background">
-              Chờ lâu nhất xếp trên cùng
             </div>
 
             {/* List items */}
@@ -505,19 +509,29 @@ export default function WarehouseInboxPage() {
           {selectedConv ? (
             <div className="flex-1 flex flex-col min-w-0">
               {/* Header phòng chat MC-02 */}
-              <div className="h-14 border-b border-neutral px-4 flex items-center justify-between shrink-0 bg-surface">
-                <div>
-                  <span className="text-xs font-bold text-text">
+              <div className="h-14 border-b border-neutral px-4 flex items-center justify-between gap-3 shrink-0 bg-surface">
+                <div className="min-w-0">
+                  <span className="text-xs font-bold text-text truncate block">
                     {selectedConv?.memberName || selectedConv?.counterpart?.displayName || 'Member'}
                   </span>
-                  <span className="text-[10px] text-textSecondary ml-2 font-mono">
-                    {selectedConv?.memberCode || selectedConv?.counterpart?.id || ''}
-                  </span>
                 </div>
-                {/* Ẩn nút "Đánh dấu đã xong" (POST /conversations/{id}/done) theo C.1 #4 do BE chưa có API */}
-                {selectedConv?.status === 'DONE' && (
-                  <span className="text-[11px] font-bold text-primary">✓ Đã xong</span>
-                )}
+                <div className="flex items-center gap-2 shrink-0">
+                  {selectedConv?.status === 'DONE' && (
+                    <span className="text-[11px] font-bold text-primary whitespace-nowrap">✓ Đã xong</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowMemberInfo((prev) => !prev)}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                      showMemberInfo
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-neutral bg-surface text-textSecondary hover:bg-background hover:text-text'
+                    }`}
+                    title={showMemberInfo ? 'Ẩn thông tin Member' : 'Hiện thông tin Member'}
+                  >
+                    {showMemberInfo ? 'Ẩn thông tin' : 'Thông tin Member'}
+                  </button>
+                </div>
               </div>
 
               {/* Lịch sử tin nhắn */}
@@ -703,47 +717,47 @@ export default function WarehouseInboxPage() {
             </div>
           )}
 
-          {/* CỘT 3 (300px): THÔNG TIN MEMBER & SKU LIÊN QUAN (MC-02) */}
-          {selectedConv && (
-            <div className="w-full lg:w-[300px] border-t lg:border-t-0 lg:border-l border-neutral p-4 text-xs space-y-4 shrink-0 bg-surface">
+          {/* CỘT 3 (280px): THÔNG TIN MEMBER & SKU LIÊN QUAN (MC-02) */}
+          {selectedConv && showMemberInfo && (
+            <div className="w-full lg:w-[280px] border-t lg:border-t-0 lg:border-l border-neutral p-4 text-xs space-y-4 shrink-0 bg-surface min-w-0">
               <div>
                 <div className="text-[10px] uppercase font-bold text-textSecondary tracking-wider mb-2">
                   Thông tin Member
                 </div>
                 <div className="space-y-1.5 divide-y divide-neutral">
-                  <div className="flex justify-between py-1">
-                    <span className="text-textSecondary">Họ tên</span>
-                    <span className="font-bold text-text">
+                  <div className="flex justify-between gap-2 py-1">
+                    <span className="text-textSecondary shrink-0">Họ tên</span>
+                    <span className="font-bold text-text text-right truncate">
                       {selectedConv?.memberName || selectedConv?.counterpart?.displayName || '—'}
                     </span>
                   </div>
-                  <div className="flex justify-between py-1">
-                    <span className="text-textSecondary">Số điện thoại</span>
-                    <span className="font-bold text-text">
+                  <div className="flex justify-between gap-2 py-1">
+                    <span className="text-textSecondary shrink-0">Số điện thoại</span>
+                    <span className="font-bold text-text text-right">
                       {selectedConv?.phone || selectedConv?.counterpart?.phone || '—'}
                     </span>
                   </div>
-                  <div className="flex justify-between py-1">
-                    <span className="text-textSecondary">Form ký gửi đang hoạt động</span>
-                    <span className="font-bold text-primary">
+                  <div className="flex justify-between gap-2 py-1">
+                    <span className="text-textSecondary shrink-0">Form ký gửi đang hoạt động</span>
+                    <span className="font-bold text-primary text-right whitespace-nowrap">
                       {formatCountDisplay(
                         selectedConv?.consignCount ?? selectedConv?.counterpart?.consignCount,
                         'form'
                       )}
                     </span>
                   </div>
-                  <div className="flex justify-between py-1">
-                    <span className="text-textSecondary">Đơn đang giao</span>
-                    <span className="font-bold text-text">
+                  <div className="flex justify-between gap-2 py-1">
+                    <span className="text-textSecondary shrink-0">Đơn đang giao</span>
+                    <span className="font-bold text-text text-right whitespace-nowrap">
                       {formatCountDisplay(
                         selectedConv?.shippingCount ?? selectedConv?.counterpart?.shippingCount,
                         'đơn'
                       )}
                     </span>
                   </div>
-                  <div className="flex justify-between py-1">
-                    <span className="text-textSecondary">Yêu cầu trả hàng</span>
-                    <span className="font-bold text-error">
+                  <div className="flex justify-between gap-2 py-1">
+                    <span className="text-textSecondary shrink-0">Yêu cầu trả hàng</span>
+                    <span className="font-bold text-error text-right whitespace-nowrap">
                       {formatCountDisplay(
                         selectedConv?.returnCount ?? selectedConv?.counterpart?.returnCount,
                         'yêu cầu'
@@ -763,7 +777,7 @@ export default function WarehouseInboxPage() {
                       RH
                     </div>
                     <div className="min-w-0">
-                      <div className="font-bold text-xs text-text">
+                      <div className="font-bold text-xs text-text truncate">
                         {selectedConv.mentionedItem.sku}
                       </div>
                       <div className="text-[10px] text-textSecondary">
@@ -780,16 +794,12 @@ export default function WarehouseInboxPage() {
                         )}`
                       )
                     }
-                    className="w-full mt-2.5 text-xs font-semibold py-2 border border-neutral rounded-xl bg-surface hover:bg-background text-text transition-colors cursor-pointer"
+                    className="w-full mt-2.5 text-xs font-semibold py-2 border border-neutral rounded-xl bg-surface hover:bg-background text-text transition-colors cursor-pointer whitespace-nowrap"
                   >
                     Mở trong Tồn kho
                   </button>
                 </div>
               )}
-
-              <div className="text-[10px] text-textSecondary leading-relaxed pt-2 border-t border-neutral">
-                Chỉ xem. Moderator không sửa giá, kỳ hay thông tin Member từ màn chat.
-              </div>
             </div>
           )}
         </div>
