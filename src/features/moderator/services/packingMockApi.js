@@ -350,6 +350,19 @@ export const packingMockApi = {
   },
 
   /**
+   * PUT /orders/{id}/pack/photos
+   */
+  updatePackingPhotos: async (orderId, photoUrls = []) => {
+    await delay();
+    const order = ordersStore[orderId] || (await packingMockApi.getOrderDetail(orderId));
+    if (order.ghnTrackingCode) {
+      throw { status: 409, message: 'Không thể cập nhật ảnh đóng gói sau khi đã tạo vận đơn.' };
+    }
+    order.packingPhotoUrls = Array.isArray(photoUrls) ? [...photoUrls].slice(0, 5) : [];
+    return [...order.packingPhotoUrls];
+  },
+
+  /**
    * API 70: POST /orders/{id}/shipment
    */
   createShipment: async (orderId, payload = {}) => {

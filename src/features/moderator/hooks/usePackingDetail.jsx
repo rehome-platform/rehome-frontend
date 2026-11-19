@@ -3,7 +3,8 @@ import React, { useRef, useState, useEffect } from "react";
 import { usePhase2, useResource } from "./warehouseHooks.jsx";
 
 import { packingService } from "../services/packingApi.js";
-import { canPack, canShip } from "../models/packingModel.js";
+import { inventoryService } from "../services/inventoryApi.js";
+import { canPack, canShip, canEditPackingPhotos, canHandoverToGhn } from "../models/packingModel.js";
 import { operationReady } from "../config/packingContract.js";
 
 export function usePackingDetail({ orderId, onChanged }) {
@@ -33,6 +34,13 @@ export function usePackingDetail({ orderId, onChanged }) {
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [handoverLoading, setHandoverLoading] = useState(false);
 
+  // Ảnh đóng gói (tối đa 5 ảnh, folder ORDER_PACKING)
+  const [packingPhotos, setPackingPhotos] = useState([]);
+  const [packingPhotosUploading, setPackingPhotosUploading] = useState(false);
+  const [packingPhotosSaving, setPackingPhotosSaving] = useState(false);
+  const [packingPhotosError, setPackingPhotosError] = useState('');
+  const packingPhotosLock = useRef(false);
+
   const lock = useRef(false);
   const input = useRef(null);
 
@@ -43,6 +51,100 @@ export function usePackingDetail({ orderId, onChanged }) {
 
   const order = resource.data;
   const changed = () => { onChanged(); window.dispatchEvent(new Event('warehouse:changed')); };
+
+  useEffect(() => {
+    if (!packingPhotosLock.current && Array.isArray(order?.packingPhotoUrls)) {
+      setPackingPhotos(order.packingPhotoUrls);
+    }
+  }, [order?.packingPhotoUrls]);
+
+  const canEditPhotos =
+    operationReady('packingPhotos') &&
+    !uncertain &&
+    canEditPackingPhotos(order, scope, now);
+
+  const persistPackingPhotos = async (nextUrls) => {
+    setPackingPhotosSaving(true);
+    try {
+      const saved = await packingService.updatePhotos(orderId, nextUrls, { signal, scope });
+      const resolvedUrls = Array.isArray(saved) ? saved : nextUrls;
+      if (alive.current && !signal.aborted) {
+        setPackingPhotos(resolvedUrls);
+        setPackingPhotosError('');
+      }
+      return resolvedUrls;
+    } finally {
+      if (alive.current && !signal.aborted) {
+        setPackingPhotosSaving(false);
+      }
+    }
+  };
+
+  const uploadPackingPhotos = async (files) => {
+    if (packingPhotosLock.current || !files?.length || !canEditPhotos) return;
+    if (packingPhotos.length + files.length > 5) {
+      setPackingPhotosError('Chỉ được tải tối đa 5 ảnh đóng gói.');
+      return;
+    }
+    packingPhotosLock.current = true;
+    setPackingPhotosUploading(true);
+    setPackingPhotosError('');
+    const uploadedUrls = [];
+    let errorMessage = '';
+    try {
+      for (const file of files) {
+        if (!file.type?.startsWith('image/')) {
+          errorMessage = 'Vui lòng chỉ chọn tệp hình ảnh.';
+          continue;
+        }
+        try {
+          const result = await inventoryService.upload(file, {
+            signal,
+            scope,
+            folder: 'ORDER_PACKING',
+          });
+          if (!result?.url || !/^https:\/\//i.test(result.url)) {
+            throw new Error('Máy chủ chưa trả về URL ảnh HTTPS hợp lệ.');
+          }
+          uploadedUrls.push(result.url);
+        } catch (err) {
+          errorMessage = err?.message || 'Không thể tải ảnh đóng gói lên.';
+        }
+      }
+      if (uploadedUrls.length > 0 && alive.current && !signal.aborted) {
+        const nextUrls = [...packingPhotos, ...uploadedUrls].slice(0, 5);
+        await persistPackingPhotos(nextUrls);
+      }
+      if (errorMessage && alive.current && !signal.aborted) {
+        setPackingPhotosError(errorMessage);
+      }
+    } catch (err) {
+      if (alive.current && !signal.aborted) {
+        setPackingPhotosError(err?.message || 'Không thể lưu danh sách ảnh đóng gói.');
+      }
+    } finally {
+      packingPhotosLock.current = false;
+      if (alive.current && !signal.aborted) {
+        setPackingPhotosUploading(false);
+      }
+    }
+  };
+
+  const removePackingPhoto = async (index) => {
+    if (packingPhotosLock.current || !canEditPhotos) return;
+    const nextUrls = packingPhotos.filter((_, idx) => idx !== index);
+    packingPhotosLock.current = true;
+    setPackingPhotosError('');
+    try {
+      await persistPackingPhotos(nextUrls);
+    } catch (err) {
+      if (alive.current && !signal.aborted) {
+        setPackingPhotosError(err?.message || 'Không thể xóa ảnh đóng gói.');
+      }
+    } finally {
+      packingPhotosLock.current = false;
+    }
+  };
 
   const togglePicked = (productId) => {
     setPickedItems(prev => ({ ...prev, [productId]: !prev[productId] }));
@@ -118,8 +220,7 @@ export function usePackingDetail({ orderId, onChanged }) {
   };
 
   const handoverGhn = async () => {
-    if (handoverLoading || lock.current || !order) return false;
-    if (['SHIPPING', 'DELIVERED', 'COMPLETED'].includes(order.status)) return false;
+    if (handoverLoading || lock.current || !canHandoverToGhn(order) || !operationReady('ghnHandover')) return false;
     lock.current = true;
     setHandoverLoading(true);
     try {
@@ -127,6 +228,7 @@ export function usePackingDetail({ orderId, onChanged }) {
       await resource.mutate(options => packingService.handoverOrder(orderId, options), {
         onSuccess: () => {
           ok = true;
+          setMessage('Đã xác nhận bàn giao kiện hàng cho GHN.');
           changed();
         },
       });
@@ -182,6 +284,16 @@ export function usePackingDetail({ orderId, onChanged }) {
 
     sections: {
       PackingItemTable: { items, pickedItems, scannedProductIds, togglePicked },
+      PackingPhotosPanel: {
+        photos: packingPhotos,
+        canEdit: canEditPhotos,
+        lockedByShipment: Boolean(order?.ghnTrackingCode),
+        uploading: packingPhotosUploading,
+        saving: packingPhotosSaving,
+        error: packingPhotosError,
+        onUpload: uploadPackingPhotos,
+        onRemove: removePackingPhoto,
+      },
       PackingScanPanel: {
         totalCount,
         order,

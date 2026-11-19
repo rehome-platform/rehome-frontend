@@ -7,6 +7,7 @@ import { Page, ResourceState } from "../components/WarehouseUi.jsx";
 import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
 import { queueService } from '../services/warehouseApi.js';
 import { listItems } from "../models/warehouseModel.js";
+import { formatOrderStatus } from "../models/packingModel.js";
 import { usePackingDetail } from '../hooks/usePackingDetail.jsx';
 import { PackingQueueItem } from '../components/packing/PackingQueueItem.jsx';
 import { PackingWrongItemModal } from '../components/packing/PackingWrongItemModal.jsx';
@@ -14,6 +15,7 @@ import { WaybillPrintModal } from '../components/packing/WaybillPrintModal.jsx';
 import {
   PackingRecipientPanel,
   PackingShipmentPanel,
+  PackingPhotosPanel,
   PackingScanPanel,
   PackingItemTable,
 } from '../components/packing/PackingDetailSections.jsx';
@@ -103,7 +105,7 @@ export function PackingDetail({ orderId, onChanged }) {
                   Phiếu lấy hàng — {model.totalCount} món
                 </h2>
                 <span className="text-xs font-bold text-[#006B2C]">
-                  {({ PAID: 'Đã thanh toán', PACKING: 'Đang đóng gói', SHIPPING: 'Đang vận chuyển', DELIVERED: 'Đã giao', COMPLETED: 'Hoàn tất', CANCELLED: 'Đã hủy' })[model.order.status] || model.order.status}
+                  {formatOrderStatus(model.order.status)}
                 </span>
               </div>
               <p className="text-xs text-[#5f5f5f]">
@@ -122,6 +124,9 @@ export function PackingDetail({ orderId, onChanged }) {
 
             {/* Bảng món hàng (DG-02) */}
             <PackingItemTable {...model.sections.PackingItemTable} />
+
+            {/* ẢNH ĐÓNG GÓI ĐƠN HÀNG (ORDER_PACKING) */}
+            <PackingPhotosPanel {...model.sections.PackingPhotosPanel} />
 
             {/* KHUNG QUÉT ĐỐI CHIẾU MÃ SKU (DG-03) */}
             {!model.order.ghnTrackingCode && (
