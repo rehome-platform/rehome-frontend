@@ -85,42 +85,38 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateProfile = async (profileData) => {
-    setLoading(true);
-    try {
-      // Đối với Moderator/Staff và Admin (hoặc vai trò không có endpoint riêng): gọi PUT /api/auth/me
-      if (user && !isMemberRole(user.role || user.authorities)) {
-        const targetName = (profileData?.fullName || profileData?.name || '').trim();
-        const targetPhone = (profileData?.phone || '').trim();
-        const targetAvatar = (profileData?.avatarUrl || profileData?.avatar || '').trim();
-        const payload = {
-          ...(targetName ? { fullName: targetName } : {}),
-          ...(profileData?.phone !== undefined ? { phone: targetPhone } : {}),
-          ...(targetAvatar ? { avatarUrl: targetAvatar } : {}),
-        };
-        const res = await baseApi.put('/api/auth/me', payload);
-        const raw = res?.data?.data ?? res?.data ?? {};
-        const resolvedName = raw.fullName || raw.name || targetName || user.fullName || user.name;
-        const resolvedPhone = raw.phone !== undefined ? raw.phone : (profileData?.phone !== undefined ? targetPhone : user.phone);
-        const resolvedAvatar = raw.avatarUrl || targetAvatar || user.avatarUrl || user.avatar || '';
-        const updated = {
-          ...user,
-          ...raw,
-          name: resolvedName,
-          fullName: resolvedName,
-          phone: resolvedPhone,
-          avatar: resolvedAvatar,
-          avatarUrl: resolvedAvatar,
-        };
-        saveUser(updated);
-        setUser(updated);
-        return updated;
-      }
-      const updatedUser = await authService.updateProfile(profileData);
-      setUser(updatedUser);
-      return updatedUser;
-    } finally {
-      setLoading(false);
+    // Profile owns this request's loading state; auth loading would unmount PrivateRoute and lose feedback banners.
+    // Đối với Moderator/Staff và Admin (hoặc vai trò không có endpoint riêng): gọi PUT /api/auth/me
+    if (user && !isMemberRole(user.role || user.authorities)) {
+      const targetName = (profileData?.fullName || profileData?.name || '').trim();
+      const targetPhone = (profileData?.phone || '').trim();
+      const targetAvatar = (profileData?.avatarUrl || profileData?.avatar || '').trim();
+      const payload = {
+        ...(targetName ? { fullName: targetName } : {}),
+        ...(profileData?.phone !== undefined ? { phone: targetPhone } : {}),
+        ...(targetAvatar ? { avatarUrl: targetAvatar } : {}),
+      };
+      const res = await baseApi.put('/api/auth/me', payload);
+      const raw = res?.data?.data ?? res?.data ?? {};
+      const resolvedName = raw.fullName || raw.name || targetName || user.fullName || user.name;
+      const resolvedPhone = raw.phone !== undefined ? raw.phone : (profileData?.phone !== undefined ? targetPhone : user.phone);
+      const resolvedAvatar = raw.avatarUrl || targetAvatar || user.avatarUrl || user.avatar || '';
+      const updated = {
+        ...user,
+        ...raw,
+        name: resolvedName,
+        fullName: resolvedName,
+        phone: resolvedPhone,
+        avatar: resolvedAvatar,
+        avatarUrl: resolvedAvatar,
+      };
+      saveUser(updated);
+      setUser(updated);
+      return updated;
     }
+    const updatedUser = await authService.updateProfile(profileData);
+    setUser(updatedUser);
+    return updatedUser;
   };
 
   const changePassword = async (passwordData) => {
@@ -167,6 +163,11 @@ export const AuthProvider = ({ children }) => {
 
     // Lắng nghe sự kiện hết hạn token từ interceptor
     const handleAuthExpired = () => {
+      try {
+        sessionStorage.setItem('rehome_session_expired', '1');
+      } catch {
+        // ignore storage errors
+      }
       setUser(null);
       setIsAuthenticated(false);
       removeTokens();
