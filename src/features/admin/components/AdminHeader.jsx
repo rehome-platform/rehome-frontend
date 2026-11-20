@@ -1,37 +1,21 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import React from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.jsx';
+import UserAccountDropdown from '../../../components/common/UserAccountDropdown.jsx';
+import { getRoleLabel } from '../../../constants/roleLabels.js';
 
 /**
  * Header Quản trị hệ thống ReHome (Admin Unified Header)
- * Đồng bộ chuẩn 100% với Moderator Header:
- * - Chiều cao chuẩn h-16 (64px), nền Surface #FFFFFF, viền Neutral #E2E8E0
+ * Đồng bộ 100% với ModeratorLayout:
+ * - Chiều cao h-16 (64px), nền bg-surface/95 backdrop-blur-sm, viền border-neutral/80
  * - Breadcrumb / Tiêu đề trang cập nhật tự động theo route
- * - Badge vai trò Quản trị viên (Admin) chuẩn Design tokens
- * - User Profile menu với avatar, thông tin và chức năng đăng xuất
+ * - Badge vai trò Quản trị viên chuẩn tiếng Việt & Design Tokens
+ * - Menu tài khoản dùng chung UserAccountDropdown
  */
 export default function AdminHeader({ activeTitle, onOpenMobile }) {
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef(null);
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, loggingOut } = useAuth();
 
-  const handleLogout = async () => {
-    setShowDropdown(false);
-    if (logout) await logout();
-  };
-
-  const displayName = user?.fullName || user?.name || user?.email || 'Quản trị viên';
-  const displayEmail = user?.email || 'admin@rehome.vn';
-  const initials = displayName
-    .split(' ')
-    .filter(Boolean)
-    .map((w) => w[0])
-    .slice(-2)
-    .join('')
-    .toUpperCase() || 'AD';
-
-  // Xác định tiêu đề trang tự động dựa trên URL nếu không truyền prop activeTitle
   const getAutoTitle = () => {
     if (activeTitle) return activeTitle;
     const path = location.pathname;
@@ -41,7 +25,7 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
     if (path.startsWith('/admin/ban-proposals')) return 'Đề xuất khóa tài khoản';
     if (path.startsWith('/admin/warehouses')) return 'Quản lý điểm kí gửi ReHome';
     if (path.startsWith('/admin/configs')) return 'Cấu hình tham số hệ thống';
-    if (path.startsWith('/admin/audit-logs')) return 'Audit log';
+    if (path.startsWith('/admin/audit-logs')) return 'Nhật ký hệ thống';
     if (path.startsWith('/admin/violation-words')) return 'Quản lý từ ngữ vi phạm';
     if (path.startsWith('/admin/membership-plans')) return 'Cấu hình gói thành viên';
     if (/^\/admin\/membership-subscriptions\/.+/.test(path)) return 'Chi tiết gói thành viên';
@@ -52,125 +36,53 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
   };
 
   const currentTitle = getAutoTitle();
-
-  // Đóng dropdown khi click ra ngoài
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+  const roleLabel = getRoleLabel(user?.role || 'ADMIN');
 
   return (
     <header
       id="admin-header"
-      className="h-16 bg-white border-b border-[#E2E8E0] px-4 sm:px-6 flex items-center justify-between sticky top-0 z-20 shadow-xs"
+      className="h-16 bg-surface/95 backdrop-blur-sm border-b border-neutral/80 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.03)]"
     >
       {/* Trái: Nút mở Mobile Drawer & Breadcrumb / Tiêu đề */}
       <div className="flex items-center gap-3 min-w-0">
         <button
+          type="button"
           onClick={onOpenMobile}
-          className="lg:hidden p-1.5 rounded-xl text-[#191C19] hover:bg-[#F0F5EE] hover:text-[#006B2C] transition-colors"
+          className="lg:hidden p-2 rounded-xl border border-neutral text-text hover:bg-[#F6F9F4] hover:text-[#006B2C] transition-colors"
           title="Mở thanh điều hướng"
           aria-label="Mở menu"
         >
-          <span className="material-symbols-outlined text-2xl">menu</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-xl leading-none block">
+            menu
+          </span>
         </button>
 
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-[11px] font-semibold text-[#717971] tracking-wider hidden sm:inline shrink-0">
+          <span className="text-[11px] font-semibold text-textSecondary tracking-wider hidden sm:inline shrink-0">
             Hệ thống
           </span>
-          <span className="text-xs text-[#E2E8E0] hidden sm:inline shrink-0">/</span>
-          <h1 className="text-sm sm:text-base font-bold text-[#191C19] font-heading truncate">
+          <span className="text-xs text-neutral hidden sm:inline shrink-0">/</span>
+          <h1 className="text-sm sm:text-base font-bold text-text font-heading truncate">
             {currentTitle}
           </h1>
         </div>
       </div>
 
-      {/* Phải: Badge Role & Admin Profile Dropdown */}
-      <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-        {/* Pill Badge vai trò Quản trị viên */}
-        <div className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#E8F5E9] text-[#006B2C] border border-[#C8E6C9] select-none">
+      {/* Phải: Badge vai trò & Menu tài khoản dùng chung */}
+      <div className="flex items-center gap-3 shrink-0">
+        <div className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#ECFDF3] text-[#006B2C] border border-[#ABEFC6] select-none">
           <span className="w-2 h-2 rounded-full bg-[#006B2C]"></span>
-          <span>Quản trị viên (Admin)</span>
+          <span>{roleLabel}</span>
         </div>
 
-        {/* User Profile trigger & Dropdown */}
-        <div className="relative" ref={dropdownRef}>
-          <div
-            onClick={() => setShowDropdown((prev) => !prev)}
-            className="flex items-center gap-2.5 p-1 pl-2.5 rounded-xl hover:bg-[#F8FAF8] cursor-pointer transition-colors border border-transparent hover:border-[#E2E8E0] select-none"
-            role="button"
-            aria-expanded={showDropdown}
-            aria-controls="admin-account-dropdown"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                setShowDropdown((prev) => !prev);
-              }
-            }}
-          >
-            <div className="w-8 h-8 rounded-full bg-[#E8F5E9] text-[#006B2C] font-bold text-xs flex items-center justify-center shrink-0 border border-[#C8E6C9]">
-              {initials}
-            </div>
-            <div className="hidden sm:block text-left">
-              <p className="text-xs font-bold text-[#191C19] leading-tight truncate max-w-[130px]">
-                {displayName}
-              </p>
-              <p className="text-[10px] text-[#717971] leading-tight truncate max-w-[130px]">
-                {displayEmail}
-              </p>
-            </div>
-            <span className="material-symbols-outlined text-[18px] text-[#717971]">
-              arrow_drop_down
-            </span>
-          </div>
-
-          {showDropdown && (
-            <div
-              id="admin-account-dropdown"
-              className="absolute right-0 mt-1.5 w-56 bg-white rounded-xl shadow-lg border border-[#E2E8E0] py-1 z-50 animate-fadeIn"
-            >
-              <div className="px-4 py-2.5 border-b border-[#E2E8E0]">
-                <p className="text-xs font-bold text-[#191C19] truncate">{displayName}</p>
-                <p className="text-[11px] text-[#5B6776] truncate">{displayEmail}</p>
-                <div className="mt-1.5">
-                  <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7]">
-                    Quản trị viên
-                  </span>
-                </div>
-              </div>
-
-              <div className="py-1">
-                <Link
-                  to="/profile"
-                  onClick={() => setShowDropdown(false)}
-                  className="flex items-center gap-2.5 px-4 py-2 text-xs text-[#191C19] hover:bg-[#F0F5EE] hover:text-[#006B2C]"
-                >
-                  <span className="material-symbols-outlined text-[18px] text-[#717971]">manage_accounts</span>
-                  <span>Hồ sơ cá nhân & Đổi mật khẩu</span>
-                </Link>
-              </div>
-
-              <div className="border-t border-[#E2E8E0] my-1"></div>
-
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-[#BA1A1A] hover:bg-[#FEE4E2] transition-colors"
-              >
-                <span className="material-symbols-outlined text-[18px]">logout</span>
-                <span>Đăng xuất</span>
-              </button>
-            </div>
-          )}
-        </div>
+        <UserAccountDropdown
+          user={user}
+          logout={logout}
+          loggingOut={loggingOut}
+          roleLabel={roleLabel}
+          subtitle={user?.email || 'admin@rehome.vn'}
+          dropdownId="admin-account-dropdown"
+        />
       </div>
     </header>
   );

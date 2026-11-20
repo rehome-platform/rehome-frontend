@@ -9,3 +9,4 @@ export { default as Logo } from './Logo.jsx';
 export { default as ToastContainer } from './ToastContainer.jsx';
 export { default as ToastItem } from './ToastItem.jsx';
 export { default as Tooltip } from './Tooltip.jsx';
+export { default as UserAccountDropdown } from './UserAccountDropdown.jsx';
