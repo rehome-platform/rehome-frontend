@@ -29,7 +29,6 @@ export default function InventoryDetailPage() {
 
   const product = useResource((options) => inventoryService.read(sku, options), [sku], {
     poll: true,
-    refreshInterval: 30000,
     done: (value) => !value?.photos?.some((photo) => photo.status === 'PROCESSING'),
   });
 
@@ -79,13 +78,13 @@ export default function InventoryDetailPage() {
     if (data.degradedCaseId === null) return null;
     const cases = await inventoryService.degradedCases({}, options);
     return latestDegradedCase(cases, data.id);
-  }, [data?.id, data?.status, data?.degradedCaseId], { enabled: Boolean(data?.id && data.status !== 'ON_SALE'), refreshInterval: 30000 });
+  }, [data?.id, data?.status, data?.degradedCaseId], { enabled: Boolean(data?.id && data.status !== 'ON_SALE') });
   const activeCase = data?.status === 'ON_SALE' || data?.degradedCaseId === null ? null
     : data?.degradedCaseId
       ? [existingCase.data, submittedCase].find(item => item?.id === data.degradedCaseId)
       : existingCase.data || submittedCase;
   const pricing = useResource(options => endTermService.pendingPricing(options), [sku], {
-    enabled: Boolean(data && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(data.status)), refreshInterval: 30000,
+    enabled: Boolean(data && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(data.status)),
   });
   const pendingReturnData = useMemo(() => pendingReturnFromInventory(data), [data]);
   const pendingReturn = useMemo(

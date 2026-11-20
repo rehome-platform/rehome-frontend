@@ -98,4 +98,33 @@ describe('bounded polling', () => {
     expect(screen.queryByText('Private data')).not.toBeInTheDocument();
     expect(signals.every((signal) => signal.aborted)).toBe(true);
   });
+  it('does not refetch non-polling resources when document visibility changes', async () => {
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    const loader = vi.fn(async () => ({ name: 'Static data' }));
+    function StaticProbe() {
+      const resource = useResource(loader, []);
+      return <p>{resource.data?.name}</p>;
+    }
+    render(<StaticProbe />, { wrapper: Wrapper });
+    await act(async () => {});
+    const initial = loader.mock.calls.length;
+    visibility.mockReturnValue('hidden');
+    await act(async () => fireEvent(document, new Event('visibilitychange')));
+    visibility.mockReturnValue('visible');
+    await act(async () => fireEvent(document, new Event('visibilitychange')));
+    expect(loader).toHaveBeenCalledTimes(initial);
+  });
+  it('does not refetch completed polling resources when document visibility changes', async () => {
+    vi.useFakeTimers();
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    const loader = vi.fn(async () => ({ name: 'Done receipt', confirmedAt: '2026-10-18' }));
+    render(<Probe loader={loader} done={(value) => !!value?.confirmedAt} />, { wrapper: Wrapper });
+    await act(async () => {});
+    const initial = loader.mock.calls.length;
+    visibility.mockReturnValue('hidden');
+    await act(async () => fireEvent(document, new Event('visibilitychange')));
+    visibility.mockReturnValue('visible');
+    await act(async () => fireEvent(document, new Event('visibilitychange')));
+    expect(loader).toHaveBeenCalledTimes(initial);
+  });
 });

@@ -72,21 +72,18 @@ it('clears obsolete end-of-term actions when the backend says ON_SALE or UNCLAIM
   expect(inventoryDetail({ ...item, status: 'UNCLAIMED', allowedActions: ['HANDOVER'] }, item.id).allowedActions).not.toContain('HANDOVER');
 });
 
-it('keeps the entered price and note through background refresh and a temporary network failure', async () => {
-  vi.useFakeTimers();
+it('keeps the entered price and note through manual refresh and a temporary network failure', async () => {
   page();
-  await act(async () => {});
-  expect(screen.getByRole('button', { name: /Gửi đề xuất giá mới/ })).toBeEnabled();
+  await waitFor(() => expect(screen.getByRole('button', { name: /Gửi đề xuất giá mới/ })).toBeEnabled());
   fireEvent.change(screen.getByLabelText(/Giá bán đề xuất/), { target: { value: '350000' } });
   fireEvent.change(screen.getByLabelText(/Ghi chú của Moderator/), { target: { value: 'Giá đã trao đổi' } });
   inventoryService.read.mockRejectedValueOnce(new Error('Network interrupted'));
-  await act(async () => { vi.advanceTimersByTime(30000); });
-  expect(inventoryService.read).toHaveBeenCalledTimes(2);
+  fireEvent.click(screen.getByRole('button', { name: 'Tải lại' }));
+  await waitFor(() => expect(inventoryService.read).toHaveBeenCalledTimes(2));
+  fireEvent.click(screen.getByRole('button', { name: 'Tải lại' }));
+  await waitFor(() => expect(screen.queryByText('Network interrupted')).not.toBeInTheDocument());
   expect(screen.getByLabelText(/Giá bán đề xuất/)).toHaveValue('350000');
   expect(screen.getByLabelText(/Ghi chú của Moderator/)).toHaveValue('Giá đã trao đổi');
-  await act(async () => { vi.advanceTimersByTime(30000); });
-  expect(screen.queryByText('Network interrupted')).not.toBeInTheDocument();
-  expect(screen.getByLabelText(/Giá bán đề xuất/)).toHaveValue('350000');
 });
 
 it('recovers a submitted proposal after remount without offering another submission', async () => {
@@ -114,21 +111,22 @@ it('keeps confirmed state when Member confirmed before the proposal page is reop
   endTermService.pendingPricing.mockResolvedValue([]);
   const callsBefore = inventoryService.read.mock.calls.length;
   page();
-  await waitFor(() => expect(inventoryService.read.mock.calls.length).toBeGreaterThanOrEqual(callsBefore + 2));
+  await waitFor(() => expect(inventoryService.read.mock.calls.length).toBeGreaterThanOrEqual(callsBefore + 1));
   expect(await screen.findByText(/MEMBER ĐÃ XÁC NHẬN/)).toBeInTheDocument();
 });
 
 it('renders scheduler term changes and UNCLAIMED using refreshed inventory data', async () => {
-  vi.useFakeTimers();
   const list = vi.spyOn(inventoryService, 'list').mockResolvedValue({ items: [{ ...item, sku: item.id, status: 'ON_SALE', currentTerm: 1 }], totalPages: 1 });
   page(WarehouseInventoryPage);
   await act(async () => {});
   expect(screen.getByText(/Kỳ 1/)).toBeInTheDocument();
   list.mockResolvedValue({ items: [{ ...item, sku: item.id, status: 'ON_SALE', currentTerm: 2 }], totalPages: 1 });
-  await act(async () => { vi.advanceTimersByTime(30000); });
+  fireEvent.click(screen.getByRole('button', { name: 'Tải lại' }));
+  await act(async () => {});
   expect(screen.getByText(/Kỳ 2/)).toBeInTheDocument();
   list.mockResolvedValue({ items: [{ ...item, sku: item.id, status: 'UNCLAIMED', decision: 'TAKE_BACK' }], totalPages: 1 });
-  await act(async () => { vi.advanceTimersByTime(30000); });
+  fireEvent.click(screen.getByRole('button', { name: 'Tải lại' }));
+  await act(async () => {});
   expect(screen.getAllByText('Quá hạn nhận lại').length).toBeGreaterThan(1);
   expect(screen.queryByText('Khách yêu cầu nhận lại')).not.toBeInTheDocument();
   expect(screen.queryByText('Đàm phán giá →')).not.toBeInTheDocument();

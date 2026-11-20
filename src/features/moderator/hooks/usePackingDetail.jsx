@@ -17,7 +17,8 @@ export function usePackingDetail({ orderId, onChanged }) {
     const epoch = readEpoch.current;
     return { ...await packingService.read(orderId, options), readEpoch: epoch };
   }, [orderId], {
-    poll: true, done: data => !!data?.ghnTrackingCode,
+    poll: true,
+    done: (data) => Boolean(data?.ghnTrackingCode) || data?.shipmentOutcome === 'NOT_CREATED',
   });
 
   const [sku, setSku] = useState('');
