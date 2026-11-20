@@ -273,8 +273,8 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
           targetType: /kho|ký gửi|kí gửi|WAREHOUSE/i.test(l.action || '')
             ? 'WAREHOUSE'
             : l.action?.includes('cấu hình')
-              ? 'SYSTEM_CONFIG'
-              : 'ACCOUNT',
+            ? 'SYSTEM_CONFIG'
+            : 'ACCOUNT',
           target: l.action,
           beforeState: '—',
           afterState: '—',
@@ -470,10 +470,11 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
                 key={opt.value}
                 type="button"
                 onClick={() => toggleQuickMinutes(opt.value)}
-                className={`px-2.5 py-2 rounded-xl text-[11px] font-semibold border transition-colors ${quickMinutes === opt.value
+                className={`px-2.5 py-2 rounded-xl text-[11px] font-semibold border transition-colors ${
+                  quickMinutes === opt.value
                     ? 'bg-[#006B2C] text-white border-[#006B2C]'
                     : 'bg-white text-[#414942] border-[#E2E8E0] hover:border-[#006B2C]/50'
-                  }`}
+                }`}
               >
                 {opt.label}
               </button>
@@ -557,14 +558,14 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
               fromTime ||
               toTime ||
               quickMinutes) && (
-                <button
-                  onClick={handleResetFilter}
-                  className="px-3 py-1.5 text-xs font-semibold text-[#717971] hover:text-[#191C19] hover:bg-[#F0F4EE] rounded-xl transition-colors flex items-center gap-1"
-                >
-                  <span className="material-symbols-outlined text-base">restart_alt</span>
-                  <span>Xóa bộ lọc</span>
-                </button>
-              )}
+              <button
+                onClick={handleResetFilter}
+                className="px-3 py-1.5 text-xs font-semibold text-[#717971] hover:text-[#191C19] hover:bg-[#F0F4EE] rounded-xl transition-colors flex items-center gap-1"
+              >
+                <span className="material-symbols-outlined text-base">restart_alt</span>
+                <span>Xóa bộ lọc</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -597,8 +598,9 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
       ) : (
         /* Audit Table - gọn, mỗi ô một dòng, chi tiết đầy đủ nằm trong hàng mở rộng */
         <div
-          className={`bg-white rounded-2xl border border-[#E2E8E0] shadow-xs overflow-hidden transition-opacity duration-150 ${loading ? 'opacity-60 pointer-events-none' : ''
-            }`}
+          className={`bg-white rounded-2xl border border-[#E2E8E0] shadow-xs overflow-hidden transition-opacity duration-150 ${
+            loading ? 'opacity-60 pointer-events-none' : ''
+          }`}
         >
           <div className="overflow-x-auto">
             <table className="w-full min-w-[920px] text-left text-xs">
@@ -618,8 +620,9 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
                     <React.Fragment key={log.id}>
                       <tr
                         onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
-                        className={`hover:bg-[#F8FAF8] cursor-pointer transition-colors ${isExpanded ? 'bg-[#F8FAF8]' : ''
-                          }`}
+                        className={`hover:bg-[#F8FAF8] cursor-pointer transition-colors ${
+                          isExpanded ? 'bg-[#F8FAF8]' : ''
+                        }`}
                       >
                         {/* Expand toggle chevron (hỗ trợ bàn phím Enter/Space) */}
                         <td className="py-2.5 pl-4 pr-1 text-[#5B6776] align-middle">
@@ -635,8 +638,9 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
                           >
                             <span
                               aria-hidden="true"
-                              className={`material-symbols-outlined text-base transition-transform duration-200 inline-block ${isExpanded ? 'rotate-90 text-[#006B2C]' : ''
-                                }`}
+                              className={`material-symbols-outlined text-base transition-transform duration-200 inline-block ${
+                                isExpanded ? 'rotate-90 text-[#006B2C]' : ''
+                              }`}
                             >
                               chevron_right
                             </span>
@@ -653,10 +657,11 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
                         <td className="py-2.5 px-3 whitespace-nowrap overflow-hidden text-ellipsis align-middle" title={log.user}>
                           <span className="font-semibold text-[#191C19]">{log.user}</span>
                           <span
-                            className={`ml-1.5 inline-block px-1.5 py-0.5 rounded-md text-[9px] font-bold ${String(log.role || '').toUpperCase() === 'ADMIN'
+                            className={`ml-1.5 inline-block px-1.5 py-0.5 rounded-md text-[9px] font-bold ${
+                              String(log.role || '').toUpperCase() === 'ADMIN'
                                 ? 'bg-[#E8F5E9] text-[#006B2C]'
                                 : 'bg-[#E0F2F1] text-[#00685F]'
-                              }`}
+                            }`}
                           >
                             {log.role}
                           </span>
@@ -733,10 +738,11 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage <= 1}
-                className={`px-2.5 py-1 rounded-xl border border-[#E2E8E0] transition-colors ${currentPage <= 1
+                className={`px-2.5 py-1 rounded-xl border border-[#E2E8E0] transition-colors ${
+                  currentPage <= 1
                     ? 'opacity-40 cursor-not-allowed bg-gray-50'
                     : 'hover:bg-[#F8FAF8]'
-                  }`}
+                }`}
               >
                 Trước
               </button>
@@ -744,10 +750,11 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
                 <button
                   key={p}
                   onClick={() => setCurrentPage(p)}
-                  className={`px-2.5 py-1 rounded-xl text-xs transition-colors ${currentPage === p
+                  className={`px-2.5 py-1 rounded-xl text-xs transition-colors ${
+                    currentPage === p
                       ? 'bg-[#006B2C] text-white font-bold'
                       : 'border border-[#E2E8E0] hover:bg-[#F8FAF8] text-[#414942]'
-                    }`}
+                  }`}
                 >
                   {p}
                 </button>
@@ -755,10 +762,11 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
               <button
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage >= totalPages}
-                className={`px-2.5 py-1 rounded-xl border border-[#E2E8E0] transition-colors ${currentPage >= totalPages
+                className={`px-2.5 py-1 rounded-xl border border-[#E2E8E0] transition-colors ${
+                  currentPage >= totalPages
                     ? 'opacity-40 cursor-not-allowed bg-gray-50'
                     : 'hover:bg-[#F8FAF8]'
-                  }`}
+                }`}
               >
                 Sau
               </button>
