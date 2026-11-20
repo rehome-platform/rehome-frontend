@@ -19,8 +19,8 @@ export default function Footer() {
               </span>
               <span className="text-lg font-black font-heading text-[#006B2C]">ReHome Web</span>
             </div>
-            <p className="text-[#717971] leading-relaxed">
-              Cổng điều hành và quản trị tập trung dành riêng cho Nhân viên Điểm kí gửi (Moderator) và Quản trị viên (Admin) nền tảng ReHome.
+            <p className="text-[#5B6776] leading-relaxed">
+              Cổng điều hành và quản trị tập trung dành riêng cho Nhân viên Điểm ký gửi (Moderator) và Quản trị viên (Admin) nền tảng ReHome.
             </p>
           </div>
 
@@ -29,14 +29,14 @@ export default function Footer() {
             <h4 className="font-bold text-[#191C19] mb-3 uppercase tracking-wider">
               Cổng Điều Hành Web
             </h4>
-            <ul className="space-y-2 text-[#717971]">
+            <ul className="space-y-2 text-[#5B6776]">
               {isModerator && <>
-                <li><Link to="/moderator/counter" className="hover:text-[#006B2C] transition-colors">Quầy Điểm kí gửi & Kiểm định (Moderator)</Link></li>
-                <li><Link to="/moderator/queue" className="hover:text-[#006B2C] transition-colors">Hàng đợi duyệt form online</Link></li>
+                <li><Link to="/moderator/counter" className="hover:text-[#006B2C] transition-colors">Quầy Điểm ký gửi & Kiểm định</Link></li>
+                <li><Link to="/moderator/queue" className="hover:text-[#006B2C] transition-colors">Hàng đợi duyệt phiếu ký gửi</Link></li>
               </>}
               {isAdmin && <>
-                <li><Link to="/admin" className="hover:text-[#006B2C] transition-colors">Quản trị & Quỹ nền tảng (Admin)</Link></li>
-                <li><Link to="/admin/configs" className="hover:text-[#006B2C] transition-colors">Cấu hình tham số Mục 11</Link></li>
+                <li><Link to="/admin" className="hover:text-[#006B2C] transition-colors">Quản trị & Quỹ nền tảng</Link></li>
+                <li><Link to="/admin/configs" className="hover:text-[#006B2C] transition-colors">Cấu hình tham số hệ thống</Link></li>
               </>}
             </ul>
           </div>
@@ -46,33 +46,33 @@ export default function Footer() {
             <h4 className="font-bold text-[#191C19] mb-3 uppercase tracking-wider">
               Chính Sách & Vận Hành
             </h4>
-            <ul className="space-y-2 text-[#717971]">
+            <ul className="space-y-2 text-[#5B6776]">
               <li><span className="text-[#414942]">Hoa hồng 3 kỳ: 10% - 15% - 20%</span></li>
               <li><span className="text-[#414942]">Giá sàn bảo vệ người bán (50% giá chốt)</span></li>
               <li><span className="text-[#414942]">Cửa sổ rút hàng miễn phí 7 ngày</span></li>
-              <li><span className="text-[#414942]">Kiểm định điểm kí gửi & Tem nhãn SKU dán áo</span></li>
+              <li><span className="text-[#414942]">Kiểm định điểm ký gửi & Tem nhãn SKU</span></li>
             </ul>
           </div>
 
           {/* Contact */}
           <div>
             <h4 className="font-bold text-[#191C19] mb-3 uppercase tracking-wider">
-              Chi Nhánh Điểm Kí Gửi ReHome
+              Chi Nhánh Điểm Ký Gửi ReHome
             </h4>
-            <p className="text-[#717971] mb-1">Điểm kí gửi Q7: Số 12 Nguyễn Thị Thập, P. Tân Phú, Q. 7, TP.HCM</p>
-            <p className="text-[#717971] mb-1">Hotline: 1900 xxxx (8:00 - 18:00)</p>
-            <p className="text-[#717971]">Email hỗ trợ: support@rehome.vn</p>
+            <p className="text-[#5B6776] mb-1">Điểm ký gửi Q7: Số 12 Nguyễn Thị Thập, P. Tân Phú, Q. 7, TP.HCM</p>
+            <p className="text-[#5B6776] mb-1">Giờ làm việc: 8:00 - 18:00 (Thứ 2 - Chủ Nhật)</p>
+            <p className="text-[#5B6776]">Email hỗ trợ: support@rehome.vn</p>
           </div>
         </div>
 
-        <div className="border-t border-[#DDE5D9] pt-6 flex flex-col sm:flex-row items-center justify-between text-[11px] text-[#717971]">
-          <p>© {new Date().getFullYear()} ReHome Platform. Vận hành theo tài liệu nghiệp vụ Review 1.</p>
+        <div className="border-t border-[#DDE5D9] pt-6 flex flex-col sm:flex-row items-center justify-between text-[11px] text-[#5B6776]">
+          <p>© {new Date().getFullYear()} ReHome Platform. Hệ thống quản trị & vận hành nội bộ.</p>
           <div className="flex space-x-4 mt-2 sm:mt-0">
             <span>Sổ kép đối ứng</span>
             <span>•</span>
-            <span>Sandbox VNPay & GHN</span>
+            <span>Thanh toán VNPay & Vận chuyển GHN</span>
             <span>•</span>
-            <span>Admin & Moderator Web</span>
+            <span>ReHome Web Portal</span>
           </div>
         </div>
       </div>

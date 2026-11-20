@@ -20,7 +20,7 @@ export default function Header() {
     {
       label: 'Đổi mật khẩu',
       icon: 'lock_reset',
-      onClick: () => navigate('/profile'),
+      onClick: () => navigate('/profile?tab=security'),
     },
     { divider: true },
     ...(isAdmin

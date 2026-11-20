@@ -7,7 +7,7 @@ gsap.registerPlugin(useGSAP);
 const Button = React.forwardRef(function Button(
   {
     children,
-    variant = 'primary', // 'primary' | 'secondary' | 'outline' | 'warning' | 'accent' | 'danger' | 'ghost'
+    variant = 'primary', // 'primary' | 'secondary' | 'outline' | 'warning' | 'accent' | 'danger' | 'danger-outline' | 'danger-ghost' | 'ghost'
     size = 'md', // 'sm' | 'md' | 'lg'
     disabled = false,
     loading = false,
@@ -96,11 +96,13 @@ const Button = React.forwardRef(function Button(
 
   const variants = {
     primary: 'bg-[#006B2C] text-white hover:bg-[#005523] hover:text-white focus:ring-[#006B2C]/30 shadow-sm hover:shadow',
-    secondary: 'border border-[#DDE5D9] bg-white text-[#1F2A37] hover:bg-[#F6F9F4] hover:border-[#006B2C] hover:text-[#1F2A37] focus:ring-[#006B2C]/20',
+    secondary: 'border border-[#DDE5D9] bg-[#EBF1E8] text-[#1F2A37] hover:bg-[#DDE5D9] hover:text-[#1F2A37] focus:ring-[#006B2C]/20',
     outline: 'border border-[#DDE5D9] bg-white text-[#1F2A37] hover:bg-[#F6F9F4] hover:border-[#006B2C] hover:text-[#1F2A37] focus:ring-[#006B2C]/20',
     warning: 'bg-[#FEA619] text-[#1F2A37] hover:bg-[#E59412] hover:text-[#1F2A37] focus:ring-[#FEA619]/40 shadow-sm font-bold',
     accent: 'bg-[#00685F] text-white hover:bg-[#005049] hover:text-white focus:ring-[#00685F]/30 shadow-sm',
     danger: 'bg-[#D92D20] text-white hover:bg-[#B42318] hover:text-white focus:ring-[#D92D20]/30 shadow-sm',
+    'danger-outline': 'border border-[#D92D20] bg-white text-[#D92D20] hover:bg-[#FEF3F2] hover:border-[#B42318] hover:text-[#B42318] focus:ring-[#D92D20]/25',
+    'danger-ghost': 'text-[#D92D20] hover:bg-[#FEF3F2] hover:text-[#B42318] focus:ring-[#D92D20]/25',
     ghost: 'text-[#1F2A37] hover:bg-[#F6F9F4] hover:text-[#006B2C] focus:ring-[#006B2C]/20',
   };
 
