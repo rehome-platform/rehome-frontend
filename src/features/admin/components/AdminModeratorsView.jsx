@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import adminApi from '../services/adminApi';
 import { Button, Spinner, Modal } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
+import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
 
 /**
  * View Quản lý Nhân sự ReHome
@@ -19,6 +20,11 @@ export default function AdminModeratorsView({ onLogAction }) {
   const [error, setError] = useState(null);
 
   const [searchKeyword, setSearchKeyword] = useState('');
+  const {
+    debouncedQuery: debouncedSearch,
+    isTooShort: isSearchTooShort,
+    hint: searchHint,
+  } = useDebouncedSearch(searchKeyword);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [warehouseFilter, setWarehouseFilter] = useState('ALL');
 
@@ -47,13 +53,10 @@ export default function AdminModeratorsView({ onLogAction }) {
     loadWarehouses();
   }, []);
 
-  // Fetch moderators when filters change (debounce 350ms cho từ khóa tìm kiếm)
+  // Fetch moderators when filters change (debounce 400ms & tối thiểu 2 ký tự qua useDebouncedSearch)
   useEffect(() => {
-    const timer = setTimeout(() => {
-      loadModerators();
-    }, searchKeyword ? 350 : 0);
-    return () => clearTimeout(timer);
-  }, [searchKeyword, statusFilter, warehouseFilter]);
+    loadModerators();
+  }, [debouncedSearch, statusFilter, warehouseFilter]);
 
   const loadWarehouses = async () => {
     try {
@@ -73,7 +76,7 @@ export default function AdminModeratorsView({ onLogAction }) {
       setIsLoading(true);
       setError(null);
       const params = {
-        search: searchKeyword.trim() || undefined,
+        search: debouncedSearch || undefined,
         status: statusFilter !== 'ALL' ? statusFilter : undefined,
         warehouseId: warehouseFilter !== 'ALL' ? warehouseFilter : undefined,
       };
@@ -273,17 +276,22 @@ export default function AdminModeratorsView({ onLogAction }) {
 
       {/* Filter Bar */}
       <div className="bg-white p-4 rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-        <div className="relative flex-1">
-          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#717971] text-lg">
-            search
-          </span>
-          <input
-            type="text"
-            value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.target.value)}
-            placeholder="Tìm theo tên, email hoặc số điện thoại..."
-            className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]/50 focus:bg-white focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15 outline-none transition-all"
-          />
+        <div className="flex-1">
+          <div className="relative">
+            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#717971] text-lg">
+              search
+            </span>
+            <input
+              type="text"
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              placeholder="Tìm theo tên, email hoặc số điện thoại..."
+              className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]/50 focus:bg-white focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15 outline-none transition-all"
+            />
+          </div>
+          {isSearchTooShort && (
+            <p className="mt-1 text-[11px] text-[#5f5f5f]">{searchHint}</p>
+          )}
         </div>
 
         <div className="flex items-center gap-2">

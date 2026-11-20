@@ -160,6 +160,38 @@ describe('Phase 2 No-Shelf Regression', () => {
     });
   });
 
+  it('WarehouseInventoryPage waits for at least 2 characters and debounces before calling inventoryService.list', async () => {
+    const listSpy = vi.spyOn(inventoryService, 'list').mockResolvedValue({
+      items: [
+        { sku: 'RH-M4T19B', name: 'Áo khoác kaki', status: 'ON_SALE', currentPrice: 200000 },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+    });
+
+    render(<WarehouseInventoryPage />, { wrapper: Wrapper });
+    await screen.findByText('Áo khoác kaki');
+    const callsAfterMount = listSpy.mock.calls.length;
+
+    const user = userEvent.setup();
+    const searchInput = screen.getByPlaceholderText(/RH-M4T19B/i);
+    await user.type(searchInput, 'R');
+
+    expect(screen.getByText('Nhập ít nhất 2 ký tự để tìm kiếm')).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    expect(listSpy).toHaveBeenCalledTimes(callsAfterMount);
+
+    await user.type(searchInput, 'H');
+    expect(screen.queryByText('Nhập ít nhất 2 ký tự để tìm kiếm')).not.toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(listSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ sku: 'RH' }),
+        expect.anything(),
+      );
+    });
+  });
+
   it('EndOfTermPage renders without shelf placeholders or columns and searches by SKU/name', async () => {
     const items = [
       { id: 'Q7-AK-001', sku: 'Q7-AK-001', name: 'Áo khoác dạ', status: 'UNCLAIMED' },

@@ -224,21 +224,30 @@ export function useResource(
           ? refreshInterval : Math.min(30000, 5000 * 2 ** failures));
       }
     };
+    const hasAutoRefresh = Boolean(poll || refreshInterval > 0);
     const visibility = () => {
       clearTimeout(timer);
-      if (document.visibilityState !== 'hidden' && !terminal && (refreshInterval || !poll || !complete)) {
+      if (
+        document.visibilityState !== 'hidden' &&
+        !terminal &&
+        (refreshInterval > 0 || (poll && !complete))
+      ) {
         if (poll && !refreshInterval && Date.now() - started >= 600000) setPollExpired(true);
         else load();
       }
     };
-    if ((poll || refreshInterval) && document.visibilityState === 'hidden') {
+    if (hasAutoRefresh && document.visibilityState === 'hidden') {
       setState({ data: null, loading: false, error: null });
     } else load();
-    document.addEventListener('visibilitychange', visibility);
+    if (hasAutoRefresh) {
+      document.addEventListener('visibilitychange', visibility);
+    }
     return () => {
       abort();
       session.signal.removeEventListener('abort', abort);
-      document.removeEventListener('visibilitychange', visibility);
+      if (hasAutoRefresh) {
+        document.removeEventListener('visibilitychange', visibility);
+      }
     };
     // Callers supply stable resource identifiers, never the inline loader.
     // eslint-disable-next-line react-hooks/exhaustive-deps

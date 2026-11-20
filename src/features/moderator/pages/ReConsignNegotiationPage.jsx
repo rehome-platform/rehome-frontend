@@ -17,7 +17,6 @@ export default function ReConsignNegotiationPage() {
 }
 
 function Negotiation({ sku }) {
-  const [tracking, setTracking] = useState(true);
   const [proposedPrice, setProposedPrice] = useState('');
   const [moderatorNote, setModeratorNote] = useState('');
   const [receiptId, setReceiptId] = useState(null);
@@ -34,7 +33,7 @@ function Negotiation({ sku }) {
     const proposal = proposalForProduct(readProposals(options), { ...product, id: product.id || sku }, request);
     if (proposal && product.status !== 'WAREHOUSE') forgetProposal(product.id || sku, options);
     return { product, request, proposal };
-  }, [sku], { refreshInterval: tracking ? 30000 : 0 });
+  }, [sku]);
   const product = resource.data?.product;
   const request = resource.data?.request;
   const proposal = resource.data?.proposal;
@@ -45,8 +44,8 @@ function Negotiation({ sku }) {
   useEffect(() => {
     if (!product) return;
     if (['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(product.status) && (request?.decisionId || proposal || submitted)) wasWaiting.current = true;
-    if (confirmed) { wasWaiting.current = true; setTracking(false); setFeedback(''); }
-    if (['UNCLAIMED', 'DONATED', 'RETURNED', 'DESTROYED', 'SOLD'].includes(product.status)) { setTracking(false); setFeedback(''); }
+    if (confirmed) { wasWaiting.current = true; setFeedback(''); }
+    if (['UNCLAIMED', 'DONATED', 'RETURNED', 'DESTROYED', 'SOLD'].includes(product.status)) { setFeedback(''); }
     if (!dirty.current && request?.currentPrice != null) setProposedPrice(String(request.currentPrice));
     if (!dirty.current && proposal?.proposedPrice != null) setProposedPrice(String(proposal.proposedPrice));
     if (product.newReceiptId) setReceiptId(product.newReceiptId);

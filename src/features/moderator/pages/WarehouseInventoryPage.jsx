@@ -1,8 +1,9 @@
 import { WarehouseHistoryTabs } from '../components/WarehouseHistoryTabs.jsx';
 import DegradedCaseDetails from '../components/DegradedCaseDetails.jsx';
 import { degradedCaseLabel, degradedInventoryItem } from '../models/degradedCaseModel.js';
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
 import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
 import QRScannerModal from '../../../components/QRScannerModal.jsx';
@@ -56,9 +57,28 @@ export default function WarehouseInventoryPage() {
 
   const page = Math.max(0, Number(search.get('page')) || 0);
   const sku = search.get('sku') || '';
+  const [skuInput, setSkuInput] = useState(sku);
+  const { debouncedQuery: debouncedSku, isTooShort: isSkuTooShort, hint: skuHint } = useDebouncedSearch(skuInput);
   const rawStatus = search.get('status') || '';
   const status = rawStatus === 'WAITING_END_OF_TERM' ? 'TERM_EXPIRED' : rawStatus;
   const linkedCaseId = search.get('caseId');
+
+  useEffect(() => {
+    setSkuInput(sku);
+  }, [sku]);
+
+  useEffect(() => {
+    if (debouncedSku === sku) return;
+    setSearch(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        debouncedSku ? next.set('sku', debouncedSku) : next.delete('sku');
+        next.set('page', '0');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [debouncedSku, sku, setSearch]);
 
   React.useEffect(() => {
     if (linkedCaseId) setDegradedModalItem({ caseId: linkedCaseId });
@@ -106,7 +126,6 @@ export default function WarehouseInventoryPage() {
       return inventoryService.list({ page, sku, status }, { ...options, enrichDetails: true });
     },
     [page, sku, status],
-    { refreshInterval: 30000 },
   );
 
   const enums = useResource(
@@ -218,10 +237,10 @@ export default function WarehouseInventoryPage() {
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-bold text-[#191C19]">Mã SKU hoặc tên</label>
-              {sku.trim() && (
+              {skuInput.trim() && (
                 <button
                   type="button"
-                  onClick={() => navigate(`/moderator/inventory/${encodeURIComponent(sku.trim())}`)}
+                  onClick={() => navigate(`/moderator/inventory/${encodeURIComponent(skuInput.trim())}`)}
                   className="text-[11px] text-[#006B2C] font-semibold hover:underline"
                 >
                   Mở chi tiết SKU →
@@ -231,16 +250,19 @@ export default function WarehouseInventoryPage() {
             <input
               type="text"
               placeholder="VD: RH-M4T19B, RH-C2M08P..."
-              value={sku}
-              onChange={(e) => change('sku', e.target.value)}
+              value={skuInput}
+              onChange={(e) => setSkuInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && sku.trim()) {
+                if (e.key === 'Enter' && skuInput.trim()) {
                   e.preventDefault();
-                  navigate(`/moderator/inventory/${encodeURIComponent(sku.trim())}`);
+                  navigate(`/moderator/inventory/${encodeURIComponent(skuInput.trim())}`);
                 }
               }}
               className="w-full rounded-xl border border-[#8a8a8a] px-3.5 py-2 text-xs font-mono font-bold focus:border-[#006B2C] focus:outline-none"
             />
+            {isSkuTooShort && (
+              <p className="mt-1 text-[11px] text-[#5f5f5f]">{skuHint}</p>
+            )}
           </div>
 
           <div>
