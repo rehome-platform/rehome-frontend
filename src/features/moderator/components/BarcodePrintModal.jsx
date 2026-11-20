@@ -59,7 +59,7 @@ export default function BarcodePrintModal({ isOpen, onClose, item }) {
         </p>
 
         <div className="flex justify-end gap-2 pt-2 border-t border-neutral">
-          <Button variant="outline" size="sm" onClick={label.refresh} loading={label.busy}>
+          <Button variant="outline" size="sm" onClick={label.refresh} loading={label.loading}>
             Tải lại tem
           </Button>
           <Button variant="ghost" size="sm" onClick={onClose}>

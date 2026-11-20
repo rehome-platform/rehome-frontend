@@ -137,7 +137,15 @@ export default function ViolationReportsPage() {
         status: statusFilter,
         type: typeFilter,
       });
-      const list = res?.data || [];
+      const rawList = res?.data || [];
+      const list = [...rawList].sort((a, b) => {
+        const tA = a?.latestReportedAt || a?.createdAt ? Date.parse(a.latestReportedAt || a.createdAt) : NaN;
+        const tB = b?.latestReportedAt || b?.createdAt ? Date.parse(b.latestReportedAt || b.createdAt) : NaN;
+        if (Number.isFinite(tA) && Number.isFinite(tB)) return tB - tA;
+        if (Number.isFinite(tB)) return 1;
+        if (Number.isFinite(tA)) return -1;
+        return 0;
+      });
       listCacheRef.current[cacheKey] = list;
       setReports(list);
 
@@ -249,8 +257,9 @@ export default function ViolationReportsPage() {
       const label = ACTION_LABEL_MAP[selectedAction] || selectedAction;
       toast.success(`Đã thực thi [${label}] thành công!`);
 
-      // Optimistic UI: cập nhật trực tiếp trạng thái dòng trên bảng và cache, không reload toàn bộ bảng
+      // Optimistic UI: cập nhật trực tiếp trạng thái dòng trên bảng và xóa cache các tab khác
       const nextStatus = isDismiss ? 'DISMISSED' : 'RESOLVED';
+      listCacheRef.current = {};
       setReports((prev) => {
         const updated = prev
           .map((item) => (String(item.id) === String(selectedReport.id) ? { ...item, status: nextStatus } : item))
@@ -306,61 +315,59 @@ export default function ViolationReportsPage() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 border-b border-neutral pb-4">
               <div>
-                <div className="flex items-center space-x-2">
-                  <h1 className="text-2xl font-bold font-heading text-text">
-                    Báo cáo vi phạm nội dung
-                  </h1>
-                  <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary-light text-primary">
-                    {reports.length} nhóm
-                  </span>
-                </div>
+                <h1 className="text-2xl font-bold font-heading text-text">
+                  Báo cáo vi phạm nội dung
+                </h1>
                 <p className="text-xs text-textSecondary mt-1">
                   Bài viết cộng đồng, chiến dịch quyên góp hoặc hồ sơ tổ chức bị Member báo cáo
                 </p>
               </div>
 
-              {/* Bộ lọc trạng thái nhanh */}
-              <div className="flex flex-wrap items-center gap-1.5 bg-background p-1 rounded-xl border border-neutral">
-                {STATUS_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setStatusFilter(opt.value)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
-                      statusFilter === opt.value
-                        ? 'bg-primary text-white shadow-xs'
-                        : 'text-textSecondary hover:text-text hover:bg-surface'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+              {/* Bộ lọc trạng thái nhanh & nút Tải lại */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1.5 bg-background p-1 rounded-xl border border-neutral">
+                  {STATUS_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setStatusFilter(opt.value)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                        statusFilter === opt.value
+                          ? 'bg-primary text-white shadow-xs'
+                          : 'text-textSecondary hover:text-text hover:bg-surface'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  loading={loading}
+                  onClick={() => fetchReports({ force: true })}
+                  className="whitespace-nowrap"
+                >
+                  Tải lại
+                </Button>
               </div>
             </div>
 
-            {/* Thanh điều khiển phụ: Lọc theo loại đối tượng & Ghi chú */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-textSecondary whitespace-nowrap">
-                  Loại đối tượng:
-                </span>
-                <select
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                  className="px-3 py-1.5 rounded-xl border border-neutral bg-surface text-xs font-semibold text-text focus:outline-none focus:border-primary cursor-pointer shadow-xs"
-                >
-                  {TYPE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="p-2.5 px-3.5 rounded-xl border border-neutral bg-background text-xs text-textSecondary flex items-center gap-2">
-                <span className="text-amber-500 font-bold">ℹ</span>
-                <span>Hệ thống tự động gom các báo cáo trùng cùng một đối tượng để kiểm duyệt trong 1 lượt.</span>
-              </div>
+            {/* Thanh điều khiển phụ: Lọc theo loại đối tượng */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-textSecondary whitespace-nowrap">
+                Loại đối tượng:
+              </span>
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="px-3 py-1.5 rounded-xl border border-neutral bg-surface text-xs font-semibold text-text focus:outline-none focus:border-primary cursor-pointer shadow-xs"
+              >
+                {TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Bảng Hàng đợi VP-01 */}
@@ -370,9 +377,8 @@ export default function ViolationReportsPage() {
                   <thead>
                     <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
                       <th className="py-3 px-3.5">Loại đối tượng</th>
-                      <th className="py-3 px-3.5">Mã đối tượng (Target ID)</th>
+                      <th className="py-3 px-3.5">Đối tượng</th>
                       <th className="py-3 px-3.5 text-center">Số lượt báo cáo</th>
-                      <th className="py-3 px-3.5">Lý do báo cáo mẫu</th>
                       <th className="py-3 px-3.5">Báo cáo gần nhất</th>
                       <th className="py-3 px-3.5 text-right">Thao tác</th>
                     </tr>
@@ -380,7 +386,7 @@ export default function ViolationReportsPage() {
                   <tbody className="divide-y divide-neutral">
                     {loading && (
                       <tr>
-                        <td colSpan="6" className="py-12 text-center text-textSecondary">
+                        <td colSpan="5" className="py-12 text-center text-textSecondary">
                           <div className="flex flex-col items-center justify-center gap-2">
                             <Spinner size="md" />
                             <span>Đang nạp dữ liệu báo cáo vi phạm từ máy chủ…</span>
@@ -391,7 +397,7 @@ export default function ViolationReportsPage() {
 
                     {!loading && error && (
                       <tr>
-                        <td colSpan="6" className="py-12 text-center text-error">
+                        <td colSpan="5" className="py-12 text-center text-error">
                           {error}
                         </td>
                       </tr>
@@ -399,7 +405,7 @@ export default function ViolationReportsPage() {
 
                     {!loading && !error && reports.length === 0 && (
                       <tr>
-                        <td colSpan="6" className="py-12 text-center text-textSecondary">
+                        <td colSpan="5" className="py-12 text-center text-textSecondary">
                           Không có báo cáo vi phạm nào khớp với bộ lọc hiện tại.
                         </td>
                       </tr>
@@ -413,6 +419,14 @@ export default function ViolationReportsPage() {
                           label: rep.targetType,
                           color: 'bg-neutral-light text-textSecondary',
                         };
+                        const snapshot = snapshotsById[rep.id];
+                        const subjectName =
+                          snapshot?.organizationDisplayName ||
+                          snapshot?.organizationLegalName ||
+                          snapshot?.campaignTitle ||
+                          rep.organizationName ||
+                          rep.targetName ||
+                          '—';
 
                         return (
                           <tr
@@ -423,42 +437,23 @@ export default function ViolationReportsPage() {
                             }`}
                           >
                             {/* Loại đối tượng */}
-                            <td className="py-3.5 px-3.5 font-semibold">
+                            <td className="py-3.5 px-3.5 font-semibold whitespace-nowrap">
                               <span
-                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border ${typeInfo.color}`}
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border whitespace-nowrap ${typeInfo.color}`}
                               >
                                 <span>{typeInfo.label}</span>
                               </span>
                             </td>
 
-                            {/* Mã đối tượng & Thông tin tóm tắt */}
-                            <td className="py-3.5 px-3.5 text-text">
-                              {snapshotsById[rep.id]?.organizationDisplayName && (
-                                <span className="block font-bold text-text text-xs mb-0.5">
-                                  {snapshotsById[rep.id].organizationDisplayName}
-                                </span>
-                              )}
-                              {(snapshotsById[rep.id]?.postContent ||
-                                snapshotsById[rep.id]?.campaignTitle ||
-                                snapshotsById[rep.id]?.organizationLegalName) && (
-                                <span className="block text-[11px] text-textSecondary max-w-xs truncate mb-0.5">
-                                  {snapshotsById[rep.id].postContent ||
-                                    snapshotsById[rep.id].campaignTitle ||
-                                    snapshotsById[rep.id].organizationLegalName}
-                                </span>
-                              )}
-                              <span className="font-mono font-semibold text-[11px]" title={rep.targetId}>
-                                #{String(rep.targetId).substring(0, 8).toUpperCase()}...
-                              </span>
-                              <span className="ml-1.5 text-[10px] text-textSecondary font-sans">
-                                ({rep.targetType})
-                              </span>
+                            {/* Đối tượng: chỉ hiển thị tên tổ chức / đối tượng */}
+                            <td className="py-3.5 px-3.5 font-semibold text-text">
+                              {subjectName}
                             </td>
 
                             {/* Số lượt báo cáo gom nhóm */}
-                            <td className="py-3.5 px-3.5 text-center">
+                            <td className="py-3.5 px-3.5 text-center whitespace-nowrap">
                               <span
-                                className={`inline-flex items-center justify-center font-bold px-3 py-1 rounded-full text-xs shadow-2xs ${
+                                className={`inline-flex items-center justify-center font-bold px-3 py-1 rounded-full text-xs shadow-2xs whitespace-nowrap ${
                                   isHighPriority
                                     ? 'bg-error text-white animate-pulse'
                                     : 'border border-neutral bg-background text-text'
@@ -468,27 +463,23 @@ export default function ViolationReportsPage() {
                               </span>
                             </td>
 
-                            {/* Lý do báo cáo mẫu & Lý do đóng (nếu đã xử lý) */}
-                            <td className="py-3.5 px-3.5 text-textSecondary max-w-xs" title={rep.resolutionReason || rep.sampleReason}>
-                              <p className="truncate">"{rep.sampleReason || 'Không có mô tả chi tiết'}"</p>
-                              {(rep.resolutionReason || rep.resolutionNote || rep.status === 'RESOLVED') &&
-                                (rep.resolutionReason || rep.resolutionNote) && (
-                                  <p className="mt-1 inline-block rounded-md bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
-                                    Lý do đóng: {rep.resolutionReason || rep.resolutionNote}
-                                  </p>
-                                )}
-                            </td>
-
                             {/* Thời gian */}
                             <td className="py-3.5 px-3.5 text-textSecondary whitespace-nowrap">
                               {rep.latestReportedAt ? formatDateTime(rep.latestReportedAt) : '—'}
                             </td>
 
                             {/* Nút xử lý */}
-                            <td className="py-3.5 px-3.5 text-right">
-                              <span className="inline-flex items-center justify-center text-xs font-bold px-3.5 py-1.5 rounded-xl border border-primary/30 text-primary bg-primary/5 hover:bg-primary hover:text-white transition-all shadow-xs">
-                                Xem & Quyết định →
-                              </span>
+                            <td className="py-3.5 px-3.5 text-right whitespace-nowrap">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenDetail(rep);
+                                }}
+                                className="inline-flex items-center justify-center text-xs font-semibold px-3.5 py-1.5 rounded-xl bg-[#006B2C] text-white hover:bg-[#005523] transition-colors shadow-sm whitespace-nowrap cursor-pointer"
+                              >
+                                Chi tiết
+                              </button>
                             </td>
                           </tr>
                         );
@@ -514,19 +505,9 @@ export default function ViolationReportsPage() {
                 >
                   ←
                 </button>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-textSecondary">Kiểm duyệt vi phạm · </span>
-                    <span className="text-base font-bold font-heading text-text">
-                      Chi tiết báo cáo & quyết định
-                    </span>
-                  </div>
-                  {selectedReport && (
-                    <span className="text-xs text-textSecondary font-mono">
-                      Mã đối tượng: {selectedReport.targetId}
-                    </span>
-                  )}
-                </div>
+                <span className="text-base font-bold font-heading text-text">
+                  Chi tiết báo cáo & quyết định
+                </span>
               </div>
 
               {/* Status Badge */}
@@ -592,7 +573,9 @@ export default function ViolationReportsPage() {
                                     alt={`Ảnh ${idx + 1}`}
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
-                                      e.currentTarget.src = 'https://via.placeholder.com/150?text=Ảnh+lỗi';
+                                      e.currentTarget.onerror = null;
+                                      e.currentTarget.src =
+                                        "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150'><rect width='100%' height='100%' fill='%23f3f4f6'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%236b7280' font-size='12' font-family='sans-serif'>Ảnh lỗi</text></svg>";
                                     }}
                                   />
                                   <span className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px] font-bold transition-opacity">
@@ -606,7 +589,6 @@ export default function ViolationReportsPage() {
 
                         <div className="flex items-center justify-between text-textSecondary text-[11px] pt-1">
                           <span>Trạng thái bài viết: <strong className="text-text">{targetSnapshot?.postStatus || '—'}</strong></span>
-                          <span>Mã bài viết: <span className="font-mono">{selectedReport.targetId}</span></span>
                         </div>
                       </div>
                     )}
@@ -621,7 +603,9 @@ export default function ViolationReportsPage() {
                               alt="Ảnh bìa chiến dịch"
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                e.currentTarget.src = 'https://via.placeholder.com/600x200?text=Ảnh+bìa+lỗi';
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src =
+                                  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='200'><rect width='100%' height='100%' fill='%23f3f4f6'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%236b7280' font-size='14' font-family='sans-serif'>Không tải được ảnh bìa</text></svg>";
                               }}
                             />
                           </div>
@@ -636,7 +620,6 @@ export default function ViolationReportsPage() {
                         </div>
                         <div className="flex items-center justify-between text-textSecondary text-[11px] pt-2 border-t border-neutral">
                           <span>Trạng thái chiến dịch: <strong className="text-text">{targetSnapshot?.campaignStatus || '—'}</strong></span>
-                          <span>Mã chiến dịch: <span className="font-mono">{selectedReport.targetId}</span></span>
                         </div>
                       </div>
                     )}
@@ -697,7 +680,11 @@ export default function ViolationReportsPage() {
                         <div key={item.id || idx} className="p-3.5 space-y-1 hover:bg-background/40 transition-colors">
                           <div className="flex items-center justify-between text-[11px]">
                             <span className="font-semibold text-text">
-                              {item.isPrimary ? 'Báo cáo gốc' : `Báo cáo viên #${String(item.reporterId).substring(0, 8)}`}
+                              {item.isPrimary
+                                ? 'Báo cáo gốc'
+                                : item.reporterId
+                                  ? `Báo cáo viên #${String(item.reporterId).substring(0, 8)}`
+                                  : 'Báo cáo viên ẩn danh'}
                             </span>
                             <span className="text-textSecondary">
                               {item.createdAt ? formatDateTime(item.createdAt) : '—'}
@@ -735,7 +722,7 @@ export default function ViolationReportsPage() {
                             <div key={idx} className="p-3 space-y-1 bg-surface">
                               <div className="flex items-center justify-between">
                                 <span className="font-bold text-text flex items-center gap-1.5">
-                                  <Badge variant="error">
+                                  <Badge variant="danger">
                                     {ACTION_LABEL_MAP[act.action] || act.action}
                                   </Badge>
                                   <span className="text-textSecondary font-normal">
@@ -859,9 +846,6 @@ export default function ViolationReportsPage() {
                               />
                               <div className="space-y-0.5">
                                 <span className="font-bold block text-text">{opt.label}</span>
-                                <span className="text-[11px] text-textSecondary block leading-relaxed">
-                                  {opt.desc}
-                                </span>
                               </div>
                             </label>
                           ))}
@@ -888,11 +872,6 @@ export default function ViolationReportsPage() {
                             }
                             className="w-full text-xs p-3 border border-neutral rounded-xl text-text focus:outline-none focus:border-primary transition-colors resize-none shadow-2xs"
                           />
-                        </div>
-
-                        {/* Cảnh báo tác vụ */}
-                        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 leading-relaxed">
-                          <strong>Lưu ý:</strong> Hành động này sẽ tự động đóng toàn bộ {allReportsList.length} báo cáo đang chờ xử lý của đối tượng này.
                         </div>
 
                         {/* Nút xác nhận */}
@@ -927,7 +906,10 @@ export default function ViolationReportsPage() {
           className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-xs"
           onClick={() => setPreviewImage(null)}
         >
-          <div className="relative max-w-4xl max-h-[90vh] bg-surface rounded-2xl overflow-hidden p-2 shadow-2xl">
+          <div
+            className="relative max-w-4xl max-h-[90vh] bg-surface rounded-2xl overflow-hidden p-2 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               type="button"
               onClick={() => setPreviewImage(null)}

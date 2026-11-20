@@ -213,12 +213,12 @@ describe('L-06 Withdrawal & Counter Handover Flow (BG-01, QT-01 to QT-03)', () =
       expect(screen.getByText(/RH-K9B47T/i)).toBeInTheDocument();
     });
 
-    const handoverBtns = screen.getAllByRole('button', { name: /Bàn giao/i });
+    const handoverBtns = screen.getAllByRole('button', { name: 'Bàn giao cho khách' });
     fireEvent.click(handoverBtns[0]); // First one is ITEM_WITHDRAWAL
 
-    // BG-01 Handover modal appears
+    // Handover modal appears (internal code badge BG-01 removed per FE-06)
     await waitFor(() => {
-      expect(screen.getByText(/BG-01/i)).toBeInTheDocument();
+      expect(screen.queryByText(/BG-01/i)).not.toBeInTheDocument();
       expect(screen.getByText(/Xác nhận bàn giao hiện vật tại quầy/i)).toBeInTheDocument();
       expect(screen.getAllByText(/Member rút hàng/i).length).toBeGreaterThan(0);
     });
@@ -275,7 +275,7 @@ describe('L-06 Withdrawal & Counter Handover Flow (BG-01, QT-01 to QT-03)', () =
       expect(screen.getByText(/RH-CV882X/i)).toBeInTheDocument();
     });
 
-    const handoverBtns = screen.getAllByRole('button', { name: /Bàn giao/i });
+    const handoverBtns = screen.getAllByRole('button', { name: 'Bàn giao cho khách' });
     // Click the invalid return handover button (the third one)
     fireEvent.click(handoverBtns[2]);
 

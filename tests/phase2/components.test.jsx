@@ -1,5 +1,5 @@
 import React, { StrictMode } from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -333,9 +333,14 @@ describe('ConsignmentQueuePage component behaviors', () => {
     });
 
     render(<ConsignmentQueuePage />, { wrapper: Wrapper });
-    expect(await screen.findByText('Áo khoác dạ')).toBeInTheDocument();
-    expect(screen.getByText('chưa ai nhận')).toBeInTheDocument();
+    expect(await screen.findByText('chưa ai nhận')).toBeInTheDocument();
+    expect(screen.queryByText('Áo khoác dạ')).not.toBeInTheDocument();
     expect(screen.getByText('Bạn đang nhận việc này')).toBeInTheDocument();
+
+    const freeRow = screen.getByText('chưa ai nhận').closest('tr');
+    fireEvent.click(within(freeRow).getByRole('button', { name: 'Chi tiết' }));
+    expect(within(screen.getByRole('dialog')).getByText('Áo khoác dạ')).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: 'Đóng' })[0]);
 
     const claimBtn = screen.getByRole('button', { name: 'Nhận việc' });
     fireEvent.click(claimBtn);
@@ -371,7 +376,8 @@ describe('ConsignmentQueuePage component behaviors', () => {
     );
 
     render(<ConsignmentQueuePage />, { wrapper: Wrapper });
-    expect(await screen.findByText('Giày sneaker')).toBeInTheDocument();
+    expect(await screen.findByText('chưa ai nhận')).toBeInTheDocument();
+    expect(screen.queryByText('Giày sneaker')).not.toBeInTheDocument();
 
     const claimBtn = screen.getByRole('button', { name: 'Nhận việc' });
     fireEvent.click(claimBtn);
@@ -401,7 +407,8 @@ describe('ConsignmentQueuePage component behaviors', () => {
     const releaseSpy = vi.spyOn(queueService, 'release').mockResolvedValue(null);
 
     render(<ConsignmentQueuePage />, { wrapper: Wrapper });
-    expect(await screen.findByText('Túi xách da')).toBeInTheDocument();
+    expect(await screen.findByText('Bạn đang nhận việc này')).toBeInTheDocument();
+    expect(screen.queryByText('Túi xách da')).not.toBeInTheDocument();
 
     const releaseTrigger = screen.getByRole('button', { name: 'Nhả việc' });
     fireEvent.click(releaseTrigger);
@@ -820,8 +827,12 @@ describe('ConsignmentDetailPage component behaviors', () => {
 
       render(<WarehouseInventoryPage />, { wrapper: Wrapper });
 
-      expect(await screen.findByText('Q7-AK-000845')).toBeInTheDocument();
-      expect(screen.getByText('Áo khoác dạ Zara')).toBeInTheDocument();
+      expect(await screen.findByText('Áo khoác dạ Zara')).toBeInTheDocument();
+      expect(screen.queryByText('Q7-AK-000845')).not.toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Chi tiết' })).toHaveAttribute(
+        'href',
+        '/moderator/inventory/Q7-AK-000845',
+      );
       expect(screen.getByText('Kỳ 2 · ngày 12')).toBeInTheDocument();
       expect(listSpy).toHaveBeenCalledWith(
         expect.objectContaining({ page: 0 }),

@@ -113,7 +113,10 @@ describe('Moderator DonationsPage (Luồng A & B)', () => {
     expect(await screen.findByText('Món ký gửi · SKU Q7-AK-000111')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Áo khoác dạ' })).toHaveAttribute('src', 'https://img.test/ao-khoac.jpg');
     expect(screen.getByText('MOD-01')).toBeInTheDocument();
-    expect(screen.getByText('Áo khoác, Chăn ấm')).toBeInTheDocument();
+
+    // FE-08: Mở form ghi nhận lượt quyên góp bằng nút Ghi nhận
+    fireEvent.click(screen.getByRole('button', { name: 'Ghi nhận' }));
+    expect(await screen.findByText('Áo khoác, Chăn ấm')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/Tên người quyên góp/), { target: { value: 'Nguyễn An' } });
     fireEvent.change(screen.getByLabelText(/Ghi chú gộp hiện vật/), { target: { value: '5 áo, 2 chăn' } });
@@ -161,6 +164,7 @@ describe('Moderator DonationsPage (Luồng A & B)', () => {
 
     renderDonations();
 
+    fireEvent.click(await screen.findByRole('button', { name: 'Ghi nhận' }));
     const alert = await screen.findByRole('alert');
     expect(within(alert).getByText('Địa điểm này hiện không có chiến dịch nào nhận đồ')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Ghi nhận lượt quyên góp' })).toBeDisabled();
@@ -204,10 +208,14 @@ describe('Moderator DonationsPage (Luồng A & B)', () => {
 
     const donorInput = await screen.findByLabelText(/Tên người quyên góp/);
     expect(donorInput).toHaveValue('Lê Hoa');
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Ghi nhận lượt quyên góp' })).toBeEnabled(),
+    );
 
     fireEvent.change(screen.getByLabelText(/Ghi chú gộp hiện vật/), { target: { value: '3 khăn' } });
     fireEvent.click(screen.getByRole('button', { name: 'Ghi nhận lượt quyên góp' }));
     expect(await screen.findByText('Chiến dịch đã hết hạn nhận đồ.')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Đóng' })[0]);
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Chọn lượt don-1' }));
     fireEvent.click(screen.getByRole('button', { name: /Bàn giao cho tổ chức \(1\)/ }));
@@ -357,9 +365,11 @@ describe('Moderator DonationsPage (Luồng A & B)', () => {
     fireEvent.click(await screen.findByRole('tab', { name: /Lịch sử chiến dịch/i }));
     fireEvent.click(await screen.findByRole('button', { name: /Chọn chiến dịch Mùa Hè/i }));
 
-    // Recording form must be blocked with clear message
+    // Recording form inside Ghi nhận modal must be blocked with clear message
+    fireEvent.click(screen.getByRole('button', { name: 'Ghi nhận' }));
     expect(await screen.findByText(/không thể ghi nhận lượt quyên góp mới/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Ghi nhận lượt quyên góp' })).toBeDisabled();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Đóng' })[0]);
 
     // Existing PENDING_PICKUP donation can still be viewed and handed over
     expect(screen.getByText('10 tập vở')).toBeInTheDocument();

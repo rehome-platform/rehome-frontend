@@ -22,9 +22,10 @@ export function useConsignmentQueue() {
   const overdueOnly = search.get('overdue') === '1';
   const page = Math.max(0, Number(search.get('page')) || 0);
 
-  // Modal nhận việc & nhả việc (HQ-02-NhanViec & HQ-02-NhaViec)
+  // Modal nhận việc & nhả việc & chi tiết (HQ-02)
   const [claimTarget, setClaimTarget] = useState(null);
   const [releaseTarget, setReleaseTarget] = useState(null);
+  const [detailTarget, setDetailTarget] = useState(null);
   const [withdrawalCheckTarget, setWithdrawalCheckTarget] = useState(null);
   const [feedback, setFeedback] = useState(null);
 
@@ -117,12 +118,14 @@ export function useConsignmentQueue() {
         const msg = 'Đã duyệt yêu cầu rút hàng. Yêu cầu đã chuyển sang bước bàn giao tại quầy.';
         setFeedback({ type: 'success', message: msg });
         toast.success(msg);
-        setWithdrawalCheckTarget((prev) => (prev ? {
+        const applyApproved = (prev) => (prev ? {
           ...prev,
           status: updated?.status || 'PENDING_PICKUP',
           pickupDeadline: updated?.pickupDeadline ?? prev.pickupDeadline,
           feeCharged: updated?.feeCharged ?? prev.feeCharged,
-        } : null));
+        } : null);
+        setWithdrawalCheckTarget(applyApproved);
+        setDetailTarget((prev) => (prev && (prev.refId === withdrawalId || prev.id === withdrawalId) ? applyApproved(prev) : prev));
       },
     });
   };
@@ -137,6 +140,7 @@ export function useConsignmentQueue() {
         setFeedback({ type: 'success', message: msg });
         toast.success(msg);
         setWithdrawalCheckTarget(null);
+        setDetailTarget((prev) => (prev && (prev.refId === withdrawalId || prev.id === withdrawalId) ? null : prev));
       },
     });
   };
@@ -160,6 +164,8 @@ export function useConsignmentQueue() {
     claimTarget,
     setClaimTarget,
     setReleaseTarget,
+    detailTarget,
+    setDetailTarget,
     page,
     releaseTarget,
     handleRelease,

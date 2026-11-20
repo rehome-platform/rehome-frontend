@@ -1,11 +1,13 @@
 import { WarehouseHistoryTabs } from '../components/WarehouseHistoryTabs.jsx';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Page, ResourceState, Pager, Status, money } from '../components/WarehouseUi.jsx';
+import { Page, ResourceState, Pager, Status, money, date } from '../components/WarehouseUi.jsx';
 import Button from '../../../components/common/Button.jsx';
+import Modal from '../../../components/common/Modal.jsx';
 import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
 import { consignmentService } from '../services/warehouseApi.js';
-import { listItems } from '../models/warehouseModel.js';
+import { listItems, formatConditionLabel } from '../models/warehouseModel.js';
+import { sortQueueItemsNewestFirst } from '../models/queueModel.js';
 
 const TABS = [
   { key: 'PENDING', label: 'Chờ duyệt', countKey: 'pending' },
@@ -38,7 +40,9 @@ export default function ConsignmentListPage() {
   );
 
   const rawItems = listItems(resource.data);
+  const sortedItems = useMemo(() => sortQueueItemsNewestFirst(rawItems), [rawItems]);
   const totalPages = resource.data?.totalPages || 1;
+  const [detailForm, setDetailForm] = useState(null);
 
   const [lastConsignment, setLastConsignment] = useState(null);
   React.useEffect(() => {
@@ -151,7 +155,7 @@ export default function ConsignmentListPage() {
                 role="tab"
                 aria-selected={isSelected}
                 onClick={() => handleTabChange(tab.key)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${isSelected
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border whitespace-nowrap ${isSelected
                   ? 'border-[#006B2C] bg-[#006B2C] text-white shadow-sm'
                   : 'border-neutral bg-white text-textSecondary hover:bg-[#F6F9F4]'
                   }`}
@@ -162,42 +166,16 @@ export default function ConsignmentListPage() {
           })}
         </div>
 
-        {/* 2. KHUNG LƯU Ý HƯỚNG DẪN DUYỆT TRÊN ẢNH (KD-01) */}
-        <div className="flex items-start gap-3 px-4 py-3 rounded-2xl border border-neutral border-l-4 border-l-primary bg-surface text-xs shadow-xs">
-          <svg
-            className="w-4 h-4 text-primary shrink-0 mt-0.5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="16" x2="12" y2="12" />
-            <line x1="12" y1="8" x2="12.01" y2="8" />
-          </svg>
-          <div className="space-y-0.5 leading-relaxed">
-            <p className="font-bold text-text">
-              Ở bước này bạn duyệt trên ảnh, chưa thấy hàng thật.
-            </p>
-            <p className="text-textSecondary">
-              Duyệt nghĩa là mời Member mang sản phẩm đến kho trong thời hạn được thông báo, chưa phải cam kết nhận hàng. Kiểm định thật diễn ra tại quầy.
-            </p>
-          </div>
-        </div>
-
-        <ResourceState resource={resource} empty={!rawItems.length} />
+        <ResourceState resource={resource} empty={!sortedItems.length} />
 
         {/* 3. BẢNG DANH SÁCH FORM KÝ GỬI (KD-01) */}
-        {!!rawItems.length && (
+        {!!sortedItems.length && (
           <div className="rounded-2xl border border-neutral bg-surface overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[850px] text-left text-xs">
+              <table className="w-full min-w-[760px] text-left text-xs">
                 <thead>
                   <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
                     <th className="py-2.5 px-3.5 w-16">Ảnh</th>
-                    <th className="py-2.5 px-3">Mã form</th>
                     <th className="py-2.5 px-3">Sản phẩm</th>
                     <th className="py-2.5 px-3">Thương hiệu</th>
                     <th className="py-2.5 px-3">Member</th>
@@ -207,15 +185,14 @@ export default function ConsignmentListPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral">
-                  {rawItems.map((form) => {
+                  {sortedItems.map((form) => {
                     const formId = form.formId || form.id || form.refId;
-                    const isMine = form.claimedBy === scope.userId;
                     const firstPhoto = form.photos?.[0]?.url || form.photos?.[0] || form.coverPhoto;
 
                     return (
                       <tr key={formId} className="hover:bg-[#F6F9F4] transition-colors">
                         <td className="py-3 px-3.5">
-                          <div className="w-13 h-13 w-[52px] h-[52px] rounded-xl border border-neutral bg-[#F6F9F4] overflow-hidden flex items-center justify-center shrink-0">
+                          <div className="w-[52px] h-[52px] rounded-xl border border-neutral bg-[#F6F9F4] overflow-hidden flex items-center justify-center shrink-0">
                             {firstPhoto ? (
                               <img src={firstPhoto} alt="" className="w-full h-full object-cover" />
                             ) : (
@@ -223,45 +200,47 @@ export default function ConsignmentListPage() {
                             )}
                           </div>
                         </td>
-                      <td className="py-3 px-3 font-semibold text-text">
-                        <div>{formId}</div>
-                        {isMine && (
-                          <span className="inline-block mt-0.5 text-[9px] font-bold text-[#006B2C] bg-[#006B2C]/10 px-2 py-0.5 rounded-full whitespace-nowrap">
-                            Bạn đang nhận việc này
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-3 font-bold text-text">
-                        {form.name || form.productName || '—'}
-                      </td>
-                      <td className="py-3 px-3 text-textSecondary">
-                        {form.brand || form.brandName || '—'}
-                      </td>
-                      <td className="py-3 px-3 text-textSecondary">
-                        {form.member?.fullName || form.memberName || '—'}
-                      </td>
-                      <td className="py-3 px-3 font-bold text-text">
-                        {money(form.desiredPrice ?? form.price)}
-                      </td>
-                      <td className="py-3 px-3 text-textSecondary">
-                        {form.createdAt ? new Date(form.createdAt).toLocaleDateString('vi-VN', {
-                          day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
-                        }) : '—'}
-                      </td>
-                      <td className="py-3 px-3 text-right">
-                        <Link
-                          to={`/moderator/consignments/${encodeURIComponent(formId)}`}
-                          state={{ form }}
-                          className="inline-block font-semibold text-xs py-1.5 px-3 bg-[#006B2C] text-white hover:bg-[#005523] rounded-xl shadow-sm transition-colors"
-                        >
-                          {RESUME_LABELS[form.resumeStep] || 'Mở duyệt'}
-                        </Link>
-                      </td>
-                    </tr>
-                );
-                })}
-              </tbody>
-            </table>
+                        <td className="py-3 px-3 font-bold text-text">
+                          {form.name || form.productName || '—'}
+                        </td>
+                        <td className="py-3 px-3 text-textSecondary whitespace-nowrap">
+                          {form.brand || form.brandName || '—'}
+                        </td>
+                        <td className="py-3 px-3 text-textSecondary whitespace-nowrap">
+                          {form.member?.fullName || form.memberName || '—'}
+                        </td>
+                        <td className="py-3 px-3 font-bold text-text whitespace-nowrap">
+                          {money(form.desiredPrice ?? form.price)}
+                        </td>
+                        <td className="py-3 px-3 text-textSecondary whitespace-nowrap">
+                          {form.createdAt ? new Date(form.createdAt).toLocaleDateString('vi-VN', {
+                            day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+                          }) : '—'}
+                        </td>
+                        <td className="py-3 px-3 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs py-1.5 px-3 whitespace-nowrap"
+                              onClick={() => setDetailForm(form)}
+                            >
+                              Chi tiết
+                            </Button>
+                            <Link
+                              to={`/moderator/consignments/${encodeURIComponent(formId)}`}
+                              state={{ form }}
+                              className="inline-flex items-center justify-center font-semibold text-xs py-1.5 px-3 bg-[#006B2C] text-white hover:bg-[#005523] rounded-xl shadow-sm transition-colors whitespace-nowrap"
+                            >
+                              {RESUME_LABELS[form.resumeStep] || 'Mở duyệt'}
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
@@ -270,6 +249,120 @@ export default function ConsignmentListPage() {
           <Pager page={page} totalPages={totalPages} onChange={handlePageChange} />
         )}
       </WarehouseHistoryTabs>
+
+      <Modal
+        isOpen={Boolean(detailForm)}
+        title="Chi tiết form ký gửi"
+        onClose={() => setDetailForm(null)}
+        size="md"
+      >
+        {detailForm && (() => {
+          const detailFormId = detailForm.formId || detailForm.id || detailForm.refId;
+          const isMine = detailForm.claimedBy === scope.userId;
+          const detailPhotos = Array.isArray(detailForm.photos)
+            ? detailForm.photos.map((p) => (typeof p === 'string' ? p : p?.url)).filter(Boolean)
+            : detailForm.coverPhoto
+              ? [detailForm.coverPhoto]
+              : [];
+          return (
+            <div className="space-y-4 text-xs text-textSecondary">
+              {detailPhotos.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {detailPhotos.map((src, idx) => (
+                    <img
+                      key={idx}
+                      src={src}
+                      alt={detailForm.name || detailForm.productName || `Ảnh ${idx + 1}`}
+                      className="w-20 h-20 rounded-xl object-cover border border-neutral"
+                    />
+                  ))}
+                </div>
+              )}
+              <div className="rounded-xl border border-neutral bg-[#F6F9F4] p-3.5 space-y-2">
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold shrink-0">Mã form:</span>
+                  <span className="font-mono font-bold text-text text-right break-all">{detailFormId}</span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold shrink-0">Sản phẩm:</span>
+                  <span className="font-bold text-text text-right">{detailForm.name || detailForm.productName || '—'}</span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold shrink-0">Thương hiệu:</span>
+                  <span className="text-text text-right">{detailForm.brand || detailForm.brandName || '—'}</span>
+                </div>
+                {(detailForm.categoryName || detailForm.category) && (
+                  <div className="flex justify-between gap-4">
+                    <span className="font-semibold shrink-0">Danh mục:</span>
+                    <span className="text-text text-right">{detailForm.categoryName || detailForm.category}</span>
+                  </div>
+                )}
+                {detailForm.size && (
+                  <div className="flex justify-between gap-4">
+                    <span className="font-semibold shrink-0">Kích cỡ:</span>
+                    <span className="text-text text-right">{detailForm.size}</span>
+                  </div>
+                )}
+                {detailForm.condition && (
+                  <div className="flex justify-between gap-4">
+                    <span className="font-semibold shrink-0">Tình trạng khai báo:</span>
+                    <span className="text-text text-right">{formatConditionLabel(detailForm.condition)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold shrink-0">Member:</span>
+                  <span className="font-medium text-text text-right">
+                    {detailForm.member?.fullName || detailForm.memberName || '—'}
+                    {detailForm.member?.memberCode ? ` (${detailForm.member.memberCode})` : ''}
+                  </span>
+                </div>
+                {detailForm.member?.phone && (
+                  <div className="flex justify-between gap-4">
+                    <span className="font-semibold shrink-0">Số điện thoại:</span>
+                    <span className="text-text text-right">{detailForm.member.phone}</span>
+                  </div>
+                )}
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold shrink-0">Giá mong muốn:</span>
+                  <span className="font-bold text-text text-right">{money(detailForm.desiredPrice ?? detailForm.price)}</span>
+                </div>
+                <div className="flex justify-between items-center gap-4">
+                  <span className="font-semibold shrink-0">Trạng thái:</span>
+                  <Status>{detailForm.status}</Status>
+                </div>
+                {isMine && (
+                  <div className="flex justify-between gap-4">
+                    <span className="font-semibold shrink-0">Phụ trách:</span>
+                    <span className="font-bold text-[#006B2C] text-right">Bạn đang nhận việc này</span>
+                  </div>
+                )}
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold shrink-0">Gửi lúc:</span>
+                  <span className="text-text text-right">{detailForm.createdAt ? date(detailForm.createdAt) : '—'}</span>
+                </div>
+                {detailForm.description && (
+                  <div className="pt-2 border-t border-neutral">
+                    <span className="font-semibold block mb-1">Mô tả:</span>
+                    <p className="text-text leading-relaxed">{detailForm.description}</p>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setDetailForm(null)} className="whitespace-nowrap">
+                  Đóng
+                </Button>
+                <Link
+                  to={`/moderator/consignments/${encodeURIComponent(detailFormId)}`}
+                  state={{ form: detailForm }}
+                  className="inline-flex items-center justify-center font-semibold text-xs py-1.5 px-3 bg-[#006B2C] text-white hover:bg-[#005523] rounded-xl shadow-sm transition-colors whitespace-nowrap"
+                >
+                  {RESUME_LABELS[detailForm.resumeStep] || 'Mở duyệt'}
+                </Link>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
     </Page>
   );
 }

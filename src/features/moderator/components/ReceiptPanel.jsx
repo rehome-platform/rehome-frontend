@@ -63,7 +63,12 @@ export default function ReceiptPanel({ receiptId, form, allowStockIn = false, on
   const termDays = data?.termLengthDays ?? snapshot?.termLengthDays;
   const commission = data?.commissionRateTerm1 ?? snapshot?.commissionRate;
   const fee = data?.withdrawalFee ?? snapshot?.fee;
-  const rateText = value => value == null ? '—' : `${Math.round(Number(value) * (Number(value) <= 1 ? 100 : 1))}%`;
+  const rateText = (value) => {
+    if (value == null || value === '') return '—';
+    const num = Number(value);
+    if (!Number.isFinite(num)) return '—';
+    return `${Math.round(num * (num <= 1 ? 100 : 1))}%`;
+  };
   const commissions = [data?.commissionRateTerm1 ?? snapshot?.commissionRate, data?.commissionRateTerm2, data?.commissionRateTerm3]
     .map(rateText).join(' → ');
 
@@ -85,6 +90,7 @@ export default function ReceiptPanel({ receiptId, form, allowStockIn = false, on
       }
     } catch (err) {
       console.error('Không thể tải PDF biên nhận:', err);
+      toast?.error?.(err?.message || 'Không thể tải PDF biên nhận. Vui lòng thử lại.');
     } finally {
       setDownloadingPdf(false);
     }

@@ -1,20 +1,5 @@
-import { PackingQueueItem } from "./PackingQueueItem.jsx";
-import { usePackingDetail } from "../../hooks/usePackingDetail.jsx";
-import {
-  PackingIncidentDialog,
-  PackingRecipientPanel,
-  PackingShipmentPanel,
-  PackingScanPanel,
-  PackingItemTable,
-} from "./PackingDetailSections.jsx";
-import React, { useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import Button from "../../../../components/common/Button.jsx";
-import QRScannerModal from "../../../../components/QRScannerModal.jsx";
-import { Page, ResourceState } from "../WarehouseUi.jsx";
-import { usePhase2, useResource } from "../../hooks/warehouseHooks.jsx";
-import { queueService } from "../../services/warehouseApi.js";
-import { listItems } from "../../models/warehouseModel.js";
+import React from "react";
+import { Link } from "react-router-dom";
 
 export function PackingAccessNotice({  }) {
   return (

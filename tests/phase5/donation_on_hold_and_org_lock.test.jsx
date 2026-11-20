@@ -257,7 +257,14 @@ describe('Donation ON_HOLD & Org Lock Review Flows', () => {
         },
       ],
     });
-    mockViolationReportService.getDetail.mockResolvedValue(null);
+    mockViolationReportService.getDetail.mockResolvedValue({
+      id: 'rep-1',
+      targetType: 'CAMPAIGN',
+      targetId: 'camp-99',
+      status: 'RESOLVED',
+      resolutionReason: 'Tổ chức đã bị khoá',
+      reason: 'Nghi vấn minh bạch',
+    });
 
     render(
       <MemoryRouter>
@@ -265,8 +272,11 @@ describe('Donation ON_HOLD & Org Lock Review Flows', () => {
       </MemoryRouter>,
     );
 
+    const detailBtn = await screen.findByRole('button', { name: 'Chi tiết' });
+    fireEvent.click(detailBtn);
+
     await waitFor(() => {
-      expect(screen.getByText(/Tổ chức đã bị khoá/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Tổ chức đã bị khoá/i).length).toBeGreaterThan(0);
     });
   });
 });

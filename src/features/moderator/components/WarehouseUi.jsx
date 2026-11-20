@@ -8,11 +8,17 @@ import { safeDocumentUrl } from '../models/warehouseModel.js';
 import { isFixtureMode } from '../config/warehouseContract.js';
 import { getStatusMeta } from '../config/statusTheme.js';
 
-export const money = (value) =>
-  value == null
-    ? '—'
-    : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
-export const date = (value) => (value ? new Date(value).toLocaleString('vi-VN') : '—');
+export const money = (value) => {
+  if (value == null || value === '') return '—';
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '—';
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
+};
+export const date = (value) => {
+  if (!value) return '—';
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('vi-VN');
+};
 export const formatCountdown = (value, now = Date.now()) => {
   if (!value) return null;
   const targetMs = new Date(value).getTime();
@@ -88,7 +94,7 @@ export function Status({ children, label, showDot = true, className = '' }) {
     </span>
   );
 }
-export function ResourceState({ resource, empty = false, children }) {
+export function ResourceState({ resource, empty = false, emptyText = 'Chưa có dữ liệu phù hợp.', children }) {
   return (
     <>
       {resource.loading && (
@@ -120,7 +126,7 @@ export function ResourceState({ resource, empty = false, children }) {
         </p>
       )}
       {!resource.loading && !resource.error && empty && (
-        <p className="p-5 text-textSecondary">Chưa có dữ liệu phù hợp.</p>
+        <p className="p-5 text-textSecondary">{emptyText}</p>
       )}
       {children}
     </>
@@ -180,28 +186,38 @@ export function MemberSummary({ member }) {
   );
 }
 export function Photos({ photos = [] }) {
+  const validPhotos = Array.isArray(photos)
+    ? photos.filter((photo) => {
+        if (!photo) return false;
+        const src = typeof photo === 'string' ? photo : photo.url || photo.imageUrl;
+        return Boolean(src);
+      })
+    : [];
   return (
     <div className="flex flex-wrap gap-3">
-      {photos.map((photo, index) => (
-        <figure key={photo.photoId || photo.url || index} className="space-y-1">
-          <img
-            className="h-32 w-28 rounded-xl object-cover border border-neutral"
-            src={typeof photo === 'string' ? photo : photo.url}
-            alt={`Ảnh sản phẩm ${index + 1}`}
-          />
-          {photo.status && (
-            <figcaption className="text-xs">
-              {photo.status === 'DONE'
-                ? 'Đã tách nền'
-                : photo.status === 'FAILED'
-                  ? 'Tách nền thất bại'
-                  : photo.status === 'PROCESSING'
-                    ? 'Đang tách nền'
-                    : 'Ảnh gốc'}
-            </figcaption>
-          )}
-        </figure>
-      ))}
+      {validPhotos.map((photo, index) => {
+        const src = typeof photo === 'string' ? photo : photo.url || photo.imageUrl;
+        return (
+          <figure key={(typeof photo === 'object' && photo.photoId) || src || index} className="space-y-1">
+            <img
+              className="h-32 w-28 rounded-xl object-cover border border-neutral"
+              src={src}
+              alt={`Ảnh sản phẩm ${index + 1}`}
+            />
+            {typeof photo === 'object' && photo.status && (
+              <figcaption className="text-xs">
+                {photo.status === 'DONE'
+                  ? 'Đã tách nền'
+                  : photo.status === 'FAILED'
+                    ? 'Tách nền thất bại'
+                    : photo.status === 'PROCESSING'
+                      ? 'Đang tách nền'
+                      : 'Ảnh gốc'}
+              </figcaption>
+            )}
+          </figure>
+        );
+      })}
     </div>
   );
 }

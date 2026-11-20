@@ -10,10 +10,12 @@ import {
   ReturnRequestDetails,
   ReturnQueueTable,
   ReturnQueueTabs,
+  ReturnQuickDetailModal,
   DegradedCaseModal,
   DegradedCaseViewTH07,
 } from "../components/returns/ReturnSections.jsx";
 import React from "react";
+import Button from '../../../components/common/Button.jsx';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 
 /**
@@ -47,14 +49,47 @@ export default function ReturnProcessingPage() {
                   Sắp theo hạn xử lý, sắp quá hạn lên trước. Người mua đang chờ tiền — để lâu là một khiếu nại.
                 </p>
               </div>
-              <div className="text-xs text-textSecondary font-medium">
-                Hạn duyệt: 1 ngày làm việc kể từ khi nhận yêu cầu
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="text-xs text-textSecondary font-medium">
+                  Hạn duyệt: 1 ngày làm việc kể từ khi nhận yêu cầu
+                </div>
+                <Button
+                  variant="outline"
+                  loading={model.loading}
+                  onClick={() => model.fetchReturns?.()}
+                  className="whitespace-nowrap"
+                >
+                  Tải lại
+                </Button>
               </div>
             </div>
 
-            {/* Search filter */}
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1 max-w-md">
+            {/* Search filter & History Switcher */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div role="tablist" aria-label="Công việc và lịch sử trả hàng" className="flex flex-wrap gap-2">
+                <Button
+                  role="tab"
+                  aria-selected={model.activeSection === 'WORK'}
+                  variant={model.activeSection === 'WORK' ? 'primary' : 'outline'}
+                  size="sm"
+                  className="whitespace-nowrap"
+                  onClick={() => model.setActiveSection('WORK')}
+                >
+                  Công việc
+                </Button>
+                <Button
+                  role="tab"
+                  aria-selected={model.activeSection === 'HISTORY'}
+                  variant={model.activeSection === 'HISTORY' ? 'primary' : 'outline'}
+                  size="sm"
+                  className="whitespace-nowrap"
+                  onClick={() => model.setActiveSection('HISTORY')}
+                >
+                  Lịch sử ({model.historyRequests.length})
+                </Button>
+              </div>
+
+              <div className="relative flex-1 max-w-md min-w-[240px]">
                 <input
                   type="text"
                   value={model.searchQuery}
@@ -74,11 +109,38 @@ export default function ReturnProcessingPage() {
               </div>
             </div>
 
-            {/* Tabs */}
-            <ReturnQueueTabs {...model.sections.ReturnQueueTabs} />
+            {!model.loading && model.error && (
+              <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700 flex items-center justify-between gap-3">
+                <span>{model.error}</span>
+                <Button variant="outline" size="sm" onClick={() => model.fetchReturns?.()}>
+                  Thử lại
+                </Button>
+              </div>
+            )}
 
-            {/* Bảng TH-01 */}
-            <ReturnQueueTable {...model.sections.ReturnQueueTable} />
+            {model.activeSection === 'WORK' ? (
+              <>
+                {/* Tabs */}
+                <ReturnQueueTabs {...model.sections.ReturnQueueTabs} />
+
+                {/* Bảng TH-01 */}
+                <ReturnQueueTable {...model.sections.ReturnQueueTable} />
+              </>
+            ) : (
+              <section aria-label="Lịch sử xử lý yêu cầu trả hàng" className="space-y-4">
+                <ReturnQueueTable
+                  loading={model.loading}
+                  filteredRequests={model.historyRequests}
+                  activeTab="RESOLVED"
+                  handleOpenReview={model.handleOpenReview}
+                  handleOpenInspect={model.handleOpenInspect}
+                  handleOpenDegradedCaseView={model.handleOpenDegradedCaseView}
+                  handleOpenOutcomeModal={model.handleOpenOutcomeModal}
+                  handleOpenQuickDetail={model.setQuickDetailItem}
+                  emptyText="Chưa có yêu cầu trả hàng nào đã xử lý."
+                />
+              </section>
+            )}
           </div>
         )}
 
@@ -90,7 +152,7 @@ export default function ReturnProcessingPage() {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => model.setViewMode('QUEUE')}
+                  onClick={model.handleBackToQueue}
                   className="w-8 h-8 flex items-center justify-center rounded-xl border border-neutral text-sm text-text hover:bg-background transition-colors"
                   title="Quay lại hàng đợi"
                 >
@@ -104,7 +166,7 @@ export default function ReturnProcessingPage() {
               <div className="flex items-center gap-2">
                 {model.selectedItem.isOverdue && model.selectedItem.status === 'PENDING_APPROVAL' && (
                   <span className="text-[10px] font-bold px-2.5 py-1 bg-secondary text-text rounded-full shadow-sm">
-                    QUÁ HẠN DUYỆT 15 GIỜ
+                    QUÁ HẠN DUYỆT
                   </span>
                 )}
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-success-light text-primary">
@@ -132,7 +194,7 @@ export default function ReturnProcessingPage() {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => model.setViewMode('QUEUE')}
+                  onClick={model.handleBackToQueue}
                   className="w-8 h-8 flex items-center justify-center rounded-xl border border-neutral text-sm text-text hover:bg-background transition-colors"
                   title="Quay lại hàng đợi"
                 >
@@ -183,6 +245,13 @@ export default function ReturnProcessingPage() {
 
         {/* MODAL: Lập biên bản hàng xuống cấp (TH-04 / KG-16) */}
         <DegradedCaseModal {...model.sections.DegradedCaseModal} />
+
+        {/* MODAL: Xem chi tiết nhanh yêu cầu trả hàng */}
+        <ReturnQuickDetailModal
+          item={model.quickDetailItem}
+          onClose={() => model.setQuickDetailItem(null)}
+          onOpenFullReview={model.handleOpenReview}
+        />
       </div>
     </ModeratorLayout>
   );

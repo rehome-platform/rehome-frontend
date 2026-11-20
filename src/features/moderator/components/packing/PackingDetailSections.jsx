@@ -14,7 +14,16 @@ export function PackingRecipientPanel({ order, scanLogs }) {
   const subtotalStr = order.subtotal != null ? `${Number(order.subtotal).toLocaleString('vi-VN')}đ` : '—';
   const shippingFeeStr = order.shippingFee != null ? `${Number(order.shippingFee).toLocaleString('vi-VN')}đ` : '—';
   const totalAmountStr = order.totalAmount != null ? `${Number(order.totalAmount).toLocaleString('vi-VN')}đ` : '—';
-  const paymentMethodStr = order.paymentMethod ? `Đã thu qua ${order.paymentMethod}` : 'Đã thanh toán';
+  const PAYMENT_METHOD_LABELS = {
+    WALLET: 'Ví ReHome',
+    VNPAY: 'VNPay',
+    BANK_TRANSFER: 'Chuyển khoản ngân hàng',
+    COD: 'Thanh toán khi nhận hàng',
+  };
+  const paymentMethodLabel = order.paymentMethod
+    ? PAYMENT_METHOD_LABELS[String(order.paymentMethod).toUpperCase()] || order.paymentMethod
+    : null;
+  const paymentMethodStr = paymentMethodLabel ? `Đã thu qua ${paymentMethodLabel}` : 'Đã thanh toán';
   const paidTimeStr = order.paidAt ? warehouseDateTime(order.paidAt) : "";
 
   return (
@@ -207,7 +216,8 @@ export function PackingPhotosPanel({
       {photos.length > 0 ? (
         <div className="flex flex-wrap gap-3">
           {photos.map((url, index) => {
-            const safeUrl = safeDocumentUrl(url) || url;
+            const safeUrl = safeDocumentUrl(url);
+            if (!safeUrl) return null;
             return (
               <div
                 key={`${url}-${index}`}
@@ -378,7 +388,7 @@ export function PackingScanPanel({
       {message && (
         <p
           role="status"
-          className={`text-xs font-bold p-2.5 rounded-lg border ${message.includes('không') ? 'bg-red-50 text-[#BA1A1A] border-red-200' : 'bg-green-50 text-[#006B2C] border-green-200'
+          className={`text-xs font-bold p-2.5 rounded-lg border ${message.toLowerCase().includes('không') || message.toLowerCase().includes('lỗi') || message.toLowerCase().includes('sai') ? 'bg-red-50 text-[#BA1A1A] border-red-200' : 'bg-green-50 text-[#006B2C] border-green-200'
             }`}
         >
           {message}
@@ -429,8 +439,9 @@ export function PackingItemTable({ items, pickedItems, scannedProductIds, toggle
                     <input
                       type="checkbox"
                       checked={isPicked || isScanned}
+                      disabled={isScanned}
                       onChange={() => togglePicked(item.productId)}
-                      className="rounded"
+                      className="rounded disabled:opacity-60"
                       aria-label={`Đã lấy ${item.productId}`}
                     />
                   </td>
@@ -452,10 +463,12 @@ export function PackingItemTable({ items, pickedItems, scannedProductIds, toggle
                   </td>
                   <td className="py-3 px-3">
                     <p className="font-semibold text-[#191C19]">{item.name || item.productId}</p>
-                    <p className="text-[11px] text-[#717971]">{item.brand || 'ReHome'} · {item.condition || 'Tốt'}</p>
+                    {(item.brand || item.condition) && (
+                      <p className="text-[11px] text-[#717971]">{[item.brand, item.condition].filter(Boolean).join(' · ')}</p>
+                    )}
                   </td>
                   <td className="py-3 px-3 font-medium text-[#414942]">
-                    {item.size || 'M'}
+                    {item.size || '—'}
                   </td>
                   <td className="py-3 px-3 text-right">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-[11px] font-semibold ${isScanned ? 'bg-[#ECFDF3] text-[#067647] border-[#ABEFC6]' : 'bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]'}`}>

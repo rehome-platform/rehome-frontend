@@ -1,6 +1,6 @@
 import { useConsignmentQueue } from '../hooks/useConsignmentQueue.jsx';
 
-import { QueueClaimDialog, QueueReleaseDialog, QueueTaskRow, QueueFilters, QueueTabs, WithdrawalCheckModal } from '../components/queue/QueueSections.jsx';
+import { QueueClaimDialog, QueueReleaseDialog, QueueTaskDetailModal, QueueTaskRow, QueueFilters, QueueTabs, WithdrawalCheckModal } from '../components/queue/QueueSections.jsx';
 import React from "react";
 
 import Button from '../../../components/common/Button.jsx';
@@ -109,12 +109,12 @@ export default function ConsignmentQueuePage() {
               <thead>
                 <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
                   <th className="py-2.5 px-4">Loại việc</th>
-                  <th className="py-2.5 px-3">Tên</th>
                   <th className="py-2.5 px-3">Đối tượng</th>
                   <th className="py-2.5 px-3">Tạo lúc</th>
                   <th className="py-2.5 px-3">Đã chờ</th>
                   <th className="py-2.5 px-3">Người nhận</th>
-                  <th className="py-2.5 px-3 text-right">Hành động</th>
+                  <th className="py-2.5 px-3 text-center w-24">Chi tiết</th>
+                  <th className="py-2.5 px-4 text-left w-[300px]">Hành động</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral">
@@ -137,6 +137,7 @@ export default function ConsignmentQueuePage() {
                       setFeedback={model.setFeedback}
                       setReleaseTarget={model.setReleaseTarget}
                       onCheckWithdrawal={model.setWithdrawalCheckTarget}
+                      onViewDetail={model.setDetailTarget}
                     />
                   );
                 })}
@@ -158,6 +159,13 @@ export default function ConsignmentQueuePage() {
       {/* 4. MODAL NHẬN VIỆC (HQ-02-NhanViec.dc.html) & MODAL NHẢ VIỆC (HQ-02-NhaViec.dc.html) */}
       <QueueClaimDialog {...model.sections.QueueClaimDialog} />
       <QueueReleaseDialog {...model.sections.QueueReleaseDialog} />
+      <QueueTaskDetailModal
+        target={model.detailTarget}
+        busy={model.resource?.busy}
+        onApproveWithdrawal={model.handleApproveWithdrawal}
+        onRejectWithdrawal={model.handleRejectWithdrawal}
+        onClose={() => model.setDetailTarget(null)}
+      />
       <WithdrawalCheckModal
         target={model.withdrawalCheckTarget}
         busy={model.resource?.busy}

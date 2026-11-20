@@ -2,8 +2,9 @@ import { CounterHandoverTask } from './CounterHandoverTask.jsx';
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import Button from "../../../../components/common/Button.jsx";
+import Modal from "../../../../components/common/Modal.jsx";
 
-import { Status, DetailLink, money } from "../WarehouseUi.jsx";
+import { Status, DetailLink, money, date } from "../WarehouseUi.jsx";
 
 export function CounterHandoverDialog({ confirmHandover, selected, handoverLoading, setConfirmHandover, executeHandover }) {
   const item = confirmHandover?.item || {};
@@ -14,7 +15,8 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
   const [isIdentityConfirmed, setIsIdentityConfirmed] = useState(false);
   const [isFeeCollected, setIsFeeCollected] = useState(false);
 
-  const requiresFeeConfirmation = Boolean(context === 'ITEM_WITHDRAWAL' && item.feeCharged > 0 && !item.feePaid);
+  const isFeePaid = Boolean(item.feePaid || item.feePaidAt);
+  const requiresFeeConfirmation = Boolean(context === 'ITEM_WITHDRAWAL' && item.feeCharged > 0 && !isFeePaid);
   const isSkuMatched = Boolean(targetSku && skuInput.trim().toUpperCase() === targetSku.toUpperCase());
   const canHandover = Boolean(isSkuMatched && isIdentityConfirmed && (!requiresFeeConfirmation || isFeeCollected));
 
@@ -26,8 +28,8 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-surface p-6 shadow-card space-y-4 border border-neutral font-sans">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-surface p-6 shadow-card space-y-4 border border-neutral font-sans">
         <div className="flex items-center justify-between border-b border-neutral pb-3">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-secondary text-text font-bold px-2.5 py-0.5">
@@ -50,7 +52,7 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
           </div>
           <div className="flex justify-between">
             <span className="text-[#5B6776]">Số điện thoại:</span>
-            <span className="font-medium text-[#191C19]">{selected?.phone || '09xx xxx xxx'}</span>
+            <span className="font-medium text-[#191C19]">{selected?.phone || '—'}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-[#5B6776]">Sản phẩm:</span>
@@ -69,7 +71,7 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
                 {item.feeCharged ? (
                   <>
                     <strong className="text-[#191C19] mr-1.5">{money(item.feeCharged)}</strong>
-                    {item.feePaid ? (
+                    {isFeePaid ? (
                       <span className="font-bold text-[#006B2C]">(Đã thanh toán)</span>
                     ) : (
                       <span className="font-bold text-[#BA1A1A]">(Chưa thanh toán)</span>
@@ -323,6 +325,10 @@ function resolveCounterTaskAction(task) {
 }
 
 export function CounterConsignmentTasks({ taskGroups }) {
+  const [detailTask, setDetailTask] = useState(null);
+  const detailSku = detailTask?.productSku || detailTask?.sku || detailTask?.product?.sku || '';
+  const detailPhoto = detailTask?.productPhotoUrl || detailTask?.photoUrl || detailTask?.photos?.[0]?.url || detailTask?.photos?.[0] || null;
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
@@ -335,51 +341,162 @@ export function CounterConsignmentTasks({ taskGroups }) {
       </div>
       {taskGroups.pendingForms.map((task) => {
         const { header, actionLabel } = resolveCounterTaskAction(task);
+        const sku = task.productSku || task.sku || task.product?.sku;
         return (
           <div
             key={task.formId}
             className="rounded-2xl border-2 border-[#2b2b2b] bg-white overflow-hidden shadow-sm"
           >
             <div className="bg-[#f4f4f4] border-b border-[#8a8a8a] px-4 py-2.5 flex items-center justify-between gap-2">
-              <span className="text-xs font-bold text-[#191C19]">
+              <span className="text-xs font-bold text-[#191C19] whitespace-nowrap">
                 {header}
               </span>
               <span className="text-[11px] text-[#5B6776] flex items-center gap-1.5 flex-wrap justify-end">
-                {task.productSku && (
-                  <span className="font-mono font-bold text-[#191C19] bg-white px-2 py-0.5 rounded border border-[#c4c4c4]">
-                    SKU: {task.productSku}
+                {sku && (
+                  <span className="font-mono font-bold text-[#191C19] bg-white px-2 py-0.5 rounded border border-[#c4c4c4] whitespace-nowrap">
+                    SKU: {sku}
                   </span>
                 )}
-                <span>Form {task.formId} ·</span>
                 <Status>{task.status}</Status>
               </span>
             </div>
             <div className="p-4 flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="font-bold text-sm text-[#191C19]">{task.name || task.productName || task.formId}</p>
+              <div className="min-w-0 flex-1">
+                <p className="font-bold text-sm text-[#191C19]">{task.name || task.productName || 'Sản phẩm ký gửi'}</p>
                 <p className="text-xs text-[#5B6776] mt-0.5">
                   {task.desiredPrice ? `Giá mong muốn: ${money(task.desiredPrice)}` : 'Đang có mặt tại quầy'}
-                  {task.receiptId && (
-                    <span className="ml-2 text-[#191C19]">
-                      · {task.confirmedAt ? 'Biên nhận đã xác nhận' : 'Biên nhận chờ xác nhận'}
-                    </span>
-                  )}
                 </p>
               </div>
-              {actionLabel && (
-                <Link
-                  to={`/moderator/consignments/${encodeURIComponent(task.formId)}`}
-                  state={{ form: task, identified: true }}
+              <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="text-xs font-semibold whitespace-nowrap"
+                  onClick={() => setDetailTask(task)}
                 >
-                  <Button className="bg-[#2b2b2b] text-white hover:bg-black text-xs font-bold px-4 py-2">
-                    {actionLabel}
-                  </Button>
-                </Link>
-              )}
+                  Chi tiết
+                </Button>
+                {actionLabel && (
+                  <Link
+                    to={`/moderator/consignments/${encodeURIComponent(task.formId)}`}
+                    state={{ form: task, identified: true }}
+                  >
+                    <Button size="sm" className="bg-[#2b2b2b] text-white hover:bg-black text-xs font-bold px-4 py-1.5 whitespace-nowrap">
+                      {actionLabel}
+                    </Button>
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
         );
       })}
+
+      <Modal
+        isOpen={Boolean(detailTask)}
+        title="Chi tiết sản phẩm tại quầy"
+        onClose={() => setDetailTask(null)}
+        size="md"
+      >
+        {detailTask && (
+          <div className="space-y-4 text-xs text-textSecondary">
+            {detailPhoto && (
+              <div className="flex justify-center">
+                <img
+                  src={detailPhoto}
+                  alt={detailTask.name || detailTask.productName || 'Ảnh sản phẩm'}
+                  className="h-40 w-40 rounded-xl object-cover border border-neutral"
+                />
+              </div>
+            )}
+            <div className="rounded-xl border border-neutral bg-[#F6F9F4] p-3.5 space-y-2">
+              <div className="flex justify-between gap-4">
+                <span className="font-semibold shrink-0">Sản phẩm:</span>
+                <span className="font-bold text-text text-right">{detailTask.name || detailTask.productName || '—'}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="font-semibold shrink-0">Mã form:</span>
+                <span className="font-mono font-bold text-text text-right break-all">{detailTask.formId || detailTask.id || '—'}</span>
+              </div>
+              {detailSku && (
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold shrink-0">Mã SKU:</span>
+                  <span className="font-mono font-bold text-text text-right">{detailSku}</span>
+                </div>
+              )}
+              {(detailTask.brandName || (typeof detailTask.brand === 'object' ? detailTask.brand?.name : detailTask.brand)) && (
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold shrink-0">Thương hiệu:</span>
+                  <span className="text-text text-right">{detailTask.brandName || (typeof detailTask.brand === 'object' ? detailTask.brand?.name : detailTask.brand)}</span>
+                </div>
+              )}
+              {(detailTask.categoryName || (typeof detailTask.category === 'object' ? detailTask.category?.name : detailTask.category)) && (
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold shrink-0">Danh mục:</span>
+                  <span className="text-text text-right">{detailTask.categoryName || (typeof detailTask.category === 'object' ? detailTask.category?.name : detailTask.category)}</span>
+                </div>
+              )}
+              {detailTask.size && (
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold shrink-0">Kích cỡ:</span>
+                  <span className="text-text text-right">{detailTask.size}</span>
+                </div>
+              )}
+              <div className="flex justify-between gap-4">
+                <span className="font-semibold shrink-0">Giá mong muốn:</span>
+                <span className="font-bold text-text text-right">{detailTask.desiredPrice != null ? money(detailTask.desiredPrice) : '—'}</span>
+              </div>
+              {(detailTask.agreedPrice != null || detailTask.currentPrice != null) && (
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold shrink-0">Giá bán / chốt:</span>
+                  <span className="font-bold text-[#006B2C] text-right">{money(detailTask.currentPrice ?? detailTask.agreedPrice)}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center gap-4">
+                <span className="font-semibold shrink-0">Trạng thái:</span>
+                <Status>{detailTask.status}</Status>
+              </div>
+              {detailTask.receiptId && (
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold shrink-0">Biên nhận:</span>
+                  <span className="font-semibold text-text text-right">
+                    {detailTask.confirmedAt ? 'Biên nhận đã xác nhận' : 'Biên nhận chờ xác nhận'}
+                  </span>
+                </div>
+              )}
+              {detailTask.createdAt && (
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold shrink-0">Ngày tạo:</span>
+                  <span className="text-text text-right">{date(detailTask.createdAt)}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setDetailTask(null)} className="whitespace-nowrap">
+                Đóng
+              </Button>
+              {detailSku && (
+                <Link
+                  to={`/moderator/inventory/${encodeURIComponent(detailSku)}`}
+                  className="inline-flex items-center justify-center rounded-xl bg-[#006B2C] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#005523] whitespace-nowrap"
+                >
+                  Xem tồn kho
+                </Link>
+              )}
+              {detailTask.formId && (
+                <Link
+                  to={`/moderator/consignments/${encodeURIComponent(detailTask.formId)}`}
+                  state={{ form: detailTask, identified: true }}
+                  className="inline-flex items-center justify-center rounded-xl border border-neutral bg-white px-3 py-1.5 text-xs font-semibold text-text hover:bg-[#F6F9F4] whitespace-nowrap"
+                >
+                  Mở phiếu ký gửi
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
@@ -399,7 +516,7 @@ export function CounterMemberSummary({ selected }) {
             </span>
           </div>
           <p className="text-xs text-[#5B6776] mt-0.5">
-            {selected.memberCode} · {selected.phone || '09xx xxx xxx'} · Phiên xác nhận hiệu lực 15 phút
+            {selected.memberCode} · {selected.phone || '—'} · Phiên xác nhận hiệu lực 15 phút
           </p>
         </div>
       </div>
@@ -425,14 +542,14 @@ export function CounterIdentityPanel({ selected, results, confirmed, confirmIden
         </h2>
       </div>
     
-      <div className="grid grid-cols-3 gap-4 border-b border-[#d4d4d4] pb-4 text-xs">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-b border-[#d4d4d4] pb-4 text-xs">
         <div>
           <p className="text-[10px] text-[#717971] uppercase font-bold">Mã Member</p>
           <p className="font-bold text-sm text-[#191C19] mt-0.5">{selected.memberCode}</p>
         </div>
         <div>
           <p className="text-[10px] text-[#717971] uppercase font-bold">Số điện thoại</p>
-          <p className="font-bold text-sm text-[#191C19] mt-0.5">{selected.phone || '09xx xxx xxx'}</p>
+          <p className="font-bold text-sm text-[#191C19] mt-0.5">{selected.phone || '—'}</p>
         </div>
         <div>
           <p className="text-[10px] text-[#717971] uppercase font-bold">Email đăng ký</p>
@@ -440,7 +557,7 @@ export function CounterIdentityPanel({ selected, results, confirmed, confirmIden
         </div>
       </div>
     
-      <div className="grid grid-cols-3 gap-4 text-xs text-[#5B6776]">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-[#5B6776]">
         <div>
           <p className="text-[10px] text-[#717971] uppercase font-bold">Tham gia từ</p>
           <p className="font-medium text-[#191C19] mt-0.5">

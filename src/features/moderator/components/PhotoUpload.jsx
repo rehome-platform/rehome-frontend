@@ -17,6 +17,8 @@ export default function PhotoUpload({ onChange, disabled = false, maxFiles = nul
   const controllers = useRef(new Set());
   const active = useRef(true);
   const fileInputRef = useRef(null);
+  const filesRef = useRef(files);
+  filesRef.current = files;
 
   useEffect(() => {
     active.current = true;
@@ -24,7 +26,7 @@ export default function PhotoUpload({ onChange, disabled = false, maxFiles = nul
       active.current = false;
       controllers.current.forEach((controller) => controller.abort());
       // Revoke any created preview URLs to prevent memory leaks
-      files.forEach((f) => {
+      filesRef.current.forEach((f) => {
         if (f.previewUrl && typeof window !== 'undefined' && window.URL?.revokeObjectURL) {
           window.URL.revokeObjectURL(f.previewUrl);
         }
@@ -218,17 +220,27 @@ export default function PhotoUpload({ onChange, disabled = false, maxFiles = nul
 
                 {/* Trạng thái lỗi */}
                 {item.status === 'FAILED' && (
-                  <div className="absolute inset-0 bg-red-950/70 p-2 flex flex-col items-center justify-center text-center text-white z-30">
-                    <span className="text-[10px] font-semibold text-red-200 line-clamp-2 mb-1">
+                  <div className="absolute inset-0 bg-red-950/75 p-2 flex flex-col items-center justify-center text-center text-white z-30 gap-1.5">
+                    <span className="text-[10px] font-semibold text-red-200 line-clamp-2">
                       {item.error || 'Lỗi tải ảnh'}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => upload(item)}
-                      className="text-[10px] font-bold underline bg-white/20 px-2 py-0.5 rounded hover:bg-white/30"
-                    >
-                      Thử tải lại
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => upload(item)}
+                        className="text-[10px] font-bold underline bg-white/20 px-2 py-0.5 rounded hover:bg-white/30"
+                      >
+                        Thử tải lại
+                      </button>
+                      <button
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => removePhoto(item)}
+                        className="text-[10px] font-bold bg-red-600/80 px-2 py-0.5 rounded hover:bg-red-600"
+                      >
+                        Xóa
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -275,6 +287,17 @@ export default function PhotoUpload({ onChange, disabled = false, maxFiles = nul
           role="button"
           tabIndex={0}
           onClick={() => !disabled && fileInputRef.current?.click()}
+          onDragOver={(e) => {
+            if (!disabled) e.preventDefault();
+          }}
+          onDrop={(e) => {
+            if (disabled) return;
+            e.preventDefault();
+            const dropped = Array.from(e.dataTransfer?.files || []).filter((f) => f.type?.startsWith('image/'));
+            if (dropped.length) {
+              handleFilesAdded({ target: { files: dropped, value: '' } });
+            }
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();

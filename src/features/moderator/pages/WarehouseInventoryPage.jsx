@@ -1,17 +1,20 @@
 import { WarehouseHistoryTabs } from '../components/WarehouseHistoryTabs.jsx';
 import DegradedCaseDetails from '../components/DegradedCaseDetails.jsx';
 import { degradedCaseLabel, degradedInventoryItem } from '../models/degradedCaseModel.js';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
 import QRScannerModal from '../../../components/QRScannerModal.jsx';
 import { inventoryService } from '../services/warehouseApi.js';
+import { returnService, pendingReturnFromInventory } from '../services/returnApi.js';
 import { enrichListRows } from '../services/listDetailEnrichment.js';
 import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
 import { listItems } from '../models/warehouseModel.js';
 import { Page, Status, Pager, ResourceState, money } from '../components/WarehouseUi.jsx';
+import { ReturnOutcomeDialog } from '../components/returns/ReturnSections.jsx';
+import { useToast } from '../../../context/ToastContext.jsx';
 
 export const SUPPORTED_INVENTORY_STATUSES = [
   'ON_SALE',
@@ -35,7 +38,7 @@ export const INVENTORY_STATUS_LABELS = {
   UNCLAIMED: 'Vô thừa nhận',
   DONATED: 'Đã quyên góp',
   DESTROYED: 'Đã tiêu huỷ',
-  RETURNED: 'Đã hoàn trả',
+  RETURNED: 'Đã bàn giao',
   PLATFORM_OWNED: 'Tài sản nền tảng',
 };
 
@@ -43,11 +46,11 @@ export default function WarehouseInventoryPage() {
   const [search, setSearch] = useSearchParams();
   const navigate = useNavigate();
   const [scanner, setScanner] = useState(false);
-  const [skuLookupModal, setSkuLookupModal] = useState(false);
-  const [lookupInput, setLookupInput] = useState('');
-  const [lookupResult, setLookupResult] = useState(null); // { type: 'FOUND'|'NOT_FOUND'|'OTHER_WAREHOUSE', data?: any }
-  const [isLookingUp, setIsLookingUp] = useState(false);
   const [degradedModalItem, setDegradedModalItem] = useState(null);
+  const [relistTarget, setRelistTarget] = useState(null);
+  const [relistSubmitting, setRelistSubmitting] = useState(false);
+  const relistLock = useRef(false);
+  const toast = useToast();
 
   const page = Math.max(0, Number(search.get('page')) || 0);
   const sku = search.get('sku') || '';
@@ -83,9 +86,17 @@ export default function WarehouseInventoryPage() {
           },
           options,
         );
+        const keyword = sku.trim().toLowerCase();
+        const filtered = keyword
+          ? enriched.filter(
+              (item) =>
+                String(item.sku || '').toLowerCase().includes(keyword) ||
+                String(item.name || '').toLowerCase().includes(keyword)
+            )
+          : enriched;
         return {
-          content: enriched,
-          totalElements: enriched.length,
+          content: filtered,
+          totalElements: filtered.length,
           totalPages: 1,
         };
       }
@@ -103,7 +114,40 @@ export default function WarehouseInventoryPage() {
     [],
   );
 
-  const items = listItems(resource.data);
+  const rawItems = listItems(resource.data);
+  const items = useMemo(() => {
+    return [...rawItems].sort((a, b) => {
+      const tA = Date.parse(a?.createdAt || a?.stockedAt || a?.updatedAt || a?.degradedDate || '') || 0;
+      const tB = Date.parse(b?.createdAt || b?.stockedAt || b?.updatedAt || b?.degradedDate || '') || 0;
+      return tB - tA;
+    });
+  }, [rawItems]);
+
+  const pendingReturnBySku = useMemo(() => {
+    const map = new Map();
+    for (const item of items) {
+      const ret = item.status === 'RETURNED' ? pendingReturnFromInventory(item) : null;
+      if (ret) map.set(String(item.sku || item.id || '').trim().toUpperCase(), ret);
+    }
+    return map;
+  }, [items]);
+
+  const handleConfirmRelist = async (outcome) => {
+    if (!relistTarget || relistLock.current) return;
+    relistLock.current = true;
+    setRelistSubmitting(true);
+    try {
+      await returnService.applyItemAction(relistTarget.id, outcome);
+      toast.success(`Đã đăng bán lại sản phẩm ${relistTarget.sku || relistTarget.itemName || ''} lên sàn.`);
+      setRelistTarget(null);
+      resource.refresh();
+    } catch (err) {
+      toast.error(err?.message || 'Không thể đăng bán lại sản phẩm. Vui lòng thử lại.');
+    } finally {
+      relistLock.current = false;
+      setRelistSubmitting(false);
+    }
+  };
 
   const change = (key, value) =>
     setSearch(
@@ -123,50 +167,12 @@ export default function WarehouseInventoryPage() {
     { label: 'Lưu kho', value: 'WAREHOUSE' },
     { label: 'Đang giữ', value: 'RESERVED' },
     { label: 'Đã bán, chờ đóng gói', value: 'SOLD' },
+    { label: 'Đã bàn giao', value: 'RETURNED' },
     { label: 'Chờ xử lý cuối kỳ', value: 'WAITING_END_OF_TERM' },
     { label: 'Gửi về người bán', value: 'WITHDRAWN' },
     { label: 'Vô thừa nhận', value: 'UNCLAIMED' },
     { label: 'Hàng xuống cấp', value: 'DEGRADED' },
   ];
-
-  // TK-03 Lookup SKU handler
-  const handleLookupSku = async (targetSku) => {
-    const code = (targetSku || lookupInput).trim().toUpperCase();
-    if (!code) {
-      setLookupResult(null);
-      return;
-    }
-
-    setIsLookingUp(true);
-    try {
-      // Check in warehouse list first
-      const foundInList = items.find((i) => i.sku?.toUpperCase() === code);
-      if (foundInList) {
-        setLookupResult({ type: 'FOUND', data: foundInList });
-        return;
-      }
-
-      // Check specific warehouse products or call API
-      const res = await inventoryService.read(code).catch((err) => {
-        if (err.status === 403 || err.code === 'PRODUCT_NOT_IN_YOUR_WAREHOUSE') {
-          return { errorType: 'OTHER_WAREHOUSE', sku: code, warehouseName: 'Kho Thủ Đức' };
-        }
-        return null;
-      });
-
-      if (!res) {
-        setLookupResult({ type: 'NOT_FOUND', sku: code });
-      } else if (res.errorType === 'OTHER_WAREHOUSE') {
-        setLookupResult({ type: 'OTHER_WAREHOUSE', sku: code, warehouseName: res.warehouseName || 'Kho Thủ Đức' });
-      } else {
-        setLookupResult({ type: 'FOUND', data: res });
-      }
-    } catch {
-      setLookupResult({ type: 'NOT_FOUND', sku: code });
-    } finally {
-      setIsLookingUp(false);
-    }
-  };
 
   return (
     <Page
@@ -178,24 +184,12 @@ export default function WarehouseInventoryPage() {
           </span>
         </div>
       }
-      subtitle="Chỉ hàng trong kho đang làm việc. Moderator không xem được kho khác."
       actions={
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => {
-              setSkuLookupModal(true);
-              setLookupResult(null);
-              setLookupInput('');
-            }}
-            className="text-xs font-bold border-[#2b2b2b] text-[#2b2b2b]"
-          >
-            Tra cứu SKU
-          </Button>
-          <Button variant="outline" onClick={() => setScanner(true)}>
+          <Button variant="outline" className="whitespace-nowrap" onClick={() => setScanner(true)}>
             Quét QR SKU
           </Button>
-          <Button variant="outline" onClick={resource.refresh}>
+          <Button variant="outline" className="whitespace-nowrap" onClick={resource.refresh}>
             Tải lại
           </Button>
         </div>
@@ -265,6 +259,7 @@ export default function WarehouseInventoryPage() {
               {Array.from(
                 new Set([
                   ...SUPPORTED_INVENTORY_STATUSES,
+                  'RETURNED',
                   ...(Array.isArray(enums.data?.inventoryStatuses) ? enums.data.inventoryStatuses : []),
                 ])
               ).map((value) => (
@@ -285,10 +280,9 @@ export default function WarehouseInventoryPage() {
           <div className="rounded-2xl border border-[#8a8a8a] bg-white overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               {status === 'DEGRADED' ? (
-                <table className="min-w-[760px] w-full text-left text-xs">
+                <table className="min-w-[700px] w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-[#FFF8E1] border-b border-[#FFE082] text-[10px] font-bold uppercase tracking-wider text-[#B78103]">
-                      <th className="py-3 px-4 w-32">Mã SKU</th>
+                    <tr className="bg-[#FFF8E1] border-b border-[#FFE082] text-[10px] font-bold uppercase tracking-wider text-[#B78103] whitespace-nowrap">
                       <th className="py-3 px-4">Sản phẩm</th>
                       <th className="py-3 px-4 w-28">Ngày báo</th>
                       <th className="py-3 px-4">Lý do xuống cấp</th>
@@ -297,27 +291,29 @@ export default function WarehouseInventoryPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#e0e0e0]">
-                    {items.map((item) => (
+                    {items.map((item) => {
+                      const rawBrand = item.brandName || item.brand;
+                      const cleanBrand = rawBrand && rawBrand.trim().toLowerCase() !== 'rehome' ? rawBrand.trim() : '';
+                      const subMeta = [cleanBrand, item.size ? `Size ${item.size}` : ''].filter(Boolean).join(' · ');
+                      return (
                       <tr key={item.sku || item.id} className="hover:bg-[#FFFDF5] transition-colors">
-                        <td className="py-3.5 px-4 font-mono font-bold text-[#191C19]">
-                          {item.sku || item.id}
-                        </td>
                         <td className="py-3.5 px-4">
                           <p className="font-semibold text-[#191C19]">{item.name}</p>
-                          <p className="text-[11px] text-[#717971]">
-                            {item.brandName || item.brand || 'ReHome'}
-                            {item.size ? ` · Size ${item.size}` : ''}
-                          </p>
+                          {subMeta && (
+                            <p className="text-[11px] text-[#717971]">{subMeta}</p>
+                          )}
                         </td>
-                        <td className="py-3.5 px-4 text-[#5f5f5f]">
-                          {item.degradedDate ? new Date(item.degradedDate).toLocaleDateString('vi-VN') : '—'}
+                        <td className="py-3.5 px-4 text-[#5f5f5f] whitespace-nowrap">
+                          {item.degradedDate && !Number.isNaN(new Date(item.degradedDate).getTime())
+                            ? new Date(item.degradedDate).toLocaleDateString('vi-VN')
+                            : '—'}
                         </td>
                         <td className="py-3.5 px-4 max-w-xs truncate" title={item.degradedReason || item.conditionNote}>
                           <span className="font-medium text-[#191C19]">
                             {item.degradedReason || item.conditionNote || 'Hàng trả về có dấu hiệu xuống cấp'}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4">
+                        <td className="py-3.5 px-4 whitespace-nowrap">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold ${item.decisionStatus === 'FULL_COMPENSATION'
                               ? 'bg-[#ECFDF3] text-[#067647] border-[#ABEFC6]'
                               : (item.decisionStatus === 'PARTIAL_COMPENSATION' || item.decisionStatus === 'PARTIAL_WITH_ITEM_BACK')
@@ -329,38 +325,43 @@ export default function WarehouseInventoryPage() {
                             {item.decisionStatusLabel || degradedCaseLabel(item)}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 text-right">
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
                           <Button
                             type="button"
                             variant="outline"
-                            className="text-xs py-1 px-3 border-[#006B2C] text-[#006B2C] hover:bg-[#E8F5E9] font-semibold"
+                            className="text-xs py-1.5 px-3 border-[#006B2C] text-[#006B2C] hover:bg-[#E8F5E9] font-semibold whitespace-nowrap"
                             onClick={() => setDegradedModalItem(item)}
                           >
-                            Xem biên bản & ảnh →
+                            Xem biên bản & ảnh
                           </Button>
                         </td>
                       </tr>
-                    ))}
+                    );})}
                   </tbody>
                 </table>
               ) : (
-                <table className="min-w-[760px] w-full text-left text-xs">
+                <table className="min-w-[700px] w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-[#f4f4f4] border-b border-[#8a8a8a] text-[10px] font-bold uppercase tracking-wider text-[#5f5f5f]">
-                      <th className="py-2.5 px-4 w-32">Mã SKU</th>
+                    <tr className="bg-[#f4f4f4] border-b border-[#8a8a8a] text-[10px] font-bold uppercase tracking-wider text-[#5f5f5f] whitespace-nowrap">
                       <th className="py-2.5 px-4">Sản phẩm</th>
                       <th className="py-2.5 px-4">Trạng thái</th>
                       <th className="py-2.5 px-4">Kỳ ký gửi</th>
                       <th className="py-2.5 px-4 text-right">Giá bán</th>
-                      <th className="py-2.5 px-4 text-right w-40">Thao tác</th>
+                      <th className="py-2.5 px-4 text-left w-[320px]">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#e0e0e0]">
                     {items.map((item) => {
+                      const skuKey = String(item.sku || item.id || '').trim().toUpperCase();
+                      const pendingReturn = item.status === 'RETURNED' ? pendingReturnBySku.get(skuKey) || null : null;
                       const isActionNeeded =
                         item.status === 'WAITING_END_OF_TERM' ||
                         item.status === 'UNCLAIMED' ||
+                        Boolean(pendingReturn) ||
                         (item.status === 'WAREHOUSE' && (item.decisionId || item.pricingEligible));
+                      const rawBrand = item.brandName || item.brand;
+                      const cleanBrand = rawBrand && rawBrand.trim().toLowerCase() !== 'rehome' ? rawBrand.trim() : '';
+                      const subMeta = [cleanBrand, item.size ? `Size ${item.size}` : ''].filter(Boolean).join(' · ');
 
                       return (
                         <tr
@@ -370,28 +371,24 @@ export default function WarehouseInventoryPage() {
                             : 'hover:bg-[#fcfdfc]'
                             }`}
                         >
-                          <td className="py-3.5 px-4 font-mono font-bold text-[#191C19]">
-                            <Link
-                              className="text-primary hover:underline"
-                              to={`/moderator/inventory/${encodeURIComponent(item.sku)}`}
-                            >
-                              {item.sku}
-                            </Link>
-                          </td>
                           <td className="py-3.5 px-4">
                             <p className="font-semibold text-[#191C19]">{item.name}</p>
-                            <p className="text-[11px] text-[#717971]">
-                              {item.brandName || item.brand || 'ReHome'}
-                              {item.size ? ` · Size ${item.size}` : ''}
-                            </p>
+                            {subMeta && (
+                              <p className="text-[11px] text-[#717971]">{subMeta}</p>
+                            )}
                           </td>
-                          <td className="py-3.5 px-4">
+                          <td className="py-3.5 px-4 whitespace-nowrap">
                             {item.status === 'WAITING_END_OF_TERM' ? (
                               <span className="font-bold text-[#2b2b2b]">Chờ xử lý cuối kỳ</span>
                             ) : item.status === 'UNCLAIMED' ? (
                               <span className="font-bold text-red-700">Vô thừa nhận</span>
                             ) : (
                               <Status>{item.status}</Status>
+                            )}
+                            {pendingReturn && (
+                              <span className="block text-[10px] text-[#B54708] font-semibold mt-0.5">
+                                Chờ chọn phương án xử lý
+                              </span>
                             )}
                             {item.pricingEligible && item.status === 'WAREHOUSE' && (
                               <span className="block text-[10px] text-[#006B2C] font-semibold mt-0.5">
@@ -406,27 +403,44 @@ export default function WarehouseInventoryPage() {
                               </span>
                             )}
                           </td>
-                          <td className="py-3.5 px-4 text-[#5f5f5f]">
+                          <td className="py-3.5 px-4 text-[#5f5f5f] whitespace-nowrap">
                             {item.currentTerm ? `Kỳ ${item.currentTerm} · ngày ${item.daysIntoTerm ?? 1}${item.termLengthDays ? ` / ${item.termLengthDays}` : ''}` : '—'}
                           </td>
-                          <td className="py-3.5 px-4 font-bold text-[#191C19] text-right">
+                          <td className="py-3.5 px-4 font-bold text-[#191C19] text-right whitespace-nowrap">
                             {item.currentPrice != null ? money(item.currentPrice) : (item.agreedPrice != null ? money(item.agreedPrice) : '—')}
                           </td>
-                          <td className="py-3.5 px-4 text-right">
-                            <div className="flex items-center justify-end gap-2.5">
-                              {(item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT') && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(item.status) && (
+                          <td className="py-3.5 px-4 text-left align-middle whitespace-nowrap">
+                            <div className="grid grid-cols-[104px_128px_72px] items-center justify-items-start gap-2">
+                              {pendingReturn ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs border-[#006B2C] text-[#006B2C] hover:bg-[#E8F5E9] font-semibold whitespace-nowrap"
+                                  onClick={() => setRelistTarget(pendingReturn)}
+                                >
+                                  Đăng bán lại
+                                </Button>
+                              ) : <span aria-hidden="true" />}
+                              {(item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT') && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(item.status) ? (
                                 <Link
                                   to={`/moderator/inventory/${encodeURIComponent(item.sku)}/re-consign`}
-                                  className="text-xs font-bold text-[#006B2C] hover:underline bg-[#E8F5E9] px-2 py-1 rounded border border-[#C8E6C9]"
+                                  className="inline-flex items-center justify-center text-xs font-semibold text-[#006B2C] bg-[#E8F5E9] hover:bg-[#D1FADF] px-3 py-1.5 rounded-xl border border-[#A5D6A7] transition-colors whitespace-nowrap"
                                 >
-                                  {item.reConsignStatus === 'PROPOSAL_SENT' ? 'Theo dõi xác nhận →' : 'Đàm phán giá →'}
+                                  {item.reConsignStatus === 'PROPOSAL_SENT' ? 'Theo dõi xác nhận' : 'Đàm phán giá'}
                                 </Link>
-                              )}
+                              ) : item.status === 'RETURNED' ? (
+                                <Link
+                                  to={`/moderator/inventory/${encodeURIComponent(item.sku)}`}
+                                  className="inline-flex items-center justify-center text-xs font-semibold text-error border border-error/40 hover:bg-error-light px-3 py-1.5 rounded-xl transition-colors whitespace-nowrap"
+                                >
+                                  Báo xuống cấp
+                                </Link>
+                              ) : <span aria-hidden="true" />}
                               <Link
-                                className="text-xs text-primary hover:underline font-semibold"
+                                className="inline-flex items-center justify-center text-xs font-semibold py-1.5 px-3 bg-[#006B2C] text-white hover:bg-[#005523] rounded-xl shadow-sm transition-colors whitespace-nowrap"
                                 to={`/moderator/inventory/${encodeURIComponent(item.sku)}`}
                               >
-                                Chi tiết →
+                                Chi tiết
                               </Link>
                             </div>
                           </td>
@@ -449,116 +463,6 @@ export default function WarehouseInventoryPage() {
           onChange={(value) => change('page', String(value))}
         />
       )}
-
-      {/* MODAL TRA CỨU SKU CHUẨN WIREFRAME (TK-03) */}
-      <Modal
-        isOpen={skuLookupModal}
-        title="Tra cứu sản phẩm bằng mã SKU"
-        onClose={() => setSkuLookupModal(false)}
-        maxWidth="max-w-xl"
-      >
-        <div className="space-y-5 text-xs text-[#2b2b2b]">
-          <div className="space-y-1">
-            <label htmlFor="sku-lookup-input" className="block text-xs font-bold text-[#191C19]">
-              Nhập mã SKU trên tem
-            </label>
-            <p className="text-[11px] text-[#5f5f5f]">
-              Đọc mã trên tem dán ở sản phẩm. Không quét QR — kho đã bỏ quét mã (quyết định 11/10).
-            </p>
-            <div className="flex gap-2 pt-2">
-              <input
-                id="sku-lookup-input"
-                type="text"
-                value={lookupInput}
-                onChange={(e) => setLookupInput(e.target.value.toUpperCase())}
-                onKeyDown={(e) => e.key === 'Enter' && handleLookupSku()}
-                placeholder="VD: RH-K9B47T, RH-M4T19B, RH-D6P23L..."
-                className="flex-1 rounded-xl border border-neutral px-3.5 py-2 text-sm font-bold font-mono focus:outline-none focus:border-[#006B2C]"
-              />
-              <Button
-                variant="primary"
-                onClick={() => handleLookupSku()}
-                loading={isLookingUp}
-                className="font-semibold px-5 text-sm"
-              >
-                Tra cứu
-              </Button>
-            </div>
-          </div>
-
-          {/* HIỂN THỊ KẾT QUẢ THEO 4 TRẠNG THÁI WIREFRAME TK-03 */}
-          {!lookupResult && (
-            /* TK-03-ChoNhap */
-            <div className="p-6 border border-dashed border-[#c4c4c4] rounded-xl text-center space-y-1 text-[#7a7a7a]">
-              <div className="font-bold text-sm text-[#5f5f5f]">Chưa có kết quả</div>
-              <p className="text-[11px]">Nhập đủ mã SKU rồi bấm Tra cứu, hoặc Enter.</p>
-            </div>
-          )}
-
-          {lookupResult?.type === 'FOUND' && (
-            /* TK-03-TimThay */
-            <div className="border border-neutral p-4 rounded-xl bg-white space-y-3">
-              <span className="text-[10px] font-bold tracking-wider px-2.5 py-1 bg-[#006B2C] text-white rounded">
-                TÌM THẤY
-              </span>
-              <div className="flex gap-4 items-start pt-2">
-                <div className="w-16 h-16 rounded-lg border border-[#c4c4c4] bg-[#f9f9f9] flex items-center justify-center font-bold text-xs text-[#8a8a8a]">
-                  Ảnh
-                </div>
-                <div className="flex-1 min-w-0 space-y-1">
-                  <h4 className="font-bold text-sm text-[#191C19]">{lookupResult.data.name}</h4>
-                  <p className="text-[11px] text-[#5f5f5f]">
-                    {lookupResult.data.brandName || lookupResult.data.brand || 'ReHome'} · Size {lookupResult.data.size || 'M'}
-                  </p>
-                  <p className="text-[11px] text-[#5f5f5f]">
-                    Trạng thái: <Status>{lookupResult.data.status}</Status>
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  setSkuLookupModal(false);
-                  navigate(`/moderator/inventory/${encodeURIComponent(lookupResult.data.sku)}`);
-                }}
-                className="w-full py-2 text-sm font-semibold rounded-xl"
-              >
-                Mở chi tiết sản phẩm →
-              </Button>
-            </div>
-          )}
-
-          {lookupResult?.type === 'OTHER_WAREHOUSE' && (
-            /* TK-03-KhongThuocKho */
-            <div className="border-2 border-[#2b2b2b] p-4 rounded-xl bg-white space-y-2">
-              <span className="text-[10px] font-bold tracking-wider px-2.5 py-1 border border-[#2b2b2b] text-[#2b2b2b] rounded">
-                THUỘC KHO KHÁC
-              </span>
-              <h4 className="font-bold text-sm text-[#191C19] pt-1">
-                {lookupResult.sku} không ở kho này
-              </h4>
-              <p className="text-xs text-[#4a4a4a] leading-relaxed">
-                Mã này thuộc <strong>{lookupResult.warehouseName}</strong>. Mỗi kho chỉ xem và xử lý hàng trong kho của mình — không mở được chi tiết từ đây.
-              </p>
-            </div>
-          )}
-
-          {lookupResult?.type === 'NOT_FOUND' && (
-            /* TK-03-KhongTonTai */
-            <div className="border-2 border-dashed border-[#8a8a8a] p-4 rounded-xl bg-white space-y-2">
-              <span className="text-[10px] font-bold tracking-wider px-2.5 py-1 border border-[#8a8a8a] text-[#4a4a4a] rounded">
-                KHÔNG TỒN TẠI
-              </span>
-              <h4 className="font-bold text-sm text-[#191C19] pt-1">
-                Không tìm thấy mã SKU này
-              </h4>
-              <p className="text-xs text-[#4a4a4a] leading-relaxed">
-                Kiểm tra lại đã gõ đúng mã trên tem chưa. Mã SKU bỏ chữ I, O và số 0, 1 để tránh đọc nhầm.
-              </p>
-            </div>
-          )}
-        </div>
-      </Modal>
 
       {/* Modal Quét QR SKU */}
       <QRScannerModal
@@ -585,6 +489,17 @@ export default function WarehouseInventoryPage() {
           />
         </Modal>
       )}
+
+      {/* MODAL CHỌN ĐĂNG BÁN LẠI MÓN HÀNG ĐÃ BÀN GIAO */}
+      <ReturnOutcomeDialog
+        isOutcomeModalOpen={Boolean(relistTarget)}
+        setIsOutcomeModalOpen={(open) => {
+          if (!open && !relistLock.current) setRelistTarget(null);
+        }}
+        selectedItem={relistTarget}
+        submitting={relistSubmitting}
+        handleConfirmOutcome={handleConfirmRelist}
+      />
       </WarehouseHistoryTabs>
     </Page>
   );

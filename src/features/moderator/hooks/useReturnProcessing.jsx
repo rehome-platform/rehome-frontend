@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { formatCurrencyVND } from "../../../utils/formatters.js";
 import { formatDeadlineWithCountdown } from "../components/WarehouseUi.jsx";
-import { returnService } from "../services/returnApi.js";
+import { returnService, needsItemAction } from "../services/returnApi.js";
 import { inventoryService } from "../services/inventoryApi.js";
 import { useToast } from "../../../context/ToastContext.jsx";
+
+const isPendingDisposition = needsItemAction;
 
 export function useReturnProcessing() {
   const toast = useToast();
@@ -28,7 +30,9 @@ export function useReturnProcessing() {
 
   // Navigation states: 'QUEUE' | 'REVIEW' (TH-02) | 'INSPECT' (TH-03)
   const [viewMode, setViewMode] = useState('QUEUE');
+  const [activeSection, setActiveSection] = useState('WORK'); // 'WORK' | 'HISTORY'
   const [selectedItem, setSelectedItem] = useState(null);
+  const [quickDetailItem, setQuickDetailItem] = useState(null);
 
   // In-flight mutation lock (F13)
   const resolvingRef = useRef(false);
@@ -48,8 +52,9 @@ export function useReturnProcessing() {
   const [inspectionVerdict, setInspectionVerdict] = useState(''); // 'VALID' | 'INVALID'
   const [invalidReason, setInvalidReason] = useState('');
 
-  // TH-04 Outcome Modal (Relist vs Return Seller)
+  // TH-04 Outcome Modal (Relist)
   const [isOutcomeModalOpen, setIsOutcomeModalOpen] = useState(false);
+  const [outcomeSubmitting, setOutcomeSubmitting] = useState(false);
 
   // Compare side-by-side modal
   const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
@@ -123,7 +128,10 @@ export function useReturnProcessing() {
     try {
       setLoading(true);
       setError(null);
-      const res = await returnService.list();
+      const res =
+        typeof returnService.listForWorkspace === 'function'
+          ? await returnService.listForWorkspace()
+          : await returnService.list();
       setReturnRequests(res.data || []);
     } catch (err) {
       setError('Không thể tải danh sách yêu cầu trả hàng.');
@@ -148,6 +156,8 @@ export function useReturnProcessing() {
       if (found) {
         if (paramTab) {
           setActiveTab(paramTab);
+        } else if (isPendingDisposition(found)) {
+          setActiveTab('PENDING_DISPOSITION');
         } else if (found.status) {
           setActiveTab(found.status);
         }
@@ -166,6 +176,8 @@ export function useReturnProcessing() {
             setSelectedItem(item);
             if (paramTab) {
               setActiveTab(paramTab);
+            } else if (isPendingDisposition(item)) {
+              setActiveTab('PENDING_DISPOSITION');
             } else if (item.status) {
               setActiveTab(item.status);
             }
@@ -191,15 +203,25 @@ export function useReturnProcessing() {
     WAITING_BUYER_DISPATCH: returnRequests.filter((r) => r.status === 'WAITING_BUYER_DISPATCH').length,
     RETURNING: returnRequests.filter((r) => r.status === 'RETURNING').length,
     RECEIVED_INSPECT: returnRequests.filter((r) => r.status === 'RECEIVED_INSPECT').length,
-    RESOLVED: returnRequests.filter((r) => isResolvedStatus(r.status)).length,
+    PENDING_DISPOSITION: returnRequests.filter((r) => isPendingDisposition(r)).length,
+    RESOLVED: returnRequests.filter((r) => isResolvedStatus(r.status) && !isPendingDisposition(r)).length,
   };
 
-  const filteredRequests = returnRequests.filter((r) => {
-    if (activeTab === 'RESOLVED') {
-      if (!isResolvedStatus(r.status)) return false;
-    } else {
-      if (r.status !== activeTab) return false;
-    }
+  const sortReturnsNewestFirst = (list) => {
+    if (!Array.isArray(list)) return [];
+    return [...list].sort((a, b) => {
+      const rawA = a?.createdAt || a?.resolvedAt;
+      const rawB = b?.createdAt || b?.resolvedAt;
+      const tA = rawA ? Date.parse(rawA) : NaN;
+      const tB = rawB ? Date.parse(rawB) : NaN;
+      if (Number.isFinite(tA) && Number.isFinite(tB)) return tB - tA;
+      if (Number.isFinite(tB)) return 1;
+      if (Number.isFinite(tA)) return -1;
+      return 0;
+    });
+  };
+
+  const matchesReturnSearch = (r) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -208,7 +230,24 @@ export function useReturnProcessing() {
       (r.sku && r.sku.toLowerCase().includes(q)) ||
       (r.buyerName && r.buyerName.toLowerCase().includes(q))
     );
-  });
+  };
+
+  const filteredRequests = sortReturnsNewestFirst(
+    returnRequests.filter((r) => {
+      if (activeTab === 'PENDING_DISPOSITION') {
+        if (!isPendingDisposition(r)) return false;
+      } else if (activeTab === 'RESOLVED') {
+        if (!isResolvedStatus(r.status) || isPendingDisposition(r)) return false;
+      } else {
+        if (r.status !== activeTab) return false;
+      }
+      return matchesReturnSearch(r);
+    })
+  );
+
+  const historyRequests = sortReturnsNewestFirst(
+    returnRequests.filter((r) => isResolvedStatus(r.status) && !isPendingDisposition(r) && matchesReturnSearch(r))
+  );
 
   const handleOpenReview = async (item) => {
     const epoch = ++selectionEpoch.current;
@@ -382,28 +421,26 @@ export function useReturnProcessing() {
   };
 
   const handleConfirmOutcome = async (outcome, extra = {}) => {
-    if (!selectedItem || resolvingRef.current) return;
+    if (!selectedItem || resolvingRef.current || outcomeSubmitting) return;
+    if (selectedItem.rawStatus === 'VALID' && !isPendingDisposition(selectedItem)) {
+      notify('warn', 'Món hàng này đã được chọn phương án xử lý trước đó.');
+      return;
+    }
     resolvingRef.current = true;
+    setOutcomeSubmitting(true);
     try {
-      const actionFn =
-        selectedItem.rawStatus === 'VALID' && typeof returnService.applyItemAction === 'function'
-          ? returnService.applyItemAction
-          : returnService.resolveValid;
       const res =
-        Object.keys(extra || {}).length > 0
-          ? await actionFn(selectedItem.id, outcome, extra)
-          : await actionFn(selectedItem.id, outcome);
+        selectedItem.rawStatus === 'VALID'
+          ? await returnService.applyItemAction(selectedItem.id, outcome, extra)
+          : Object.keys(extra || {}).length > 0
+            ? await returnService.resolveValid(selectedItem.id, outcome, extra)
+            : await returnService.resolveValid(selectedItem.id, outcome);
       await fetchReturns();
       setIsOutcomeModalOpen(false);
       setViewMode('QUEUE');
       setSelectedItem(null);
       const confirmedRefund = res?.refundAmount ?? res?.result?.refundAmount ?? selectedItem.refundAmount ?? selectedItem.amount ?? 0;
-      const outcomeLabel =
-        outcome === 'RELIST'
-          ? 'Đăng bán lại'
-          : outcome === 'DISCARD'
-          ? 'Tiêu huỷ (hàng hỏng/giả)'
-          : 'Trả người ký gửi';
+      const outcomeLabel = outcome === 'RELIST' ? 'Đăng bán lại' : 'Xử lý món hàng';
       notify(
         'success',
         `Đã hoàn tất xử lý món hàng (${outcomeLabel})! Khoản hoàn ${formatCurrencyVND(
@@ -414,7 +451,16 @@ export function useReturnProcessing() {
       notify('error', 'Có lỗi xảy ra khi xác nhận phương án: ' + (err.message || ''));
     } finally {
       resolvingRef.current = false;
+      setOutcomeSubmitting(false);
     }
+  };
+
+  const handleBackToQueue = () => {
+    if (isPendingDisposition(selectedItem)) {
+      setActiveTab('PENDING_DISPOSITION');
+    }
+    setViewMode('QUEUE');
+    setSelectedItem(null);
   };
 
   // 2-Moderator Counterfeit Verdict Handlers (F-134, F-135)
@@ -579,18 +625,25 @@ export function useReturnProcessing() {
     ...evidenceProps,
     evidenceReady,
     viewMode,
+    activeSection,
+    setActiveSection,
     setActiveTab,
     activeTab,
     tabCounts,
     loading,
     error,
+    fetchReturns,
     filteredRequests,
+    historyRequests,
+    quickDetailItem,
+    setQuickDetailItem,
     searchQuery,
     setSearchQuery,
     handleOpenReview,
     handleOpenInspect,
     selectedItem,
     setViewMode,
+    handleBackToQueue,
     setIsCompareModalOpen,
     handleApproveAndCreateWaybill,
     setIsRejectModalOpen,
@@ -641,6 +694,7 @@ export function useReturnProcessing() {
         handleMarkLost,
         handleOpenDegradedCaseView,
         handleOpenOutcomeModal,
+        handleOpenQuickDetail: setQuickDetailItem,
       },
       ReturnReviewDecision: {
         selectedItem,
@@ -686,6 +740,7 @@ export function useReturnProcessing() {
         setIsOutcomeModalOpen,
         handleConfirmOutcome,
         selectedItem,
+        submitting: outcomeSubmitting,
       },
       ReturnCompareDialog: {
         isCompareModalOpen,

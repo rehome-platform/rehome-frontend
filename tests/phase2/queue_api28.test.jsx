@@ -39,15 +39,17 @@ describe('API 28 queue contract', () => {
     expect(items[0]).toMatchObject({ queueId: 'queue-w', refId: 'withdrawal-1', accountId: 'account-1', memberCode: 'MB-001' });
   });
 
-  it('shows Member code separately in the withdrawal row and check modal, with identical counter links', async () => {
+  it('shows Member code separately in the withdrawal row and integrated Chi tiết modal, with identical counter links', async () => {
     server.use(http.get(queuesUrl, () => ok([withdrawal])));
     renderPage(<ConsignmentQueuePage />);
-    const row = (await screen.findByText('Áo len')).closest('tr');
+    const row = (await screen.findByText('Nguyễn An')).closest('tr');
     expect(within(row).getByText('Nguyễn An')).toBeInTheDocument();
-    expect(within(row).getByText('MB-001')).toBeInTheDocument();
+    expect(within(row).queryByText('MB-001')).not.toBeInTheDocument();
+    expect(within(row).queryByRole('button', { name: 'Check đơn' })).not.toBeInTheDocument();
     const openHref = within(row).getByRole('link', { name: 'Mở việc' }).getAttribute('href');
-    fireEvent.click(within(row).getByRole('button', { name: 'Check đơn' }));
+    fireEvent.click(within(row).getByRole('button', { name: 'Chi tiết' }));
     const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Áo len')).toBeInTheDocument();
     expect(within(dialog).getByText('Nguyễn An')).toBeInTheDocument();
     expect(within(dialog).getByText('MB-001')).toBeInTheDocument();
     const counterHref = within(dialog).getByRole('link', { name: /Đến Quầy bàn giao/ }).getAttribute('href');
@@ -57,10 +59,10 @@ describe('API 28 queue contract', () => {
     expect(new URL(counterHref, 'http://localhost').searchParams.get('memberCode')).toBe('MB-001');
   });
 
-  it('omits Member code when absent and still preserves accountId in the modal link', async () => {
+  it('omits Member code when absent and still preserves accountId in the Chi tiết modal link', async () => {
     server.use(http.get(queuesUrl, () => ok([{ ...withdrawal, memberCode: null }])));
     renderPage(<ConsignmentQueuePage />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Check đơn' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Chi tiết' }));
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByText('Nguyễn An')).toBeInTheDocument();
     expect(within(dialog).queryByText(/Mã Member/)).not.toBeInTheDocument();
@@ -90,7 +92,7 @@ describe('API 28 queue contract', () => {
     );
     renderPage(<ConsignmentQueuePage />);
     fireEvent.click(screen.getByRole('tab', { name: 'Trả hàng' }));
-    let row = (await screen.findByText('DH-001')).closest('tr');
+    let row = (await screen.findByText('Seller / Buyer')).closest('tr');
     await waitFor(() => expect(requests).toContain('RETURN'));
     fireEvent.click(within(row).getByRole('button', { name: 'Nhận việc' }));
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Nhận việc' }));
@@ -156,8 +158,8 @@ describe('API 28 queue contract', () => {
     );
 
     renderPage(<ConsignmentQueuePage />);
-    const row = (await screen.findByText('Áo len')).closest('tr');
-    expect(within(row).getByText('Chờ duyệt')).toBeInTheDocument();
+    const row = (await screen.findByText('Nguyễn An')).closest('tr');
+    expect(within(row).queryByText('Chờ duyệt')).not.toBeInTheDocument();
     expect(within(row).queryByRole('link', { name: 'Mở việc' })).not.toBeInTheDocument();
 
     fireEvent.click(within(row).getByRole('button', { name: 'Duyệt yêu cầu' }));
@@ -231,13 +233,22 @@ describe('API 28 queue contract', () => {
     server.use(http.get(queuesUrl, () => ok([donationPickup, unpaidWithdrawal])));
     renderPage(<ConsignmentQueuePage />);
 
-    const donRow = (await screen.findByText('Áo khoác jean')).closest('tr');
-    expect(within(donRow).getByText(/WH-Q7-AO-000123/)).toBeInTheDocument();
-    expect(within(donRow).getByText(/Áo ấm vùng cao · Quỹ Hy Vọng/)).toBeInTheDocument();
+    const donRow = (await screen.findByText('Trần Bình')).closest('tr');
+    expect(within(donRow).queryByText(/WH-Q7-AO-000123/)).not.toBeInTheDocument();
     expect(within(donRow).getByRole('link', { name: 'Mở việc' })).toHaveAttribute('href', '/moderator/donations?donationId=don-1&campaignId=camp-1');
+    fireEvent.click(within(donRow).getByRole('button', { name: 'Chi tiết' }));
+    const donDialog = screen.getByRole('dialog');
+    expect(within(donDialog).getByText('Áo khoác jean')).toBeInTheDocument();
+    expect(within(donDialog).getByText(/WH-Q7-AO-000123/)).toBeInTheDocument();
+    expect(within(donDialog).getByText(/Áo ấm vùng cao · Quỹ Hy Vọng/)).toBeInTheDocument();
+    fireEvent.click(within(donDialog).getAllByRole('button', { name: 'Đóng' })[0]);
 
-    const withRow = screen.getByText('Áo len').closest('tr');
-    expect(within(withRow).getByText(/20\.000/)).toBeInTheDocument();
-    expect(within(withRow).getByText(/Chưa thanh toán/)).toBeInTheDocument();
+    const withRow = screen.getByText('Nguyễn An').closest('tr');
+    expect(within(withRow).queryByText(/20\.000/)).not.toBeInTheDocument();
+    fireEvent.click(within(withRow).getByRole('button', { name: 'Chi tiết' }));
+    const withDialog = screen.getByRole('dialog');
+    expect(within(withDialog).getByText('Áo len')).toBeInTheDocument();
+    expect(within(withDialog).getByText(/20\.000/)).toBeInTheDocument();
+    expect(within(withDialog).getByText(/Chưa thanh toán/)).toBeInTheDocument();
   });
 });

@@ -86,7 +86,11 @@ export default function CatalogEditor({ kind, item, slots = [], onClose, onSaved
             : `Thêm mới ${labelText} vào hệ thống để áp dụng cho các sản phẩm ký gửi.`}
         </p>
 
-        <ResourceState resource={mutation} />
+        {mutation.error && !errorMessage && (
+          <div role="alert" className="rounded-xl bg-red-50 border border-red-200 px-3.5 py-2.5 text-xs text-red-700 font-medium">
+            {mutation.error.message}
+          </div>
+        )}
 
         {/* Ô nhập tên */}
         <div>

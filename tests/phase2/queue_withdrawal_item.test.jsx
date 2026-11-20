@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import ConsignmentQueuePage from '../../src/features/moderator/pages/ConsignmentQueuePage.jsx';
@@ -92,10 +92,15 @@ describe('ConsignmentQueuePage - WITHDRAWAL in Work Queue (HQ-01)', () => {
     // Click tab
     fireEvent.click(tabBtn);
 
-    // Queue item should appear
-    const itemText = await screen.findByText('Áo thun Vintage');
-    expect(itemText).toBeInTheDocument();
-    expect(screen.getByText(/Nguyễn Văn A · Miễn phí · Kệ: A1-02/i)).toBeInTheDocument();
+    // Queue item should show clean subject name only in table and full info in Chi tiết modal
+    const subjectText = await screen.findByText('Nguyễn Văn A');
+    expect(subjectText).toBeInTheDocument();
+    expect(screen.queryByText('Áo thun Vintage')).not.toBeInTheDocument();
+    const row = subjectText.closest('tr');
+    fireEvent.click(within(row).getByRole('button', { name: 'Chi tiết' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Áo thun Vintage')).toBeInTheDocument();
+    expect(within(dialog).getByText(/Nguyễn Văn A · Miễn phí · Kệ: A1-02/i)).toBeInTheDocument();
   });
 
   it('renders Mở việc link with memberCode and refId when task is claimed by moderator', async () => {

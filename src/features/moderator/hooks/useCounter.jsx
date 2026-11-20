@@ -154,7 +154,7 @@ export function useCounter() {
       });
       setHandoverFeedback({
         type: 'success',
-        message: `Đã bàn giao thành công. Đã hoàn tất bàn giao "${item.productName || item.productId}" cho khách hàng!`,
+        message: `Đã bàn giao thành công. Đã hoàn tất bàn giao "${item.productName || item.itemName || item.name || item.productId || 'sản phẩm'}" cho khách hàng!`,
       });
       rememberServed(selected, `Bàn giao hàng · ${new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })}`);
       setConfirmHandover(null);

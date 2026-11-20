@@ -139,7 +139,7 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
             role="status"
             className="rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-amber-800 font-medium"
           >
-            Chỉ được chỉnh sửa tên và ảnh bán hàng khi sản phẩm đang ON_SALE.
+            Chỉ được chỉnh sửa tên và ảnh bán hàng khi sản phẩm đang ở trạng thái Đang bán.
           </div>
         )}
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent, renderHook, act } from '@testing-library/react';
+import { render, screen, fireEvent, renderHook, act, within } from '@testing-library/react';
 import {
   VerificationQueueTabs,
   VerificationQueueTable,
@@ -95,8 +95,12 @@ describe('Organization Verification Data Mapping & Design Tokens', () => {
     expect(screen.getByText('Quỹ từ thiện')).toBeInTheDocument();
     expect(screen.getByText('Doanh nghiệp xã hội')).toBeInTheDocument();
 
-    // Displays tax code
-    expect(screen.getByText('0102030405')).toBeInTheDocument();
+    // Tax code is hidden from queue table row (FE-09) and shown inside Chi tiết modal
+    expect(screen.queryByText('0102030405')).not.toBeInTheDocument();
+    const firstRow = screen.getByText('Quỹ Hy Vọng Tương Lai').closest('tr');
+    fireEvent.click(within(firstRow).getByRole('button', { name: 'Chi tiết' }));
+    expect(within(screen.getByRole('dialog')).getByText('0102030405')).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: 'Đóng' })[0]);
 
     // Action button
     const actionButtons = screen.getAllByRole('button', { name: /Xác minh/i });
@@ -150,7 +154,7 @@ describe('Organization Verification Data Mapping & Design Tokens', () => {
     expect(screen.getByText('Tổ Chức Bảo Tồn')).toBeInTheDocument();
     expect(screen.getByText('Nguyễn Văn Đại Diện · Tổng Thư Ký')).toBeInTheDocument();
     expect(screen.getByText('QUYET_DINH_THANH_LAP')).toBeInTheDocument();
-    expect(screen.getByText('456/QĐ-BNV · 2022-05-10 · Bộ Nội vụ')).toBeInTheDocument();
+    expect(screen.queryByText('456/QĐ-BNV · 2022-05-10 · Bộ Nội vụ')).not.toBeInTheDocument();
   });
 
   it('VerificationDocuments renders CCCD attachments with "Xem ảnh" when URLs are present', () => {
@@ -208,12 +212,14 @@ describe('Organization Verification Data Mapping & Design Tokens', () => {
     render(<VerificationDocuments selectedOrg={selectedOrg} setViewingDoc={vi.fn()} />);
 
     expect(screen.getByText('Thiếu ảnh CCCD')).toBeInTheDocument();
-    expect(screen.getByText('Chưa nộp ảnh CCCD mặt trước (bắt buộc)')).toBeInTheDocument();
-    expect(screen.getByText('Chưa nộp ảnh CCCD mặt sau (bắt buộc)')).toBeInTheDocument();
+    expect(screen.getByText('CCCD mặt trước (Người đại diện)')).toBeInTheDocument();
+    expect(screen.getByText('CCCD mặt sau (Người đại diện)')).toBeInTheDocument();
+    expect(screen.queryByText('Chưa nộp ảnh CCCD mặt trước (bắt buộc)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Chưa nộp ảnh CCCD mặt sau (bắt buộc)')).not.toBeInTheDocument();
     expect(screen.getAllByText('Thiếu tệp')).toHaveLength(2);
   });
 
-  it('VerificationChecklist displays warning when CCCD images are missing', () => {
+  it('VerificationChecklist renders checklist steps cleanly without redundant CCCD warning banner', () => {
     const selectedOrg = {
       representative: { fullName: 'Trần Thị Mỹ Hạnh' },
       documents: [{ title: 'Giấy phép' }],
@@ -228,7 +234,10 @@ describe('Organization Verification Data Mapping & Design Tokens', () => {
       />
     );
 
-    expect(screen.getByText(/Hồ sơ thiếu ảnh CCCD/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Đối chiếu tên trên CCCD với tên người đại diện ghi trên giấy phép/i)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Hồ sơ thiếu ảnh CCCD/i)).not.toBeInTheDocument();
   });
 
   it('calls approveOrg with refId instead of queueItemId', async () => {

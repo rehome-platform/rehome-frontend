@@ -122,7 +122,7 @@ function AuthenticatedImage({ src, alt, className }) {
           >
             Thử tải lại
           </button>
-          {src && (
+          {src && !isProtectedUrl(src) && (
             <a
               href={src}
               target="_blank"
@@ -242,13 +242,32 @@ export default function OrgVerificationPage() {
                   Xác minh sai một hồ sơ là một tổ chức giả được phép kêu gọi quyên góp. Không có hạn gấp — làm kỹ hơn làm nhanh.
                 </p>
               </div>
-              <div className="text-xs text-textSecondary font-medium">
-                Cam kết phản hồi trong 5 ngày làm việc
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="text-xs text-textSecondary font-medium">
+                  Cam kết phản hồi trong 5 ngày làm việc
+                </div>
+                <Button
+                  variant="outline"
+                  loading={model.loading}
+                  onClick={() => model.handleRefresh?.()}
+                  className="whitespace-nowrap"
+                >
+                  Tải lại
+                </Button>
               </div>
             </div>
 
+            {!model.loading && model.error && (
+              <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700 flex items-center justify-between gap-3">
+                <span>{model.error}</span>
+                <Button variant="outline" size="sm" onClick={() => model.handleRefresh?.()}>
+                  Thử lại
+                </Button>
+              </div>
+            )}
+
             {/* Main Tabs: Hồ sơ mới vs Đổi pháp lý */}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
                 onClick={() => model.setActiveMainTab('NEW_ORGS')}
@@ -321,26 +340,16 @@ export default function OrgVerificationPage() {
         {model.viewMode === 'DETAIL' && model.selectedOrg && (
           <div className="space-y-4">
             {/* Header TC-02 */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral pb-3">
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => model.setViewMode('LIST')}
-                  className="w-8 h-8 flex items-center justify-center rounded-xl border border-neutral text-sm hover:bg-background text-text transition-colors"
-                  title="Quay lại danh sách"
-                >
-                  ←
-                </button>
-                <div>
-                  <span className="text-xs text-textSecondary">Hồ sơ tổ chức · </span>
-                  <span className="text-sm font-bold font-heading text-text">
-                    {model.selectedOrg.id} · {model.selectedOrg.legalName || model.selectedOrg.name}
-                  </span>
-                </div>
-              </div>
-              <span className="text-xs font-semibold px-3 py-1 border border-neutral rounded-full bg-neutral-light text-primary">
-                {String(model.selectedOrg.orgType || model.selectedOrg.type || 'Tổ chức').toUpperCase()}
-              </span>
+            <div className="flex items-center gap-3 border-b border-neutral pb-3">
+              <button
+                type="button"
+                onClick={() => model.setViewMode('LIST')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral text-xs font-semibold hover:bg-background text-text transition-colors whitespace-nowrap cursor-pointer"
+                title="Quay lại danh sách"
+              >
+                <span>←</span>
+                <span>Quay lại danh sách</span>
+              </button>
             </div>
 
             {/* Bố cục 2 cột TC-02 */}
@@ -352,9 +361,6 @@ export default function OrgVerificationPage() {
               <div className="lg:col-span-6 space-y-4">
                 <div>
                   <h2 className="text-base font-bold font-heading text-text">Quy trình kiểm chứng</h2>
-                  <p className="text-xs text-textSecondary">
-                    Tích đủ các bước bắt buộc mới bấm Xác thực được.
-                  </p>
                 </div>
 
                 {/* Checklist TC-02 */}
@@ -363,7 +369,7 @@ export default function OrgVerificationPage() {
                 {/* Audit Log Note */}
                 <div className="border border-neutral rounded-xl p-3.5 bg-surface text-xs space-y-2">
                   <div className="text-[10px] uppercase font-bold text-textSecondary tracking-wider">
-                    Ghi chú xác minh · lưu vào audit log
+                    Ghi chú xác minh
                   </div>
                   <textarea
                     rows="2"
@@ -387,22 +393,23 @@ export default function OrgVerificationPage() {
                     Hồ sơ này đã được xác thực thành công.
                   </div>
                 ) : (
-                  <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
+                  <div className="pt-2 flex flex-wrap items-center gap-3">
                     <button
                       type="button"
-                      disabled={!model.isChecklistComplete}
+                      disabled={!model.isChecklistComplete || model.approvingOrg}
                       onClick={model.handleApproveOrg}
-                      className={`py-2.5 px-6 rounded-xl text-xs font-bold transition-all ${model.isChecklistComplete
+                      className={`py-2.5 px-5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 ${model.isChecklistComplete && !model.approvingOrg
                           ? 'bg-primary text-white hover:bg-primary-hover shadow-sm cursor-pointer'
                           : 'bg-neutral-light text-textSecondary border border-neutral cursor-not-allowed'
                         }`}
                     >
-                      Xác thực tổ chức
+                      {model.approvingOrg ? 'Đang xác thực...' : 'Xác thực tổ chức'}
                     </button>
                     <button
                       type="button"
+                      disabled={model.approvingOrg}
                       onClick={() => model.setIsRejectModalOpen(true)}
-                      className="py-2.5 px-4 rounded-xl border border-error text-error hover:bg-error-light text-xs font-semibold transition-colors"
+                      className="py-2.5 px-4 rounded-xl border border-error text-error hover:bg-error-light text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Từ chối kèm lý do
                     </button>

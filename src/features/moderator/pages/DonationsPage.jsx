@@ -58,6 +58,7 @@ export default function DonationsPage() {
   const [statusFilter, setStatusFilter] = useState('');
 
   // Form ghi nhận lượt quyên góp trực tiếp (Luồng A)
+  const [recordModalOpen, setRecordModalOpen] = useState(Boolean(initialDonorName));
   const [selectedCampaignId, setSelectedCampaignId] = useState('');
   const [donorName, setDonorName] = useState(initialDonorName);
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -166,10 +167,17 @@ export default function DonationsPage() {
     [campaignsPageData],
   );
   const campaignTotalPages = campaignsPageData.totalPages ?? (campaigns.length > 0 ? 1 : 0);
-  const donations = useMemo(
-    () => (Array.isArray(donationsResource.data) ? donationsResource.data : []),
-    [donationsResource.data],
-  );
+  const donations = useMemo(() => {
+    const raw = Array.isArray(donationsResource.data) ? donationsResource.data : [];
+    return [...raw].sort((a, b) => {
+      const tA = a?.createdAt ? Date.parse(a.createdAt) : NaN;
+      const tB = b?.createdAt ? Date.parse(b.createdAt) : NaN;
+      if (Number.isFinite(tA) && Number.isFinite(tB)) return tB - tA;
+      if (Number.isFinite(tB)) return 1;
+      if (Number.isFinite(tA)) return -1;
+      return 0;
+    });
+  }, [donationsResource.data]);
   const onHoldDonations = useMemo(() => {
     const raw = Array.isArray(onHoldDonationsResource.data) ? onHoldDonationsResource.data : [];
     return [...raw].sort((a, b) => {
@@ -319,6 +327,7 @@ export default function DonationsPage() {
       setIsAnonymous(false);
       setNote('');
       setDonationPhotos([]);
+      setRecordModalOpen(false);
       if (created) {
         donationsResource.setData((prev) => (Array.isArray(prev) ? [created, ...prev] : [created]));
       } else {
@@ -466,6 +475,7 @@ export default function DonationsPage() {
           onClick={() => {
             campaignsResource.refresh();
             donationsResource.refresh();
+            onHoldDonationsResource.refresh();
           }}
         >
           Tải lại
@@ -515,17 +525,31 @@ export default function DonationsPage() {
                 </button>
               </div>
 
-              <input
-                type="search"
-                aria-label="Tìm chiến dịch"
-                value={campaignSearch}
-                onChange={(e) => {
-                  setCampaignSearch(e.target.value);
-                  setCampaignPage(0);
-                }}
-                placeholder="Tìm chiến dịch hoặc tổ chức..."
-                className="w-full sm:w-64 rounded-xl border border-neutral bg-white px-3 py-1.5 text-xs text-text focus:border-[#006B2C] focus:outline-none"
-              />
+              <div className="flex flex-col sm:items-end gap-2 w-full sm:w-auto">
+                <input
+                  type="search"
+                  aria-label="Tìm chiến dịch"
+                  value={campaignSearch}
+                  onChange={(e) => {
+                    setCampaignSearch(e.target.value);
+                    setCampaignPage(0);
+                  }}
+                  placeholder="Tìm chiến dịch hoặc tổ chức..."
+                  className="w-full sm:w-64 rounded-xl border border-neutral bg-white px-3 py-1.5 text-xs text-text focus:border-[#006B2C] focus:outline-none"
+                />
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    setRecordError(null);
+                    setRecordModalOpen(true);
+                  }}
+                  className="bg-[#006B2C] hover:bg-[#005523] text-white font-bold whitespace-nowrap"
+                >
+                  Ghi nhận
+                </Button>
+              </div>
             </div>
 
             <ResourceState
@@ -643,196 +667,8 @@ export default function DonationsPage() {
             )}
           </Card>
 
-        <div className="grid gap-6 lg:grid-cols-12 items-start">
-          {/* CỘT TRÁI: Ghi nhận lượt quyên góp trực tiếp (Luồng A) */}
-          <div className="lg:col-span-4 space-y-4">
-            <Card title="Ghi nhận lượt quyên góp (Quầy)">
-              <ResourceState resource={campaignsResource} />
-
-              {noOpenCampaigns && (
-                <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900 space-y-1">
-                  <p className="font-bold">Địa điểm này hiện không có chiến dịch nào nhận đồ</p>
-                  <p>Theo quy định vận hành, quầy tạm thời không nhận quyên góp trực tiếp khi chưa có chiến dịch mở nhận tại đây.</p>
-                </div>
-              )}
-
-              {!noOpenCampaigns && selectedCampaign && !isSelectedCampaignActive && (
-                <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900 space-y-1">
-                  <p className="font-bold">
-                    {selectedCampaign.organizationLocked
-                      ? 'Tổ chức của chiến dịch này đang bị khóa'
-                      : `Chiến dịch ${CAMPAIGN_STATUS_LABELS[selectedCampaign.status] || 'đã đóng / hết hạn'}`}
-                  </p>
-                  <p>
-                    Không thể ghi nhận lượt quyên góp mới cho chiến dịch này. Bạn vẫn có thể xem lịch sử và bàn giao các lượt đang chờ lấy.
-                  </p>
-                </div>
-              )}
-
-              {recordError && (
-                <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
-                  {recordError}
-                </div>
-              )}
-
-              <form onSubmit={handleRecordDonation} className="space-y-3.5 text-xs">
-                <div>
-                  <label htmlFor="donation-campaign" className="block font-bold text-text mb-1">
-                    Chiến dịch tiếp nhận <span className="text-red-600">*</span>
-                  </label>
-                  <select
-                    id="donation-campaign"
-                    value={effectiveCampaignId}
-                    disabled={noOpenCampaigns || recording}
-                    onChange={(e) => {
-                      setSelectedCampaignId(e.target.value);
-                      if (recordError) setRecordError(null);
-                    }}
-                    className="w-full rounded-xl border border-neutral bg-white px-3 py-2 text-xs text-text focus:border-[#006B2C] focus:outline-none disabled:bg-background"
-                  >
-                    {campaigns.length === 0 ? (
-                      <option value="">
-                        {campaignView === 'HISTORY' ? 'Không có chiến dịch trong lịch sử' : 'Không có chiến dịch đang mở'}
-                      </option>
-                    ) : (
-                      campaigns.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.title} — {c.organizationName}
-                        </option>
-                      ))
-                    )}
-                  </select>
-
-                  {selectedCampaign && (
-                    <div className="mt-2 rounded-xl border border-neutral bg-[#F6F9F4] p-2.5 space-y-1 text-[11px] text-textSecondary">
-                      <p>
-                        <span className="font-semibold text-text">Tổ chức:</span> {selectedCampaign.organizationName}
-                      </p>
-                      <p>
-                        <span className="font-semibold text-text">Hạn nhận:</span>{' '}
-                        {selectedCampaign.endTime ? date(selectedCampaign.endTime) : '—'}
-                      </p>
-                      <p>
-                        <span className="font-semibold text-text">Loại đồ cần:</span>{' '}
-                        {selectedCampaign.preferredItemTypes?.length
-                          ? selectedCampaign.preferredItemTypes.join(', ')
-                          : 'Tất cả đồ phù hợp'}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={isAnonymous}
-                    disabled={isRecordBlocked || recording}
-                    onChange={(e) => {
-                      setIsAnonymous(e.target.checked);
-                      if (recordError) setRecordError(null);
-                    }}
-                    className="rounded border-neutral text-[#006B2C] focus:ring-[#006B2C]"
-                  />
-                  <span className="font-semibold text-text">Người góp chọn ẩn danh</span>
-                </label>
-
-                {!isAnonymous && (
-                  <div>
-                    <label htmlFor="donation-donor-name" className="block font-bold text-text mb-1">
-                      Tên người quyên góp <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      id="donation-donor-name"
-                      type="text"
-                      value={donorName}
-                      disabled={isRecordBlocked || recording}
-                      onChange={(e) => {
-                        setDonorName(e.target.value);
-                        if (recordError) setRecordError(null);
-                      }}
-                      placeholder="VD: Nguyễn Minh Anh"
-                      className="w-full rounded-xl border border-neutral bg-white px-3 py-2 text-xs text-text focus:border-[#006B2C] focus:outline-none"
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label htmlFor="donation-note" className="block font-bold text-text">
-                      Ghi chú gộp hiện vật
-                    </label>
-                  </div>
-
-                  {/* Suggestion Chips từ 'Loại đồ cần' của chiến dịch đang chọn */}
-                  {selectedCampaign?.preferredItemTypes?.length > 0 && (
-                    <div className="mb-2">
-                      <p className="text-[10px] text-[#5B6776] mb-1 font-medium">
-                        Gợi ý loại hiện vật chiến dịch cần (bấm để thêm vào ghi chú):
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedCampaign.preferredItemTypes.map((itemType) => (
-                          <button
-                            key={itemType}
-                            type="button"
-                            disabled={isRecordBlocked || recording}
-                            onClick={() => {
-                              setNote((prev) => {
-                                const trimmed = prev.trim();
-                                if (!trimmed) return itemType;
-                                if (trimmed.includes(itemType)) return prev;
-                                return `${trimmed}, ${itemType}`;
-                              });
-                              if (recordError) setRecordError(null);
-                            }}
-                            className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#E8F5E9] text-[#006B2C] border border-[#006B2C]/20 hover:bg-[#D0EBD2] transition-colors cursor-pointer disabled:opacity-50"
-                          >
-                            + {itemType}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <textarea
-                    id="donation-note"
-                    rows={3}
-                    value={note}
-                    disabled={isRecordBlocked || recording}
-                    onChange={(e) => {
-                      setNote(e.target.value);
-                      if (recordError) setRecordError(null);
-                    }}
-                    placeholder='VD: "5 áo khoác, 2 chăn"'
-                    className="w-full rounded-xl border border-neutral bg-white p-2.5 text-xs text-text focus:border-[#006B2C] focus:outline-none"
-                  />
-                </div>
-
-                {/* Tải / Chụp ảnh gói hiện vật quyên góp */}
-                <div>
-                  <label className="block font-bold text-text mb-1">
-                    Ảnh gói hiện vật quyên góp (tuỳ chọn)
-                  </label>
-                  <p className="text-[10px] text-[#5B6776] mb-1.5">
-                    Chụp hoặc tải ảnh gói đồ quyên góp tại quầy để lưu chứng từ đối soát (tối đa 5 ảnh).
-                  </p>
-                  <PhotoUpload maxFiles={5} disabled={isRecordBlocked || recording} onChange={onDonationPhotosChange} />
-                </div>
-
-                <Button
-                  type="submit"
-                  variant="primary"
-                  loading={recording || donationPhotosPending}
-                  disabled={isRecordBlocked || !effectiveCampaignId || (!isAnonymous && !donorName.trim()) || donationPhotosPending}
-                  className="w-full py-2.5 text-xs font-bold bg-[#006B2C] hover:bg-[#005523] text-white"
-                >
-                  Ghi nhận lượt quyên góp
-                </Button>
-              </form>
-            </Card>
-          </div>
-
-          {/* CỘT PHẢI: Danh sách lượt quyên góp & Bàn giao / Tạm giữ */}
-          <div className="lg:col-span-8 space-y-4">
+          {/* Danh sách lượt quyên góp & Bàn giao / Tạm giữ (full-width) */}
+          <div className="space-y-4">
             <Card
               title="Danh sách lượt quyên góp & Bàn giao"
               actions={
@@ -1048,9 +884,9 @@ export default function DonationsPage() {
                   className="rounded-xl border border-neutral bg-white px-3 py-1.5 text-xs font-semibold text-text focus:border-[#006B2C] focus:outline-none"
                 >
                   <option value="">Mọi trạng thái</option>
-                  <option value="PENDING_PICKUP">Chờ lấy (PENDING_PICKUP)</option>
-                  <option value="ON_HOLD">Tạm giữ (ON_HOLD)</option>
-                  <option value="HANDED_OVER">Đã bàn giao (HANDED_OVER)</option>
+                  <option value="PENDING_PICKUP">Chờ lấy</option>
+                  <option value="ON_HOLD">Tạm giữ</option>
+                  <option value="HANDED_OVER">Đã bàn giao</option>
                 </select>
 
                 <span className="ml-auto text-xs text-textSecondary">
@@ -1321,8 +1157,207 @@ export default function DonationsPage() {
             </Card>
           </div>
         </div>
-        </div>
       )}
+
+      <Modal
+        isOpen={recordModalOpen}
+        onClose={() => !recording && setRecordModalOpen(false)}
+        title="Ghi nhận lượt quyên góp (Quầy)"
+        size="md"
+      >
+        <div className="space-y-4">
+          <ResourceState resource={campaignsResource} />
+
+          {noOpenCampaigns && (
+            <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900 space-y-1">
+              <p className="font-bold">Địa điểm này hiện không có chiến dịch nào nhận đồ</p>
+              <p>Theo quy định vận hành, quầy tạm thời không nhận quyên góp trực tiếp khi chưa có chiến dịch mở nhận tại đây.</p>
+            </div>
+          )}
+
+          {!noOpenCampaigns && selectedCampaign && !isSelectedCampaignActive && (
+            <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900 space-y-1">
+              <p className="font-bold">
+                {selectedCampaign.organizationLocked
+                  ? 'Tổ chức của chiến dịch này đang bị khóa'
+                  : `Chiến dịch ${CAMPAIGN_STATUS_LABELS[selectedCampaign.status] || 'đã đóng / hết hạn'}`}
+              </p>
+              <p>
+                Không thể ghi nhận lượt quyên góp mới cho chiến dịch này. Bạn vẫn có thể xem lịch sử và bàn giao các lượt đang chờ lấy.
+              </p>
+            </div>
+          )}
+
+          {recordError && (
+            <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+              {recordError}
+            </div>
+          )}
+
+          <form onSubmit={handleRecordDonation} className="space-y-3.5 text-xs">
+            <div>
+              <label htmlFor="donation-campaign" className="block font-bold text-text mb-1">
+                Chiến dịch tiếp nhận <span className="text-red-600">*</span>
+              </label>
+              <select
+                id="donation-campaign"
+                value={effectiveCampaignId}
+                disabled={noOpenCampaigns || recording}
+                onChange={(e) => {
+                  setSelectedCampaignId(e.target.value);
+                  if (recordError) setRecordError(null);
+                }}
+                className="w-full rounded-xl border border-neutral bg-white px-3 py-2 text-xs text-text focus:border-[#006B2C] focus:outline-none disabled:bg-background"
+              >
+                {campaigns.length === 0 ? (
+                  <option value="">
+                    {campaignView === 'HISTORY' ? 'Không có chiến dịch trong lịch sử' : 'Không có chiến dịch đang mở'}
+                  </option>
+                ) : (
+                  campaigns.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.title} — {c.organizationName}
+                    </option>
+                  ))
+                )}
+              </select>
+
+              {selectedCampaign && (
+                <div className="mt-2 rounded-xl border border-neutral bg-[#F6F9F4] p-2.5 space-y-1 text-[11px] text-textSecondary">
+                  <p>
+                    <span className="font-semibold text-text">Tổ chức:</span> {selectedCampaign.organizationName}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-text">Hạn nhận:</span>{' '}
+                    {selectedCampaign.endTime ? date(selectedCampaign.endTime) : '—'}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-text">Loại đồ cần:</span>{' '}
+                    {selectedCampaign.preferredItemTypes?.length
+                      ? selectedCampaign.preferredItemTypes.join(', ')
+                      : 'Tất cả đồ phù hợp'}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={isAnonymous}
+                disabled={isRecordBlocked || recording}
+                onChange={(e) => {
+                  setIsAnonymous(e.target.checked);
+                  if (recordError) setRecordError(null);
+                }}
+                className="rounded border-neutral text-[#006B2C] focus:ring-[#006B2C]"
+              />
+              <span className="font-semibold text-text">Người góp chọn ẩn danh</span>
+            </label>
+
+            {!isAnonymous && (
+              <div>
+                <label htmlFor="donation-donor-name" className="block font-bold text-text mb-1">
+                  Tên người quyên góp <span className="text-red-600">*</span>
+                </label>
+                <input
+                  id="donation-donor-name"
+                  type="text"
+                  value={donorName}
+                  disabled={isRecordBlocked || recording}
+                  onChange={(e) => {
+                    setDonorName(e.target.value);
+                    if (recordError) setRecordError(null);
+                  }}
+                  placeholder="VD: Nguyễn Minh Anh"
+                  className="w-full rounded-xl border border-neutral bg-white px-3 py-2 text-xs text-text focus:border-[#006B2C] focus:outline-none"
+                />
+              </div>
+            )}
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="donation-note" className="block font-bold text-text">
+                  Ghi chú gộp hiện vật
+                </label>
+              </div>
+
+              {selectedCampaign?.preferredItemTypes?.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-[10px] text-[#5B6776] mb-1 font-medium">
+                    Gợi ý loại hiện vật chiến dịch cần (bấm để thêm vào ghi chú):
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedCampaign.preferredItemTypes.map((itemType) => (
+                      <button
+                        key={itemType}
+                        type="button"
+                        disabled={isRecordBlocked || recording}
+                        onClick={() => {
+                          setNote((prev) => {
+                            const trimmed = prev.trim();
+                            if (!trimmed) return itemType;
+                            if (trimmed.includes(itemType)) return prev;
+                            return `${trimmed}, ${itemType}`;
+                          });
+                          if (recordError) setRecordError(null);
+                        }}
+                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#E8F5E9] text-[#006B2C] border border-[#006B2C]/20 hover:bg-[#D0EBD2] transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        + {itemType}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <textarea
+                id="donation-note"
+                rows={3}
+                value={note}
+                disabled={isRecordBlocked || recording}
+                onChange={(e) => {
+                  setNote(e.target.value);
+                  if (recordError) setRecordError(null);
+                }}
+                placeholder='VD: "5 áo khoác, 2 chăn"'
+                className="w-full rounded-xl border border-neutral bg-white p-2.5 text-xs text-text focus:border-[#006B2C] focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-text mb-1">
+                Ảnh gói hiện vật quyên góp (tuỳ chọn)
+              </label>
+              <p className="text-[10px] text-[#5B6776] mb-1.5">
+                Chụp hoặc tải ảnh gói đồ quyên góp tại quầy để lưu chứng từ đối soát (tối đa 5 ảnh).
+              </p>
+              <PhotoUpload maxFiles={5} disabled={isRecordBlocked || recording} onChange={onDonationPhotosChange} />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={recording}
+                onClick={() => setRecordModalOpen(false)}
+                className="whitespace-nowrap"
+              >
+                Đóng
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                loading={recording || donationPhotosPending}
+                disabled={isRecordBlocked || !effectiveCampaignId || (!isAnonymous && !donorName.trim()) || donationPhotosPending}
+                className="py-2.5 px-5 text-xs font-bold bg-[#006B2C] hover:bg-[#005523] text-white whitespace-nowrap"
+              >
+                Ghi nhận lượt quyên góp
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Modal>
 
       <Modal
         isOpen={reassignModalOpen}
@@ -1423,7 +1458,7 @@ export default function DonationsPage() {
             <ul className="max-h-48 overflow-y-auto rounded-xl border border-neutral bg-white divide-y divide-neutral">
               {selectedRows.map((row) => (
                 <li key={row.id} className="p-2.5 flex items-start justify-between gap-3">
-                  <span className="text-text font-medium">{row.note || row.productName || 'Không có ghi chú'}</span>
+                  <span className="text-text font-medium">{getDonationRowDetails(row).cleanText || row.productName || 'Không có ghi chú'}</span>
                   {row.sku && (
                     <span className="font-mono font-bold text-[11px] text-[#006B2C] bg-[#E8F5E9] px-2 py-0.5 rounded flex-shrink-0">
                       {row.sku}

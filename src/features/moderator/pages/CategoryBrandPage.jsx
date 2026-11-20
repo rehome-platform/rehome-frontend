@@ -37,7 +37,7 @@ export default function CategoryBrandPage() {
   const brands = resource.data?.brands || [];
   const rawItems = isCategory ? categories : brands;
 
-  // Lọc đa chiều: từ khóa tìm kiếm + slot thử đồ + trạng thái (DM-01)
+  // Lọc đa chiều: từ khóa tìm kiếm + slot thử đồ + trạng thái (DM-01) + mới nhất lên đầu
   const items = useMemo(() => {
     let result = rawItems;
     if (keyword.trim()) {
@@ -56,7 +56,16 @@ export default function CategoryBrandPage() {
         return statusFilter === 'HIDDEN' ? isHidden : !isHidden;
       });
     }
-    return result;
+    return [...result].sort((a, b) => {
+      const rawA = a?.createdAt || a?.updatedAt;
+      const rawB = b?.createdAt || b?.updatedAt;
+      const tA = rawA ? Date.parse(rawA) : NaN;
+      const tB = rawB ? Date.parse(rawB) : NaN;
+      if (Number.isFinite(tA) && Number.isFinite(tB)) return tB - tA;
+      if (Number.isFinite(tB)) return 1;
+      if (Number.isFinite(tA)) return -1;
+      return 0;
+    });
   }, [rawItems, keyword, slotFilter, statusFilter, isCategory]);
 
   const handleUnhide = (item) => {
@@ -96,8 +105,11 @@ export default function CategoryBrandPage() {
     );
   };
 
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
   const handleDeleteConfirm = async () => {
-    if (!deleting) return;
+    if (!deleting || deleteBusy) return;
+    setDeleteBusy(true);
     const target = deleting;
     const label = target.kind === 'category' ? 'danh mục' : 'thương hiệu';
     try {
@@ -128,6 +140,8 @@ export default function CategoryBrandPage() {
       } else {
         toast.error(err.message || `Có lỗi xảy ra khi xóa ${label}.`);
       }
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -221,9 +235,9 @@ export default function CategoryBrandPage() {
           </div>
         </div>
 
-        {/* Thanh bộ lọc đa tiêu chí cho Danh mục (DM-01) */}
-        {isCategory && (
-          <div className="flex flex-wrap items-center gap-4 pt-1">
+        {/* Thanh bộ lọc đa tiêu chí (DM-01) */}
+        <div className="flex flex-wrap items-center gap-4 pt-1">
+          {isCategory && (
             <div className="flex items-center gap-1.5 text-xs text-[#5B6776]">
               <label htmlFor="category-slot-filter" className="font-semibold text-[#191C19]">
                 Slot thử đồ AI:
@@ -236,45 +250,45 @@ export default function CategoryBrandPage() {
                 className="rounded-xl border border-neutral bg-white px-2.5 py-1.5 text-xs font-semibold text-text focus:border-[#006B2C] focus:outline-none"
               >
                 <option value="ALL">Tất cả slot</option>
-                <option value="TOP">TOP · Áo</option>
-                <option value="BOTTOM">BOTTOM · Quần</option>
-                <option value="DRESS">DRESS · Đầm</option>
-                <option value="NONE">NONE · Không có slot</option>
+                <option value="TOP">Áo</option>
+                <option value="BOTTOM">Quần / Váy</option>
+                <option value="DRESS">Đầm / Liền thân</option>
+                <option value="NONE">Không có slot</option>
               </select>
             </div>
+          )}
 
-            <div className="flex items-center gap-1.5 text-xs text-textSecondary">
-              <label htmlFor="category-status-filter" className="font-semibold text-text">
-                Trạng thái:
-              </label>
-              <select
-                id="category-status-filter"
-                aria-label="Lọc trạng thái"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="rounded-xl border border-neutral bg-white px-2.5 py-1.5 text-xs font-semibold text-text focus:border-[#006B2C] focus:outline-none"
-              >
-                <option value="ALL">Tất cả trạng thái</option>
-                <option value="ACTIVE">Đang hiện (ACTIVE)</option>
-                <option value="HIDDEN">Đã ẩn (HIDDEN)</option>
-              </select>
-            </div>
-
-            {(keyword || slotFilter !== 'ALL' || statusFilter !== 'ALL') && (
-              <button
-                type="button"
-                onClick={() => {
-                  setKeyword('');
-                  setSlotFilter('ALL');
-                  setStatusFilter('ALL');
-                }}
-                className="text-xs font-bold text-primary hover:underline ml-auto"
-              >
-                Đặt lại bộ lọc
-              </button>
-            )}
+          <div className="flex items-center gap-1.5 text-xs text-textSecondary">
+            <label htmlFor="category-status-filter" className="font-semibold text-text">
+              Trạng thái:
+            </label>
+            <select
+              id="category-status-filter"
+              aria-label="Lọc trạng thái"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="rounded-xl border border-neutral bg-white px-2.5 py-1.5 text-xs font-semibold text-text focus:border-[#006B2C] focus:outline-none"
+            >
+              <option value="ALL">Tất cả trạng thái</option>
+              <option value="ACTIVE">Đang hiện</option>
+              <option value="HIDDEN">Đã ẩn</option>
+            </select>
           </div>
-        )}
+
+          {(keyword || slotFilter !== 'ALL' || statusFilter !== 'ALL') && (
+            <button
+              type="button"
+              onClick={() => {
+                setKeyword('');
+                setSlotFilter('ALL');
+                setStatusFilter('ALL');
+              }}
+              className="text-xs font-bold text-primary hover:underline ml-auto"
+            >
+              Đặt lại bộ lọc
+            </button>
+          )}
+        </div>
       </div>
 
       <ResourceState resource={resource} empty={!items.length && !keyword} />
@@ -330,24 +344,24 @@ export default function CategoryBrandPage() {
                         </td>
                       )}
 
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-4 whitespace-nowrap">
                         {isHidden ? (
-                          <span className="text-[9px] font-bold px-2 py-0.5 border border-[#a8a8a8] bg-[#f0f0f0] text-[#7a7a7a] rounded uppercase">
+                          <span className="inline-flex items-center justify-center text-[11px] font-bold px-3 py-1 border border-[#FECDCA] bg-[#FEF3F2] text-[#B42318] rounded-lg uppercase whitespace-nowrap">
                             ĐÃ ẨN
                           </span>
                         ) : (
-                          <span className="text-[9px] font-bold px-2 py-0.5 border border-[#2b2b2b] text-[#2b2b2b] bg-white rounded uppercase">
+                          <span className="inline-flex items-center justify-center text-[11px] font-bold px-3 py-1 border border-[#A5D6A7] bg-[#E8F5E9] text-[#006B2C] rounded-lg uppercase whitespace-nowrap">
                             HIỆN
                           </span>
                         )}
                       </td>
 
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-3 text-xs">
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-2 text-xs whitespace-nowrap">
                           <button
                             type="button"
                             onClick={() => setEditor({ kind, item })}
-                            className="font-semibold text-primary underline hover:opacity-80"
+                            className="px-3 py-1.5 rounded-lg border border-neutral bg-white text-[#191C19] hover:bg-[#F6F9F4] font-semibold transition-colors cursor-pointer whitespace-nowrap"
                           >
                             Sửa
                           </button>
@@ -355,7 +369,7 @@ export default function CategoryBrandPage() {
                             <button
                               type="button"
                               onClick={() => setHiding({ kind, item })}
-                              className="font-semibold text-[#7a7a7a] hover:text-[#BA1A1A] underline"
+                              className="px-3 py-1.5 rounded-lg border border-[#FECDCA] bg-[#FEF3F2] text-[#B42318] hover:bg-[#FEE4E2] font-semibold transition-colors cursor-pointer whitespace-nowrap"
                             >
                               Ẩn
                             </button>
@@ -363,7 +377,7 @@ export default function CategoryBrandPage() {
                             <button
                               type="button"
                               onClick={() => handleUnhide(item)}
-                              className="font-semibold text-[#006B2C] hover:underline"
+                              className="px-3 py-1.5 rounded-lg border border-[#A5D6A7] bg-[#E8F5E9] text-[#006B2C] hover:bg-[#D1FADF] font-semibold transition-colors cursor-pointer whitespace-nowrap"
                             >
                               Hiện lại
                             </button>
@@ -371,7 +385,7 @@ export default function CategoryBrandPage() {
                           <button
                             type="button"
                             onClick={() => setDeleting({ kind, item })}
-                            className="font-semibold text-[#D92D20] hover:underline"
+                            className="px-3 py-1.5 rounded-lg border border-[#D92D20] bg-[#D92D20] text-white hover:bg-[#B42318] font-semibold transition-colors cursor-pointer whitespace-nowrap"
                           >
                             Xóa
                           </button>
@@ -441,7 +455,7 @@ export default function CategoryBrandPage() {
       <Modal
         isOpen={!!deleting}
         onClose={() => {
-          if (!resource.busy) setDeleting(null);
+          if (!deleteBusy) setDeleting(null);
         }}
         title="Xác nhận xóa"
       >
@@ -460,14 +474,15 @@ export default function CategoryBrandPage() {
               variant="outline"
               className="flex-1 py-2"
               onClick={() => setDeleting(null)}
-              disabled={resource.busy}
+              disabled={deleteBusy}
             >
               Hủy
             </Button>
             <Button
               variant="danger"
               className="flex-1 py-2 font-bold"
-              loading={resource.busy}
+              loading={deleteBusy}
+              disabled={deleteBusy}
               onClick={handleDeleteConfirm}
             >
               Xác nhận xóa

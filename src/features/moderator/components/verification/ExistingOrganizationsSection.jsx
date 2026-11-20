@@ -41,13 +41,17 @@ export function ExistingOrganizationsSection({
   const filteredOrgs = useMemo(() => {
     return existingOrgs.filter((org) => {
       const q = searchTerm.trim().toLowerCase();
+      const repName =
+        typeof org.representative === 'string'
+          ? org.representative
+          : org.representative?.fullName || org.representativeName || '';
       const matchSearch =
         !q ||
         (org.displayName || '').toLowerCase().includes(q) ||
         (org.legalName || '').toLowerCase().includes(q) ||
         (org.name || '').toLowerCase().includes(q) ||
         (org.taxCode || '').toLowerCase().includes(q) ||
-        (org.representative || '').toLowerCase().includes(q) ||
+        repName.toLowerCase().includes(q) ||
         (org.operationScope || '').toLowerCase().includes(q) ||
         (org.donationPointAddress || '').toLowerCase().includes(q) ||
         (org.id || '').toLowerCase().includes(q);
@@ -365,7 +369,9 @@ export function ExistingOrganizationsSection({
                   <div className="flex justify-between">
                     <span className="text-textSecondary">Ngày xác minh:</span>
                     <span className="font-mono text-text">
-                      {selectedOrg.verifiedAt ? new Date(selectedOrg.verifiedAt).toLocaleDateString('vi-VN') : '—'}
+                      {selectedOrg.verifiedAt && !Number.isNaN(new Date(selectedOrg.verifiedAt).getTime())
+                        ? new Date(selectedOrg.verifiedAt).toLocaleDateString('vi-VN')
+                        : '—'}
                     </span>
                   </div>
                 </div>
@@ -381,9 +387,10 @@ export function ExistingOrganizationsSection({
                   <div className="flex justify-between">
                     <span className="text-textSecondary">Người đại diện:</span>
                     <span className="font-semibold text-text">
-                      {selectedOrg.representative ||
+                      {(typeof selectedOrg.representative === 'string'
+                        ? selectedOrg.representative
+                        : selectedOrg.representative?.fullName) ||
                         selectedOrg.representativeName ||
-                        selectedOrg.representative?.fullName ||
                         '—'}
                     </span>
                   </div>

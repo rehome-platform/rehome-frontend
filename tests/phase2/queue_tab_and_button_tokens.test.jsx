@@ -99,21 +99,30 @@ describe('HQ-01: Tab selection in place, Claim flow, and "Mở việc" without a
     const returnTab = screen.getByRole('tab', { name: 'Trả hàng' });
     await user.click(returnTab);
     expect(screen.getByTestId('location')).toHaveTextContent('/moderator/queue?type=RETURN');
-    expect(await screen.findByText('Đơn hàng hoàn RET-101')).toBeInTheDocument();
+    expect(await screen.findByText('Lý do: Hàng lỗi kỹ thuật')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Chi tiết' }));
+    expect(within(screen.getByRole('dialog')).getByText('Đơn hàng hoàn RET-101')).toBeInTheDocument();
+    await user.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: 'Đóng' })[0]);
     expect(screen.getByRole('button', { name: 'Nhận việc' })).toBeInTheDocument();
 
     // 2. Click tab "Xác minh tổ chức" (ORG_VERIFICATION)
     const orgTab = screen.getByRole('tab', { name: 'Xác minh tổ chức' });
     await user.click(orgTab);
     expect(screen.getByTestId('location')).toHaveTextContent('/moderator/queue?type=ORG_VERIFICATION');
-    expect(await screen.findByText('Quỹ Nụ Cười Xanh')).toBeInTheDocument();
+    expect(await screen.findByText('Tổ chức từ thiện')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Chi tiết' }));
+    expect(within(screen.getByRole('dialog')).getByText('Quỹ Nụ Cười Xanh')).toBeInTheDocument();
+    await user.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: 'Đóng' })[0]);
     expect(screen.getByRole('button', { name: 'Nhận việc' })).toBeInTheDocument();
 
     // 3. Click tab "Vi phạm" (VIOLATION_REPORT)
     const reportTab = screen.getByRole('tab', { name: 'Vi phạm' });
     await user.click(reportTab);
     expect(screen.getByTestId('location')).toHaveTextContent('/moderator/queue?type=VIOLATION_REPORT');
-    expect(await screen.findByText('Bài đăng nghi vấn gian lận')).toBeInTheDocument();
+    expect(await screen.findByText('3 báo cáo vi phạm nội dung')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Chi tiết' }));
+    expect(within(screen.getByRole('dialog')).getByText('Bài đăng nghi vấn gian lận')).toBeInTheDocument();
+    await user.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: 'Đóng' })[0]);
     expect(screen.getByRole('button', { name: 'Nhận việc' })).toBeInTheDocument();
   });
 
@@ -133,7 +142,8 @@ describe('HQ-01: Tab selection in place, Claim flow, and "Mở việc" without a
     renderQueueApp('/moderator/queue?type=RETURN');
 
     // Unclaimed state
-    expect(await screen.findByText('Đơn hàng hoàn RET-101')).toBeInTheDocument();
+    expect(await screen.findByText('Lý do: Hàng lỗi kỹ thuật')).toBeInTheDocument();
+    expect(screen.queryByText('Đơn hàng hoàn RET-101')).not.toBeInTheDocument();
     expect(screen.getByText('chưa ai nhận')).toBeInTheDocument();
 
     // The unclaimed item title should not be a navigation link
@@ -165,6 +175,85 @@ describe('HQ-01: Tab selection in place, Claim flow, and "Mở việc" without a
     renderQueueApp();
     await screen.findByText('Yêu cầu trả hàng');
     expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
+  });
+
+  it('HQ-01: aligns Work Queue action buttons uniformly without arrows or awkward wrapping', async () => {
+    const claimedPacking = {
+      queueId: 'q-pack-1',
+      refId: 'ord-1',
+      orderId: 'ord-1',
+      type: 'PACKING',
+      typeLabel: 'Đóng gói đơn hàng',
+      name: 'Đơn #OD-01',
+      targetName: 'Đơn #OD-01',
+      subjectSubtitle: 'Nguyễn Văn B',
+      status: 'PAID',
+      claimedBy: 'mod-a',
+      createdAt: '2026-10-01T00:00:00Z',
+    };
+    const claimedWithdrawal = {
+      queueId: 'q-with-1',
+      refId: 'w-1',
+      type: 'WITHDRAWAL',
+      typeLabel: 'Rút hàng',
+      name: 'Áo thun',
+      targetName: 'Áo thun',
+      subjectSubtitle: 'Trần Thị C',
+      productImageUrl: 'https://cdn.rehome.test/ao-thun.jpg',
+      status: 'PENDING_APPROVAL',
+      claimedBy: 'mod-a',
+      createdAt: '2026-10-01T00:00:00Z',
+    };
+
+    vi.spyOn(queueService, 'list').mockImplementation(async () => [claimedPacking, claimedWithdrawal]);
+    renderQueueApp();
+
+    const packRow = (await screen.findByText('Nguyễn Văn B')).closest('tr');
+    // 7 columns: Nhận/Nhả việc được gộp vào cột Hành động (căn trái)
+    const headers = screen.getAllByRole('columnheader').map((th) => th.textContent.trim());
+    expect(headers).toEqual(['Loại việc', 'Đối tượng', 'Tạo lúc', 'Đã chờ', 'Người nhận', 'Chi tiết', 'Hành động']);
+
+    const packDetailBtn = within(packRow).getByRole('button', { name: 'Chi tiết' });
+    const packReleaseBtn = within(packRow).getByRole('button', { name: 'Nhả việc' });
+    const packActionLink = within(packRow).getByRole('link', { name: 'Đóng gói' });
+    const packActionsWrap = packActionLink.parentElement;
+    // Nhả việc + Mở việc nằm cùng ô Hành động, căn trái, lưới cố định
+    expect(packDetailBtn.closest('td')).not.toBe(packReleaseBtn.closest('td'));
+    expect(packReleaseBtn.closest('td')).toBe(packActionLink.closest('td'));
+    expect(packActionLink.closest('td').className).toContain('text-left');
+    expect(packActionsWrap.className).toContain('grid');
+    expect(packActionsWrap.className).toContain('justify-items-start');
+    expect(packActionsWrap.className).toContain('gap-2');
+
+    [packReleaseBtn, packActionLink].forEach((el) => {
+      expect(el.className).toContain('h-8');
+      expect(el.className).toContain('px-3');
+      expect(el.className).toContain('text-xs');
+      expect(el.className).toContain('font-semibold');
+      expect(el.className).toContain('whitespace-nowrap');
+      expect(el.className).toContain('shrink-0');
+      expect(el.textContent).not.toContain('→');
+      expect(el.textContent).not.toContain('->');
+    });
+
+    const withdrawRow = screen.getByText('Trần Thị C').closest('tr');
+    // Check đơn button is removed and no thumbnail image is rendered inside Loại việc column
+    expect(within(withdrawRow).queryByRole('button', { name: 'Check đơn' })).not.toBeInTheDocument();
+    expect(within(withdrawRow).queryByRole('img')).not.toBeInTheDocument();
+
+    const withdrawDetailBtn = within(withdrawRow).getByRole('button', { name: 'Chi tiết' });
+    const withdrawReleaseBtn = within(withdrawRow).getByRole('button', { name: 'Nhả việc' });
+    const withdrawApproveBtn = within(withdrawRow).getByRole('button', { name: 'Duyệt yêu cầu' });
+    expect(withdrawDetailBtn.closest('td')).not.toBe(withdrawReleaseBtn.closest('td'));
+    expect(withdrawReleaseBtn.closest('td')).toBe(withdrawApproveBtn.closest('td'));
+    [withdrawReleaseBtn, withdrawApproveBtn].forEach((el) => {
+      expect(el.className).toContain('h-8');
+      expect(el.className).toContain('px-3');
+      expect(el.className).toContain('text-xs');
+      expect(el.className).toContain('font-semibold');
+      expect(el.className).toContain('whitespace-nowrap');
+      expect(el.className).toContain('shrink-0');
+    });
   });
 });
 

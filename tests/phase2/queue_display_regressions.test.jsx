@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { Phase2Provider } from '../../src/features/moderator/hooks/warehouseHooks.jsx';
@@ -28,10 +28,14 @@ describe('Moderator queue display regressions', () => {
       createdAt: '2026-11-06T11:00:00Z',
     }] : []);
     renderPage(<WarehouseHomePage />);
-    const row = (await screen.findByText('form-1')).closest('tr');
-    expect(within(row).getByText('Áo khoác len')).toBeInTheDocument();
+    const row = (await screen.findByText('Nguyễn Minh An')).closest('tr');
+    expect(within(row).queryByText('form-1')).not.toBeInTheDocument();
     expect(within(row).getByText('Nguyễn Minh An')).toBeInTheDocument();
     expect(within(row).getByText('1 ngày 1 giờ')).toBeInTheDocument();
+    fireEvent.click(within(row).getByRole('button', { name: 'Chi tiết' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('form-1')).toBeInTheDocument();
+    expect(within(dialog).getByText('Áo khoác len')).toBeInTheDocument();
   });
 
   it('places the empty print-queue message inside a full-width table cell once', async () => {

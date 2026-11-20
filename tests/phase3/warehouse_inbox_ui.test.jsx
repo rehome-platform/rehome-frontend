@@ -362,9 +362,17 @@ describe('WarehouseInboxPage Crash Resistance & Design Tokens', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('MB-0055')).toBeInTheDocument();
+      expect(screen.getAllByText('Trần Văn X').length).toBeGreaterThan(0);
     });
+    expect(screen.queryByText('MB-0055')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Đánh dấu đã xong/i })).not.toBeInTheDocument();
+
+    // FE-15: Toggle member info panel visibility to prevent obstruction/overflow
+    expect(screen.getByText('Form ký gửi đang hoạt động')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ẩn thông tin' }));
+    expect(screen.queryByText('Form ký gửi đang hoạt động')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Thông tin Member' }));
+    expect(screen.getByText('Form ký gửi đang hoạt động')).toBeInTheDocument();
   });
 
   it('ignores stale getMessages response from a previous conversation when switching quickly', async () => {

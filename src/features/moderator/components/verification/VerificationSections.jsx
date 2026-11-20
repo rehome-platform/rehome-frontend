@@ -292,11 +292,6 @@ export function VerificationChecklist({ checklist, setChecklist, isEnterprise, s
           <span className="font-semibold text-text">
             Đối chiếu tên trên CCCD với tên người đại diện ghi trên giấy phép
           </span>
-          {missingCccd && (
-            <span className="block text-[10px] text-error font-medium mt-1">
-              Hồ sơ thiếu ảnh CCCD. Nếu xác thực, hệ thống sẽ từ chối vì chưa đủ hồ sơ tối thiểu. Hãy nhấn &quot;Từ chối kèm lý do&quot; để tổ chức bổ sung.
-            </span>
-          )}
         </div>
       </label>
 
@@ -385,6 +380,12 @@ export function VerificationDocuments({ selectedOrg, setViewingDoc }) {
       </div>
 
       <div className="border border-neutral rounded-xl divide-y divide-neutral bg-surface text-xs">
+        {selectedOrg?.id && (
+          <div className="p-2.5 flex gap-3">
+            <span className="w-28 text-textSecondary shrink-0">Mã hồ sơ</span>
+            <span className="font-mono font-semibold text-text break-all">{selectedOrg.id}</span>
+          </div>
+        )}
         <div className="p-2.5 flex gap-3">
           <span className="w-28 text-textSecondary shrink-0">Tên theo giấy tờ</span>
           <span className="font-bold text-text">{orgName}</span>
@@ -424,14 +425,11 @@ export function VerificationDocuments({ selectedOrg, setViewingDoc }) {
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold font-heading text-text">Tệp đính kèm</h2>
           {!hasBothCccd && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-error-light text-error border border-error/30">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-error-light text-error border border-error/30 whitespace-nowrap">
               Thiếu ảnh CCCD
             </span>
           )}
         </div>
-        <p className="text-[11px] text-textSecondary">
-          Hai nhóm bắt buộc cho mọi loại tổ chức: 1. Giấy tờ pháp lý tổ chức, 2. Ảnh CCCD người đại diện. Bấm &quot;Xem ảnh&quot; để kiểm tra con dấu và hiệu lực pháp lý.
-        </p>
       </div>
 
       <div className="border border-neutral rounded-xl overflow-hidden bg-surface text-xs divide-y divide-neutral">
@@ -449,19 +447,18 @@ export function VerificationDocuments({ selectedOrg, setViewingDoc }) {
                   </span>
                   <div className="min-w-0">
                     <div className="font-bold text-text truncate">{docTitle}</div>
-                    <div className="text-[10px] text-textSecondary truncate">{docInfo}</div>
                   </div>
                 </div>
                 {docUrl ? (
                   <button
                     type="button"
                     onClick={() => setViewingDoc({ title: docTitle, info: docInfo, url: docUrl })}
-                    className="shrink-0 text-xs font-medium px-3 py-1.5 border border-neutral rounded-xl bg-surface hover:bg-background text-text transition-colors"
+                    className="shrink-0 whitespace-nowrap text-xs font-medium px-3 py-1.5 border border-neutral rounded-xl bg-surface hover:bg-background text-text transition-colors"
                   >
                     Xem ảnh
                   </button>
                 ) : (
-                  <span className="shrink-0 text-[10px] text-textSecondary px-2.5 py-0.5 bg-neutral-light rounded-full">Không có tệp</span>
+                  <span className="shrink-0 whitespace-nowrap text-[10px] text-textSecondary px-2.5 py-0.5 bg-neutral-light rounded-full">Không có tệp</span>
                 )}
               </div>
             );
@@ -481,9 +478,6 @@ export function VerificationDocuments({ selectedOrg, setViewingDoc }) {
                 </span>
                 <div className="min-w-0">
                   <div className="font-bold text-text truncate">CCCD mặt trước (Người đại diện)</div>
-                  <div className={`text-[10px] truncate ${cccdFrontUrl ? 'text-textSecondary' : 'text-error font-medium'}`}>
-                    {cccdFrontUrl ? (cccdNumber ? `Số CCCD: ${cccdNumber}` : 'Ảnh mặt trước CCCD') : 'Chưa nộp ảnh CCCD mặt trước (bắt buộc)'}
-                  </div>
                 </div>
               </div>
               {cccdFrontUrl ? (
@@ -494,12 +488,12 @@ export function VerificationDocuments({ selectedOrg, setViewingDoc }) {
                     info: cccdNumber ? `Số CCCD: ${cccdNumber}` : 'CCCD mặt trước',
                     url: cccdFrontUrl
                   })}
-                  className="shrink-0 text-xs font-medium px-3 py-1.5 border border-neutral rounded-xl bg-surface hover:bg-background text-text transition-colors"
+                  className="shrink-0 whitespace-nowrap text-xs font-medium px-3 py-1.5 border border-neutral rounded-xl bg-surface hover:bg-background text-text transition-colors"
                 >
                   Xem ảnh
                 </button>
               ) : (
-                <span className="shrink-0 text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-error-light text-error">
+                <span className="shrink-0 whitespace-nowrap text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-error-light text-error">
                   Thiếu tệp
                 </span>
               )}
@@ -513,9 +507,6 @@ export function VerificationDocuments({ selectedOrg, setViewingDoc }) {
                 </span>
                 <div className="min-w-0">
                   <div className="font-bold text-text truncate">CCCD mặt sau (Người đại diện)</div>
-                  <div className={`text-[10px] truncate ${cccdBackUrl ? 'text-textSecondary' : 'text-error font-medium'}`}>
-                    {cccdBackUrl ? (formatRepresentative(rep) !== '—' ? `Người đại diện: ${formatRepresentative(rep)}` : 'Ảnh mặt sau CCCD') : 'Chưa nộp ảnh CCCD mặt sau (bắt buộc)'}
-                  </div>
                 </div>
               </div>
               {cccdBackUrl ? (
@@ -526,12 +517,12 @@ export function VerificationDocuments({ selectedOrg, setViewingDoc }) {
                     info: formatRepresentative(rep) !== '—' ? `Người đại diện: ${formatRepresentative(rep)}` : 'CCCD mặt sau',
                     url: cccdBackUrl
                   })}
-                  className="shrink-0 text-xs font-medium px-3 py-1.5 border border-neutral rounded-xl bg-surface hover:bg-background text-text transition-colors"
+                  className="shrink-0 whitespace-nowrap text-xs font-medium px-3 py-1.5 border border-neutral rounded-xl bg-surface hover:bg-background text-text transition-colors"
                 >
                   Xem ảnh
                 </button>
               ) : (
-                <span className="shrink-0 text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-error-light text-error">
+                <span className="shrink-0 whitespace-nowrap text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-error-light text-error">
                   Thiếu tệp
                 </span>
               )}
@@ -619,7 +610,7 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
                       {chg.status === 'PENDING' ? (
                         <Badge variant="warning" className="mt-1">Chờ duyệt</Badge>
                       ) : chg.status === 'REJECTED' ? (
-                        <Badge variant="error" className="mt-1">Bị từ chối</Badge>
+                        <Badge variant="danger" className="mt-1">Bị từ chối</Badge>
                       ) : (
                         <Badge variant="success" className="mt-1">Đã duyệt</Badge>
                       )}
@@ -683,7 +674,7 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
               </div>
               <div className="flex justify-between">
                 <span className="text-textSecondary">Mã số thuế:</span>
-                <span className="font-mono font-bold text-primary">{selectedChangeModal.taxCode || '0109887766'}</span>
+                <span className="font-mono font-bold text-primary">{selectedChangeModal.taxCode || '—'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-textSecondary">Người gửi yêu cầu:</span>
@@ -695,7 +686,15 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
               </div>
               <div className="flex justify-between">
                 <span className="text-textSecondary">Trạng thái:</span>
-                <span className="font-bold text-primary">{selectedChangeModal.status === 'PENDING' ? 'Chờ duyệt' : selectedChangeModal.status}</span>
+                <span className="font-bold text-primary">
+                  {selectedChangeModal.status === 'PENDING'
+                    ? 'Chờ duyệt'
+                    : selectedChangeModal.status === 'APPROVED'
+                      ? 'Đã duyệt'
+                      : selectedChangeModal.status === 'REJECTED'
+                        ? 'Bị từ chối'
+                        : selectedChangeModal.status || '—'}
+                </span>
               </div>
             </div>
 
@@ -871,6 +870,8 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
 }
 
 export function VerificationQueueTable({ loading, orgsQueue = [], handleOpenDetail, activeQueueTab = 'PENDING' }) {
+  const [detailOrg, setDetailOrg] = React.useState(null);
+
   const filteredOrgs = orgsQueue.filter((org) => {
     const status = org.status || 'PENDING';
     if (activeQueueTab === 'PENDING') return status === 'PENDING';
@@ -880,16 +881,20 @@ export function VerificationQueueTable({ loading, orgsQueue = [], handleOpenDeta
     return true;
   });
 
+  const formatRep = (rep) => {
+    if (!rep) return '—';
+    if (typeof rep === 'string') return rep;
+    return [rep.fullName, rep.position].filter(Boolean).join(' · ') || rep.fullName || '—';
+  };
+
   return (
     <div className="bg-surface border border-neutral rounded-2xl overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
             <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
-              <th className="py-2.5 px-3">Mã hồ sơ</th>
               <th className="py-2.5 px-3">Tên tổ chức</th>
               <th className="py-2.5 px-3">Loại hình</th>
-              <th className="py-2.5 px-3">Mã số thuế</th>
               <th className="py-2.5 px-3">Nộp lúc</th>
               <th className="py-2.5 px-3">Đã chờ</th>
               <th className="py-2.5 px-3">Lần nộp</th>
@@ -899,14 +904,14 @@ export function VerificationQueueTable({ loading, orgsQueue = [], handleOpenDeta
           <tbody className="divide-y divide-neutral">
             {loading && (
               <tr>
-                <td colSpan="8" className="py-8 text-center text-textSecondary">
+                <td colSpan="6" className="py-8 text-center text-textSecondary">
                   Đang tải danh sách hồ sơ tổ chức...
                 </td>
               </tr>
             )}
             {!loading && filteredOrgs.length === 0 && (
               <tr>
-                <td colSpan="8" className="py-8 text-center text-textSecondary">
+                <td colSpan="6" className="py-8 text-center text-textSecondary">
                   Chưa có hồ sơ nào trong mục này.
                 </td>
               </tr>
@@ -922,25 +927,17 @@ export function VerificationQueueTable({ loading, orgsQueue = [], handleOpenDeta
                       idx === 0 ? 'border-l-4 border-l-primary bg-background/30' : ''
                     }`}
                   >
-                    <td className="py-3 px-3 font-bold text-text">{org.id}</td>
-                    <td className="py-3 px-3 font-semibold text-text truncate max-w-[220px]" title={orgName}>
+                    <td className="py-3 px-3 font-semibold text-text truncate max-w-[240px]" title={orgName}>
                       {orgName}
                     </td>
-                    <td className="py-3 px-3 text-textSecondary">{orgType}</td>
-                    <td className="py-3 px-3 font-mono">
-                      {org.taxCode && org.taxCode !== 'không có' ? (
-                        <span className="font-bold text-primary">{org.taxCode}</span>
-                      ) : (
-                        <span className="text-textSecondary">{org.taxCode || 'không có'}</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-3 text-textSecondary">
+                    <td className="py-3 px-3 text-textSecondary whitespace-nowrap">{orgType}</td>
+                    <td className="py-3 px-3 text-textSecondary whitespace-nowrap">
                       {org.submittedAt || (org.createdAt ? new Date(org.createdAt).toLocaleDateString('vi-VN') : '—')}
                     </td>
-                    <td className="py-3 px-3 font-semibold text-text">
+                    <td className="py-3 px-3 font-semibold text-text whitespace-nowrap">
                       {org.waitTime || (org.status === 'PENDING' ? 'Chờ duyệt' : '—')}
                     </td>
-                    <td className="py-3 px-3">
+                    <td className="py-3 px-3 whitespace-nowrap">
                       <span
                         className={
                           String(org.submissionCount || '').includes('lại')
@@ -951,18 +948,27 @@ export function VerificationQueueTable({ loading, orgsQueue = [], handleOpenDeta
                         {org.submissionCount || 'Nộp lần đầu'}
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenDetail(org)}
-                        className={`text-xs font-medium px-3.5 py-1.5 rounded-xl transition-colors ${
-                          idx === 0 && activeQueueTab === 'PENDING'
-                            ? 'bg-primary text-white hover:bg-primary-hover shadow-sm'
-                            : 'border border-neutral text-text hover:bg-background'
-                        }`}
-                      >
-                        {activeQueueTab === 'PENDING' ? 'Xác minh' : 'Xem chi tiết'}
-                      </button>
+                    <td className="py-3 px-3 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setDetailOrg(org)}
+                          className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-neutral bg-white text-text hover:bg-background transition-colors whitespace-nowrap cursor-pointer"
+                        >
+                          Chi tiết
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDetail(org)}
+                          className={`text-xs font-medium px-3.5 py-1.5 rounded-xl transition-colors whitespace-nowrap cursor-pointer ${
+                            idx === 0 && activeQueueTab === 'PENDING'
+                              ? 'bg-primary text-white hover:bg-primary-hover shadow-sm'
+                              : 'border border-neutral text-text hover:bg-background'
+                          }`}
+                        >
+                          {activeQueueTab === 'PENDING' ? 'Xác minh' : 'Xem hồ sơ'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -970,6 +976,95 @@ export function VerificationQueueTable({ loading, orgsQueue = [], handleOpenDeta
           </tbody>
         </table>
       </div>
+
+      <Modal
+        isOpen={Boolean(detailOrg)}
+        onClose={() => setDetailOrg(null)}
+        title="Chi tiết hồ sơ tổ chức"
+        size="md"
+      >
+        {detailOrg && (
+          <div className="space-y-4 text-xs text-textSecondary font-sans">
+            <div className="rounded-xl border border-neutral bg-[#F6F9F4] p-3.5 space-y-2">
+              <div className="flex justify-between gap-4">
+                <span className="font-semibold shrink-0">Mã hồ sơ:</span>
+                <span className="font-mono font-bold text-text text-right break-all">{detailOrg.id}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="font-semibold shrink-0">Tên theo giấy tờ:</span>
+                <span className="font-bold text-text text-right">
+                  {detailOrg.legalName || detailOrg.name || detailOrg.displayName || '—'}
+                </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="font-semibold shrink-0">Tên hiển thị:</span>
+                <span className="text-text text-right">
+                  {detailOrg.displayName || detailOrg.legalName || detailOrg.name || '—'}
+                </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="font-semibold shrink-0">Loại hình:</span>
+                <span className="text-text text-right">
+                  {detailOrg.orgType || (detailOrg.type !== 'ORG_VERIFICATION' ? detailOrg.type : 'Tổ chức từ thiện')}
+                </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="font-semibold shrink-0">Mã số thuế:</span>
+                <span className="font-mono font-bold text-primary text-right">{detailOrg.taxCode || 'không có'}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="font-semibold shrink-0">Phạm vi:</span>
+                <span className="text-text text-right">{detailOrg.scope || 'Toàn quốc'}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="font-semibold shrink-0">Trụ sở:</span>
+                <span className="text-text text-right">{detailOrg.address || '—'}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="font-semibold shrink-0">Liên hệ:</span>
+                <span className="text-text text-right">
+                  {[detailOrg.phone, detailOrg.email].filter(Boolean).join(' · ') || '—'}
+                </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="font-semibold shrink-0">Người đại diện:</span>
+                <span className="font-semibold text-text text-right">{formatRep(detailOrg.representative)}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="font-semibold shrink-0">Nộp lúc:</span>
+                <span className="text-text text-right">
+                  {detailOrg.submittedAt || (detailOrg.createdAt ? new Date(detailOrg.createdAt).toLocaleDateString('vi-VN') : '—')}
+                </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="font-semibold shrink-0">Đã chờ:</span>
+                <span className="text-text text-right">{detailOrg.waitTime || '—'}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="font-semibold shrink-0">Lần nộp:</span>
+                <span className="text-text text-right">{detailOrg.submissionCount || 'Nộp lần đầu'}</span>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setDetailOrg(null)} className="whitespace-nowrap">
+                Đóng
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                className="whitespace-nowrap"
+                onClick={() => {
+                  const target = detailOrg;
+                  setDetailOrg(null);
+                  handleOpenDetail(target);
+                }}
+              >
+                {activeQueueTab === 'PENDING' ? 'Xác minh' : 'Mở hồ sơ'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
