@@ -2,12 +2,15 @@ import React, { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
+import Tooltip from '../../../components/common/Tooltip.jsx';
+import TableActionButton from '../../../components/common/TableActionButton.jsx';
 import CatalogEditor from '../components/CatalogEditor.jsx';
 import { catalogService } from '../services/warehouseApi.js';
 import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
 import { Page, ResourceState } from '../components/WarehouseUi.jsx';
 import { filterCatalogItems, formatTryOnSlot } from '../models/warehouseModel.js';
+import { TABLE_COLUMN_LABELS } from '../../../constants/tableColumns.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 
 export default function CategoryBrandPage() {
@@ -168,13 +171,16 @@ export default function CategoryBrandPage() {
             }`}
         >
           <span>{feedback.message}</span>
-          <button
-            type="button"
-            onClick={() => setFeedback(null)}
-            className="text-xs font-bold px-2 py-0.5 hover:opacity-75"
-          >
-            ✕
-          </button>
+          <Tooltip content="Đóng thông báo">
+            <button
+              type="button"
+              aria-label="Đóng thông báo"
+              onClick={() => setFeedback(null)}
+              className="text-xs font-bold px-2 py-0.5 hover:opacity-75 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-current"
+            >
+              ✕
+            </button>
+          </Tooltip>
         </div>
       )}
 
@@ -224,13 +230,16 @@ export default function CategoryBrandPage() {
               className="w-full rounded-xl border-[#8a8a8a] text-xs py-2 pl-3 pr-8 focus:border-[#2b2b2b] focus:ring-1 focus:ring-[#2b2b2b]"
             />
             {keyword && (
-              <button
-                type="button"
-                onClick={() => setKeyword('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[#7a7a7a] hover:text-black font-bold"
-              >
-                ✕
-              </button>
+              <Tooltip content="Xóa từ khóa tìm kiếm" className="absolute right-2 top-1/2 -translate-y-1/2">
+                <button
+                  type="button"
+                  aria-label="Xóa từ khóa tìm kiếm"
+                  onClick={() => setKeyword('')}
+                  className="text-xs text-[#5B6776] hover:text-black font-bold p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                >
+                  ✕
+                </button>
+              </Tooltip>
             )}
           </div>
         </div>
@@ -316,8 +325,8 @@ export default function CategoryBrandPage() {
                 <tr className="bg-[#f4f4f4] border-b border-[#8a8a8a] text-xs font-semibold text-[#5f5f5f] whitespace-nowrap">
                   <th className="py-2.5 px-4">{isCategory ? 'Danh mục' : 'Thương hiệu'}</th>
                   {isCategory && <th className="py-2.5 px-4">Slot thử đồ AI</th>}
-                  <th className="py-2.5 px-4">Trạng thái</th>
-                  <th className="py-2.5 px-4 text-right">Hành động</th>
+                  <th className="py-2.5 px-4">{TABLE_COLUMN_LABELS.STATUS}</th>
+                  <th className="py-2.5 px-4 text-right">{TABLE_COLUMN_LABELS.ACTIONS}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e0e0e0]">
@@ -327,11 +336,11 @@ export default function CategoryBrandPage() {
                   return (
                     <tr
                       key={item.id}
-                      className={`hover:bg-[#fcfdfc] transition-colors ${isHidden ? 'bg-[#fafafa] text-[#8a8a8a]' : 'text-[#191C19]'
+                      className={`hover:bg-[#fcfdfc] transition-colors ${isHidden ? 'bg-[#fafafa] text-[#5B6776]' : 'text-[#191C19]'
                         }`}
                     >
                       <td className="py-3 px-4 font-semibold text-xs">
-                        <span className={isHidden ? 'line-through text-[#8a8a8a]' : ''}>{item.name}</span>
+                        <span className={isHidden ? 'line-through text-[#5B6776]' : ''}>{item.name}</span>
                       </td>
 
                       {isCategory && (
@@ -358,37 +367,31 @@ export default function CategoryBrandPage() {
 
                       <td className="py-3 px-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2 text-xs whitespace-nowrap">
-                          <button
-                            type="button"
+                          <TableActionButton
+                            action="edit"
                             onClick={() => setEditor({ kind, item })}
-                            className="px-3 py-1.5 rounded-lg border border-neutral bg-white text-[#191C19] hover:bg-[#F6F9F4] font-semibold transition-colors cursor-pointer whitespace-nowrap"
-                          >
-                            Sửa
-                          </button>
+                          />
                           {!isHidden ? (
-                            <button
-                              type="button"
+                            <TableActionButton
+                              action="view"
+                              icon="visibility_off"
+                              label="Ẩn"
                               onClick={() => setHiding({ kind, item })}
-                              className="px-3 py-1.5 rounded-lg border border-[#FECDCA] bg-[#FEF3F2] text-[#B42318] hover:bg-[#FEE4E2] font-semibold transition-colors cursor-pointer whitespace-nowrap"
-                            >
-                              Ẩn
-                            </button>
+                              className="border-[#FECDCA] text-[#B42318] hover:bg-[#FEF3F2] hover:border-[#D92D20] hover:text-[#B42318]"
+                            />
                           ) : (
-                            <button
-                              type="button"
+                            <TableActionButton
+                              action="view"
+                              icon="visibility"
+                              label="Hiện lại"
                               onClick={() => handleUnhide(item)}
-                              className="px-3 py-1.5 rounded-lg border border-[#A5D6A7] bg-[#E8F5E9] text-[#006B2C] hover:bg-[#D1FADF] font-semibold transition-colors cursor-pointer whitespace-nowrap"
-                            >
-                              Hiện lại
-                            </button>
+                              className="border-[#ABEFC6] text-[#006B2C] hover:bg-[#ECFDF3] hover:border-[#006B2C] hover:text-[#006B2C]"
+                            />
                           )}
-                          <button
-                            type="button"
+                          <TableActionButton
+                            action="delete"
                             onClick={() => setDeleting({ kind, item })}
-                            className="px-3 py-1.5 rounded-lg border border-[#D92D20] bg-[#D92D20] text-white hover:bg-[#B42318] font-semibold transition-colors cursor-pointer whitespace-nowrap"
-                          >
-                            Xóa
-                          </button>
+                          />
                         </div>
                       </td>
                     </tr>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
 import Spinner from '../../../components/common/Spinner.jsx';
@@ -7,6 +7,7 @@ import { usePhase2 } from '../hooks/warehouseHooks.jsx';
 import { normalizeError } from '../models/warehouseModel.js';
 
 export default function PhotoUpload({ onChange, disabled = false, maxFiles = null }) {
+  const inputId = useId();
   const phase2 = usePhase2();
   const fallbackController = useRef(new AbortController());
   const signal = phase2?.signal || fallbackController.current.signal;
@@ -137,7 +138,7 @@ export default function PhotoUpload({ onChange, disabled = false, maxFiles = nul
   return (
     <div className="space-y-3 font-sans">
       <div className="flex items-center justify-between">
-        <label htmlFor="photo-file-input" className="block text-sm font-semibold text-[#191C19]">
+        <label htmlFor={inputId} className="block text-sm font-semibold text-[#191C19]">
           Ảnh sản phẩm ({files.length}{maxFiles != null ? `/${maxFiles}` : ''})
         </label>
         <span className="text-xs text-[#5B6776]">
@@ -320,7 +321,7 @@ export default function PhotoUpload({ onChange, disabled = false, maxFiles = nul
       {/* Input file ẩn thực tế */}
       <input
         ref={fileInputRef}
-        id="photo-file-input"
+        id={inputId}
         aria-label="Ảnh sản phẩm"
         className="hidden"
         type="file"

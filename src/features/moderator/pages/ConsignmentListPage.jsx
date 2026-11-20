@@ -1,9 +1,11 @@
 import { WarehouseHistoryTabs } from '../components/WarehouseHistoryTabs.jsx';
+import { TABLE_COLUMN_LABELS } from '../../../constants/tableColumns.js';
 import React, { useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Page, ResourceState, Pager, Status, money, date } from '../components/WarehouseUi.jsx';
 import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
+import TableActionButton from '../../../components/common/TableActionButton.jsx';
 import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
 import { consignmentService } from '../services/warehouseApi.js';
 import { listItems, formatConditionLabel } from '../models/warehouseModel.js';
@@ -181,7 +183,7 @@ export default function ConsignmentListPage() {
                     <th className="py-2.5 px-3">Member</th>
                     <th className="py-2.5 px-3">Giá mong muốn</th>
                     <th className="py-2.5 px-3">Gửi lúc</th>
-                    <th className="py-2.5 px-3 text-right">Hành động</th>
+                    <th className="py-2.5 px-3 text-right">{TABLE_COLUMN_LABELS.ACTIONS}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral">
@@ -219,14 +221,10 @@ export default function ConsignmentListPage() {
                         </td>
                         <td className="py-3 px-3 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-xs py-1.5 px-3 whitespace-nowrap"
+                            <TableActionButton
+                              action="view"
                               onClick={() => setDetailForm(form)}
-                            >
-                              Chi tiết
-                            </Button>
+                            />
                             <Link
                               to={`/moderator/consignments/${encodeURIComponent(formId)}`}
                               state={{ form }}

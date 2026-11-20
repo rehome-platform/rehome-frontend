@@ -1,8 +1,9 @@
 import { WarehouseHistoryTabs } from '../components/WarehouseHistoryTabs.jsx';
 import DegradedCaseDetails from '../components/DegradedCaseDetails.jsx';
 import { degradedCaseLabel, degradedInventoryItem } from '../models/degradedCaseModel.js';
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
 import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
 import QRScannerModal from '../../../components/QRScannerModal.jsx';
@@ -15,6 +16,14 @@ import { listItems } from '../models/warehouseModel.js';
 import { Page, Status, Pager, ResourceState, money } from '../components/WarehouseUi.jsx';
 import { ReturnOutcomeDialog } from '../components/returns/ReturnSections.jsx';
 import { useToast } from '../../../context/ToastContext.jsx';
+import {
+  PRODUCT_STATUS_LABELS,
+  PRODUCT_TABS,
+  productStatusKey,
+  productStatusLabelByKey,
+  resolveProductStatusLabel,
+} from '../../../constants/productStatus.js';
+import { TABLE_COLUMN_LABELS } from '../../../constants/tableColumns.js';
 
 export const SUPPORTED_INVENTORY_STATUSES = [
   'ON_SALE',
@@ -29,17 +38,11 @@ export const SUPPORTED_INVENTORY_STATUSES = [
 ];
 
 export const INVENTORY_STATUS_LABELS = {
-  ON_SALE: 'Đang bán',
-  WAREHOUSE: 'Lưu kho, tạm ngừng bán',
-  RESERVED: 'Đang giữ',
-  SOLD: 'Đã bán, chờ đóng gói',
-  WAITING_END_OF_TERM: 'Chờ xử lý cuối kỳ',
-  WITHDRAWN: 'Đã rút hàng',
-  UNCLAIMED: 'Vô thừa nhận',
-  DONATED: 'Đã quyên góp',
-  DESTROYED: 'Đã tiêu huỷ',
-  RETURNED: 'Đã bàn giao',
-  PLATFORM_OWNED: 'Tài sản nền tảng',
+  ...PRODUCT_STATUS_LABELS,
+  WAREHOUSE: productStatusLabelByKey('WAREHOUSE'),
+  DEGRADED: productStatusLabelByKey('DEGRADED'),
+  TERM_EXPIRED: productStatusLabelByKey('WAREHOUSE_TERM_EXPIRED'),
+  PLATFORM_FINAL: 'Tài sản nền tảng / Đã xử lý',
 };
 
 export default function WarehouseInventoryPage() {
@@ -54,8 +57,28 @@ export default function WarehouseInventoryPage() {
 
   const page = Math.max(0, Number(search.get('page')) || 0);
   const sku = search.get('sku') || '';
-  const status = search.get('status') || '';
+  const [skuInput, setSkuInput] = useState(sku);
+  const { debouncedQuery: debouncedSku, isTooShort: isSkuTooShort, hint: skuHint } = useDebouncedSearch(skuInput);
+  const rawStatus = search.get('status') || '';
+  const status = rawStatus === 'WAITING_END_OF_TERM' ? 'TERM_EXPIRED' : rawStatus;
   const linkedCaseId = search.get('caseId');
+
+  useEffect(() => {
+    setSkuInput(sku);
+  }, [sku]);
+
+  useEffect(() => {
+    if (debouncedSku === sku) return;
+    setSearch(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        debouncedSku ? next.set('sku', debouncedSku) : next.delete('sku');
+        next.set('page', '0');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [debouncedSku, sku, setSearch]);
 
   React.useEffect(() => {
     if (linkedCaseId) setDegradedModalItem({ caseId: linkedCaseId });
@@ -103,7 +126,6 @@ export default function WarehouseInventoryPage() {
       return inventoryService.list({ page, sku, status }, { ...options, enrichDetails: true });
     },
     [page, sku, status],
-    { refreshInterval: 30000 },
   );
 
   const enums = useResource(
@@ -160,27 +182,19 @@ export default function WarehouseInventoryPage() {
       { replace: true },
     );
 
-  // Quick status tabs matching TK-01
+  // 9 tab trạng thái sản phẩm + tab "Tất cả"
   const statusTabs = [
     { label: 'Tất cả', value: '' },
-    { label: 'Đang bán', value: 'ON_SALE' },
-    { label: 'Lưu kho', value: 'WAREHOUSE' },
-    { label: 'Đang giữ', value: 'RESERVED' },
-    { label: 'Đã bán, chờ đóng gói', value: 'SOLD' },
-    { label: 'Đã bàn giao', value: 'RETURNED' },
-    { label: 'Chờ xử lý cuối kỳ', value: 'WAITING_END_OF_TERM' },
-    { label: 'Gửi về người bán', value: 'WITHDRAWN' },
-    { label: 'Vô thừa nhận', value: 'UNCLAIMED' },
-    { label: 'Hàng xuống cấp', value: 'DEGRADED' },
+    ...PRODUCT_TABS.map(({ label, value }) => ({ label, value })),
   ];
 
   return (
     <Page
       title={
         <div className="flex items-baseline gap-3">
-          <span>Tồn kho</span>
+          <span>Quản lý sản phẩm</span>
           <span className="text-xs font-normal text-[#5f5f5f]">
-            · {resource.data?.totalElements || items.length} món lưu tại kho
+            · {resource.data?.totalElements || items.length} sản phẩm tại kho
           </span>
         </div>
       }
@@ -223,10 +237,10 @@ export default function WarehouseInventoryPage() {
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-bold text-[#191C19]">Mã SKU hoặc tên</label>
-              {sku.trim() && (
+              {skuInput.trim() && (
                 <button
                   type="button"
-                  onClick={() => navigate(`/moderator/inventory/${encodeURIComponent(sku.trim())}`)}
+                  onClick={() => navigate(`/moderator/inventory/${encodeURIComponent(skuInput.trim())}`)}
                   className="text-[11px] text-[#006B2C] font-semibold hover:underline"
                 >
                   Mở chi tiết SKU →
@@ -236,16 +250,19 @@ export default function WarehouseInventoryPage() {
             <input
               type="text"
               placeholder="VD: RH-M4T19B, RH-C2M08P..."
-              value={sku}
-              onChange={(e) => change('sku', e.target.value)}
+              value={skuInput}
+              onChange={(e) => setSkuInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && sku.trim()) {
+                if (e.key === 'Enter' && skuInput.trim()) {
                   e.preventDefault();
-                  navigate(`/moderator/inventory/${encodeURIComponent(sku.trim())}`);
+                  navigate(`/moderator/inventory/${encodeURIComponent(skuInput.trim())}`);
                 }
               }}
               className="w-full rounded-xl border border-[#8a8a8a] px-3.5 py-2 text-xs font-mono font-bold focus:border-[#006B2C] focus:outline-none"
             />
+            {isSkuTooShort && (
+              <p className="mt-1 text-[11px] text-[#5f5f5f]">{skuHint}</p>
+            )}
           </div>
 
           <div>
@@ -260,11 +277,14 @@ export default function WarehouseInventoryPage() {
                 new Set([
                   ...SUPPORTED_INVENTORY_STATUSES,
                   'RETURNED',
+                  'DEGRADED',
+                  'TERM_EXPIRED',
+                  'PLATFORM_FINAL',
                   ...(Array.isArray(enums.data?.inventoryStatuses) ? enums.data.inventoryStatuses : []),
                 ])
               ).map((value) => (
                 <option key={value} value={value}>
-                  {INVENTORY_STATUS_LABELS[value] || value}
+                  {INVENTORY_STATUS_LABELS[value] || productStatusLabelByKey(value)}
                 </option>
               ))}
             </select>
@@ -282,12 +302,12 @@ export default function WarehouseInventoryPage() {
               {status === 'DEGRADED' ? (
                 <table className="min-w-[700px] w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-[#FFF8E1] border-b border-[#FFE082] text-[10px] font-bold uppercase tracking-wider text-[#B78103] whitespace-nowrap">
+                    <tr className="bg-[#FFFAEB] border-b border-[#FEDF89] text-[10px] font-bold uppercase tracking-wider text-[#B54708] whitespace-nowrap">
                       <th className="py-3 px-4">Sản phẩm</th>
                       <th className="py-3 px-4 w-28">Ngày báo</th>
                       <th className="py-3 px-4">Lý do xuống cấp</th>
                       <th className="py-3 px-4">Trạng thái đền bù</th>
-                      <th className="py-3 px-4 text-right w-44">Thao tác</th>
+                      <th className="py-3 px-4 text-right w-44">{TABLE_COLUMN_LABELS.ACTIONS}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#e0e0e0]">
@@ -344,10 +364,10 @@ export default function WarehouseInventoryPage() {
                   <thead>
                     <tr className="bg-[#f4f4f4] border-b border-[#8a8a8a] text-[10px] font-bold uppercase tracking-wider text-[#5f5f5f] whitespace-nowrap">
                       <th className="py-2.5 px-4">Sản phẩm</th>
-                      <th className="py-2.5 px-4">Trạng thái</th>
+                      <th className="py-2.5 px-4">{TABLE_COLUMN_LABELS.STATUS}</th>
                       <th className="py-2.5 px-4">Kỳ ký gửi</th>
                       <th className="py-2.5 px-4 text-right">Giá bán</th>
-                      <th className="py-2.5 px-4 text-left w-[320px]">Thao tác</th>
+                      <th className="py-2.5 px-4 text-left w-[320px]">{TABLE_COLUMN_LABELS.ACTIONS}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#e0e0e0]">
@@ -378,13 +398,9 @@ export default function WarehouseInventoryPage() {
                             )}
                           </td>
                           <td className="py-3.5 px-4 whitespace-nowrap">
-                            {item.status === 'WAITING_END_OF_TERM' ? (
-                              <span className="font-bold text-[#2b2b2b]">Chờ xử lý cuối kỳ</span>
-                            ) : item.status === 'UNCLAIMED' ? (
-                              <span className="font-bold text-red-700">Vô thừa nhận</span>
-                            ) : (
-                              <Status>{item.status}</Status>
-                            )}
+                            <Status label={resolveProductStatusLabel(item)}>
+                              {productStatusKey(item)}
+                            </Status>
                             {pendingReturn && (
                               <span className="block text-[10px] text-[#B54708] font-semibold mt-0.5">
                                 Chờ chọn phương án xử lý

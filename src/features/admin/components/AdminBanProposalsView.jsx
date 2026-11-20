@@ -14,11 +14,11 @@ const VIOLATION_ACTION_LABEL = {
   REMOVE_POST: 'Gỡ bài viết vi phạm',
   HIDE_CAMPAIGN: 'Ẩn chiến dịch vi phạm',
   WARN_ORG: 'Cảnh cáo tổ chức',
-  PROPOSE_BAN: 'Đề xuất Admin khóa tài khoản',
+  PROPOSE_BAN: 'Đề xuất khóa tài khoản',
   VIOLATION_RESOLVE_REMOVE_POST: 'Gỡ bài viết vi phạm',
   VIOLATION_RESOLVE_HIDE_CAMPAIGN: 'Ẩn chiến dịch vi phạm',
   VIOLATION_RESOLVE_WARN_ORG: 'Cảnh cáo tổ chức',
-  VIOLATION_RESOLVE_PROPOSE_BAN: 'Đề xuất Admin khóa tài khoản',
+  VIOLATION_RESOLVE_PROPOSE_BAN: 'Đề xuất khóa tài khoản',
 };
 
 /**
@@ -52,14 +52,23 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
   const [banSubmitting, setBanSubmitting] = useState(false);
   const [banPreview, setBanPreview] = useState(null);
   const [banPreviewLoading, setBanPreviewLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   const loadProposals = useCallback(async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const [auditRes, accountsRes] = await Promise.allSettled([
         adminApi.getBanProposals({ page: 0, size: 50 }),
         adminApi.getAccounts({ page: 0, size: 100 }),
       ]);
+
+      if (auditRes.status === 'rejected') {
+        const err = auditRes.reason;
+        setLoadError(
+          err?.response?.data?.message || err?.message || 'Không thể tải danh sách đề xuất khóa tài khoản.'
+        );
+      }
 
       const rawLogs =
         auditRes.status === 'fulfilled'
@@ -284,11 +293,11 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
   return (
     <div className="space-y-5">
       {/* Header & Bộ lọc */}
-      <div className="bg-white p-5 rounded-2xl border border-[#E2E8E0] shadow-xs space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[#E2E8E0] pb-4">
+      <div className="bg-white p-5 rounded-2xl border border-[#DDE5D9] shadow-xs space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[#DDE5D9] pb-4">
 
           {/* Filter Tabs */}
-          <div className="flex flex-wrap items-center gap-1.5 bg-[#F8FAF8] p-1 rounded-xl border border-[#E2E8E0]">
+          <div className="flex flex-wrap items-center gap-1.5 bg-[#F6F9F4] p-1 rounded-xl border border-[#DDE5D9]">
             {[
               { id: 'PENDING', label: 'Chờ xử lý', count: counts.PENDING },
               { id: 'BANNED', label: 'Đã khóa', count: counts.BANNED },
@@ -302,7 +311,7 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   statusFilter === tab.id
                     ? 'bg-[#006B2C] text-white shadow-2xs'
-                    : 'text-[#414942] hover:bg-white'
+                    : 'text-[#5B6776] hover:bg-white'
                 }`}
               >
                 <span>{tab.label}</span>
@@ -312,7 +321,7 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
                       ? 'bg-white/20 text-white'
                       : tab.id === 'PENDING' && tab.count > 0
                       ? 'bg-[#DC2626] text-white'
-                      : 'bg-[#E2E8E0] text-[#414942]'
+                      : 'bg-[#DDE5D9] text-[#5B6776]'
                   }`}
                 >
                   {tab.count}
@@ -325,22 +334,22 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
         {/* Thanh tìm kiếm & Làm mới */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-md">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#717971] text-[18px]">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#5B6776] text-[18px]">
               search
             </span>
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tìm theo tên tổ chức, mã ID, Moderator hoặc lý do đề xuất..."
-              className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-[#F8FAF8] text-[#191C19] focus:outline-none focus:border-[#006B2C] focus:bg-white transition-colors"
+              placeholder="Tìm theo tên tổ chức, mã ID, nhân viên đề xuất hoặc lý do..."
+              className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-[#DDE5D9] bg-[#F6F9F4] text-[#1F2A37] focus:outline-none focus:border-[#006B2C] focus:bg-white transition-colors"
             />
           </div>
 
           <button
             type="button"
             onClick={loadProposals}
-            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#E2E8E0] bg-white hover:bg-[#F0F5EE] text-xs font-bold text-[#414942] transition-colors cursor-pointer"
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#DDE5D9] bg-white hover:bg-[#F6F9F4] text-xs font-bold text-[#5B6776] transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px]">refresh</span>
             <span>Làm mới danh sách</span>
@@ -348,18 +357,34 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
         </div>
       </div>
 
+      {loadError && (
+        <div
+          role="alert"
+          className="px-4 py-3 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-xs font-semibold text-[#B91C1C] flex items-center justify-between gap-3"
+        >
+          <span>{loadError}</span>
+          <button
+            type="button"
+            onClick={loadProposals}
+            className="px-3 py-1.5 rounded-lg border border-[#FECACA] bg-white hover:bg-[#FEF2F2] text-xs font-bold text-[#991B1B]"
+          >
+            Thử lại
+          </button>
+        </div>
+      )}
+
       {/* Bảng Danh sách Đề xuất khóa */}
       <div
-        className={`bg-white border border-[#E2E8E0] rounded-2xl overflow-hidden shadow-xs transition-opacity duration-150 ${
+        className={`bg-white border border-[#DDE5D9] rounded-2xl overflow-hidden shadow-xs transition-opacity duration-150 ${
           loading && proposals.length > 0 ? 'opacity-60 pointer-events-none' : ''
         }`}
       >
-        <div className="overflow-hidden">
-          <table className="w-full table-fixed text-left border-collapse text-xs">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[920px] text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-[#F8FAF8] border-b border-[#E2E8E0] text-[11px] font-bold text-[#717971] tracking-wider">
+              <tr className="bg-[#F6F9F4] border-b border-[#DDE5D9] text-[11px] font-bold text-[#5B6776] tracking-wider">
                 <th className="py-3.5 px-4 whitespace-nowrap w-[18%]">Tổ chức</th>
-                <th className="py-3.5 px-4 whitespace-nowrap w-[15%]">Moderator đề xuất</th>
+                <th className="py-3.5 px-4 whitespace-nowrap w-[15%]">Nhân viên đề xuất</th>
                 <th className="py-3.5 px-4 whitespace-nowrap w-[21%]">Lý do đề xuất</th>
                 <th className="py-3.5 px-4 whitespace-nowrap text-center w-[8%]">Số báo cáo</th>
                 <th className="py-3.5 px-4 whitespace-nowrap w-[12%]">Thời gian</th>
@@ -367,10 +392,10 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
                 <th className="py-3.5 px-6 text-center whitespace-nowrap w-[16%]">Thao tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E2E8E0]">
+            <tbody className="divide-y divide-[#DDE5D9]">
               {loading && proposals.length === 0 && (
                 <tr>
-                  <td colSpan="7" className="py-12 text-center text-[#717971]">
+                  <td colSpan="7" className="py-12 text-center text-[#5B6776]">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Spinner size="lg" />
                       <span>Đang tải danh sách đề xuất khóa từ hệ thống...</span>
@@ -381,12 +406,12 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
 
               {!(loading && proposals.length === 0) && filteredProposals.length === 0 && (
                 <tr>
-                  <td colSpan="7" className="py-12 text-center text-[#717971]">
+                  <td colSpan="7" className="py-12 text-center text-[#5B6776]">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <span className="material-symbols-outlined text-3xl text-[#006B2C]/60">
                         verified_user
                       </span>
-                      <span className="font-semibold text-[#191C19]">
+                      <span className="font-semibold text-[#1F2A37]">
                         Không có đề xuất khóa tài khoản nào trong mục này
                       </span>
                     </div>
@@ -398,20 +423,20 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
                 filteredProposals.map((item) => (
                   <tr
                     key={item.id}
-                    className="hover:bg-[#F8FAF8]/80 transition-colors"
+                    className="hover:bg-[#F6F9F4]/80 transition-colors"
                   >
                     {/* Tổ chức */}
-                    <td className="py-3.5 px-4 font-bold text-[#191C19] whitespace-nowrap overflow-hidden text-ellipsis" title={item.orgName}>
+                    <td className="py-3.5 px-4 font-bold text-[#1F2A37] whitespace-nowrap overflow-hidden text-ellipsis" title={item.orgName}>
                       {item.orgName}
                     </td>
 
                     {/* Moderator đề xuất */}
-                    <td className="py-3.5 px-4 font-semibold text-[#191C19] whitespace-nowrap overflow-hidden text-ellipsis" title={item.moderatorName}>
+                    <td className="py-3.5 px-4 font-semibold text-[#1F2A37] whitespace-nowrap overflow-hidden text-ellipsis" title={item.moderatorName}>
                       {item.moderatorName}
                     </td>
 
                     {/* Lý do */}
-                    <td className="py-3.5 px-4 text-[#414942] whitespace-nowrap overflow-hidden text-ellipsis" title={item.proposeReason}>
+                    <td className="py-3.5 px-4 text-[#5B6776] whitespace-nowrap overflow-hidden text-ellipsis" title={item.proposeReason}>
                       {item.proposeReason}
                     </td>
 
@@ -423,7 +448,7 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
                     </td>
 
                     {/* Thời gian */}
-                    <td className="py-3.5 px-4 text-[#717971] whitespace-nowrap">
+                    <td className="py-3.5 px-4 text-[#5B6776] whitespace-nowrap">
                       {item.createdAt ? formatDateTime(item.createdAt) : '—'}
                     </td>
 
@@ -465,41 +490,41 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
           onClick={() => setSelectedProposal(null)}
         >
           <div
-            className="w-full max-w-xl bg-white h-full shadow-2xl border-l border-[#E2E8E0] flex flex-col justify-between overflow-y-auto"
+            className="w-full max-w-xl bg-white h-full shadow-2xl border-l border-[#DDE5D9] flex flex-col justify-between overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6 space-y-6">
               {/* Drawer Header */}
-              <div className="flex items-start justify-between border-b border-[#E2E8E0] pb-4">
+              <div className="flex items-start justify-between border-b border-[#DDE5D9] pb-4">
                 <div>
                   <span className="text-[11px] font-bold tracking-wider text-[#DC2626]">
                     Hồ sơ đề xuất khóa tài khoản
                   </span>
-                  <h3 className="text-lg font-extrabold text-[#191C19] font-heading mt-0.5">
+                  <h3 className="text-lg font-extrabold text-[#1F2A37] font-heading mt-0.5">
                     {selectedProposal.orgName}
                   </h3>
-                  <p className="text-xs text-[#717971] font-mono">
+                  <p className="text-xs text-[#5B6776] font-mono">
                     ID: {selectedProposal.targetId}
                   </p>
                   <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
-                    <div className="px-3 py-2 rounded-xl border border-[#E2E8E0] bg-[#F8FAF8]">
-                      <div className="text-[10px] tracking-wide text-[#717971] font-semibold">Loại đối tượng</div>
-                      <div className="font-semibold text-[#191C19]">{TARGET_TYPE_LABEL[selectedProposal.targetType] || selectedProposal.targetType}</div>
+                    <div className="px-3 py-2 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]">
+                      <div className="text-[10px] tracking-wide text-[#5B6776] font-semibold">Loại đối tượng</div>
+                      <div className="font-semibold text-[#1F2A37]">{TARGET_TYPE_LABEL[selectedProposal.targetType] || selectedProposal.targetType}</div>
                     </div>
-                    <div className="px-3 py-2 rounded-xl border border-[#E2E8E0] bg-[#F8FAF8]">
-                      <div className="text-[10px] tracking-wide text-[#717971] font-semibold">Email</div>
-                      <div className="font-mono text-[#191C19] break-all">{selectedProposal.orgEmail}</div>
+                    <div className="px-3 py-2 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]">
+                      <div className="text-[10px] tracking-wide text-[#5B6776] font-semibold">Email</div>
+                      <div className="font-mono text-[#1F2A37] break-all">{selectedProposal.orgEmail}</div>
                     </div>
-                    <div className="px-3 py-2 rounded-xl border border-[#E2E8E0] bg-[#F8FAF8]">
-                      <div className="text-[10px] tracking-wide text-[#717971] font-semibold">Số điện thoại</div>
-                      <div className="font-mono text-[#191C19]">{selectedProposal.orgPhone}</div>
+                    <div className="px-3 py-2 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]">
+                      <div className="text-[10px] tracking-wide text-[#5B6776] font-semibold">Số điện thoại</div>
+                      <div className="font-mono text-[#1F2A37]">{selectedProposal.orgPhone}</div>
                     </div>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setSelectedProposal(null)}
-                  className="w-8 h-8 rounded-xl border border-[#E2E8E0] flex items-center justify-center text-[#717971] hover:text-[#191C19] hover:bg-[#F8FAF8] cursor-pointer"
+                  className="w-8 h-8 rounded-xl border border-[#DDE5D9] flex items-center justify-center text-[#5B6776] hover:text-[#1F2A37] hover:bg-[#F6F9F4] cursor-pointer"
                 >
                   ✕
                 </button>
@@ -510,30 +535,30 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-[#DC2626] flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-[16px]">report</span>
-                    <span>Kiến nghị từ Moderator: {selectedProposal.moderatorName}{selectedProposal.moderatorEmail !== "—" ? ` (${selectedProposal.moderatorEmail})` : ""}</span>
+                    <span>Kiến nghị từ nhân viên: {selectedProposal.moderatorName}{selectedProposal.moderatorEmail !== "—" ? ` (${selectedProposal.moderatorEmail})` : ""}</span>
                   </span>
-                  <span className="text-[#717971]">
+                  <span className="text-[#5B6776]">
                     {selectedProposal.createdAt ? formatDateTime(selectedProposal.createdAt) : '—'}
                   </span>
                 </div>
-                <div className="p-3 rounded-xl bg-white border border-[#FECACA] text-[#191C19]">
-                  <span className="text-[#717971] block text-[11px] mb-0.5">Lý do đề xuất khóa:</span>
+                <div className="p-3 rounded-xl bg-white border border-[#FECACA] text-[#1F2A37]">
+                  <span className="text-[#5B6776] block text-[11px] mb-0.5">Lý do đề xuất khóa:</span>
                   <strong className="text-xs">"{selectedProposal.proposeReason}"</strong>
                 </div>
-                <div className="flex items-center justify-between text-[11px] text-[#717971]">
-                  <span>Số báo cáo từ Member trong đợt này: <strong>{selectedProposal.closedReportCount} báo cáo</strong></span>
+                <div className="flex items-center justify-between text-[11px] text-[#5B6776]">
+                  <span>Số báo cáo từ thành viên trong đợt này: <strong>{selectedProposal.closedReportCount} báo cáo</strong></span>
                 </div>
               </div>
 
               {/* Thông tin Snapshot Tổ chức (nếu có) */}
               {reportSnapshot && (
-                <div className="p-4 rounded-2xl bg-[#F8FAF8] border border-[#E2E8E0] space-y-2 text-xs">
-                  <div className="font-bold text-[#191C19]">Thông tin Hồ sơ Tổ chức / Nội dung</div>
+                <div className="p-4 rounded-2xl bg-[#F6F9F4] border border-[#DDE5D9] space-y-2 text-xs">
+                  <div className="font-bold text-[#1F2A37]">Thông tin Hồ sơ Tổ chức / Nội dung</div>
                   {reportSnapshot.organizationLegalName && (
                     <div>Tên pháp lý: <strong>{reportSnapshot.organizationLegalName}</strong></div>
                   )}
                   {reportSnapshot.organizationDescription && (
-                    <div className="text-[#717971]">{reportSnapshot.organizationDescription}</div>
+                    <div className="text-[#5B6776]">{reportSnapshot.organizationDescription}</div>
                   )}
                 </div>
               )}
@@ -541,40 +566,40 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
               {/* Khối Lịch sử vi phạm của Tổ chức */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold tracking-wider text-[#191C19]">
+                  <h4 className="text-xs font-bold tracking-wider text-[#1F2A37]">
                     Lịch sử bị xử lý vi phạm ({violationHistory.length})
                   </h4>
-                  <span className="text-[11px] text-[#717971]">
+                  <span className="text-[11px] text-[#5B6776]">
                     Trích xuất từ Nhật ký kiểm duyệt
                   </span>
                 </div>
 
                 {historyLoading ? (
-                  <div className="p-6 text-center flex flex-col items-center justify-center gap-2 text-xs text-[#717971] bg-[#F8FAF8] rounded-xl border border-[#E2E8E0]">
+                  <div className="p-6 text-center flex flex-col items-center justify-center gap-2 text-xs text-[#5B6776] bg-[#F6F9F4] rounded-xl border border-[#DDE5D9]">
                     <Spinner size="md" />
                     <span>Đang tải lịch sử vi phạm...</span>
                   </div>
                 ) : violationHistory.length === 0 ? (
-                  <div className="p-4 text-xs text-[#717971] bg-[#F8FAF8] rounded-xl border border-[#E2E8E0]">
+                  <div className="p-4 text-xs text-[#5B6776] bg-[#F6F9F4] rounded-xl border border-[#DDE5D9]">
                     Chỉ ghi nhận lần đề xuất khóa hiện tại ({selectedProposal.proposeReason}).
                   </div>
                 ) : (
-                  <div className="divide-y divide-[#E2E8E0] border border-[#E2E8E0] rounded-2xl overflow-hidden text-xs">
+                  <div className="divide-y divide-[#DDE5D9] border border-[#DDE5D9] rounded-2xl overflow-hidden text-xs">
                     {violationHistory.map((h, i) => (
                       <div key={h.id || i} className="p-3.5 bg-white space-y-1">
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-[#191C19]">
+                          <span className="font-bold text-[#1F2A37]">
                             {VIOLATION_ACTION_LABEL[h.action] || h.action}
                           </span>
-                          <span className="text-[11px] text-[#717971]">
+                          <span className="text-[11px] text-[#5B6776]">
                             {h.date ? formatDateTime(h.date) : '—'}
                           </span>
                         </div>
-                        <p className="text-[#414942]">
+                        <p className="text-[#5B6776]">
                           Lý do: <span>"{h.reason}"</span>
                         </p>
                         {h.actorName && (
-                          <div className="text-[11px] text-[#717971]">
+                          <div className="text-[11px] text-[#5B6776]">
                             Người xử lý: {h.actorName}
                           </div>
                         )}
@@ -586,11 +611,11 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
             </div>
 
             {/* Drawer Footer Actions */}
-            <div className="p-5 border-t border-[#E2E8E0] bg-[#F8FAF8] flex items-center justify-end gap-3">
+            <div className="p-5 border-t border-[#DDE5D9] bg-[#F6F9F4] flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setSelectedProposal(null)}
-                className="px-4 py-2.5 rounded-xl border border-[#E2E8E0] bg-white text-xs font-bold text-[#414942] hover:bg-[#F0F5EE] cursor-pointer"
+                className="px-4 py-2.5 rounded-xl border border-[#DDE5D9] bg-white text-xs font-bold text-[#5B6776] hover:bg-[#F6F9F4] cursor-pointer"
               >
                 Đóng
               </button>
@@ -600,7 +625,7 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
                   <button
                     type="button"
                     onClick={() => handleDismissProposal(selectedProposal)}
-                    className="px-4 py-2.5 rounded-xl border border-[#E2E8E0] bg-white text-xs font-bold text-[#717971] hover:bg-[#E2E8E0]/50 cursor-pointer"
+                    className="px-4 py-2.5 rounded-xl border border-[#DDE5D9] bg-white text-xs font-bold text-[#5B6776] hover:bg-[#DDE5D9]/50 cursor-pointer"
                   >
                     Bỏ qua đề xuất
                   </button>
@@ -625,7 +650,7 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
           onClick={() => setBanModalTarget(null)}
         >
           <div
-            className="bg-white rounded-2xl border border-[#E2E8E0] max-w-md w-full p-6 shadow-2xl space-y-4"
+            className="bg-white rounded-2xl border border-[#DDE5D9] max-w-md w-full p-6 shadow-2xl space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-3">
@@ -633,11 +658,11 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
                 <span className="material-symbols-outlined">lock</span>
               </div>
               <div>
-                <h3 className="text-base font-extrabold text-[#191C19] font-heading">
+                <h3 className="text-base font-extrabold text-[#1F2A37] font-heading">
                   Xác nhận khóa tài khoản tổ chức?
                 </h3>
-                <p className="text-xs text-[#717971]">
-                  Tổ chức: <strong className="text-[#191C19]">{banModalTarget.orgName}</strong>
+                <p className="text-xs text-[#5B6776]">
+                  Tổ chức: <strong className="text-[#1F2A37]">{banModalTarget.orgName}</strong>
                 </p>
               </div>
             </div>
@@ -661,7 +686,7 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#191C19] mb-1.5">
+              <label className="block text-xs font-bold text-[#1F2A37] mb-1.5">
                 Lý do khóa tài khoản <span className="text-[#DC2626]">*</span>
               </label>
               <textarea
@@ -669,7 +694,7 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
                 value={banReason}
                 onChange={(e) => setBanReason(e.target.value)}
                 placeholder="Nhập lý do khóa tài khoản..."
-                className="w-full p-3 text-xs rounded-xl border border-[#E2E8E0] text-[#191C19] focus:outline-none focus:border-[#DC2626] resize-none"
+                className="w-full p-3 text-xs rounded-xl border border-[#DDE5D9] text-[#1F2A37] focus:outline-none focus:border-[#DC2626] resize-none"
               />
             </div>
 
@@ -678,7 +703,7 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
                 type="button"
                 disabled={banSubmitting}
                 onClick={() => setBanModalTarget(null)}
-                className="px-4 py-2 rounded-xl border border-[#E2E8E0] bg-white text-xs font-bold text-[#414942] hover:bg-[#F8FAF8] cursor-pointer"
+                className="px-4 py-2 rounded-xl border border-[#DDE5D9] bg-white text-xs font-bold text-[#5B6776] hover:bg-[#F6F9F4] cursor-pointer"
               >
                 Hủy
               </button>

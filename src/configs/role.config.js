@@ -22,11 +22,11 @@ export const ROLES = {
 };
 
 export const ROLE_LABELS = {
-  [ROLES.ADMIN]: "Quản trị viên (Admin)",
-  [ROLES.MODERATOR]: "Nhân viên Điểm kí gửi / Kiểm duyệt (Moderator)",
-  staff: "Nhân viên Điểm kí gửi / Kiểm duyệt (Moderator)",
-  [ROLES.ORGANIZER]: "Tổ chức từ thiện (Mobile)",
-  [ROLES.MEMBER]: "Thành viên (Mobile)",
+  [ROLES.ADMIN]: "Quản trị viên",
+  [ROLES.MODERATOR]: "Nhân viên điểm kí gửi",
+  staff: "Nhân viên điểm kí gửi",
+  [ROLES.ORGANIZER]: "Tổ chức từ thiện",
+  [ROLES.MEMBER]: "Thành viên",
 };
 
 export const ROLE_HOME_ROUTES = {

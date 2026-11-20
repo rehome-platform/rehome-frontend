@@ -9,10 +9,10 @@ import { pickTrendGranularity } from '../utils/adminDateUtils.js';
 
 const ROLE_OPTIONS = [
   { value: 'ALL', label: 'Tất cả vai trò' },
-  { value: 'MEMBER', label: 'Member' },
+  { value: 'MEMBER', label: 'Thành viên' },
   { value: 'ORGANIZATION', label: 'Tổ chức' },
-  { value: 'MODERATOR', label: 'Moderator' },
-  { value: 'ADMIN', label: 'Admin' },
+  { value: 'MODERATOR', label: 'Nhân viên điểm kí gửi' },
+  { value: 'ADMIN', label: 'Quản trị viên' },
 ];
 
 /**
@@ -97,7 +97,7 @@ export default function AdminAccountGrowthChart({ footerNote }) {
 
   const points = growthData.points || [];
   const maxCount = Math.max(1, ...points.map((p) => Number(p.count || 0)));
-  const yTicks = [maxCount, Math.round(maxCount * 0.66), Math.round(maxCount * 0.33), 0];
+  const yTicks = [...new Set([maxCount, Math.round(maxCount * 0.66), Math.round(maxCount * 0.33), 0])];
 
   const chartLeft = 48;
   const chartRight = 568;
@@ -133,12 +133,12 @@ export default function AdminAccountGrowthChart({ footerNote }) {
   return (
     <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <h3 className="text-base font-bold text-[#191C19] font-heading">
+        <h3 className="text-base font-bold text-[#1F2A37] font-heading">
           Tài khoản mới theo chu kỳ
         </h3>
         {!loading && !error && !dateError && (
           <div className="flex items-center gap-2">
-            <span className="text-sm font-black text-[#191C19] font-heading">
+            <span className="text-sm font-black text-[#1F2A37] font-heading">
               {growthData.total} tài khoản mới
             </span>
             <ComparisonBadge
@@ -154,13 +154,13 @@ export default function AdminAccountGrowthChart({ footerNote }) {
       {/* Bộ lọc riêng của biểu đồ: thời gian + vai trò */}
       <div className="rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] p-3 flex flex-wrap items-end gap-3">
         <AdminPeriodFilter filter={filter} name="tăng trưởng" allowAll={false} />
-        <label className="flex flex-col gap-1 text-xs text-[#414942]">
+        <label className="flex flex-col gap-1 text-xs text-[#5B6776]">
           <span>Vai trò</span>
           <select
             aria-label="Lọc vai trò tăng trưởng"
             value={role}
             onChange={(e) => setRole(e.target.value)}
-            className="rounded-xl border border-[#E2E8E0] bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30"
+            className="rounded-xl border border-[#DDE5D9] bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30"
           >
             {ROLE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -193,12 +193,12 @@ export default function AdminAccountGrowthChart({ footerNote }) {
           </button>
         </div>
       ) : loading ? (
-        <div className="h-56 flex flex-col items-center justify-center gap-3 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-[#717971]">
+        <div className="h-56 flex flex-col items-center justify-center gap-3 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-[#5B6776]">
           <Spinner size="lg" />
           <span>Đang tải dữ liệu tăng trưởng tài khoản...</span>
         </div>
       ) : points.length === 0 ? (
-        <div className="h-56 flex items-center justify-center rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-[#717971]">
+        <div className="h-56 flex items-center justify-center rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-[#5B6776]">
           Chưa có dữ liệu tăng trưởng trong khoảng thời gian đã chọn.
         </div>
       ) : (
@@ -233,7 +233,7 @@ export default function AdminAccountGrowthChart({ footerNote }) {
                       x={chartLeft - 8}
                       y={yVal + 3}
                       fontSize="10"
-                      fill="#8E998D"
+                      fill="#5B6776"
                       textAnchor="end"
                     >
                       {tick}
@@ -285,7 +285,7 @@ export default function AdminAccountGrowthChart({ footerNote }) {
                     x={item.x}
                     y={186}
                     fontSize="10"
-                    fill="#717971"
+                    fill="#5B6776"
                     textAnchor="middle"
                   >
                     {item.pt.label}
@@ -295,16 +295,22 @@ export default function AdminAccountGrowthChart({ footerNote }) {
             </svg>
           </div>
 
-          {activePoint && (
-            <div className="px-3 py-1.5 rounded-lg bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-[#191C19] text-center font-medium">
-              {activePoint.label} ({activePoint.periodStart} → {activePoint.periodEnd}): {activePoint.count} đăng ký
-            </div>
-          )}
+          <div className="min-h-[2.25rem] flex items-center justify-center">
+            {activePoint ? (
+              <div className="w-full px-3 py-1.5 rounded-lg bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-[#1F2A37] text-center font-medium">
+                {activePoint.label} ({activePoint.periodStart} → {activePoint.periodEnd}): {Number(activePoint.count || 0).toLocaleString('vi-VN')} đăng ký
+              </div>
+            ) : (
+              <p className="text-[11px] text-[#5B6776]">
+                Di chuột hoặc chọn mốc trên biểu đồ để xem chi tiết số lượng đăng ký.
+              </p>
+            )}
+          </div>
         </div>
       )}
 
       {footerNote && (
-        <p className="text-[11px] text-[#717971] text-center">{footerNote}</p>
+        <p className="text-[11px] text-[#5B6776] text-center">{footerNote}</p>
       )}
     </div>
   );

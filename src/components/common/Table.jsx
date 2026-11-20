@@ -21,7 +21,7 @@ export default function Table({
       }`}
     >
       <table className="w-full text-left text-sm text-on-surface">
-        <thead className="bg-surface-container text-xs font-semibold text-outline">
+        <thead className="bg-surface-container text-xs font-semibold text-textSecondary">
           <tr>
             {columns.map((col, idx) => (
               <th key={idx} className={`px-4 py-3 whitespace-nowrap ${col.className || ''}`}>
@@ -33,7 +33,7 @@ export default function Table({
         <tbody className="divide-y divide-outline-variant">
           {isInitialLoading ? (
             <tr>
-              <td colSpan={columns.length} className="px-4 py-10 text-center text-outline">
+              <td colSpan={columns.length} className="px-4 py-10 text-center text-textSecondary">
                 <div className="flex flex-col items-center justify-center gap-2">
                   <Spinner size="lg" />
                   <span>Đang tải dữ liệu...</span>
@@ -42,7 +42,7 @@ export default function Table({
             </tr>
           ) : data.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="px-4 py-8 text-center text-outline">
+              <td colSpan={columns.length} className="px-4 py-8 text-center text-textSecondary">
                 {emptyMessage}
               </td>
             </tr>

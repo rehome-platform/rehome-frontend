@@ -37,6 +37,9 @@ export function useReturnProcessing() {
   // In-flight mutation lock (F13)
   const resolvingRef = useRef(false);
   const [releasingReturn, setReleasingReturn] = useState(false);
+  const [approvingReturn, setApprovingReturn] = useState(false);
+  const [rejectingReturn, setRejectingReturn] = useState(false);
+  const [savingInspection, setSavingInspection] = useState(false);
 
   // TH-02 Reject Modal
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
@@ -289,6 +292,7 @@ export function useReturnProcessing() {
   const handleApproveAndCreateWaybill = async () => {
     if (!selectedItem || resolvingRef.current) return;
     resolvingRef.current = true;
+    setApprovingReturn(true);
     try {
       const approved = await returnService.approveReturnAndCreateWaybill(selectedItem.id);
       await fetchReturns();
@@ -311,6 +315,7 @@ export function useReturnProcessing() {
       notify('error', 'Có lỗi xảy ra khi duyệt yêu cầu: ' + (err.message || ''));
     } finally {
       resolvingRef.current = false;
+      setApprovingReturn(false);
     }
   };
 
@@ -321,6 +326,7 @@ export function useReturnProcessing() {
       return;
     }
     resolvingRef.current = true;
+    setRejectingReturn(true);
     try {
       await returnService.rejectReturn(selectedItem.id, rejectReason);
       await fetchReturns();
@@ -333,12 +339,14 @@ export function useReturnProcessing() {
       notify('error', 'Có lỗi xảy ra khi từ chối yêu cầu: ' + (err.message || ''));
     } finally {
       resolvingRef.current = false;
+      setRejectingReturn(false);
     }
   };
 
   const handleSaveInspection = async () => {
     if (!selectedItem || !inspectionVerdict || resolvingRef.current || !requireEvidence()) return;
     resolvingRef.current = true;
+    setSavingInspection(true);
     try {
       if (inspectionVerdict === 'INVALID') {
         if (!invalidReason.trim()) {
@@ -399,6 +407,7 @@ export function useReturnProcessing() {
       notify('error', 'Có lỗi xảy ra khi lưu kết luận: ' + (err.message || ''));
     } finally {
       resolvingRef.current = false;
+      setSavingInspection(false);
     }
   };
 
@@ -479,7 +488,7 @@ export function useReturnProcessing() {
   };
 
   const handleConfirmCounterfeitVerdict = async (verdictPayload) => {
-    if (!selectedItem || resolvingRef.current) return;
+    if (!selectedItem || resolvingRef.current) return false;
     resolvingRef.current = true;
     try {
       await returnService.counterfeitConclusion(selectedItem.id, verdictPayload);
@@ -488,8 +497,10 @@ export function useReturnProcessing() {
       setViewMode('QUEUE');
       setSelectedItem(null);
       notify('success', 'Đã lưu kết luận thẩm định hàng nghi giả thành công!');
+      return true;
     } catch (err) {
       notify('error', 'Có lỗi khi lưu kết luận hội chẩn: ' + (err.message || ''));
+      return false;
     } finally {
       resolvingRef.current = false;
     }
@@ -701,6 +712,7 @@ export function useReturnProcessing() {
         handleApproveAndCreateWaybill,
         setIsRejectModalOpen,
         handleOpenOutcomeModal,
+        approvingReturn,
       },
       ReturnInspectionProduct: {
         ...evidenceProps,
@@ -721,6 +733,7 @@ export function useReturnProcessing() {
         handleOpenDegradedCase,
         handleReleaseReturn,
         releasingReturn,
+        savingInspection,
       },
       ReturnRejectDialog: {
         isRejectModalOpen,
@@ -728,6 +741,7 @@ export function useReturnProcessing() {
         rejectReason,
         setRejectReason,
         handleConfirmRejectRequest,
+        rejectingReturn,
       },
       ReturnMarkLostDialog: {
         markLostTarget,

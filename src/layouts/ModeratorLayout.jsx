@@ -5,6 +5,8 @@ import { useGSAP } from '@gsap/react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { NotificationBell } from '../components/notification/index.js';
 import Logo from '../components/common/Logo.jsx';
+import UserAccountDropdown from '../components/common/UserAccountDropdown.jsx';
+import { getRoleLabel } from '../constants/roleLabels.js';
 
 if (typeof gsap?.registerPlugin === 'function' && typeof useGSAP === 'function') {
   gsap.registerPlugin(useGSAP);
@@ -155,7 +157,7 @@ export default function ModeratorLayout({ children, apiColors = true }) {
           subItem: true,
           active: onPath('/moderator/consignments/print-queue', '/moderator/print-queue'),
         },
-        { to: '/moderator/inventory', label: 'Tồn kho', icon: 'inventory_2', active: onPath('/moderator/inventory', '/moderator/end-of-term') },
+        { to: '/moderator/inventory', label: 'Quản lý sản phẩm', icon: 'inventory_2', active: onPath('/moderator/inventory', '/moderator/end-of-term') },
       ],
     },
     {
@@ -189,14 +191,15 @@ export default function ModeratorLayout({ children, apiColors = true }) {
       {/* Sidebar Desktop & Mobile Drawer */}
       {isMobileMenuOpen && (
         <button
+          type="button"
           aria-label="Đóng menu"
-          className="fixed inset-0 z-20 bg-black/40 backdrop-blur-[1px] lg:hidden"
+          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-[1px] lg:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
       <aside
         ref={sidebarRef}
-        className={`${isMobileMenuOpen ? 'flex' : 'hidden'} lg:flex w-72 ${isSidebarCollapsed ? 'lg:w-20' : 'lg:w-72'} bg-surface border-r border-neutral flex-col fixed inset-y-0 z-30 shadow-sm`}
+        className={`${isMobileMenuOpen ? 'flex' : 'hidden'} lg:flex w-72 ${isSidebarCollapsed ? 'lg:w-20' : 'lg:w-72'} bg-surface border-r border-neutral flex-col fixed inset-y-0 z-40 shadow-sm`}
       >
         {/* Nút thu gọn / mở rộng sidebar (Desktop) */}
         <button
@@ -348,19 +351,14 @@ export default function ModeratorLayout({ children, apiColors = true }) {
               />
             </form>
             <NotificationBell userRole={user?.role} />
-            <Link to="/profile" className="flex items-center space-x-2.5 hover:opacity-85 transition-opacity">
-              <div className="w-[30px] h-[30px] rounded-full bg-[#006B2C]/10 text-[#006B2C] font-bold flex items-center justify-center text-xs border border-[#006B2C]/20 shrink-0 overflow-hidden">
-                {user?.avatarUrl || user?.avatar ? (
-                  <img src={user.avatarUrl || user.avatar} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <span>{(user?.fullName || user?.name || user?.email || 'M')[0].toUpperCase()}</span>
-                )}
-              </div>
-              <div className="hidden sm:block leading-tight">
-                <p className="text-[11px] font-semibold text-text">{user?.fullName || user?.name || 'Nhân viên Điểm kí gửi'}</p>
-                <p className="text-[10px] text-textSecondary">{user?.memberCode || user?.email || 'Moderator ReHome'}</p>
-              </div>
-            </Link>
+            <UserAccountDropdown
+              user={user}
+              logout={logout}
+              loggingOut={loggingOut}
+              roleLabel={getRoleLabel(user?.role || 'MODERATOR')}
+              subtitle={user?.memberCode || user?.email || 'Nhân viên điểm kí gửi'}
+              dropdownId="moderator-account-dropdown"
+            />
           </div>
         </header>
 

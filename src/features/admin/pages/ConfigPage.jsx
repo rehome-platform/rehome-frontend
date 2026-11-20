@@ -253,7 +253,14 @@ export default function ConfigPage() {
     setErrorMessage('');
 
     try {
-      const configKeyMap = SYSTEM_CONFIG_FIELDS.filter(item => specs[item.key]).map(({ key, group, field, percent }) => {
+      const dirtySet = new Set(dirtyFields);
+      const targetItems = SYSTEM_CONFIG_FIELDS.filter(
+        item => specs[item.key] && dirtySet.has(`${item.group}.${item.field}`)
+      );
+      if (targetItems.length === 0) {
+        return;
+      }
+      const configKeyMap = targetItems.map(({ key, group, field, percent }) => {
         const raw = configs[group][field];
         const value = percent ? Number((Number(raw) / 100).toPrecision(15)) : Number(raw);
         const spec = specs[key];
@@ -329,7 +336,7 @@ export default function ConfigPage() {
         }`}
       >
         <div className="flex items-start justify-between gap-3">
-          <label htmlFor={inputId} className="text-xs font-semibold text-[#191C19] leading-snug">
+          <label htmlFor={inputId} className="text-xs font-semibold text-[#1F2A37] leading-snug">
             {label}
           </label>
           <div className="flex items-center gap-1 shrink-0">
@@ -378,13 +385,13 @@ export default function ConfigPage() {
           }}
           className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-bold font-mono outline-none transition-all ${
             editing
-              ? 'border-[#006B2C] bg-white text-[#191C19] focus:ring-2 focus:ring-[#006B2C]/15'
-              : 'border-transparent bg-[#F0F4EE] text-[#191C19] cursor-default'
+              ? 'border-[#006B2C] bg-white text-[#1F2A37] focus:ring-2 focus:ring-[#006B2C]/15'
+              : 'border-transparent bg-[#F0F4EE] text-[#1F2A37] cursor-default'
           } disabled:bg-[#F5F5F5] disabled:text-[#9E9E9E]`}
         />
 
         {(unavailableText || dirty) && (
-          <div className="flex items-center justify-between gap-2 text-[11px] text-[#717971] min-h-[16px]">
+          <div className="flex items-center justify-between gap-2 text-[11px] text-[#5B6776] min-h-[16px]">
             <span>
               {unavailableText && <span className="text-[#B45309]">{unavailableText}</span>}
             </span>
@@ -396,7 +403,7 @@ export default function ConfigPage() {
           </div>
         )}
         {hint && !unavailableText && (
-          <p className="text-[11px] text-[#717971] -mt-1">{hint}</p>
+          <p className="text-[11px] text-[#5B6776] -mt-1">{hint}</p>
         )}
       </div>
     );
@@ -406,7 +413,7 @@ export default function ConfigPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <p className="text-xs text-[#717971] mt-0.5">
+          <p className="text-xs text-[#5B6776] mt-0.5">
             Bấm "Sửa" trên tham số cần thay đổi, chỉnh xong bấm "Lưu thay đổi tham số" để áp dụng.
           </p>
         </div>
@@ -414,9 +421,9 @@ export default function ConfigPage() {
           type="submit"
           form="config-form"
           loading={saving}
-          disabled={loading || !loaded}
+          disabled={loading || !loaded || !hasChanges}
           className={`shrink-0 shadow-sm rounded-xl text-white ${
-            hasChanges ? 'bg-[#006B2C] hover:bg-[#005523]' : 'bg-[#006B2C]/70 hover:bg-[#006B2C]'
+            hasChanges ? 'bg-[#006B2C] hover:bg-[#005523]' : 'bg-[#006B2C]/70'
           }`}
         >
           <span className="material-symbols-outlined text-sm mr-1.5">save</span>
@@ -430,7 +437,7 @@ export default function ConfigPage() {
       </div>
 
       {loading && (
-        <p role="status" className="flex items-center gap-2 text-sm text-[#717971]">
+        <p role="status" className="flex items-center gap-2 text-sm text-[#5B6776]">
           <Spinner size="sm" />
           <span>Đang tải cấu hình từ máy chủ...</span>
         </p>
@@ -493,7 +500,7 @@ export default function ConfigPage() {
               className={`flex items-center space-x-2 px-4 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition-colors ${
                 isActive
                   ? 'border-[#006B2C] text-[#006B2C] bg-[#006B2C]/5'
-                  : 'border-transparent text-[#717971] hover:text-[#191C19] hover:bg-[#F6F9F4]'
+                  : 'border-transparent text-[#5B6776] hover:text-[#1F2A37] hover:bg-[#F6F9F4]'
               }`}
             >
               <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
@@ -513,10 +520,10 @@ export default function ConfigPage() {
         <div className="space-y-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 className="text-base font-bold text-[#191C19]">{currentTab.title}</h3>
-              <p className="text-xs text-[#717971] mt-0.5">{currentTab.description}</p>
+              <h3 className="text-base font-bold text-[#1F2A37]">{currentTab.title}</h3>
+              <p className="text-xs text-[#5B6776] mt-0.5">{currentTab.description}</p>
             </div>
-            <span className="text-[11px] text-[#717971] whitespace-nowrap shrink-0 pt-1">
+            <span className="text-[11px] text-[#5B6776] whitespace-nowrap shrink-0 pt-1">
               {currentTab.fields.length} tham số
             </span>
           </div>

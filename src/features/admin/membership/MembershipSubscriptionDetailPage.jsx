@@ -55,7 +55,7 @@ export default function MembershipSubscriptionDetailPage() {
 
   if (loading && !detail) {
     return (
-      <div className="p-6 bg-white rounded-xl border border-[#E2E8E0] text-sm text-[#5B6776] flex flex-col items-center justify-center gap-3">
+      <div className="p-6 bg-white rounded-xl border border-[#DDE5D9] text-sm text-[#5B6776] flex flex-col items-center justify-center gap-3">
         <Spinner size="lg" />
         <span>Đang tải chi tiết gói thành viên...</span>
       </div>
@@ -99,7 +99,7 @@ export default function MembershipSubscriptionDetailPage() {
   return (
     <div className="space-y-5">
       {/* Top Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-5 rounded-xl border border-[#E2E8E0]">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-5 rounded-xl border border-[#DDE5D9]">
         <div className="flex items-center gap-3">
           <Button variant="secondary" size="sm" onClick={() => navigate('/admin/membership-subscriptions')} className="gap-1">
             <span className="material-symbols-outlined text-sm">arrow_back</span>
@@ -125,9 +125,9 @@ export default function MembershipSubscriptionDetailPage() {
       </div>
 
       {/* Thông tin gói */}
-      <section className="bg-white p-5 rounded-xl border border-[#E2E8E0] space-y-4">
+      <section className="bg-white p-5 rounded-xl border border-[#DDE5D9] space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-bold text-[#191C19]">Thông tin gói</h3>
+          <h3 className="text-base font-bold text-[#1F2A37]">Thông tin gói</h3>
           <Badge variant={STATUS_VARIANTS[detail.status] || 'default'}>
             {SUBSCRIPTION_STATUS_LABELS[detail.status] || detail.status}
           </Badge>
@@ -136,7 +136,7 @@ export default function MembershipSubscriptionDetailPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
           <div>
             <p className="text-xs text-[#5B6776]">Thành viên</p>
-            <p className="font-semibold text-[#191C19] mt-0.5">{detail.memberName || '-'}</p>
+            <p className="font-semibold text-[#1F2A37] mt-0.5">{detail.memberName || '-'}</p>
             <p className="text-xs text-[#5B6776]">{detail.memberEmail || '-'}</p>
           </div>
           <div>
@@ -153,7 +153,7 @@ export default function MembershipSubscriptionDetailPage() {
           </div>
           <div>
             <p className="text-xs text-[#5B6776]">Giá đã trả</p>
-            <p className="font-semibold text-[#191C19] mt-0.5">{formatCurrencyVND(detail.pricePaid)}</p>
+            <p className="font-semibold text-[#1F2A37] mt-0.5">{formatCurrencyVND(detail.pricePaid)}</p>
           </div>
           <div>
             <p className="text-xs text-[#5B6776]">Bắt đầu</p>
@@ -189,21 +189,21 @@ export default function MembershipSubscriptionDetailPage() {
 
       {/* Hạn mức đã dùng trên mobile & Lịch sử thanh toán */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-white p-5 rounded-xl border border-[#E2E8E0] space-y-3">
-          <h3 className="text-base font-bold text-[#191C19]">Hạn mức đã dùng trên mobile</h3>
+        <div className="bg-white p-5 rounded-xl border border-[#DDE5D9] space-y-3">
+          <h3 className="text-base font-bold text-[#1F2A37]">Hạn mức đã dùng trên mobile</h3>
           {quotaUsage ? (
-            <dl className="divide-y divide-[#E2E8E0] text-sm">
+            <dl className="divide-y divide-[#DDE5D9] text-sm">
               <div className="py-2.5 flex items-center justify-between gap-4">
                 <dt className="text-[#5B6776]">Thử đồ ảo hôm nay</dt>
-                <dd className="font-semibold text-[#191C19]">{quotaUsage.liveTryonUsedToday ?? 0}</dd>
+                <dd className="font-semibold text-[#1F2A37]">{quotaUsage.liveTryonUsedToday ?? 0}</dd>
               </div>
               <div className="py-2.5 flex items-center justify-between gap-4">
                 <dt className="text-[#5B6776]">Phối đồ hôm nay</dt>
-                <dd className="font-semibold text-[#191C19]">{quotaUsage.aiTryonUsedToday ?? 0}</dd>
+                <dd className="font-semibold text-[#1F2A37]">{quotaUsage.aiTryonUsedToday ?? 0}</dd>
               </div>
               <div className="py-2.5 flex items-center justify-between gap-4">
                 <dt className="text-[#5B6776]">Tin nổi bật</dt>
-                <dd className="font-semibold text-[#191C19]">
+                <dd className="font-semibold text-[#1F2A37]">
                   {typeof quotaUsage.featuredListing === 'boolean'
                     ? quotaUsage.featuredListing
                       ? 'Đang bật'
@@ -213,11 +213,11 @@ export default function MembershipSubscriptionDetailPage() {
               </div>
               <div className="py-2.5 flex items-center justify-between gap-4">
                 <dt className="text-[#5B6776]">Số sản phẩm nổi bật</dt>
-                <dd className="font-semibold text-[#191C19]">{quotaUsage.featuredProductCount ?? 0}</dd>
+                <dd className="font-semibold text-[#1F2A37]">{quotaUsage.featuredProductCount ?? 0}</dd>
               </div>
               <div className="py-2.5 flex items-center justify-between gap-4">
                 <dt className="text-[#5B6776]">Phiếu ký gửi chờ duyệt</dt>
-                <dd className="font-semibold text-[#191C19]">{quotaUsage.pendingConsignmentForms ?? 0}</dd>
+                <dd className="font-semibold text-[#1F2A37]">{quotaUsage.pendingConsignmentForms ?? 0}</dd>
               </div>
             </dl>
           ) : (
@@ -227,15 +227,15 @@ export default function MembershipSubscriptionDetailPage() {
           )}
         </div>
 
-        <div className="bg-white p-5 rounded-xl border border-[#E2E8E0] space-y-3">
-          <h3 className="text-base font-bold text-[#191C19]">Lịch sử thanh toán</h3>
+        <div className="bg-white p-5 rounded-xl border border-[#DDE5D9] space-y-3">
+          <h3 className="text-base font-bold text-[#1F2A37]">Lịch sử thanh toán</h3>
           {payments.length === 0 ? (
             <p className="text-sm text-[#5B6776]">Chưa có giao dịch thanh toán.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm border-collapse">
                 <thead>
-                  <tr className="border-b border-[#E2E8E0] text-xs text-[#5B6776]">
+                  <tr className="border-b border-[#DDE5D9] text-xs text-[#5B6776]">
                     <th className="py-2 pr-3 whitespace-nowrap">Mã GD</th>
                     <th className="py-2 pr-3 whitespace-nowrap">Phương thức</th>
                     <th className="py-2 pr-3 text-right whitespace-nowrap">Số tiền</th>
@@ -243,7 +243,7 @@ export default function MembershipSubscriptionDetailPage() {
                     <th className="py-2 whitespace-nowrap">Thời gian</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#E2E8E0]">
+                <tbody className="divide-y divide-[#DDE5D9]">
                   {payments.map((p, idx) => (
                     <tr key={p.id || idx}>
                       <td className="py-2 pr-3 font-mono text-xs">{p.transactionNo || p.paymentNo || '-'}</td>
@@ -261,22 +261,22 @@ export default function MembershipSubscriptionDetailPage() {
       </section>
 
       {/* Voucher đã nhận */}
-      <section className="bg-white p-5 rounded-xl border border-[#E2E8E0] space-y-3">
-        <h3 className="text-base font-bold text-[#191C19]">Voucher đã nhận</h3>
+      <section className="bg-white p-5 rounded-xl border border-[#DDE5D9] space-y-3">
+        <h3 className="text-base font-bold text-[#1F2A37]">Voucher đã nhận</h3>
         {vouchers.length === 0 ? (
           <p className="text-sm text-[#5B6776]">Chưa có voucher được cấp.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
-                <tr className="border-b border-[#E2E8E0] text-xs text-[#5B6776]">
+                <tr className="border-b border-[#DDE5D9] text-xs text-[#5B6776]">
                   <th className="py-2 pr-3 whitespace-nowrap">Mã voucher</th>
                   <th className="py-2 pr-3 whitespace-nowrap">Tên voucher</th>
                   <th className="py-2 pr-3 whitespace-nowrap">Trạng thái</th>
                   <th className="py-2 whitespace-nowrap">Đơn hàng đã dùng</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E2E8E0]">
+              <tbody className="divide-y divide-[#DDE5D9]">
                 {vouchers.map((v, idx) => {
                   const orderNos = Array.isArray(v.usedOrderNos)
                     ? v.usedOrderNos.join(', ')

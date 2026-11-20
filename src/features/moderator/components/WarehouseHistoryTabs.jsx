@@ -6,47 +6,13 @@ import { warehouseHistoryService } from '../services/warehouseHistoryApi.js';
 import { warehouseDateTime } from '../models/warehouseTime.js';
 import { listItems } from '../models/warehouseModel.js';
 import { Pager, ResourceState } from './WarehouseUi.jsx';
+import { HISTORY_TABLE_COLUMNS } from '../../../constants/tableColumns.js';
+import {
+  formatHistoryAction,
+  formatHistoryResult,
+  formatHistoryTarget,
+} from '../../../utils/formatHistoryValue.js';
 
-const actions = {
-  // PACKING
-  CLAIM_TASK: 'Nhận việc',
-  RELEASE_TASK: 'Nhả việc',
-  SCAN_SKU: 'Đối chiếu SKU',
-  CREATE_SHIPMENT: 'Tạo vận đơn GHN',
-
-  // INSPECTION
-  APPROVE_FORM: 'Duyệt phiếu ký gửi',
-  REJECT_FORM: 'Từ chối phiếu ký gửi',
-  START_INSPECTION: 'Bắt đầu kiểm định',
-  COMPLETE_INSPECTION: 'Hoàn tất kiểm định',
-  RETURN_ONSITE: 'Trả hàng tại chỗ',
-  CONFIRM_RECEIPT: 'Xác nhận biên nhận',
-  STOCK_IN: 'Nhập kho',
-  STOCK_PRODUCT: 'Nhập kho sản phẩm',
-
-  // INVENTORY
-  CONFIRM_RECONSIGN: 'Xác nhận ký gửi lại',
-  OPEN_DEGRADED_CASE: 'Mở hồ sơ hàng xuống cấp',
-  RESOLVE_DEGRADED_CASE: 'Xử lý hàng xuống cấp',
-  DECIDE_DEGRADED_CASE: 'Xử lý hàng xuống cấp',
-  END_OF_TERM_DECISION: 'Quyết định cuối kỳ',
-  DECIDE_END_OF_TERM: 'Quyết định cuối kỳ',
-  PROPOSE_RECONSIGN_TERMS: 'Đề xuất điều khoản ký gửi lại',
-  RECONSIGN_TERMS: 'Đề xuất điều khoản ký gửi lại',
-  HANDOVER_END_OF_TERM: 'Bàn giao hàng cuối kỳ',
-  HANDOVER_DEGRADED_ITEM: 'Bàn giao hàng xuống cấp',
-  HANDOVER_ITEM: 'Bàn giao nhận lại',
-  CONFIRM_UNCLAIMED_TRANSFER: 'Chuyển giao hàng vô thừa nhận',
-  UPDATE_PRICE: 'Cập nhật giá',
-  UPDATE_PRODUCT: 'Cập nhật sản phẩm',
-};
-const results = {
-  SUCCESS: 'Thành công', PASS: 'Đạt', APPROVED: 'Đã duyệt', REJECTED: 'Đã từ chối',
-  INSPECTING: 'Đang kiểm định', ON_SALE: 'Đang bán', DONATED: 'Đã chuyển giao',
-  PICKED_UP: 'Đã nhận lại', PENDING_DECISION: 'Chờ quyết định', TAKE_BACK: 'Nhận lại',
-  RE_CONSIGN: 'Ký gửi lại', WAITING_CONFIRMATION: 'Chờ xác nhận',
-  FULL_COMPENSATION: 'Đền bù toàn bộ', PARTIAL_WITH_ITEM_BACK: 'Đền bù và nhận lại hàng',
-};
 function detailLink(row) {
   let targetType = row.targetType;
   let targetId = row.targetId;
@@ -90,14 +56,14 @@ export function WarehouseHistoryTabs({ type, children }) {
         {!resource.loading && !resource.error && <div className="overflow-x-auto rounded-xl border border-neutral bg-surface">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="bg-background"><tr>
-              {['Thời gian', 'Đối tượng', 'Thao tác', 'Người thực hiện', 'Kết quả'].map(label => <th key={label} className="p-3">{label}</th>)}
+              {HISTORY_TABLE_COLUMNS.map(label => <th key={label} className="p-3">{label}</th>)}
             </tr></thead>
             <tbody className="divide-y divide-neutral">{rows.length ? rows.map((row, idx) => {
               const href = detailLink(row);
-              const targetDisplay = row.targetLabel || row.target || row.targetId || '—';
-              const actionDisplay = actions[row.action || row.actionType] || row.action || row.actionType || 'Thao tác kho';
+              const targetDisplay = formatHistoryTarget(row);
+              const actionDisplay = formatHistoryAction(row);
               const actorDisplay = row.actorName || row.actor || 'Chưa có thông tin';
-              const resultDisplay = results[row.result] || row.result || 'Thành công';
+              const resultDisplay = formatHistoryResult(row);
               const timeDisplay = warehouseDateTime(row.createdAt || row.timestamp);
               const rowKey = row.id || `${row.timestamp || row.createdAt || ''}-${row.target || row.targetId || ''}-${row.action || row.actionType || ''}-${idx}`;
 

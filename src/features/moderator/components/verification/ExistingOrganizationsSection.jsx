@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Modal, Button } from '../../../../components/common/index.js';
+import { Modal, Button, Tooltip, TableActionButton } from '../../../../components/common/index.js';
 import Spinner from '../../../../components/common/Spinner.jsx';
 import { orgVerificationService } from '../../services/orgVerificationApi.js';
+import { TABLE_COLUMN_LABELS } from '../../../../constants/tableColumns.js';
 
 export function ExistingOrganizationsSection({
   loading,
@@ -77,13 +78,16 @@ export function ExistingOrganizationsSection({
             className="w-full bg-transparent text-xs text-text placeholder-textSecondary focus:outline-none"
           />
           {searchTerm && (
-            <button
-              type="button"
-              onClick={() => setSearchTerm('')}
-              className="text-textSecondary hover:text-text text-xs"
-            >
-              ✕
-            </button>
+            <Tooltip content="Xóa từ khóa tìm kiếm">
+              <button
+                type="button"
+                aria-label="Xóa từ khóa tìm kiếm"
+                onClick={() => setSearchTerm('')}
+                className="text-textSecondary hover:text-text text-xs p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              >
+                ✕
+              </button>
+            </Tooltip>
           )}
         </div>
 
@@ -127,8 +131,8 @@ export function ExistingOrganizationsSection({
                 <th className="py-3 px-3">Phạm vi</th>
                 <th className="py-3 px-3">Điểm nhận quyên góp</th>
                 <th className="py-3 px-3">Ngày xác minh</th>
-                <th className="py-3 px-3">Trạng thái</th>
-                <th className="py-3 px-3 text-right">Hành động</th>
+                <th className="py-3 px-3">{TABLE_COLUMN_LABELS.STATUS}</th>
+                <th className="py-3 px-3 text-right">{TABLE_COLUMN_LABELS.ACTIONS}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral">
@@ -278,14 +282,11 @@ export function ExistingOrganizationsSection({
 
                       {/* Cột 7: Nút Xem chi tiết */}
                       <td className="py-3 px-3 text-right">
-                        <button
-                          type="button"
+                        <TableActionButton
+                          action="view"
+                          label="Xem hồ sơ"
                           onClick={() => handleOpenOrgDetail(org)}
-                          className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-surface hover:bg-background border border-neutral text-text transition-colors shadow-sm inline-flex items-center gap-1"
-                        >
-                          <span className="material-symbols-outlined text-sm text-primary">visibility</span>
-                          <span>Xem hồ sơ</span>
-                        </button>
+                        />
                       </td>
                     </tr>
                   );

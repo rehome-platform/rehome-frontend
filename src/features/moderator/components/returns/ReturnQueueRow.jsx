@@ -1,5 +1,6 @@
 import React from "react";
 import { needsItemAction } from "../../services/returnApi.js";
+import TableActionButton from "../../../../components/common/TableActionButton.jsx";
 
 export function ReturnQueueRow({
   r,
@@ -53,20 +54,17 @@ export function ReturnQueueRow({
               className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 whitespace-nowrap"
               title={r.ghnReturnTrackingCode || 'Mã thu hồi nội bộ'}
             >
-              GHN fallback
+              Giao hàng dự phòng
             </span>
           )}
         </div>
       </td>
       <td className="py-3 px-3.5 text-right whitespace-nowrap">
         <div className="flex items-center justify-end gap-2">
-          <button
-            type="button"
+          <TableActionButton
+            action="view"
             onClick={() => (handleOpenQuickDetail ? handleOpenQuickDetail(r) : handleOpenReview(r))}
-            className={`${actionBtnBase} border border-neutral bg-white text-text hover:bg-background`}
-          >
-            Chi tiết
-          </button>
+          />
           {r.status === 'PENDING_APPROVAL' && (
             <button
               type="button"

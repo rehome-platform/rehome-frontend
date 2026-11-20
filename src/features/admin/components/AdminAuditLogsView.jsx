@@ -3,26 +3,14 @@ import adminApi from '../services/adminApi.js';
 import AdminPeriodFilter from './AdminPeriodFilter.jsx';
 import useAdminPeriod from '../hooks/useAdminPeriod.js';
 import { Spinner } from '../../../components/common/index.js';
-
-// Nhãn gọn cho Đối tượng tác động hiển thị trên bảng (chi tiết đầy đủ nằm ở hàng xổ xuống)
-const TARGET_TYPE_LABEL = {
-  SYSTEM: 'Hệ thống',
-  ACCOUNT: 'Tài khoản',
-  ORGANIZATION_ACCOUNT: 'Hồ sơ tổ chức',
-  POST: 'Bài viết',
-  CAMPAIGN: 'Chiến dịch',
-  WAREHOUSE: 'Địa điểm ký gửi',
-  ORGANIZATION: 'Tổ chức',
-  PRODUCT: 'Sản phẩm',
-  ORDER: 'Đơn hàng',
-  SYSTEM_CONFIG: 'Cấu hình hệ thống',
-  MEMBERSHIP_PLAN: 'Gói thành viên',
-  MEMBER_SUBSCRIPTION: 'Đăng ký thành viên',
-  VOUCHER_TEMPLATE: 'Voucher',
-  RECEIPT_CLAUSE_TEMPLATE: 'Điều khoản biên nhận',
-  VIOLATION_WORD: 'Từ ngữ vi phạm',
-  CONTENT_REVIEW: 'Nội dung bị gắn cờ',
-};
+import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
+import {
+  AUDIT_TARGET_TYPE_LABELS,
+  formatAuditActionLabel,
+  formatAuditTargetTypeLabel,
+  formatAuditStatusLabel,
+} from '../../../constants/auditLogLabels.js';
+import { getRoleLabel, getRoleBadgeStyle } from '../../../constants/roleLabels.js';
 
 // Mốc lọc nhanh theo phút gần nhất (độ chính xác phút, nằm ngoài phạm vi ngày của AdminPeriodFilter)
 const QUICK_MINUTES_OPTIONS = [
@@ -47,6 +35,11 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
 
   // Bộ lọc
   const [actorSearch, setActorSearch] = useState(''); // Filter Người thực hiện (tên/email, khớp ở backend)
+  const {
+    debouncedQuery: debouncedActorSearch,
+    isTooShort: isActorSearchTooShort,
+    hint: actorSearchHint,
+  } = useDebouncedSearch(actorSearch);
   const [selectedActorRole, setSelectedActorRole] = useState('ALL'); // Filter vai trò người thực hiện
   const [selectedTargetType, setSelectedTargetType] = useState('ALL'); // Filter Đối tượng tác động
   const [selectedActionType, setSelectedActionType] = useState('ALL');
@@ -77,98 +70,8 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
     loadFilterOptions();
   }, []);
 
-  // Format nhãn hành động sang tiếng Việt thân thiện
-  const formatActionLabel = (actionType) => {
-    switch (actionType) {
-      case 'BAN_ACCOUNT':
-      case 'Khóa tài khoản':
-        return 'Khóa tài khoản';
-      case 'UNBAN_ACCOUNT':
-      case 'Mở khóa tài khoản':
-        return 'Mở khóa tài khoản';
-      case 'HIDE_WAREHOUSE':
-      case 'Ẩn kho':
-        return 'Ẩn địa điểm ký gửi';
-      case 'UNHIDE_WAREHOUSE':
-        return 'Mở hoạt động lại địa điểm ký gửi';
-      case 'CREATE_WAREHOUSE':
-      case 'Tạo kho':
-        return 'Tạo địa điểm ký gửi';
-      case 'UPDATE_WAREHOUSE':
-        return 'Cập nhật điểm ký gửi';
-      case 'CREATE_MODERATOR':
-      case 'Tạo Moderator':
-        return 'Tạo Moderator';
-      case 'UPDATE_MODERATOR':
-        return 'Cập nhật Moderator';
-      case 'CHANGE_WAREHOUSE':
-      case 'ASSIGN_WAREHOUSE':
-      case 'CHANGE_MODERATOR_WAREHOUSE':
-        return 'Phân công địa điểm ký gửi';
-      case 'CREATE_RECEIPT_CLAUSE_TEMPLATE':
-        return 'Thêm điều khoản biên nhận';
-      case 'UPDATE_RECEIPT_CLAUSE_TEMPLATE':
-        return 'Cập nhật điều khoản biên nhận';
-      case 'DELETE_RECEIPT_CLAUSE_TEMPLATE':
-        return 'Xóa điều khoản biên nhận';
-      case 'TOGGLE_RECEIPT_CLAUSE_TEMPLATE':
-        return 'Bật/tắt điều khoản biên nhận';
-      case 'CREATE_VIOLATION_WORD':
-        return 'Thêm từ ngữ vi phạm';
-      case 'UPDATE_VIOLATION_WORD':
-        return 'Cập nhật từ ngữ vi phạm';
-      case 'DELETE_VIOLATION_WORD':
-        return 'Xóa từ ngữ vi phạm';
-      case 'TOGGLE_VIOLATION_WORD':
-        return 'Bật/tắt từ ngữ vi phạm';
-      case 'UPDATE_CONFIG':
-      case 'Cập nhật cấu hình':
-        return 'Cập nhật cấu hình';
-      case 'RESOLVE_VIOLATION':
-        return 'Xử lý vi phạm';
-      case 'VIOLATION_RESOLVE_REMOVE_POST':
-        return 'Gỡ bài viết vi phạm';
-      case 'VIOLATION_RESOLVE_HIDE_CAMPAIGN':
-        return 'Ẩn chiến dịch vi phạm';
-      case 'VIOLATION_RESOLVE_WARN_ORG':
-        return 'Cảnh cáo tổ chức';
-      case 'VIOLATION_RESOLVE_PROPOSE_BAN':
-        return 'Đề xuất khóa tổ chức (Moderator)';
-      case 'VIOLATION_DISMISS':
-        return 'Bác bỏ báo cáo vi phạm';
-      case 'UPDATE_MEMBERSHIP_PLAN':
-        return 'Cập nhật gói thành viên';
-      case 'GRANT_MEMBERSHIP':
-        return 'Tặng gói thành viên';
-      case 'CANCEL_MEMBERSHIP':
-        return 'Hủy gói thành viên';
-      case 'UPDATE_VOUCHER_TEMPLATE':
-        return 'Cập nhật mẫu voucher';
-      case 'DEACTIVATE_VOUCHER_TEMPLATE':
-        return 'Ngưng kích hoạt mẫu voucher';
-      case 'CONTENT_REVIEW_APPROVED':
-        return 'Duyệt nội dung cộng đồng';
-      case 'CONTENT_REVIEW_REJECTED':
-        return 'Từ chối nội dung cộng đồng';
-      case 'CONTENT_AUTO_FLAG':
-        return 'Tự động gắn cờ nội dung vi phạm';
-      case 'CONTENT_NOTIFY_ADMIN':
-        return 'Thông báo Admin về nội dung nghi vi phạm';
-      case 'DONATE_CONSIGNED_ITEM':
-        return 'Quyên góp hàng ký gửi';
-      // Giá trị cũ còn lưu trong DB từ trước khi đổi tên hành động, không còn được code hiện tại sinh ra
-      // nhưng vẫn phải dịch để không lộ tiếng Anh với log cũ
-      case 'CREATE_ORDER':
-        return 'Tạo đơn hàng';
-      case 'REMOVE_POST':
-        return 'Gỡ bài viết vi phạm';
-      default:
-        if (typeof actionType === 'string' && actionType.startsWith('CONTENT_REVIEW_')) {
-          return 'Duyệt nội dung cộng đồng';
-        }
-        return actionType || 'Thao tác hệ thống';
-    }
-  };
+  // Format nhãn hành động sang tiếng Việt thân thiện (dùng chung từ điển auditLogLabels)
+  const formatActionLabel = formatAuditActionLabel;
 
   // Tách chuỗi thời gian đã định dạng sẵn (log phiên hiện tại) thành phần ngày / giờ để hiển thị 2 dòng gọn
   const splitTimeLabel = (formatted) => {
@@ -185,8 +88,13 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
       const from = new Date(now.getTime() - quickMinutes * 60000);
       return { from: from.toISOString(), to: now.toISOString() };
     }
-    const from = activeRange.apiFrom ? `${activeRange.apiFrom}T${fromTime || '00:00'}:00Z` : undefined;
-    const to = activeRange.apiTo ? `${activeRange.apiTo}T${toTime || '23:59'}:59Z` : undefined;
+    const toIsoLocal = (dateStr, timeStr, seconds) => {
+      if (!dateStr) return undefined;
+      const d = new Date(`${dateStr}T${timeStr}:${seconds}`);
+      return Number.isNaN(d.getTime()) ? `${dateStr}T${timeStr}:${seconds}Z` : d.toISOString();
+    };
+    const from = toIsoLocal(activeRange.apiFrom, fromTime || '00:00', '00');
+    const to = toIsoLocal(activeRange.apiTo, toTime || '23:59', '59');
     return { from, to };
   };
 
@@ -199,7 +107,7 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
         page: 0,
         size: 50,
       };
-      if (actorSearch.trim()) params.search = actorSearch.trim();
+      if (debouncedActorSearch) params.search = debouncedActorSearch;
       if (selectedActorRole !== 'ALL') params.actorRole = selectedActorRole;
       if (selectedTargetType !== 'ALL') params.targetType = selectedTargetType;
       if (selectedActionType !== 'ALL') params.actionType = selectedActionType;
@@ -217,16 +125,20 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
 
         if (l.detail) {
           if (typeof l.detail === 'object') {
-            beforeState = l.detail.beforeStatus || l.detail.beforeState || l.detail.oldValue || '—';
-            afterState = l.detail.afterStatus || l.detail.afterState || l.detail.newValue || '—';
+            beforeState = formatAuditStatusLabel(
+              l.detail.beforeStatus || l.detail.beforeState || l.detail.oldValue || '—'
+            );
+            afterState = formatAuditStatusLabel(
+              l.detail.afterStatus || l.detail.afterState || l.detail.newValue || '—'
+            );
             if (typeof l.actionType === 'string' && l.actionType.startsWith('VIOLATION_')) {
               const count = l.detail.closedReportCount ?? 1;
-              if (beforeState === '—') beforeState = 'PENDING';
+              if (beforeState === '—') beforeState = formatAuditStatusLabel('PENDING');
               if (afterState === '—') {
                 afterState =
                   l.actionType === 'VIOLATION_DISMISS'
-                    ? `DISMISSED (${count} báo cáo)`
-                    : `RESOLVED (${count} báo cáo)`;
+                    ? `${formatAuditStatusLabel('DISMISSED')} (${count} báo cáo)`
+                    : `${formatAuditStatusLabel('RESOLVED')} (${count} báo cáo)`;
               }
             }
             reason = l.detail.reason || l.detail.note || l.detail.message || JSON.stringify(l.detail);
@@ -242,12 +154,14 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
           time: createdAt ? createdAt.toLocaleString('vi-VN') : '—',
           dateStr: createdAt ? createdAt.toLocaleDateString('vi-VN') : '—',
           timeStr: createdAt ? createdAt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '',
-          user: l.actorName || l.actorEmail || (l.actorRole ? `Tài khoản ${l.actorRole}` : 'Quản trị viên'),
+          user: l.actorName || l.actorEmail || (l.actorRole ? getRoleLabel(l.actorRole) : 'Quản trị viên'),
           role: l.actorRole || 'ADMIN',
           actionType: formatActionLabel(l.actionType),
           rawActionType: l.actionType,
           targetType: l.targetType || 'SYSTEM',
-          target: l.targetId ? `${l.targetType || 'Đối tượng'}: ${l.targetId}` : (l.targetType || 'Hệ thống'),
+          target: l.targetId
+            ? `${formatAuditTargetTypeLabel(l.targetType)}: ${l.targetId}`
+            : formatAuditTargetTypeLabel(l.targetType || 'SYSTEM'),
           beforeState,
           afterState,
           reason,
@@ -306,11 +220,9 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
   };
 
   useEffect(() => {
-    // Gõ "Người thực hiện" mới cần chờ gõ xong rồi mới gọi API; các bộ lọc khác (select/ngày) áp dụng ngay
-    const timer = setTimeout(fetchAuditLogs, actorSearch ? 400 : 0);
-    return () => clearTimeout(timer);
+    fetchAuditLogs();
   }, [
-    actorSearch,
+    debouncedActorSearch,
     selectedActorRole,
     selectedTargetType,
     selectedActionType,
@@ -408,8 +320,8 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 text-[#414942] font-semibold">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#717971] shrink-0"></span>
+      <span className="inline-flex items-center gap-1 text-[#5B6776] font-semibold">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#5B6776] shrink-0"></span>
         <span className="truncate">{actionType}</span>
       </span>
     );
@@ -427,35 +339,35 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
       )}
 
       {/* Filter Bar: Khoảng thời gian & Lọc theo Đối tượng */}
-      <div className="bg-white p-5 rounded-2xl border border-[#E2E8E0] shadow-xs space-y-3.5">
+      <div className="bg-white p-5 rounded-2xl border border-[#DDE5D9] shadow-xs space-y-3.5">
         {/* Hàng 1: Khoảng thời gian (dùng chung) + Từ giờ/Đến giờ + lọc nhanh N phút gần nhất, cùng một hàng */}
-        <AdminPeriodFilter filter={dateFilter} name="audit log" label="Khoảng thời gian">
-          <label className={`flex items-center gap-2 text-xs text-[#414942] ${!hasDateRange || quickMinutes ? 'opacity-40' : ''}`}>
+        <AdminPeriodFilter filter={dateFilter} name="nhật ký hệ thống" label="Khoảng thời gian">
+          <label className={`flex items-center gap-2 text-xs text-[#5B6776] ${!hasDateRange || quickMinutes ? 'opacity-40' : ''}`}>
             <span className="shrink-0">Từ giờ</span>
             <input
               type="time"
-              aria-label="Từ giờ audit log"
+              aria-label="Từ giờ nhật ký hệ thống"
               value={fromTime}
               onChange={(e) => {
                 setFromTime(e.target.value);
                 setQuickMinutes(null);
               }}
               disabled={!hasDateRange || Boolean(quickMinutes)}
-              className="rounded-xl border border-[#E2E8E0] bg-white px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30 disabled:opacity-50"
+              className="rounded-xl border border-[#DDE5D9] bg-white px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30 disabled:opacity-50"
             />
           </label>
-          <label className={`flex items-center gap-2 text-xs text-[#414942] ${!hasDateRange || quickMinutes ? 'opacity-40' : ''}`}>
+          <label className={`flex items-center gap-2 text-xs text-[#5B6776] ${!hasDateRange || quickMinutes ? 'opacity-40' : ''}`}>
             <span className="shrink-0">Đến giờ</span>
             <input
               type="time"
-              aria-label="Đến giờ audit log"
+              aria-label="Đến giờ nhật ký hệ thống"
               value={toTime}
               onChange={(e) => {
                 setToTime(e.target.value);
                 setQuickMinutes(null);
               }}
               disabled={!hasDateRange || Boolean(quickMinutes)}
-              className="rounded-xl border border-[#E2E8E0] bg-white px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30 disabled:opacity-50"
+              className="rounded-xl border border-[#DDE5D9] bg-white px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30 disabled:opacity-50"
             />
           </label>
 
@@ -468,7 +380,7 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
                 className={`px-2.5 py-2 rounded-xl text-[11px] font-semibold border transition-colors ${
                   quickMinutes === opt.value
                     ? 'bg-[#006B2C] text-white border-[#006B2C]'
-                    : 'bg-white text-[#414942] border-[#E2E8E0] hover:border-[#006B2C]/50'
+                    : 'bg-white text-[#5B6776] border-[#DDE5D9] hover:border-[#006B2C]/50'
                 }`}
               >
                 {opt.label}
@@ -481,36 +393,42 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-[#F0F4EE]">
           <div className="flex flex-wrap items-center gap-2.5">
             {/* Filter "Người thực hiện": tìm theo tên hoặc email, backend tự khớp cả tên tổ chức */}
-            <input
-              type="text"
-              value={actorSearch}
-              onChange={(e) => setActorSearch(e.target.value)}
-              placeholder="Người thực hiện (tên hoặc email)"
-              aria-label="Lọc theo người thực hiện"
-              className="px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors w-56"
-            />
+            <div className="flex flex-col">
+              <input
+                type="text"
+                value={actorSearch}
+                onChange={(e) => setActorSearch(e.target.value)}
+                placeholder="Người thực hiện (tên hoặc email)"
+                aria-label="Lọc theo người thực hiện"
+                className="px-3 py-2 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#5B6776] font-medium outline-none hover:border-[#006B2C]/50 transition-colors w-56"
+              />
+              {isActorSearchTooShort && (
+                <p className="mt-1 text-[11px] text-[#5f5f5f]">{actorSearchHint}</p>
+              )}
+            </div>
 
             {/* Filter vai trò của người thực hiện */}
             <select
               value={selectedActorRole}
               onChange={(e) => setSelectedActorRole(e.target.value)}
               aria-label="Lọc theo vai trò người thực hiện"
-              className="px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
+              className="px-3 py-2 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#1F2A37] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
             >
               <option value="ALL">Vai trò: Tất cả</option>
-              <option value="MEMBER">Member</option>
-              <option value="MODERATOR">Moderator</option>
-              <option value="ADMIN">Admin</option>
+              <option value="MEMBER">Thành viên</option>
+              <option value="ORGANIZATION">Tổ chức</option>
+              <option value="MODERATOR">Nhân viên điểm kí gửi</option>
+              <option value="ADMIN">Quản trị viên</option>
             </select>
 
             {/* Filter "Đối tượng tác động" */}
             <select
               value={selectedTargetType}
               onChange={(e) => setSelectedTargetType(e.target.value)}
-              className="px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
+              className="px-3 py-2 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#1F2A37] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
             >
               <option value="ALL">Đối tượng tác động: Tất cả</option>
-              {Object.entries(TARGET_TYPE_LABEL).map(([value, label]) => (
+              {Object.entries(AUDIT_TARGET_TYPE_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
@@ -521,7 +439,7 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
             <select
               value={selectedActionType}
               onChange={(e) => setSelectedActionType(e.target.value)}
-              className="px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
+              className="px-3 py-2 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#5B6776] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
             >
               <option value="ALL">Loại hành động: Tất cả</option>
               {availableActionTypes.map((act) => (
@@ -555,7 +473,7 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
               quickMinutes) && (
               <button
                 onClick={handleResetFilter}
-                className="px-3 py-1.5 text-xs font-semibold text-[#717971] hover:text-[#191C19] hover:bg-[#F0F4EE] rounded-xl transition-colors flex items-center gap-1"
+                className="px-3 py-1.5 text-xs font-semibold text-[#5B6776] hover:text-[#1F2A37] hover:bg-[#F0F4EE] rounded-xl transition-colors flex items-center gap-1"
               >
                 <span className="material-symbols-outlined text-base">restart_alt</span>
                 <span>Xóa bộ lọc</span>
@@ -567,19 +485,19 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
 
       {/* Main Table or Empty State */}
       {loading && logs.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-[#E2E8E0] p-12 text-center flex flex-col items-center justify-center shadow-xs gap-3">
+        <div className="bg-white rounded-2xl border border-[#DDE5D9] p-12 text-center flex flex-col items-center justify-center shadow-xs gap-3">
           <Spinner size="lg" />
-          <p className="text-xs text-[#717971]">Đang tải dữ liệu Audit Log từ hệ thống...</p>
+          <p className="text-xs text-[#5B6776]">Đang tải dữ liệu nhật ký hệ thống...</p>
         </div>
       ) : filteredLogs.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-[#E2E8E0] p-12 text-center flex flex-col items-center justify-center shadow-xs">
-          <div className="w-16 h-16 rounded-2xl bg-[#F0F5EE] text-[#006B2C] flex items-center justify-center mb-4">
+        <div className="bg-white rounded-2xl border border-[#DDE5D9] p-12 text-center flex flex-col items-center justify-center shadow-xs">
+          <div className="w-16 h-16 rounded-2xl bg-[#F6F9F4] text-[#006B2C] flex items-center justify-center mb-4">
             <span className="material-symbols-outlined text-3xl">receipt_long</span>
           </div>
-          <h3 className="text-base font-bold text-[#191C19] font-heading">
+          <h3 className="text-base font-bold text-[#1F2A37] font-heading">
             Không tìm thấy bản ghi nhật ký phù hợp
           </h3>
-          <p className="text-xs text-[#717971] max-w-sm mt-1 mb-5">
+          <p className="text-xs text-[#5B6776] max-w-sm mt-1 mb-5">
             Thử điều chỉnh lại khoảng thời gian hoặc đối tượng tác động để tìm kiếm lại.
           </p>
           <button
@@ -593,13 +511,13 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
       ) : (
         /* Audit Table - gọn, mỗi ô một dòng, chi tiết đầy đủ nằm trong hàng mở rộng */
         <div
-          className={`bg-white rounded-2xl border border-[#E2E8E0] shadow-xs overflow-hidden transition-opacity duration-150 ${
+          className={`bg-white rounded-2xl border border-[#DDE5D9] shadow-xs overflow-hidden transition-opacity duration-150 ${
             loading ? 'opacity-60 pointer-events-none' : ''
           }`}
         >
-          <div className="overflow-hidden">
-            <table className="w-full table-fixed text-left text-xs">
-              <thead className="bg-[#F8FAF8] text-[#717971] tracking-wider font-semibold border-b border-[#E2E8E0]">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[920px] text-left text-xs">
+              <thead className="bg-[#F6F9F4] text-[#5B6776] tracking-wider font-semibold border-b border-[#DDE5D9]">
                 <tr>
                   <th className="w-[4%] py-2.5 pl-4 pr-1"></th>
                   <th className="w-[12%] py-2.5 px-3 whitespace-nowrap">Thời gian</th>
@@ -608,52 +526,60 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
                   <th className="w-[48%] py-2.5 px-3 whitespace-nowrap">Hành động</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E2E8E0]">
+              <tbody className="divide-y divide-[#DDE5D9]">
                 {paginatedLogs.map((log) => {
                   const isExpanded = expandedLogId === log.id;
                   return (
                     <React.Fragment key={log.id}>
                       <tr
                         onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
-                        className={`hover:bg-[#F8FAF8] cursor-pointer transition-colors ${
-                          isExpanded ? 'bg-[#F8FAF8]' : ''
+                        className={`hover:bg-[#F6F9F4] cursor-pointer transition-colors ${
+                          isExpanded ? 'bg-[#F6F9F4]' : ''
                         }`}
                       >
-                        {/* Expand toggle chevron */}
-                        <td className="py-2.5 pl-4 pr-1 text-[#717971] align-middle">
-                          <span
-                            className={`material-symbols-outlined text-base transition-transform duration-200 inline-block ${
-                              isExpanded ? 'rotate-90 text-[#006B2C]' : ''
-                            }`}
+                        {/* Expand toggle chevron (hỗ trợ bàn phím Enter/Space) */}
+                        <td className="py-2.5 pl-4 pr-1 text-[#5B6776] align-middle">
+                          <button
+                            type="button"
+                            aria-expanded={isExpanded}
+                            aria-label={isExpanded ? 'Thu gọn chi tiết nhật ký' : 'Xem chi tiết nhật ký'}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedLogId(isExpanded ? null : log.id);
+                            }}
+                            className="inline-flex items-center justify-center rounded-md p-0.5 hover:bg-[#EBF1E8] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#006B2C]/40"
                           >
-                            chevron_right
-                          </span>
+                            <span
+                              aria-hidden="true"
+                              className={`material-symbols-outlined text-base transition-transform duration-200 inline-block ${
+                                isExpanded ? 'rotate-90 text-[#006B2C]' : ''
+                              }`}
+                            >
+                              chevron_right
+                            </span>
+                          </button>
                         </td>
 
                         {/* Timestamp: tách 2 dòng ngày/giờ để luôn hiện đủ, không bị cắt */}
                         <td className="py-2.5 px-3 font-mono align-middle leading-tight">
-                          <div className="text-[11px] font-semibold text-[#191C19]">{log.dateStr}</div>
-                          <div className="text-[10px] text-[#717971]">{log.timeStr}</div>
+                          <div className="text-[11px] font-semibold text-[#1F2A37]">{log.dateStr}</div>
+                          <div className="text-[10px] text-[#5B6776]">{log.timeStr}</div>
                         </td>
 
                         {/* Actor */}
                         <td className="py-2.5 px-3 whitespace-nowrap overflow-hidden text-ellipsis align-middle" title={log.user}>
-                          <span className="font-semibold text-[#191C19]">{log.user}</span>
+                          <span className="font-semibold text-[#1F2A37]">{log.user}</span>
                           <span
-                            className={`ml-1.5 inline-block px-1.5 py-0.5 rounded-md text-[9px] font-bold ${
-                              log.role === 'Admin'
-                                ? 'bg-[#E8F5E9] text-[#006B2C]'
-                                : 'bg-[#E0F2F1] text-[#00685F]'
-                            }`}
+                            className={`ml-1.5 inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${getRoleBadgeStyle(log.role)}`}
                           >
-                            {log.role}
+                            {getRoleLabel(log.role)}
                           </span>
                         </td>
 
                         {/* Target: chỉ hiện nhãn loại đối tượng gọn (vd: Hệ thống, Tài khoản...); nội dung đầy đủ ở hàng xổ xuống bên dưới */}
                         <td className="py-2.5 px-3 align-middle">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#F8FAF8] border border-[#E2E8E0] text-[#414942] whitespace-nowrap">
-                            {TARGET_TYPE_LABEL[log.targetType] || log.targetType || 'Khác'}
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#F6F9F4] border border-[#DDE5D9] text-[#5B6776] whitespace-nowrap">
+                            {formatAuditTargetTypeLabel(log.targetType)}
                           </span>
                         </td>
 
@@ -665,39 +591,39 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
 
                       {/* Expanded Row Detail */}
                       {isExpanded && (
-                        <tr className="bg-[#F8FAF8]">
+                        <tr className="bg-[#F6F9F4]">
                           <td colSpan="5" className="p-3.5 pl-12 pr-6">
-                            <div className="bg-white p-3.5 rounded-xl border border-[#E2E8E0] shadow-xs space-y-2 text-xs">
+                            <div className="bg-white p-3.5 rounded-xl border border-[#DDE5D9] shadow-xs space-y-2 text-xs">
                               <div>
-                                <span className="text-[#717971] text-[11px] block mb-1">
+                                <span className="text-[#5B6776] text-[11px] block mb-1">
                                   Đối tượng tác động (đầy đủ):
                                 </span>
-                                <p className="text-[#191C19] font-medium bg-[#F8FAF8] p-2.5 rounded-lg border border-[#E2E8E0] break-words">
-                                  <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-white border border-[#E2E8E0] mr-1.5 align-middle">
-                                    {TARGET_TYPE_LABEL[log.targetType] || log.targetType || 'Khác'}
+                                <p className="text-[#1F2A37] font-medium bg-[#F6F9F4] p-2.5 rounded-lg border border-[#DDE5D9] break-words">
+                                  <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-white border border-[#DDE5D9] mr-1.5 align-middle">
+                                    {formatAuditTargetTypeLabel(log.targetType)}
                                   </span>
                                   <span className="align-middle">{log.target}</span>
                                 </p>
                               </div>
 
-                              <div className="flex flex-wrap items-center gap-6 pt-2 border-t border-[#E2E8E0]">
+                              <div className="flex flex-wrap items-center gap-6 pt-2 border-t border-[#DDE5D9]">
                                 <div>
-                                  <span className="text-[#717971] text-[11px]">Thời gian đầy đủ:</span>{' '}
-                                  <span className="font-semibold text-[#414942] font-mono">{log.time}</span>
+                                  <span className="text-[#5B6776] text-[11px]">Thời gian đầy đủ:</span>{' '}
+                                  <span className="font-semibold text-[#5B6776] font-mono">{log.time}</span>
                                 </div>
                                 {log.afterState && log.afterState !== '—' && (
                                   <div>
-                                    <span className="text-[#717971] text-[11px]">Kết quả xử lý:</span>{' '}
+                                    <span className="text-[#5B6776] text-[11px]">Kết quả xử lý:</span>{' '}
                                     <span className="font-bold text-[#006B2C]">{log.afterState}</span>
                                   </div>
                                 )}
                               </div>
 
-                              <div className="pt-2 border-t border-[#E2E8E0]">
-                                <span className="text-[#717971] text-[11px] block mb-1">
+                              <div className="pt-2 border-t border-[#DDE5D9]">
+                                <span className="text-[#5B6776] text-[11px] block mb-1">
                                   Lý do ghi nhận kiểm toán:
                                 </span>
-                                <p className="text-[#191C19] italic bg-[#F8FAF8] p-2.5 rounded-lg border border-[#E2E8E0] break-words">
+                                <p className="text-[#1F2A37] italic bg-[#F6F9F4] p-2.5 rounded-lg border border-[#DDE5D9] break-words">
                                   "{log.reason}"
                                 </p>
                               </div>
@@ -713,7 +639,7 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
           </div>
 
           {/* Pagination bar với bộ điều khiển phân trang thực tế */}
-          <div className="p-4 border-t border-[#E2E8E0] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#717971]">
+          <div className="p-4 border-t border-[#DDE5D9] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#5B6776]">
             <span>
               Hiển thị {filteredLogs.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredLogs.length)} trong tổng số {filteredLogs.length} bản ghi nhật ký
             </span>
@@ -721,10 +647,10 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage <= 1}
-                className={`px-2.5 py-1 rounded-xl border border-[#E2E8E0] transition-colors ${
+                className={`px-2.5 py-1 rounded-xl border border-[#DDE5D9] transition-colors ${
                   currentPage <= 1
                     ? 'opacity-40 cursor-not-allowed bg-gray-50'
-                    : 'hover:bg-[#F8FAF8]'
+                    : 'hover:bg-[#F6F9F4]'
                 }`}
               >
                 Trước
@@ -736,7 +662,7 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
                   className={`px-2.5 py-1 rounded-xl text-xs transition-colors ${
                     currentPage === p
                       ? 'bg-[#006B2C] text-white font-bold'
-                      : 'border border-[#E2E8E0] hover:bg-[#F8FAF8] text-[#414942]'
+                      : 'border border-[#DDE5D9] hover:bg-[#F6F9F4] text-[#5B6776]'
                   }`}
                 >
                   {p}
@@ -745,10 +671,10 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
               <button
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage >= totalPages}
-                className={`px-2.5 py-1 rounded-xl border border-[#E2E8E0] transition-colors ${
+                className={`px-2.5 py-1 rounded-xl border border-[#DDE5D9] transition-colors ${
                   currentPage >= totalPages
                     ? 'opacity-40 cursor-not-allowed bg-gray-50'
-                    : 'hover:bg-[#F8FAF8]'
+                    : 'hover:bg-[#F6F9F4]'
                 }`}
               >
                 Sau

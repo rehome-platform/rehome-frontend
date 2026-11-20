@@ -171,7 +171,7 @@ export default function ReceiptClauseTemplatesPage() {
         <div className="space-y-4">
           {editingId !== null ? (
             <div className="bg-white p-5 rounded-xl border border-[#006B2C]/30 space-y-4">
-              <p className="text-sm font-semibold text-[#191C19]">
+              <p className="text-sm font-semibold text-[#1F2A37]">
                 {editingId === 'new' ? 'Thêm điều khoản mới' : 'Chỉnh sửa điều khoản'}
               </p>
 
@@ -230,7 +230,7 @@ export default function ReceiptClauseTemplatesPage() {
                 </label>
               </div>
 
-              <div className="flex justify-end gap-3 pt-2 border-t border-[#E2E8E0]">
+              <div className="flex justify-end gap-3 pt-2 border-t border-[#DDE5D9]">
                 <Button type="button" variant="secondary" onClick={cancelEdit} disabled={submitting}>
                   Hủy
                 </Button>
@@ -259,12 +259,12 @@ export default function ReceiptClauseTemplatesPage() {
                   <div
                     key={clause.id}
                     className={`bg-white p-4 rounded-xl border space-y-2 ${
-                      clause.id === editingId ? 'border-[#006B2C]' : 'border-[#E2E8E0]'
+                      clause.id === editingId ? 'border-[#006B2C]' : 'border-[#DDE5D9]'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-[#191C19]">{clause.title}</p>
+                        <p className="text-sm font-semibold text-[#1F2A37]">{clause.title}</p>
                         <p className="text-xs text-[#5B6776] mt-0.5 line-clamp-2">{clause.bodyTemplate}</p>
                       </div>
                       <button

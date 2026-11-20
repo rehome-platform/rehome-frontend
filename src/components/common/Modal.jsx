@@ -22,12 +22,18 @@ export default function Modal({
   useGSAP(
     () => {
       if (isOpen && panel.current && process.env.NODE_ENV !== 'test') {
-        gsap.from(panel.current, {
-          scale: 0.95,
-          opacity: 0,
-          duration: 0.25,
-          ease: 'power2.out',
-        });
+        const prefersReduced =
+          typeof window !== 'undefined' &&
+          typeof window.matchMedia === 'function' &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!prefersReduced) {
+          gsap.from(panel.current, {
+            scale: 0.95,
+            opacity: 0,
+            duration: 0.25,
+            ease: 'power2.out',
+          });
+        }
       }
     },
     { dependencies: [isOpen], scope: panel }
@@ -44,6 +50,8 @@ export default function Modal({
   useEffect(() => {
     if (!isOpen) return;
     const previous = document.activeElement;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     const select = () => [
       ...(panel.current?.querySelectorAll(
         'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
@@ -76,6 +84,7 @@ export default function Modal({
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = prevOverflow;
       previous?.focus?.();
     };
   }, [isOpen]);
@@ -83,7 +92,7 @@ export default function Modal({
   if (!isOpen) return null;
 
   const modalContent = (
-    <div className="fixed inset-0 !mt-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 !mt-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
       <div
         ref={panel}
         tabIndex={-1}
@@ -100,7 +109,7 @@ export default function Modal({
             <button
               type="button"
               onClick={onClose}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-[#717971] hover:text-[#191C19] hover:bg-[#EBF1E8] transition-colors"
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-[#5B6776] hover:text-[#191C19] hover:bg-[#EBF1E8] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#006B2C]/40"
               aria-label="Đóng"
             >
               ✕

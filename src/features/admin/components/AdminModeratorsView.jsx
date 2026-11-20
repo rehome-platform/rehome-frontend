@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import adminApi from '../services/adminApi';
-import { Button, Spinner } from '../../../components/common/index.js';
+import { Button, Spinner, Modal } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
+import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
 
 /**
  * View Quản lý Nhân sự ReHome
@@ -19,6 +20,11 @@ export default function AdminModeratorsView({ onLogAction }) {
   const [error, setError] = useState(null);
 
   const [searchKeyword, setSearchKeyword] = useState('');
+  const {
+    debouncedQuery: debouncedSearch,
+    isTooShort: isSearchTooShort,
+    hint: searchHint,
+  } = useDebouncedSearch(searchKeyword);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [warehouseFilter, setWarehouseFilter] = useState('ALL');
 
@@ -29,6 +35,9 @@ export default function AdminModeratorsView({ onLogAction }) {
   const [selectedNewWarehouseId, setSelectedNewWarehouseId] = useState('');
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
   const [detailTarget, setDetailTarget] = useState(null);
+  const [toggleStatusTarget, setToggleStatusTarget] = useState(null);
+  const [toggleStatusReason, setToggleStatusReason] = useState('');
+  const [togglingStatus, setTogglingStatus] = useState(false);
 
   // Create Form State
   const [formData, setFormData] = useState({
@@ -44,10 +53,10 @@ export default function AdminModeratorsView({ onLogAction }) {
     loadWarehouses();
   }, []);
 
-  // Fetch moderators when filters change
+  // Fetch moderators when filters change (debounce 400ms & tối thiểu 2 ký tự qua useDebouncedSearch)
   useEffect(() => {
     loadModerators();
-  }, [searchKeyword, statusFilter, warehouseFilter]);
+  }, [debouncedSearch, statusFilter, warehouseFilter]);
 
   const loadWarehouses = async () => {
     try {
@@ -67,7 +76,7 @@ export default function AdminModeratorsView({ onLogAction }) {
       setIsLoading(true);
       setError(null);
       const params = {
-        search: searchKeyword.trim() || undefined,
+        search: debouncedSearch || undefined,
         status: statusFilter !== 'ALL' ? statusFilter : undefined,
         warehouseId: warehouseFilter !== 'ALL' ? warehouseFilter : undefined,
       };
@@ -151,17 +160,29 @@ export default function AdminModeratorsView({ onLogAction }) {
     }
   };
 
-  const handleToggleStatus = async (mod) => {
+  const handleToggleStatus = (mod) => {
+    if (!mod || togglingStatus) return;
+    setToggleStatusTarget(mod);
+    setToggleStatusReason(
+      mod.status === 'ACTIVE' ? 'Admin tạm khóa tài khoản nhân viên kiểm duyệt' : ''
+    );
+  };
+
+  const handleConfirmToggleStatus = async () => {
+    const mod = toggleStatusTarget;
+    if (!mod || togglingStatus) return;
     const isCurrentlyActive = mod.status === 'ACTIVE';
     const actionLabel = isCurrentlyActive ? 'khóa' : 'mở khóa';
-    if (!window.confirm(`Bạn có chắc muốn ${actionLabel} tài khoản Moderator ${mod.fullName || mod.name}?`)) {
+    if (isCurrentlyActive && !toggleStatusReason.trim()) {
+      toast.warn('Vui lòng nhập lý do khóa tài khoản.');
       return;
     }
 
+    setTogglingStatus(true);
     try {
       const accountId = mod.accountId || mod.id;
       if (isCurrentlyActive) {
-        await adminApi.banAccount(accountId, 'Admin tạm khóa tài khoản nhân viên kiểm duyệt');
+        await adminApi.banAccount(accountId, toggleStatusReason.trim());
       } else {
         await adminApi.unbanAccount(accountId);
       }
@@ -177,9 +198,14 @@ export default function AdminModeratorsView({ onLogAction }) {
         });
       }
 
+      setToggleStatusTarget(null);
+      setToggleStatusReason('');
+      setDetailTarget(null);
       await loadModerators();
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || `Lỗi khi ${actionLabel} tài khoản`);
+    } finally {
+      setTogglingStatus(false);
     }
   };
 
@@ -236,7 +262,7 @@ export default function AdminModeratorsView({ onLogAction }) {
           className="gap-1.5 shrink-0"
         >
           <span className="material-symbols-outlined text-base">person_add</span>
-          <span>Tạo tài khoản Moderator</span>
+          <span>Tạo tài khoản nhân viên</span>
         </Button>
       </div>
 
@@ -250,17 +276,22 @@ export default function AdminModeratorsView({ onLogAction }) {
 
       {/* Filter Bar */}
       <div className="bg-white p-4 rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-        <div className="relative flex-1">
-          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#717971] text-lg">
-            search
-          </span>
-          <input
-            type="text"
-            value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.target.value)}
-            placeholder="Tìm theo tên, email hoặc số điện thoại..."
-            className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]/50 focus:bg-white focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15 outline-none transition-all"
-          />
+        <div className="flex-1">
+          <div className="relative">
+            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5B6776] text-lg">
+              search
+            </span>
+            <input
+              type="text"
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              placeholder="Tìm theo tên, email hoặc số điện thoại..."
+              className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]/50 focus:bg-white focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15 outline-none transition-all"
+            />
+          </div>
+          {isSearchTooShort && (
+            <p className="mt-1 text-[11px] text-[#5f5f5f]">{searchHint}</p>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -268,7 +299,7 @@ export default function AdminModeratorsView({ onLogAction }) {
           <select
             value={warehouseFilter}
             onChange={(e) => setWarehouseFilter(e.target.value)}
-            className="px-3 py-2.5 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
+            className="px-3 py-2.5 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#5B6776] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
           >
             <option value="ALL">Địa điểm ký gửi: Tất cả</option>
             {warehouses.map((w) => (
@@ -282,7 +313,7 @@ export default function AdminModeratorsView({ onLogAction }) {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2.5 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
+            className="px-3 py-2.5 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#5B6776] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
           >
             <option value="ALL">Trạng thái: Tất cả</option>
             <option value="ACTIVE">Hoạt động</option>
@@ -295,7 +326,7 @@ export default function AdminModeratorsView({ onLogAction }) {
       {isLoading && moderators.length === 0 ? (
         <div className="bg-white rounded-2xl border border-[#DDE5D9] p-16 text-center flex flex-col items-center justify-center gap-3">
           <Spinner size="lg" />
-          <p className="text-xs text-[#717971]">Đang đồng bộ dữ liệu Moderator từ hệ thống...</p>
+          <p className="text-xs text-[#5B6776]">Đang đồng bộ dữ liệu nhân viên từ hệ thống...</p>
         </div>
       ) : error ? (
         <div className="bg-white rounded-2xl border border-[#DC2626]/20 p-12 text-center flex flex-col items-center justify-center">
@@ -320,10 +351,10 @@ export default function AdminModeratorsView({ onLogAction }) {
               verified_user
             </span>
           </div>
-          <h3 className="text-base font-bold text-[#191C19] font-heading">
-            Chưa có Moderator nào phù hợp
+          <h3 className="text-base font-bold text-[#1F2A37] font-heading">
+            Chưa có nhân viên nào phù hợp
           </h3>
-          <p className="text-xs text-[#717971] max-w-sm mt-1 mb-5">
+          <p className="text-xs text-[#5B6776] max-w-sm mt-1 mb-5">
             {searchKeyword || statusFilter !== 'ALL' || warehouseFilter !== 'ALL'
               ? 'Không tìm thấy kết quả phù hợp với bộ lọc hiện tại.'
               : 'Tạo tài khoản đầu tiên để bắt đầu phân công xử lý các tác vụ kiểm duyệt.'}
@@ -338,7 +369,7 @@ export default function AdminModeratorsView({ onLogAction }) {
             className="px-4 py-2 bg-[#006B2C] text-white text-xs font-semibold rounded-xl hover:bg-[#005523] transition-colors flex items-center gap-1.5 shadow-sm"
           >
             <span className="material-symbols-outlined text-sm">add</span>
-            <span>Tạo tài khoản Moderator</span>
+            <span>Tạo tài khoản nhân viên</span>
           </button>
         </div>
       ) : (
@@ -347,9 +378,9 @@ export default function AdminModeratorsView({ onLogAction }) {
             isLoading ? 'opacity-60 pointer-events-none' : ''
           }`}
         >
-          <div className="overflow-hidden">
-            <table className="w-full table-fixed text-left text-xs">
-              <thead className="bg-[#F6F9F4] text-[#717971] tracking-wider font-semibold border-b border-[#DDE5D9]">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[920px] text-left text-xs">
+              <thead className="bg-[#F6F9F4] text-[#5B6776] tracking-wider font-semibold border-b border-[#DDE5D9]">
                 <tr>
                   <th className="py-3 px-4 whitespace-nowrap w-[13%]">Mã nhân viên</th>
                   <th className="py-3 px-4 whitespace-nowrap w-[18%]">Họ tên</th>
@@ -373,23 +404,23 @@ export default function AdminModeratorsView({ onLogAction }) {
                       className="hover:bg-[#F6F9F4]/70 transition-colors"
                     >
                       {/* Code */}
-                      <td className="py-3.5 px-4 font-mono text-[#414942] whitespace-nowrap overflow-hidden text-ellipsis" title={modCode}>
+                      <td className="py-3.5 px-4 font-mono text-[#5B6776] whitespace-nowrap overflow-hidden text-ellipsis" title={modCode}>
                         {modCode}
                       </td>
 
                       {/* Name */}
-                      <td className="py-3.5 px-4 font-bold text-[#191C19] whitespace-nowrap overflow-hidden text-ellipsis" title={modName}>
+                      <td className="py-3.5 px-4 font-bold text-[#1F2A37] whitespace-nowrap overflow-hidden text-ellipsis" title={modName}>
                         {modName}
                       </td>
 
                       {/* Email */}
-                      <td className="py-3.5 px-4 font-mono text-[#414942] whitespace-nowrap overflow-hidden text-ellipsis" title={mod.email}>
+                      <td className="py-3.5 px-4 font-mono text-[#5B6776] whitespace-nowrap overflow-hidden text-ellipsis" title={mod.email}>
                         {mod.email}
                       </td>
 
                       {/* Warehouse */}
                       <td className="py-3.5 px-4 whitespace-nowrap overflow-hidden" title={mod.warehouseName || "Chưa gán địa điểm"}>
-                        <span className="inline-flex items-center gap-1.5 max-w-full px-2.5 py-1 rounded-lg text-xs font-medium bg-[#F6F9F4] text-[#414942] border border-[#DDE5D9]">
+                        <span className="inline-flex items-center gap-1.5 max-w-full px-2.5 py-1 rounded-lg text-xs font-medium bg-[#F6F9F4] text-[#5B6776] border border-[#DDE5D9]">
                           <span className="material-symbols-outlined text-sm text-[#006B2C] shrink-0">
                             warehouse
                           </span>
@@ -398,7 +429,7 @@ export default function AdminModeratorsView({ onLogAction }) {
                       </td>
 
                       {/* Created Date */}
-                      <td className="py-3.5 px-4 text-[#717971] font-mono whitespace-nowrap">
+                      <td className="py-3.5 px-4 text-[#5B6776] font-mono whitespace-nowrap">
                         {mod.createdAt
                           ? new Date(mod.createdAt).toLocaleDateString('vi-VN')
                           : '---'}
@@ -437,8 +468,8 @@ export default function AdminModeratorsView({ onLogAction }) {
             </table>
           </div>
 
-          <div className="p-4 border-t border-[#DDE5D9] text-xs text-[#717971]">
-            <span>Hiển thị {moderators.length} Moderator trong toàn hệ thống</span>
+          <div className="p-4 border-t border-[#DDE5D9] text-xs text-[#5B6776]">
+            <span>Hiển thị {moderators.length} nhân viên điểm kí gửi trong toàn hệ thống</span>
           </div>
         </div>
       )}
@@ -466,13 +497,13 @@ export default function AdminModeratorsView({ onLogAction }) {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
             <div className="w-full max-w-2xl bg-white rounded-2xl border border-[#DDE5D9] shadow-2xl p-6 space-y-4">
               <div className="flex items-center justify-between border-b border-[#DDE5D9] pb-3">
-                <h3 className="text-base font-bold text-[#191C19] font-heading">
-                  Chi tiết tài khoản Moderator
+                <h3 className="text-base font-bold text-[#1F2A37] font-heading">
+                  Chi tiết tài khoản nhân viên
                 </h3>
                 <button
                   type="button"
                   onClick={() => setDetailTarget(null)}
-                  className="p-1 rounded-lg text-[#717971] hover:text-[#191C19] hover:bg-[#F6F9F4]"
+                  className="p-1 rounded-lg text-[#5B6776] hover:text-[#1F2A37] hover:bg-[#F6F9F4]"
                 >
                   <span className="material-symbols-outlined text-xl">close</span>
                 </button>
@@ -483,7 +514,7 @@ export default function AdminModeratorsView({ onLogAction }) {
                   {getInitials(dName)}
                 </div>
                 <div>
-                  <p className="font-bold text-[#191C19] text-sm">{dName}</p>
+                  <p className="font-bold text-[#1F2A37] text-sm">{dName}</p>
                   {!dLocked ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C]">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#006B2C]"></span>
@@ -501,8 +532,8 @@ export default function AdminModeratorsView({ onLogAction }) {
               <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
                 {rows.map((r) => (
                   <div key={r.label} className="px-3.5 py-2.5 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]/40">
-                    <dt className="text-[10px] uppercase tracking-wide text-[#717971] font-semibold mb-0.5">{r.label}</dt>
-                    <dd className={`text-[#191C19] break-all ${r.mono ? 'font-mono' : 'font-semibold'}`}>
+                    <dt className="text-[10px] uppercase tracking-wide text-[#5B6776] font-semibold mb-0.5">{r.label}</dt>
+                    <dd className={`text-[#1F2A37] break-all ${r.mono ? 'font-mono' : 'font-semibold'}`}>
                       {r.value}
                     </dd>
                   </div>
@@ -525,24 +556,21 @@ export default function AdminModeratorsView({ onLogAction }) {
                   </button>
                   <button
                     type="button"
-                    onClick={async () => {
-                      await handleToggleStatus(detailTarget);
-                      setDetailTarget(null);
-                    }}
+                    onClick={() => handleToggleStatus(detailTarget)}
                     className={`px-4 py-2 text-xs font-semibold rounded-xl border flex items-center gap-1.5 ${
                       !dLocked
                         ? "text-[#DC2626] border-[#DC2626]/30 hover:bg-[#FEE2E2]/50"
                         : "text-[#006B2C] border-[#006B2C]/30 hover:bg-[#E8F5E9]"
                     }`}
                   >
-                    <span className="material-symbols-outlined text-base">{!dLocked ? "lock" : "lock_open"}</span>
+                    <span className="material-symbols-outlined text-base" aria-hidden="true">{!dLocked ? "lock" : "lock_open"}</span>
                     <span>{!dLocked ? "Khóa tài khoản" : "Mở khóa tài khoản"}</span>
                   </button>
                 </div>
                 <button
                   type="button"
                   onClick={() => setDetailTarget(null)}
-                  className="px-4 py-2 text-xs font-semibold bg-[#006B2C] text-white hover:bg-[#005523] rounded-xl shadow-sm"
+                  className="px-4 py-2 text-xs font-semibold border border-[#DDE5D9] bg-white text-[#5B6776] hover:bg-[#F6F9F4] rounded-xl"
                 >
                   Đóng
                 </button>
@@ -557,24 +585,24 @@ export default function AdminModeratorsView({ onLogAction }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
           <div className="w-full max-w-md bg-white rounded-2xl border border-[#DDE5D9] shadow-2xl p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-[#DDE5D9] pb-3">
-              <h3 className="text-base font-bold text-[#191C19] font-heading">
+              <h3 className="text-base font-bold text-[#1F2A37] font-heading">
                 Chuyển địa điểm công tác
               </h3>
               <button
                 onClick={() => setChangeWarehouseTarget(null)}
-                className="p-1 rounded-lg text-[#717971] hover:text-[#191C19]"
+                className="p-1 rounded-lg text-[#5B6776] hover:text-[#1F2A37]"
               >
                 <span className="material-symbols-outlined text-xl">close</span>
               </button>
             </div>
 
-            <p className="text-xs text-[#414942]">
-              Điều chuyển nhân sự <strong className="text-[#191C19]">{changeWarehouseTarget.fullName || changeWarehouseTarget.name}</strong> sang địa điểm ký gửi mới.
+            <p className="text-xs text-[#5B6776]">
+              Điều chuyển nhân sự <strong className="text-[#1F2A37]">{changeWarehouseTarget.fullName || changeWarehouseTarget.name}</strong> sang địa điểm ký gửi mới.
             </p>
 
             <form onSubmit={handleChangeWarehouseSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-[#191C19] mb-1">
+                <label className="block text-xs font-semibold text-[#1F2A37] mb-1">
                   Chọn địa điểm ký gửi mới <span className="text-[#DC2626]">*</span>
                 </label>
                 <select
@@ -595,7 +623,7 @@ export default function AdminModeratorsView({ onLogAction }) {
                 <button
                   type="button"
                   onClick={() => setChangeWarehouseTarget(null)}
-                  className="px-4 py-2 text-xs font-semibold text-[#414942] hover:bg-[#F6F9F4] rounded-xl border border-[#DDE5D9]"
+                  className="px-4 py-2 text-xs font-semibold text-[#5B6776] hover:bg-[#F6F9F4] rounded-xl border border-[#DDE5D9]"
                 >
                   Hủy
                 </button>
@@ -623,12 +651,12 @@ export default function AdminModeratorsView({ onLogAction }) {
           <div className="w-full max-w-md bg-white rounded-2xl border border-[#DDE5D9] shadow-2xl p-6 sm:p-7 space-y-4">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-[#DDE5D9] pb-3">
-              <h3 className="text-base font-bold text-[#191C19] font-heading">
-                Tạo tài khoản Moderator
+              <h3 className="text-base font-bold text-[#1F2A37] font-heading">
+                Tạo tài khoản nhân viên
               </h3>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
-                className="p-1 rounded-lg text-[#717971] hover:text-[#191C19] hover:bg-[#F6F9F4]"
+                className="p-1 rounded-lg text-[#5B6776] hover:text-[#1F2A37] hover:bg-[#F6F9F4]"
               >
                 <span className="material-symbols-outlined text-xl">close</span>
               </button>
@@ -645,7 +673,7 @@ export default function AdminModeratorsView({ onLogAction }) {
             <form onSubmit={handleCreateSubmit} className="space-y-3.5">
               {/* Họ và tên */}
               <div>
-                <label className="block text-xs font-semibold text-[#191C19] mb-1">
+                <label className="block text-xs font-semibold text-[#1F2A37] mb-1">
                   Họ và tên <span className="text-[#DC2626]">*</span>
                 </label>
                 <input
@@ -673,7 +701,7 @@ export default function AdminModeratorsView({ onLogAction }) {
 
               {/* Email */}
               <div>
-                <label className="block text-xs font-semibold text-[#191C19] mb-1">
+                <label className="block text-xs font-semibold text-[#1F2A37] mb-1">
                   Email đăng nhập <span className="text-[#DC2626]">*</span>
                 </label>
                 <input
@@ -691,7 +719,7 @@ export default function AdminModeratorsView({ onLogAction }) {
                       : 'border-[#DDE5D9] bg-white hover:border-[#006B2C]/50 focus:border-[#006B2C]'
                   }`}
                 />
-                <p className="text-[10px] text-[#717971] mt-0.5">
+                <p className="text-[10px] text-[#5B6776] mt-0.5">
                   Email chính thức của kiểm duyệt viên để nhận thông báo và tài khoản.
                 </p>
                 {formErrors.email && (
@@ -704,7 +732,7 @@ export default function AdminModeratorsView({ onLogAction }) {
 
               {/* Số điện thoại */}
               <div>
-                <label className="block text-xs font-semibold text-[#191C19] mb-1">
+                <label className="block text-xs font-semibold text-[#1F2A37] mb-1">
                   Số điện thoại
                 </label>
                 <input
@@ -731,7 +759,7 @@ export default function AdminModeratorsView({ onLogAction }) {
 
               {/* Điểm kho phụ trách */}
               <div>
-                <label className="block text-xs font-semibold text-[#191C19] mb-1">
+                <label className="block text-xs font-semibold text-[#1F2A37] mb-1">
                   Địa điểm ký gửi phụ trách <span className="text-[#DC2626]">*</span>
                 </label>
                 <select
@@ -768,7 +796,7 @@ export default function AdminModeratorsView({ onLogAction }) {
                   info
                 </span>
                 <span>
-                  Hệ thống tự động sinh Mã nhân viên & gửi mật khẩu đăng nhập tạm thời qua email cho Moderator.
+                  Hệ thống tự động sinh Mã nhân viên & gửi mật khẩu đăng nhập tạm thời qua email cho nhân viên.
                 </span>
               </div>
 
@@ -777,7 +805,7 @@ export default function AdminModeratorsView({ onLogAction }) {
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-[#414942] hover:bg-[#F6F9F4] rounded-xl transition-colors border border-[#DDE5D9]"
+                  className="px-4 py-2 text-xs font-semibold text-[#5B6776] hover:bg-[#F6F9F4] rounded-xl transition-colors border border-[#DDE5D9]"
                 >
                   Hủy
                 </button>
@@ -798,6 +826,58 @@ export default function AdminModeratorsView({ onLogAction }) {
           </div>
         </div>
       )}
+
+      {/* Modal Xác nhận Khóa / Mở khóa Moderator */}
+      <Modal
+        isOpen={Boolean(toggleStatusTarget)}
+        onClose={() => { if (!togglingStatus) setToggleStatusTarget(null); }}
+        title={toggleStatusTarget?.status === 'ACTIVE' ? 'Xác nhận khóa tài khoản nhân viên' : 'Xác nhận mở khóa tài khoản nhân viên'}
+      >
+        <div className="space-y-4 text-xs font-sans">
+          <p className="text-[#5B6776] leading-relaxed">
+            Bạn có chắc muốn{' '}
+            <strong className={toggleStatusTarget?.status === 'ACTIVE' ? 'text-[#D92D20]' : 'text-[#006B2C]'}>
+              {toggleStatusTarget?.status === 'ACTIVE' ? 'khóa' : 'mở khóa'}
+            </strong>{' '}
+            tài khoản nhân viên{' '}
+            <strong className="text-[#1F2A37]">{toggleStatusTarget?.fullName || toggleStatusTarget?.name}</strong>?
+          </p>
+          {toggleStatusTarget?.status === 'ACTIVE' && (
+            <div>
+              <label htmlFor="mod-toggle-reason" className="block font-bold text-[#1F2A37] mb-1">
+                Lý do khóa tài khoản <span className="text-[#D92D20]">*</span>
+              </label>
+              <textarea
+                id="mod-toggle-reason"
+                rows={3}
+                disabled={togglingStatus}
+                value={toggleStatusReason}
+                onChange={(e) => setToggleStatusReason(e.target.value)}
+                className="w-full p-2.5 border border-[#DDE5D9] rounded-xl text-[#1F2A37] focus:outline-none focus:border-[#006B2C]"
+              />
+            </div>
+          )}
+          <div className="flex justify-end gap-3 pt-2 border-t border-[#DDE5D9]">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={togglingStatus}
+              onClick={() => setToggleStatusTarget(null)}
+            >
+              Hủy
+            </Button>
+            <Button
+              size="sm"
+              variant={toggleStatusTarget?.status === 'ACTIVE' ? 'danger' : 'primary'}
+              loading={togglingStatus}
+              disabled={togglingStatus || (toggleStatusTarget?.status === 'ACTIVE' && !toggleStatusReason.trim())}
+              onClick={handleConfirmToggleStatus}
+            >
+              {toggleStatusTarget?.status === 'ACTIVE' ? 'Xác nhận khóa' : 'Xác nhận mở khóa'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

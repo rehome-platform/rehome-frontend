@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { transformSync } from 'esbuild';
 import * as validators from '../src/utils/validators.js';
+import * as roleLabels from '../src/constants/roleLabels.js';
 
 // Real page handlers and validators with mocked context/service boundaries.
 // Effects, dependencies, cleanups and rerenders are exercised; browser layout
@@ -60,6 +61,7 @@ function harness(overrides = {}, user = defaultUser) {
   const source = readFileSync(new URL('../src/features/auth/pages/ProfilePage.jsx', import.meta.url), 'utf8');
   const dependencies = {
     react: React,
+    'react-router-dom': { useSearchParams: () => [new URLSearchParams()] },
     '../../../context/AuthContext.jsx': { useAuth: () => auth },
     '../../../components/header.jsx': { __esModule: true, default: 'Header' },
     '../../../components/common/Badge.jsx': { __esModule: true, default: 'Badge' },
@@ -69,6 +71,7 @@ function harness(overrides = {}, user = defaultUser) {
       return overrides.getCurrentUser?.() ?? Promise.resolve(null);
     } } },
     '../../../utils/validators.js': validators,
+    '../../../constants/roleLabels.js': roleLabels,
     '../styles/profile-password.css': {},
   };
   vm.runInNewContext(transformSync(source, { loader: 'jsx', format: 'cjs' }).code, {
@@ -146,15 +149,17 @@ function fillPasswords(h, oldPassword = ' fixture-current ', password = ' fixtur
 }
 
 test('Profile displays context identity, immutable email and existing role-specific fallbacks', () => {
-  for (const [role, code, badge] of [['admin', 'ADM-OFFICIAL', 'Quản trị viên'], ['staff', 'MOD-OFFICIAL', 'Nhân viên Điểm kí gửi'], ['moderator', 'MOD-OFFICIAL', 'Nhân viên Điểm kí gửi']]) {
+  for (const [role, code, badge] of [['admin', 'ADM-OFFICIAL', 'Quản trị viên'], ['staff', 'MOD-OFFICIAL', 'Nhân viên điểm kí gửi'], ['moderator', 'MOD-OFFICIAL', 'Nhân viên điểm kí gửi']]) {
     const h = harness({}, { ...defaultUser, role, memberCode: '', authorities: '', rawRole: '', emailVerified: false });
     assert.equal(h.byId('user-name-input').props.value, 'Profile User');
     assert.equal(h.byId('user-phone-input').props.value, '0912345678');
     assert.equal(h.byId('user-email-input').props.disabled, true);
     assert.equal(h.byId('user-email-input').props.value, 'profile@example.test');
-    assert.match(text(h.render()), new RegExp(code));
-    assert.match(text(h.render()), new RegExp(badge));
-    assert.match(text(h.render()), /Đang kích hoạt/);
+    const rendered = text(h.render());
+    assert.match(rendered, new RegExp(code));
+    assert.match(rendered, new RegExp(badge));
+    assert.match(rendered, /Đang kích hoạt/);
+    assert.doesNotMatch(rendered, /ROLE_ADMIN|ROLE_MODERATOR|\(Admin\)|\(Moderator\)|\(Code\)|\(Authority\)/);
     assert.equal(h.all(node => node.type === 'Header').length, 1);
     assert.equal(h.all(node => node.type === 'footer' || node.type === 'Footer').length, 0);
   }
@@ -265,7 +270,9 @@ test('switching tabs preserves unsaved profile and password values and visibilit
   fillPasswords(h);
   h.all(node => node.props['aria-controls'] === 'current-pass-input')[0].props.onClick();
   h.tab('sessions');
-  assert.match(text(h.render()), /profile@example.test.*ROLE_ADMIN/);
+  const sessionsText = text(h.render());
+  assert.match(sessionsText, /profile@example.test.*Quản trị viên/);
+  assert.doesNotMatch(sessionsText, /ROLE_ADMIN|ROLE_MODERATOR|Active Session/);
   h.tab('info');
   assert.equal(h.byId('user-name-input').props.value, 'Unsaved profile');
   h.tab('security');

@@ -9,6 +9,7 @@ import { isFixtureMode } from "../config/warehouseContract.js";
 import { Phase2Error } from "../models/warehouseModel.js";
 import { callBackend } from './warehouseTransport.js';
 import { enrichListRows } from './listDetailEnrichment.js';
+import { PLATFORM_FINAL_STATUSES, warehouseReasonOf } from '../../../constants/productStatus.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -22,32 +23,25 @@ export const inventoryService = {
         if (isFixtureMode && fallback) return fallback();
 
         // This UI queue is not a backend ProductStatus. Filter before pagination.
-        const [stored, withdrawn, unclaimed, pricing] = await Promise.all([
-          allInventory('WAREHOUSE', options), allInventory('WITHDRAWN', options),
-          allInventory('UNCLAIMED', options), pendingPricing(options),
-        ]);
-        const storedDetails = await enrichListRows(stored, () => true, async item => ({
-          ...item, ...await inventoryService.read(item.id || item.sku, options),
-        }), options);
-        const proposals = readProposals(options);
-        const rows = [...storedDetails, ...withdrawn, ...unclaimed].map(item => {
-          const request = item.status === 'WAREHOUSE' && pricingForProduct(pricing, item.id || item.sku);
-          const proposal = item.status === 'WAREHOUSE' && proposalForProduct(proposals, item, request);
-          return inventoryDetail({
-            ...item,
-            ...(proposal ? { reConsignStatus: 'PROPOSAL_SENT', newReceiptId: proposal.receiptId } : {}),
-            ...(request ? {
-              decisionId: request.decisionId, decision: 'RE_CONSIGN', pricingEligible: true,
-              name: item.name || request.productName, currentPrice: request.currentPrice,
-              previousAgreedPrice: request.previousAgreedPrice
-            } : {}),
-          }, item.id || item.sku);
-        }).filter(item => ['WITHDRAWN', 'UNCLAIMED'].includes(item.status) || (item.status === 'WAREHOUSE' && (item.decisionId || item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT')));
-        const filtered = inventoryResult(rows, params).items;
-        const size = params?.size ?? 20;
-        const page = params?.page ?? 0;
-        const items = filtered.slice(page * size, (page + 1) * size);
-        return { items, content: items, totalElements: filtered.length, totalPages: Math.ceil(filtered.length / size) };
+        return paginateClient(await termExpiredRows(options, true), params);
+      }
+
+      // Tab "Hết hạn ký gửi": tái sử dụng logic "Chờ xử lý cuối kỳ", chỉ nhánh WAREHOUSE
+      // (WITHDRAWN/UNCLAIMED đã có tab riêng).
+      if (params?.status === 'TERM_EXPIRED') {
+        if (isFixtureMode && fallback) {
+          const legacy = await fixtureFallback('inventoryList', { params: { ...params, status: 'WAITING_END_OF_TERM' }, ...options })();
+          const rows = (legacy?.content || legacy?.items || []).filter(item => item.status === 'WAREHOUSE');
+          return paginateClient(rows.map(item => inventoryItemWithReason(item)), params, false);
+        }
+        return paginateClient(await termExpiredRows(options, false), params);
+      }
+
+      // Tab "Tài sản nền tảng / Đã xử lý": backend chỉ lọc 1 status mỗi lần,
+      // ghép nối PLATFORM_OWNED -> DONATED -> DESTROYED và phân trang theo offset phía server.
+      if (params?.status === 'PLATFORM_FINAL') {
+        if (isFixtureMode && fallback) return fallback();
+        return platformFinalPage(params, options);
       }
 
       // Backend ProductStatus enum does not support WAITING_END_OF_TERM
@@ -73,13 +67,13 @@ export const inventoryService = {
         const items = details.map(item => {
           const request = item.status === 'WAREHOUSE' && pricingForProduct(pricing, item.sku);
           const proposal = item.status === 'WAREHOUSE' && proposalForProduct(readProposals(options), item, request);
-          return inventoryDetail({
+          return inventoryItemWithReason(inventoryDetail({
             ...item,
             ...(proposal ? { reConsignStatus: 'PROPOSAL_SENT', newReceiptId: proposal.receiptId } : {}), ...(request ? {
               decisionId: request.decisionId, pricingEligible: true, decision: 'RE_CONSIGN',
               previousAgreedPrice: request.previousAgreedPrice,
             } : {})
-          }, item.sku);
+          }, item.sku));
         });
         normalized = { ...normalized, items, content: items };
       }
@@ -290,6 +284,92 @@ async function enrichInventoryResult(result, options) {
   return { ...result, items, content: items };
 }
 
+
+function inventoryItemWithReason(item) {
+  const reason = warehouseReasonOf(item);
+  return reason ? { ...item, warehouseReason: reason } : item;
+}
+
+function paginateClient(rows, params, normalize = true) {
+  const filtered = normalize ? inventoryResult(rows, params).items : rows;
+  const size = params?.size ?? 20;
+  const page = params?.page ?? 0;
+  const items = filtered.slice(page * size, (page + 1) * size);
+  return { items, content: items, totalElements: filtered.length, totalPages: Math.ceil(filtered.length / size) };
+}
+
+// Logic "Chờ xử lý cuối kỳ" dùng chung: WAREHOUSE có EndOfTermDecision (decisionId),
+// yêu cầu ký gửi lại (pricingEligible) hoặc proposal đã gửi. includeTerminal thêm WITHDRAWN/UNCLAIMED.
+async function termExpiredRows(options, includeTerminal) {
+  const [stored, withdrawn, unclaimed, pricing] = await Promise.all([
+    allInventory('WAREHOUSE', options),
+    includeTerminal ? allInventory('WITHDRAWN', options) : [],
+    includeTerminal ? allInventory('UNCLAIMED', options) : [],
+    pendingPricing(options),
+  ]);
+  const storedDetails = await enrichListRows(stored, () => true, async item => ({
+    ...item, ...await inventoryService.read(item.id || item.sku, options),
+  }), options);
+  const proposals = readProposals(options);
+  return [...storedDetails, ...withdrawn, ...unclaimed].map(item => {
+    const request = item.status === 'WAREHOUSE' && pricingForProduct(pricing, item.id || item.sku);
+    const proposal = item.status === 'WAREHOUSE' && proposalForProduct(proposals, item, request);
+    return inventoryItemWithReason(inventoryDetail({
+      ...item,
+      ...(proposal ? { reConsignStatus: 'PROPOSAL_SENT', newReceiptId: proposal.receiptId } : {}),
+      ...(request ? {
+        decisionId: request.decisionId, decision: 'RE_CONSIGN', pricingEligible: true,
+        name: item.name || request.productName, currentPrice: request.currentPrice,
+        previousAgreedPrice: request.previousAgreedPrice
+      } : {}),
+    }, item.id || item.sku));
+  }).filter(item => ['WITHDRAWN', 'UNCLAIMED'].includes(item.status) || (item.status === 'WAREHOUSE' && (item.decisionId || item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT')));
+}
+
+const rowsOf = result => result?.content || result?.items || (Array.isArray(result) ? result : []);
+
+async function inventoryPage(status, page, size, options) {
+  if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+  return callBackend({
+    method: 'get', url: API_ENDPOINTS.MODERATOR.INVENTORY, params: { status, page, size },
+  }, { signal: options?.signal });
+}
+
+// Lấy các phần tử [from, to) của một status (offset cục bộ), tối đa 2 request.
+async function inventoryRange(status, from, to, size, options) {
+  const firstPage = Math.floor(from / size);
+  const lastPage = Math.floor((to - 1) / size);
+  const rows = [];
+  for (let page = firstPage; page <= lastPage; page++) {
+    rows.push(...rowsOf(await inventoryPage(status, page, size, options)));
+  }
+  return rows.slice(from - firstPage * size, to - firstPage * size);
+}
+
+async function platformFinalPage(params, options) {
+  const size = Math.min(Math.max(params?.size ?? 20, 1), 50);
+  const page = Math.max(params?.page ?? 0, 0);
+  const totals = await Promise.all(PLATFORM_FINAL_STATUSES.map(async status => {
+    const result = await inventoryPage(status, 0, 1, options);
+    return result?.totalElements ?? rowsOf(result).length;
+  }));
+  const totalElements = totals.reduce((sum, value) => sum + value, 0);
+  const offset = page * size;
+  const end = Math.min(offset + size, totalElements);
+  const rows = [];
+  let start = 0;
+  for (let index = 0; index < PLATFORM_FINAL_STATUSES.length; index++) {
+    const segEnd = start + totals[index];
+    const from = Math.max(offset, start);
+    const to = Math.min(end, segEnd);
+    if (from < to) {
+      rows.push(...await inventoryRange(PLATFORM_FINAL_STATUSES[index], from - start, to - start, size, options));
+    }
+    start = segEnd;
+  }
+  const items = inventoryResult(rows, params).items;
+  return { items, content: items, totalElements, totalPages: Math.ceil(totalElements / size) };
+}
 
 async function allInventory(status, options) {
   const rows = [];

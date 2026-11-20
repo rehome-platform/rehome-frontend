@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import Spinner from '../../../components/common/Spinner.jsx';
+import TableActionButton from '../../../components/common/TableActionButton.jsx';
+import { DASHBOARD_TONES } from '../../../constants/dashboardTheme.js';
 import { queueService, inventoryService } from '../services/warehouseApi.js';
 import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
 import { listItems, ownsClaim } from '../models/warehouseModel.js';
@@ -16,6 +18,7 @@ import {
   extractQueueSubjectName,
 } from '../components/queue/QueueSections.jsx';
 import { formatElapsedHours, sortQueueItemsNewestFirst } from '../models/queueModel.js';
+import { TABLE_COLUMN_LABELS } from '../../../constants/tableColumns.js';
 
 const OVERDUE_HOURS = 48;
 const QUEUE_TYPES = [
@@ -34,35 +37,46 @@ const waitedHours = (item) => {
 
 function Stat({ label, value, tone, icon, to }) {
   const isAlert = tone === 'alert' && Number(value) > 0;
-  const iconToneClass = isAlert
-    ? 'bg-[#FEF3F2] text-[#B42318] border-[#FECDCA]'
+  const toneTokens = isAlert
+    ? DASHBOARD_TONES.danger
     : tone === 'success'
-      ? 'bg-[#ECFDF3] text-[#067647] border-[#ABEFC6]'
+      ? DASHBOARD_TONES.primary
       : tone === 'warning'
-        ? 'bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]'
+        ? DASHBOARD_TONES.warning
         : tone === 'info'
-          ? 'bg-[#EFF8FF] text-[#175CD3] border-[#B2DDFF]'
-          : 'bg-[#F6F9F4] text-[#006B2C] border-[#DDE5D9]';
+          ? DASHBOARD_TONES.accent
+          : DASHBOARD_TONES.neutral;
 
   const card = (
     <div
-      className={`rounded-2xl border bg-white p-4 shadow-card transition-all duration-150 ${isAlert ? 'border-[#FECDCA] bg-[#FEF3F2]/30' : 'border-neutral/80'
-        } ${to ? 'hover:border-[#006B2C]/50 hover:shadow-card-hover hover:-translate-y-0.5 cursor-pointer' : ''}`}
+      className={`group rounded-2xl border bg-white p-4 sm:p-5 shadow-card transition-all duration-200 ${
+        isAlert ? 'border-[#FECDCA] bg-[#FEF3F2]/35' : 'border-[#DDE5D9]'
+      } ${to ? 'hover:border-[#006B2C]/50 hover:shadow-card-hover hover:-translate-y-0.5 cursor-pointer' : ''}`}
     >
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-medium text-textSecondary">{label}</p>
+        <p className="text-xs font-semibold text-[#5B6776]">{label}</p>
         {icon && (
           <span
             aria-hidden="true"
-            className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 ${iconToneClass}`}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${toneTokens.iconBox}`}
           >
-            <span className="material-symbols-outlined text-[18px] leading-none">{icon}</span>
+            <span className="material-symbols-outlined text-[19px] leading-none">{icon}</span>
           </span>
         )}
       </div>
-      <p className={`mt-2.5 text-3xl font-bold tracking-tight ${isAlert ? 'text-[#B42318]' : 'text-text'}`}>
-        {value}
-      </p>
+      <div className="mt-3 flex items-baseline justify-between gap-2">
+        <p className={`text-3xl font-extrabold font-heading tracking-tight ${isAlert ? 'text-[#B42318]' : 'text-[#1F2A37]'}`}>
+          {value}
+        </p>
+        {to && (
+          <span
+            aria-hidden="true"
+            className="material-symbols-outlined text-[16px] text-[#5B6776] opacity-0 group-hover:opacity-100 group-hover:text-[#006B2C] transition-all"
+          >
+            arrow_forward
+          </span>
+        )}
+      </div>
     </div>
   );
   return to ? (
@@ -141,8 +155,16 @@ export default function WarehouseHomePage() {
       subtitle={`${today} · mọi số liệu chỉ tính trong ${warehouse?.name || 'điểm kí gửi hiện tại'}`}
       actions={
         <>
-          <Button variant="outline" onClick={refresh}>Tải lại</Button>
-          <Link to="/moderator/counter"><Button>Mở quầy tiếp nhận</Button></Link>
+          <Button variant="outline" onClick={refresh} className="gap-1.5">
+            <span aria-hidden="true" className="material-symbols-outlined text-[16px]">refresh</span>
+            <span>Tải lại</span>
+          </Button>
+          <Link to="/moderator/counter">
+            <Button className="gap-1.5">
+              <span aria-hidden="true" className="material-symbols-outlined text-[16px]">storefront</span>
+              <span>Mở quầy tiếp nhận</span>
+            </Button>
+          </Link>
         </>
       }
     >
@@ -181,7 +203,7 @@ export default function WarehouseHomePage() {
         <Stat label={`Quá hạn ${OVERDUE_HOURS}h`} value={overdue} icon="schedule" tone="alert" to="/moderator/queue" />
         <Stat label="Đơn chờ đóng gói" value={countOf(packing.data)} icon="package_2" tone="warning" to="/moderator/packing" />
         <Stat label="Chờ rút hàng" value={countOf(withdrawal.data)} icon="assignment_return" tone="warning" to="/moderator/queue?type=WITHDRAWAL" />
-        <Stat label="Tồn kho đang bán" value={countOf(onSale.data)} icon="inventory_2" tone="success" to="/moderator/inventory?status=ON_SALE" />
+        <Stat label="Sản phẩm đang bán" value={countOf(onSale.data)} icon="inventory_2" tone="success" to="/moderator/inventory?status=ON_SALE" />
       </div>
 
       <div className="grid gap-6">
@@ -201,10 +223,10 @@ export default function WarehouseHomePage() {
                 <thead>
                   <tr className="border-b border-neutral text-xs font-semibold text-textSecondary bg-[#F6F9F4]/80 whitespace-nowrap">
                     <th className="py-3 px-3.5">Loại việc</th>
-                    <th className="py-3 px-3.5">Đối tượng</th>
-                    <th className="py-3 px-3.5">Chờ</th>
+                    <th className="py-3 px-3.5">{TABLE_COLUMN_LABELS.TARGET}</th>
+                    <th className="py-3 px-3.5">{TABLE_COLUMN_LABELS.WAITED}</th>
                     <th className="py-3 px-3.5">Người nhận</th>
-                    <th className="py-3 px-3.5 text-right">Thao tác</th>
+                    <th className="py-3 px-3.5 text-right">{TABLE_COLUMN_LABELS.ACTIONS}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral/70">
@@ -254,14 +276,10 @@ export default function WarehouseHomePage() {
                         </td>
                         <td className="py-3 px-3.5 text-right whitespace-nowrap align-middle">
                           <div className="flex items-center justify-end gap-2 flex-nowrap">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className={QUEUE_TEXT_LINK_CLASS}
+                            <TableActionButton
+                              action="view"
                               onClick={() => setDetailTarget(task)}
-                            >
-                              Chi tiết
-                            </Button>
+                            />
                             {!task.claimedBy ? (
                               <Button size="sm" className={QUEUE_PRIMARY_BTN_CLASS} loading={task.source.busy} onClick={() => setClaimTarget(task)}>
                                 Nhận việc

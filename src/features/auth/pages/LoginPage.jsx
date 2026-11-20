@@ -25,6 +25,18 @@ export default function LoginPage() {
 
   const fromLocation = location.state?.from?.pathname;
 
+  // Hiển thị thông báo rõ ràng nếu người dùng vừa bị đăng xuất do hết phiên (401)
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem('rehome_session_expired') === '1') {
+        sessionStorage.removeItem('rehome_session_expired');
+        setErrorMessage('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
   // Nếu người dùng đã có session hợp lệ, chuyển thẳng tới dashboard theo vai trò, tránh bắt đăng nhập lại
   useEffect(() => {
     if (!loading && isAuthenticated && user) {

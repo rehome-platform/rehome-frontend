@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import Button from "../../../../components/common/Button.jsx";
 import Modal from "../../../../components/common/Modal.jsx";
+import TableActionButton from "../../../../components/common/TableActionButton.jsx";
 
 import { Status, DetailLink, money, date } from "../WarehouseUi.jsx";
 
@@ -368,15 +369,10 @@ export function CounterConsignmentTasks({ taskGroups }) {
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="text-xs font-semibold whitespace-nowrap"
+                <TableActionButton
+                  action="view"
                   onClick={() => setDetailTask(task)}
-                >
-                  Chi tiết
-                </Button>
+                />
                 {actionLabel && (
                   <Link
                     to={`/moderator/consignments/${encodeURIComponent(task.formId)}`}
@@ -481,7 +477,7 @@ export function CounterConsignmentTasks({ taskGroups }) {
                   to={`/moderator/inventory/${encodeURIComponent(detailSku)}`}
                   className="inline-flex items-center justify-center rounded-xl bg-[#006B2C] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#005523] whitespace-nowrap"
                 >
-                  Xem tồn kho
+                  Xem sản phẩm
                 </Link>
               )}
               {detailTask.formId && (

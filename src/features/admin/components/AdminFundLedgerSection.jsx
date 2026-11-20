@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Button, Modal, Spinner } from '../../../components/common/index.js';
+import { Button, Modal, Spinner, TableActionButton } from '../../../components/common/index.js';
 import { formatCurrencyVND, formatDateTime } from '../../../utils/formatters.js';
 import adminApi from '../services/adminApi.js';
 import { validateDateRange } from '../utils/adminDateUtils.js';
@@ -109,9 +109,9 @@ export default function AdminFundLedgerSection({ from, to }) {
   const currentPage = ledgerPage.page ?? page;
 
   return (
-    <div className="bg-white p-6 rounded-2xl border border-[#E2E8E0] shadow-xs space-y-4">
-      <div className="border-b border-[#E2E8E0] pb-3">
-        <h3 id="ledger-heading" className="text-base font-bold text-[#191C19] font-heading">
+    <div className="bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-xs space-y-4">
+      <div className="border-b border-[#DDE5D9] pb-3">
+        <h3 id="ledger-heading" className="text-base font-bold text-[#1F2A37] font-heading">
           Giao dịch
         </h3>
       </div>
@@ -119,7 +119,7 @@ export default function AdminFundLedgerSection({ from, to }) {
       {/* Bộ lọc loại giao dịch */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <label htmlFor="ledger-type-select" className="text-xs font-medium text-[#414942]">
+          <label htmlFor="ledger-type-select" className="text-xs font-medium text-[#5B6776]">
             Loại giao dịch:
           </label>
           <select
@@ -127,7 +127,7 @@ export default function AdminFundLedgerSection({ from, to }) {
             aria-label="Lọc loại giao dịch"
             value={typeFilter}
             onChange={handleTypeChange}
-            className="rounded-xl border border-[#E2E8E0] bg-white px-3 py-2 text-xs font-medium text-[#191C19] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30"
+            className="rounded-xl border border-[#DDE5D9] bg-white px-3 py-2 text-xs font-medium text-[#1F2A37] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30"
           >
             {TRANSACTION_TYPE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -137,14 +137,14 @@ export default function AdminFundLedgerSection({ from, to }) {
           </select>
         </div>
 
-        <span className="text-xs text-[#717971]">
-          Tổng số: <strong className="text-[#191C19]">{ledgerPage.totalElements}</strong> giao dịch
+        <span className="text-xs text-[#5B6776]">
+          Tổng số: <strong className="text-[#1F2A37]">{ledgerPage.totalElements}</strong> giao dịch
         </span>
       </div>
 
       {/* Bảng giao dịch */}
       {ledgerLoading && ledgerPage.content.length === 0 ? (
-        <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center flex flex-col items-center justify-center gap-3 text-xs text-[#717971]">
+        <div className="p-8 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-center flex flex-col items-center justify-center gap-3 text-xs text-[#5B6776]">
           <Spinner size="lg" />
           <span>Đang tải danh sách giao dịch...</span>
         </div>
@@ -161,14 +161,14 @@ export default function AdminFundLedgerSection({ from, to }) {
           </Button>
         </div>
       ) : ledgerPage.content.length === 0 ? (
-        <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center flex flex-col items-center justify-center">
+        <div className="p-8 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-center flex flex-col items-center justify-center">
           <div className="w-12 h-12 rounded-xl bg-[#F1F5F9] text-[#64748B] flex items-center justify-center mb-2">
             <span className="material-symbols-outlined text-2xl font-light">receipt_long</span>
           </div>
-          <h4 className="text-xs font-bold text-[#191C19]">
+          <h4 className="text-xs font-bold text-[#1F2A37]">
             Chưa có giao dịch nào phát sinh
           </h4>
-          <p className="text-[11px] text-[#717971] mt-0.5 max-w-sm">
+          <p className="text-[11px] text-[#5B6776] mt-0.5 max-w-sm">
             Các giao dịch hoàn thành và biến động số dư giữa Quỹ nền tảng và Ví thành viên trong khoảng lọc sẽ hiển thị tại đây.
           </p>
         </div>
@@ -178,12 +178,12 @@ export default function AdminFundLedgerSection({ from, to }) {
             role="region"
             aria-label="Bảng giao dịch"
             tabIndex={0}
-            className={`overflow-x-auto rounded-xl border border-[#E2E8E0] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30 transition-opacity duration-150 ${
+            className={`overflow-x-auto rounded-xl border border-[#DDE5D9] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30 transition-opacity duration-150 ${
               ledgerLoading ? 'opacity-60 pointer-events-none' : ''
             }`}
           >
             <table className="w-full text-left text-xs min-w-[920px]">
-              <thead className="bg-[#F8FAF8] text-[#717971] font-semibold border-b border-[#E2E8E0]">
+              <thead className="bg-[#F6F9F4] text-[#5B6776] font-semibold border-b border-[#DDE5D9]">
                 <tr>
                   <th className="py-3 px-4 whitespace-nowrap">Mã giao dịch</th>
                   <th className="py-3 px-4 whitespace-nowrap">Thời gian</th>
@@ -193,18 +193,18 @@ export default function AdminFundLedgerSection({ from, to }) {
                   <th className="py-3 px-4"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E2E8E0]">
+              <tbody className="divide-y divide-[#DDE5D9]">
                 {ledgerPage.content.map((entry) => {
                   const amountNum = Number(entry.amount || 0);
                   const isInflow = amountNum > 0;
                   const isOutflow = amountNum < 0;
 
                   return (
-                    <tr key={entry.id} className="hover:bg-[#F8FAF8]/70 transition-colors">
-                      <td className="py-3 px-4 whitespace-nowrap font-bold font-mono text-[#191C19]">
+                    <tr key={entry.id} className="hover:bg-[#F6F9F4]/70 transition-colors">
+                      <td className="py-3 px-4 whitespace-nowrap font-bold font-mono text-[#1F2A37]">
                         {entry.transactionNo || '—'}
                       </td>
-                      <td className="py-3 px-4 whitespace-nowrap text-[#414942]">
+                      <td className="py-3 px-4 whitespace-nowrap text-[#5B6776]">
                         {formatDateTime(entry.createdAt)}
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap">
@@ -212,25 +212,21 @@ export default function AdminFundLedgerSection({ from, to }) {
                           {TYPE_LABELS[entry.type] || entry.type}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-[#414942] max-w-[220px] truncate">
+                      <td className="py-3 px-4 text-[#5B6776] max-w-[220px] truncate">
                         {entry.note || '—'}
                       </td>
                       <td
                         className={`py-3 px-4 text-right whitespace-nowrap font-extrabold font-mono ${
-                          isInflow ? 'text-[#006B2C]' : isOutflow ? 'text-[#DC2626]' : 'text-[#191C19]'
+                          isInflow ? 'text-[#006B2C]' : isOutflow ? 'text-[#DC2626]' : 'text-[#1F2A37]'
                         }`}
                       >
                         {formatSignedAmount(entry.amount)}
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap text-right">
-                        <button
-                          type="button"
+                        <TableActionButton
+                          action="view"
                           onClick={() => setDetailEntry(entry)}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[#00685F] hover:bg-[#E0F2F1] font-semibold"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">visibility</span>
-                          Chi tiết
-                        </button>
+                        />
                       </td>
                     </tr>
                   );
@@ -239,16 +235,16 @@ export default function AdminFundLedgerSection({ from, to }) {
             </table>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 text-xs text-[#717971]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 text-xs text-[#5B6776]">
             <span>
-              Trang <strong className="text-[#191C19]">{currentPage + 1}</strong> / {totalPages}
+              Trang <strong className="text-[#1F2A37]">{currentPage + 1}</strong> / {totalPages}
             </span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={currentPage <= 0}
-                className="px-3 py-1.5 rounded-xl border border-[#E2E8E0] bg-white hover:bg-[#F8FAF8] text-[#191C19] font-semibold disabled:opacity-40"
+                className="px-3 py-1.5 rounded-xl border border-[#DDE5D9] bg-white hover:bg-[#F6F9F4] text-[#1F2A37] font-semibold disabled:opacity-40"
               >
                 Trước
               </button>
@@ -256,7 +252,7 @@ export default function AdminFundLedgerSection({ from, to }) {
                 type="button"
                 onClick={() => setPage((p) => p + 1)}
                 disabled={currentPage + 1 >= totalPages}
-                className="px-3 py-1.5 rounded-xl border border-[#E2E8E0] bg-white hover:bg-[#F8FAF8] text-[#191C19] font-semibold disabled:opacity-40"
+                className="px-3 py-1.5 rounded-xl border border-[#DDE5D9] bg-white hover:bg-[#F6F9F4] text-[#1F2A37] font-semibold disabled:opacity-40"
               >
                 Sau
               </button>
@@ -303,8 +299,8 @@ export default function AdminFundLedgerSection({ from, to }) {
               ],
             ].map(([label, value]) => (
               <div key={label} className="flex items-start justify-between gap-4 py-1.5 border-b border-[#F0F4EE] last:border-0">
-                <dt className="text-[#717971] shrink-0">{label}</dt>
-                <dd className="text-right font-semibold text-[#191C19] font-mono">{value}</dd>
+                <dt className="text-[#5B6776] shrink-0">{label}</dt>
+                <dd className="text-right font-semibold text-[#1F2A37] font-mono">{value}</dd>
               </div>
             ))}
           </dl>

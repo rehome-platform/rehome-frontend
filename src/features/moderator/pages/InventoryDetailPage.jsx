@@ -16,6 +16,12 @@ import { listItems, resolveInventoryTermAndRates } from '../models/warehouseMode
 import { Page, Card, Photos, Status, ResourceState, date, money } from '../components/WarehouseUi.jsx';
 import { ReturnOutcomeDialog } from '../components/returns/ReturnSections.jsx';
 import { useToast } from '../../../context/ToastContext.jsx';
+import {
+  WAREHOUSE_REASON,
+  productStatusKey,
+  resolveProductStatusLabel,
+  warehouseReasonOf,
+} from '../../../constants/productStatus.js';
 
 export default function InventoryDetailPage() {
   const { sku } = useParams();
@@ -23,7 +29,6 @@ export default function InventoryDetailPage() {
 
   const product = useResource((options) => inventoryService.read(sku, options), [sku], {
     poll: true,
-    refreshInterval: 30000,
     done: (value) => !value?.photos?.some((photo) => photo.status === 'PROCESSING'),
   });
 
@@ -73,13 +78,13 @@ export default function InventoryDetailPage() {
     if (data.degradedCaseId === null) return null;
     const cases = await inventoryService.degradedCases({}, options);
     return latestDegradedCase(cases, data.id);
-  }, [data?.id, data?.status, data?.degradedCaseId], { enabled: Boolean(data?.id && data.status !== 'ON_SALE'), refreshInterval: 30000 });
+  }, [data?.id, data?.status, data?.degradedCaseId], { enabled: Boolean(data?.id && data.status !== 'ON_SALE') });
   const activeCase = data?.status === 'ON_SALE' || data?.degradedCaseId === null ? null
     : data?.degradedCaseId
       ? [existingCase.data, submittedCase].find(item => item?.id === data.degradedCaseId)
       : existingCase.data || submittedCase;
   const pricing = useResource(options => endTermService.pendingPricing(options), [sku], {
-    enabled: Boolean(data && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(data.status)), refreshInterval: 30000,
+    enabled: Boolean(data && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(data.status)),
   });
   const pendingReturnData = useMemo(() => pendingReturnFromInventory(data), [data]);
   const pendingReturn = useMemo(
@@ -100,14 +105,21 @@ export default function InventoryDetailPage() {
   const sellingPrice = data?.currentPrice ?? data?.agreedPrice;
   const termAndRates = resolveInventoryTermAndRates(data);
 
+  const [degradedError, setDegradedError] = useState('');
+
   const handleSendDegradedProposal = async () => {
     if (degradedLock.current || degradedUploadPending || !['ON_SALE', 'RETURNED'].includes(data?.status) || submittedCase || !data?.id) return;
+    setDegradedError('');
     if (!degradedNotes.trim()) {
-      alert('Vui lòng nhập mô tả chi tiết hư hỏng hoặc nguyên nhân xuống cấp.');
+      const msg = 'Vui lòng nhập mô tả chi tiết hư hỏng hoặc nguyên nhân xuống cấp.';
+      setDegradedError(msg);
+      toast.warn(msg);
       return;
     }
     if (!degradedPhotos.length) {
-      alert('Vui lòng tải lên ít nhất 1 ảnh hiện trạng hư hỏng.');
+      const msg = 'Vui lòng tải lên ít nhất 1 ảnh hiện trạng hư hỏng.';
+      setDegradedError(msg);
+      toast.warn(msg);
       return;
     }
     degradedLock.current = true;
@@ -120,9 +132,12 @@ export default function InventoryDetailPage() {
       });
       setDegradedModalOpen(false);
       setSubmittedCase(created);
+      toast.success('Đã gửi đề xuất hàng xuống cấp thành công.');
       product.refresh();
     } catch (err) {
-      alert(err.message || 'Lỗi khi gửi đề xuất hàng xuống cấp.');
+      const msg = err?.message || 'Lỗi khi gửi đề xuất hàng xuống cấp.';
+      setDegradedError(msg);
+      toast.error(msg);
     } finally {
       degradedLock.current = false;
       setIsSubmittingDegraded(false);
@@ -156,12 +171,12 @@ export default function InventoryDetailPage() {
 
   return (
     <Page
-      title="Chi tiết sản phẩm tồn kho"
+      title="Chi tiết sản phẩm"
       subtitle={`Mã SKU: ${sku}`}
       actions={
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => navigate('/moderator/inventory')}>
-            ← Quay lại tồn kho
+            ← Quay lại Quản lý sản phẩm
           </Button>
           <Button variant="outline" onClick={() => product.refresh()}>
             Tải lại
@@ -179,7 +194,7 @@ export default function InventoryDetailPage() {
             Sản phẩm với mã SKU <strong>{sku}</strong> đang được lưu trữ tại chi nhánh kho khác. Bạn chỉ có quyền kiểm kê và in tem đối với các sản phẩm thuộc kho bạn được phân công.
           </p>
           <Button variant="outline" onClick={() => navigate('/moderator/inventory')}>
-            Quay lại danh sách tồn kho
+            Quay lại Quản lý sản phẩm
           </Button>
         </div>
       )}
@@ -193,14 +208,23 @@ export default function InventoryDetailPage() {
             Hệ thống không tìm thấy bất kỳ sản phẩm nào có mã SKU: <strong>{sku}</strong>. Vui lòng kiểm tra lại tem nhãn hoặc quét lại mã QR.
           </p>
           <Button variant="outline" onClick={() => navigate('/moderator/inventory')}>
-            Quay lại danh sách tồn kho
+            Quay lại Quản lý sản phẩm
           </Button>
         </div>
       )}
 
       {!isForbidden && !isNotFound && <ResourceState resource={product} />}
 
-      {data && (
+      {data && (() => {
+        const statusItem = {
+          ...data,
+          warehouseReason:
+            data.warehouseReason ||
+            (activeCase && !activeCase.choice ? WAREHOUSE_REASON.DEGRADED : undefined) ||
+            (canNegotiate ? WAREHOUSE_REASON.NEGOTIATING : undefined) ||
+            warehouseReasonOf(data),
+        };
+        return (
         <div className="space-y-6">
           {/* 1. THẺ THÔNG TIN SẢN PHẨM */}
           <div className="rounded-2xl border border-[#8a8a8a] bg-white p-6 shadow-sm space-y-5">
@@ -208,7 +232,7 @@ export default function InventoryDetailPage() {
               <div className="space-y-1.5">
                 <div className="flex items-center gap-3">
                   <h2 className="text-xl font-bold text-[#191C19]">{data.name}</h2>
-                  <Status>{data.status}</Status>
+                  <Status label={resolveProductStatusLabel(statusItem)}>{productStatusKey(statusItem)}</Status>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <span className="font-mono font-bold bg-[#f4f4f4] px-2.5 py-1 rounded-lg border border-[#d0d0d0] text-[#191C19]">
@@ -426,8 +450,8 @@ export default function InventoryDetailPage() {
               </Card>
             )}
           </div>
-          )
-      }
+        );
+      })()}
 
           {/* Modal In tem mã vạch SKU */}
           <BarcodePrintModal isOpen={print} onClose={() => setPrint(false)} item={data} />
@@ -440,7 +464,7 @@ export default function InventoryDetailPage() {
             onUpdated={() => product.refresh()}
           />
 
-          {/* Modal Đăng bán lại từ chi tiết tồn kho */}
+          {/* Modal Đăng bán lại từ chi tiết sản phẩm */}
           <ReturnOutcomeDialog
             isOutcomeModalOpen={relistModalOpen}
             setIsOutcomeModalOpen={(open) => {
@@ -492,17 +516,30 @@ export default function InventoryDetailPage() {
 
                 {/* Mô tả hư hỏng */}
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#191C19]">
+                  <label htmlFor="degraded-notes-input" className="block font-bold text-[#191C19]">
                     Mô tả hiện trạng hư hỏng / nguyên nhân xuống cấp <span className="text-red-600">*</span>
                   </label>
                   <textarea
+                    id="degraded-notes-input"
                     rows={3}
                     value={degradedNotes}
-                    onChange={(e) => setDegradedNotes(e.target.value)}
+                    onChange={(e) => {
+                      setDegradedNotes(e.target.value);
+                      if (degradedError) setDegradedError('');
+                    }}
                     placeholder="VD: Sản phẩm bị ẩm mốc góc dưới, xước mặt kính hoặc sờn rách trong quá trình lưu kho..."
-                    className="w-full rounded-xl border border-[#8a8a8a] p-2.5 text-xs text-[#191C19] focus:border-[#006B2C] focus:outline-none"
+                    className="w-full rounded-xl border border-[#DDE5D9] p-2.5 text-xs text-[#191C19] focus:border-[#006B2C] focus:outline-none"
                   />
                 </div>
+
+                {degradedError && (
+                  <div
+                    role="alert"
+                    className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700"
+                  >
+                    {degradedError}
+                  </div>
+                )}
 
                 {/* Upload ảnh hư hỏng thực tế */}
                 <div className="space-y-1">

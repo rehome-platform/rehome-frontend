@@ -8,6 +8,7 @@ import { formatCurrencyVND } from "../../../../utils/formatters.js";
 import { formatDeadlineWithCountdown } from "../WarehouseUi.jsx";
 import { ReturnEvidence, ReturnPhotoComparison } from './ReturnEvidence.jsx';
 import { useToast } from "../../../../context/ToastContext.jsx";
+import { TABLE_COLUMN_LABELS } from "../../../../constants/tableColumns.js";
 
 export function ReturnCompareDialog({ isCompareModalOpen, setIsCompareModalOpen, selectedItem }) {
   if (!selectedItem) return null;
@@ -355,23 +356,31 @@ export function DegradedCaseModal({
 
             <div className="p-2.5 rounded-xl border border-red-200 bg-red-50/40 space-y-1.5">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold text-red-700">Ảnh hiện trạng hư hỏng *</span>
+                <span className="text-[10px] font-bold text-red-700">Ảnh hiện trạng hư hỏng (tối thiểu 2, tối đa 5) *</span>
                 <span className="text-[10px] font-bold text-red-700">{allDamagedPhotos.length} / 5</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {allDamagedPhotos.map((url, i) => (
                   <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-red-300">
-                    <img src={url} alt="Ảnh hư hỏng" className="w-full h-full object-cover" />
+                    <img src={url} alt={`Ảnh hư hỏng ${i + 1}`} className="w-full h-full object-cover" />
                     <button
                       type="button"
-                      disabled={degradedSubmitting || evidenceUploading} onClick={() => removePhoto(i)}
-                      className="absolute top-0.5 right-0.5 bg-black/70 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]"
+                      aria-label={`Xóa ảnh hiện trạng ${i + 1}`}
+                      title="Xóa ảnh"
+                      disabled={degradedSubmitting || evidenceUploading}
+                      onClick={() => removePhoto(i)}
+                      className="absolute top-0.5 right-0.5 bg-black/75 hover:bg-[#D92D20] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold transition-colors"
                     >
                       ×
                     </button>
                   </div>
                 ))}
               </div>
+              {allDamagedPhotos.length === 1 && (
+                <p className="text-[10px] text-red-700 font-medium">
+                  Cần tải thêm ít nhất 1 ảnh nữa (tối thiểu 2 ảnh).
+                </p>
+              )}
 
               {allDamagedPhotos.length < 5 && (
                 <div className="space-y-1 pt-1">
@@ -431,15 +440,15 @@ export function DegradedCaseModal({
                 Không lấy lại đồ. Hàng thành tài sản nền tảng.
               </p>
             </div>
-            <div className="p-3 rounded-xl border border-[#D97706] bg-[#FFFBEB] space-y-1">
-              <span className="text-[10px] uppercase font-bold text-[#D97706]">Phương án 2 · Đền một phần + Nhận lại</span>
-              <p className="text-base font-extrabold text-[#D97706]">{showAmount(halfCompensation)}</p>
-              <p className="text-[10px] text-[#5f5f5f] leading-tight">
+            <div className="p-3 rounded-xl border border-[#B54708] bg-[#FFFAEB] space-y-1">
+              <span className="text-[10px] uppercase font-bold text-[#B54708]">Phương án 2 · Đền một phần + Nhận lại</span>
+              <p className="text-base font-extrabold text-[#B54708]">{showAmount(halfCompensation)}</p>
+              <p className="text-[10px] text-[#5B6776] leading-tight">
                 Member nhận tiền đền theo tỷ lệ trên biên nhận và đến quầy tiếp nhận lấy đồ.
               </p>
             </div>
           </div>
-          <p className="text-[10px] text-[#717971]">
+          <p className="text-[10px] text-[#5B6776]">
             {DEGRADED_DECISION_POLICY}
           </p>
         </div>
@@ -450,8 +459,10 @@ export function DegradedCaseModal({
           </Button>
           <Button
             size="sm"
+            variant="primary"
+            loading={degradedSubmitting}
             disabled={degradedSubmitting || evidenceUploading || Boolean(evidenceError) || !degradedNotes?.trim() || allDamagedPhotos.length < 2 || allDamagedPhotos.length > 5}
-            className="bg-[#2b2b2b] text-white hover:bg-black font-bold rounded-xl px-4 py-2"
+            className="font-bold rounded-xl px-4 py-2"
             onClick={() => handleCreateDegradedCase({
               notes: degradedNotes,
               photos: allDamagedPhotos,
@@ -487,11 +498,14 @@ export function DegradedCaseViewTH07({ selectedItem, onBackToQueue, onNavigateTo
   );
 }
 
-export function ReturnRejectDialog({ isRejectModalOpen, setIsRejectModalOpen, rejectReason, setRejectReason, handleConfirmRejectRequest }) {
+export function ReturnRejectDialog({ isRejectModalOpen, setIsRejectModalOpen, rejectReason, setRejectReason, handleConfirmRejectRequest, rejectingReturn = false }) {
+  const handleClose = () => {
+    if (!rejectingReturn) setIsRejectModalOpen(false);
+  };
   return (
     <Modal
       isOpen={isRejectModalOpen}
-      onClose={() => setIsRejectModalOpen(false)}
+      onClose={handleClose}
       title="Từ chối yêu cầu trả hàng"
     >
       <div className="space-y-4 text-xs font-sans">
@@ -499,20 +513,29 @@ export function ReturnRejectDialog({ isRejectModalOpen, setIsRejectModalOpen, re
           Người mua sẽ nhận được thông báo giải thích lý do yêu cầu không hợp lệ theo chính sách của ReHome.
         </p>
         <div>
-          <label className="block font-bold text-text mb-1">Lý do từ chối *</label>
+          <label htmlFor="return-reject-reason" className="block font-bold text-text mb-1">Lý do từ chối *</label>
           <textarea
+            id="return-reject-reason"
             rows="3"
             value={rejectReason}
+            disabled={rejectingReturn}
             onChange={(e) => setRejectReason(e.target.value)}
             placeholder="Ví dụ: Lỗi người mua tự gây ra, gửi yêu cầu sau khi đã quá thời hạn trả hàng cho phép..."
             className="w-full p-2.5 border border-neutral rounded-xl text-text bg-surface focus:outline-none focus:border-error"
           />
         </div>
         <div className="flex justify-end gap-2 pt-2 border-t border-neutral">
-          <Button size="sm" variant="outline" className="rounded-xl border-neutral" onClick={() => setIsRejectModalOpen(false)}>
+          <Button size="sm" variant="outline" disabled={rejectingReturn} className="rounded-xl border-neutral" onClick={handleClose}>
             Hủy
           </Button>
-          <Button size="sm" className="bg-error hover:bg-red-700 text-white font-bold rounded-xl px-4" onClick={handleConfirmRejectRequest}>
+          <Button
+            size="sm"
+            variant="danger"
+            loading={rejectingReturn}
+            disabled={rejectingReturn || !rejectReason.trim()}
+            className="font-bold rounded-xl px-4"
+            onClick={handleConfirmRejectRequest}
+          >
             Xác nhận từ chối
           </Button>
         </div>
@@ -622,6 +645,7 @@ export function ReturnInspectionVerdict({
   handleOpenDegradedCase,
   handleReleaseReturn,
   releasingReturn = false,
+  savingInspection = false,
 }) {
   return (
     <div className="lg:col-span-6 space-y-4 font-sans">
@@ -721,18 +745,17 @@ export function ReturnInspectionVerdict({
     
       {/* Nút lưu kết luận */}
       <div className="pt-2 flex items-center gap-3">
-        <button
+        <Button
           type="button"
-          disabled={!inspectionVerdict}
+          variant="primary"
+          size="sm"
+          loading={savingInspection}
+          disabled={!inspectionVerdict || savingInspection}
           onClick={handleSaveInspection}
-          className={`py-2.5 px-6 rounded-xl text-xs font-bold transition-all ${
-            inspectionVerdict
-              ? 'bg-primary text-white hover:bg-primary-hover shadow-sm cursor-pointer'
-              : 'bg-neutral text-textSecondary cursor-not-allowed'
-          }`}
+          className="py-2.5 px-6 text-xs font-bold"
         >
           Lưu kết luận
-        </button>
+        </Button>
         {!inspectionVerdict && (
           <span className="text-xs text-textSecondary">Chọn kết luận mới lưu được</span>
         )}
@@ -836,7 +859,7 @@ export function ReturnInspectionProduct({
   );
 }
 
-export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybill, setIsRejectModalOpen, handleOpenOutcomeModal }) {
+export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybill, setIsRejectModalOpen, handleOpenOutcomeModal, approvingReturn = false }) {
   const thumbUrl = selectedItem?.packingPhotoUrls?.[0] || selectedItem?.stockInPhotos?.[0] || null;
   const buyerLine = [selectedItem?.buyerName, selectedItem?.buyerPhone].filter(Boolean).join(' · ') || '—';
   return (
@@ -948,21 +971,26 @@ export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybi
     
       {/* Footer Buttons */}
       {selectedItem?.status === 'PENDING_APPROVAL' && (
-        <div className="pt-2 flex flex-col sm:flex-row gap-2">
-          <button
+        <div className="pt-2 flex flex-col sm:flex-row gap-3">
+          <Button
             type="button"
+            variant="primary"
+            loading={approvingReturn}
+            disabled={approvingReturn}
             onClick={handleApproveAndCreateWaybill}
-            className="flex-1 py-2.5 px-4 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-hover shadow-sm transition-colors"
+            className="flex-1 py-2.5 px-4 text-xs font-bold"
           >
             Duyệt & tạo vận đơn trả
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="danger-outline"
+            disabled={approvingReturn}
             onClick={() => setIsRejectModalOpen(true)}
-            className="py-2.5 px-4 rounded-xl border border-error text-error text-xs font-bold hover:bg-error-light transition-colors"
+            className="py-2.5 px-4 text-xs font-bold"
           >
             Từ chối yêu cầu
-          </button>
+          </Button>
         </div>
       )}
       {needsItemAction(selectedItem) && handleOpenOutcomeModal && (
@@ -1178,9 +1206,9 @@ export function ReturnQueueTable({
               <th className="py-3 px-3.5">Tên người mua</th>
               <th className="py-3 px-3.5">Số món</th>
               <th className="py-3 px-3.5">Gửi lúc</th>
-              <th className="py-3 px-3.5">Đã chờ</th>
-              <th className="py-3 px-3.5">Trạng thái</th>
-              <th className="py-3 px-3.5 text-right">Hành động</th>
+              <th className="py-3 px-3.5">{TABLE_COLUMN_LABELS.WAITED}</th>
+              <th className="py-3 px-3.5">{TABLE_COLUMN_LABELS.STATUS}</th>
+              <th className="py-3 px-3.5 text-right">{TABLE_COLUMN_LABELS.ACTIONS}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral">

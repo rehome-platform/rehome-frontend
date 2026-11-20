@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Modal, Button, Spinner } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
+import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
 import adminApi from '../services/adminApi.js';
 import membershipAdminApi from '../services/membershipAdminApi.js';
 import { PAID_TIERS, TIER_LABELS, SUBSCRIPTION_STATUS_LABELS } from './membershipConstants.js';
@@ -26,6 +27,11 @@ export default function GrantMembershipModal({ isOpen, onClose, onSuccess, membe
 
   const [selectedMember, setSelectedMember] = useState(member);
   const [searchQuery, setSearchQuery] = useState('');
+  const {
+    debouncedQuery: debouncedSearchQuery,
+    isTooShort: isSearchTooShort,
+    hint: searchHint,
+  } = useDebouncedSearch(searchQuery);
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -85,32 +91,40 @@ export default function GrantMembershipModal({ isOpen, onClose, onSuccess, membe
     };
   }, [isOpen, selectedMember]);
 
-  // Gõ tới đâu tìm tới đó (debounce), tìm theo tài khoản Member - kể cả người chưa từng mua gói
+  // Gõ tới đâu tìm tới đó (debounce 400ms & tối thiểu 2 ký tự), tìm theo tài khoản Member - kể cả người chưa từng mua gói
   useEffect(() => {
     if (!isOpen || selectedMember) return;
     if (!searchQuery.trim()) {
       setSearchResults([]);
       setHasSearched(false);
+      setSearching(false);
+      return;
+    }
+    if (isSearchTooShort || !debouncedSearchQuery) {
+      setSearching(false);
       return;
     }
     const seq = ++searchSeqRef.current;
     setSearching(true);
-    const timer = setTimeout(async () => {
+    let cancelled = false;
+    (async () => {
       try {
-        const res = await adminApi.getAccounts({ search: searchQuery.trim(), role: 'MEMBER', size: 10 });
-        if (seq !== searchSeqRef.current) return;
+        const res = await adminApi.getAccounts({ search: debouncedSearchQuery, role: 'MEMBER', size: 10 });
+        if (cancelled || seq !== searchSeqRef.current) return;
         const list = Array.isArray(res) ? res : res?.content || [];
         setSearchResults(list);
         setHasSearched(true);
       } catch (err) {
-        if (seq !== searchSeqRef.current) return;
+        if (cancelled || seq !== searchSeqRef.current) return;
         setError(err?.response?.data?.message || err?.message || 'Không thể tìm kiếm thành viên.');
       } finally {
-        if (seq === searchSeqRef.current) setSearching(false);
+        if (!cancelled && seq === searchSeqRef.current) setSearching(false);
       }
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [isOpen, searchQuery, selectedMember]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, searchQuery, debouncedSearchQuery, isSearchTooShort, selectedMember]);
 
   if (!isOpen) {
     return null;
@@ -168,7 +182,7 @@ export default function GrantMembershipModal({ isOpen, onClose, onSuccess, membe
           {selectedMember ? (
             <div className="flex items-center justify-between p-3 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]">
               <div>
-                <p className="text-sm font-semibold text-[#191C19]">
+                <p className="text-sm font-semibold text-[#1F2A37]">
                   {selectedMember.fullName || selectedMember.memberName || 'Thành viên'}
                 </p>
                 <p className="text-xs text-[#5B6776]">
@@ -195,6 +209,9 @@ export default function GrantMembershipModal({ isOpen, onClose, onSuccess, membe
                 placeholder="Tìm theo tên, email hoặc mã thành viên..."
                 className="w-full px-3.5 py-2 text-sm bg-white border border-[#DDE5D9] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#006B2C]/20 focus:border-[#006B2C]"
               />
+              {isSearchTooShort && (
+                <p className="text-[11px] text-[#5f5f5f]">{searchHint}</p>
+              )}
               {searching && (
                 <div className="flex items-center gap-2 text-xs text-[#5B6776] py-1">
                   <Spinner size="sm" />
@@ -202,7 +219,7 @@ export default function GrantMembershipModal({ isOpen, onClose, onSuccess, membe
                 </div>
               )}
               {!searching && searchResults.length > 0 && (
-                <ul className="max-h-40 overflow-y-auto border border-[#DDE5D9] rounded-xl divide-y divide-[#E2E8E0]">
+                <ul className="max-h-40 overflow-y-auto border border-[#DDE5D9] rounded-xl divide-y divide-[#DDE5D9]">
                   {searchResults.map((acc) => (
                     <li key={acc.id}>
                       <button
@@ -217,7 +234,7 @@ export default function GrantMembershipModal({ isOpen, onClose, onSuccess, membe
                         }
                         className="w-full text-left px-3 py-2 hover:bg-[#F6F9F4] transition-colors"
                       >
-                        <p className="text-sm font-medium text-[#191C19]">{acc.fullName || acc.email}</p>
+                        <p className="text-sm font-medium text-[#1F2A37]">{acc.fullName || acc.email}</p>
                         <p className="text-xs text-[#5B6776]">
                           {acc.email} {acc.code ? `• ${acc.code}` : ''}
                         </p>

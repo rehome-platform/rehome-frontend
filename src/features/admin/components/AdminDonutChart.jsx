@@ -61,11 +61,11 @@ export default function AdminDonutChart({
       </svg>
 
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-        <span className="text-3xl sm:text-4xl font-black text-[#191C19] font-heading leading-none">
+        <span className="text-3xl sm:text-4xl font-black text-[#1F2A37] font-heading leading-none">
           {centerValue}
         </span>
         {centerLabel && (
-          <span className="mt-1.5 text-[11px] sm:text-xs text-[#717971] font-medium leading-tight">
+          <span className="mt-1.5 text-[11px] sm:text-xs text-[#5B6776] font-medium leading-tight">
             {centerLabel}
           </span>
         )}

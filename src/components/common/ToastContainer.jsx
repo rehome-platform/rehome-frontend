@@ -14,7 +14,7 @@ export default function ToastContainer() {
       data-testid="rehome-toast-container"
       aria-live="polite"
       aria-label="Thông báo hệ thống"
-      className="fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none items-end"
+      className="fixed top-6 right-4 sm:right-6 z-[9999] flex flex-col gap-3 pointer-events-none items-end w-[calc(100vw-2rem)] sm:w-auto max-w-[420px]"
     >
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onDismiss={dismissToast} />

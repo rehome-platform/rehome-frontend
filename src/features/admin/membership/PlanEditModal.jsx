@@ -240,7 +240,7 @@ export default function PlanEditModal({ isOpen, plan, onClose, onSuccess }) {
       size="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="rounded-xl border border-[#DCE6DA] bg-[#F6F9F4] px-4 py-3 text-xs text-[#414942]">
+        <div className="rounded-xl border border-[#DCE6DA] bg-[#F6F9F4] px-4 py-3 text-xs text-[#5B6776]">
           Thay đổi giá chỉ áp dụng cho lượt mua/gia hạn mới. Tăng hạn mức áp dụng ngay; giảm hạn mức chỉ áp dụng từ kỳ gia hạn tiếp theo.
         </div>
 
@@ -312,7 +312,7 @@ export default function PlanEditModal({ isOpen, plan, onClose, onSuccess }) {
                 onChange={(e) => handleNumberChange('pricePerYear', e.target.value)}
                 error={errors.pricePerYear}
               />
-              <label className="inline-flex items-center gap-2 text-xs text-[#414942] cursor-pointer -mt-1">
+              <label className="inline-flex items-center gap-2 text-xs text-[#5B6776] cursor-pointer -mt-1">
                 <input
                   type="checkbox"
                   checked={form.pricePerYear === null}
@@ -357,7 +357,7 @@ export default function PlanEditModal({ isOpen, plan, onClose, onSuccess }) {
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <label htmlFor={`plan-${key}`} className="text-xs font-semibold text-[#191C19] leading-snug">
+                  <label htmlFor={`plan-${key}`} className="text-xs font-semibold text-[#1F2A37] leading-snug">
                     {label}
                   </label>
                   <button
@@ -386,13 +386,13 @@ export default function PlanEditModal({ isOpen, plan, onClose, onSuccess }) {
                   placeholder={isUnlimited ? 'Không giới hạn' : undefined}
                   className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-bold font-mono outline-none transition-all ${
                     editing
-                      ? 'border-[#006B2C] bg-white text-[#191C19] focus:ring-2 focus:ring-[#006B2C]/15'
-                      : 'border-transparent bg-[#F0F4EE] text-[#191C19] cursor-default'
+                      ? 'border-[#006B2C] bg-white text-[#1F2A37] focus:ring-2 focus:ring-[#006B2C]/15'
+                      : 'border-transparent bg-[#F0F4EE] text-[#1F2A37] cursor-default'
                   } disabled:bg-[#F5F5F5] disabled:text-[#9E9E9E]`}
                 />
                 {errors[key] && <p className="text-[11px] text-[#D92D20] font-medium">{errors[key]}</p>}
 
-                <label className="inline-flex items-center gap-2 text-xs text-[#414942] cursor-pointer">
+                <label className="inline-flex items-center gap-2 text-xs text-[#5B6776] cursor-pointer">
                   <input
                     type="checkbox"
                     checked={isUnlimited}
@@ -422,7 +422,7 @@ export default function PlanEditModal({ isOpen, plan, onClose, onSuccess }) {
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <label htmlFor={`plan-${key}`} className="text-xs font-semibold text-[#191C19] leading-snug">
+                  <label htmlFor={`plan-${key}`} className="text-xs font-semibold text-[#1F2A37] leading-snug">
                     {label} ({min}–{max})
                   </label>
                   <button
@@ -450,8 +450,8 @@ export default function PlanEditModal({ isOpen, plan, onClose, onSuccess }) {
                   onChange={(e) => handleNumberChange(key, e.target.value)}
                   className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-bold font-mono outline-none transition-all ${
                     editing
-                      ? 'border-[#006B2C] bg-white text-[#191C19] focus:ring-2 focus:ring-[#006B2C]/15'
-                      : 'border-transparent bg-[#F0F4EE] text-[#191C19] cursor-default'
+                      ? 'border-[#006B2C] bg-white text-[#1F2A37] focus:ring-2 focus:ring-[#006B2C]/15'
+                      : 'border-transparent bg-[#F0F4EE] text-[#1F2A37] cursor-default'
                   }`}
                 />
                 {errors[key] && <p className="text-[11px] text-[#D92D20] font-medium">{errors[key]}</p>}
@@ -484,7 +484,7 @@ export default function PlanEditModal({ isOpen, plan, onClose, onSuccess }) {
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#E2E8E0]">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#DDE5D9]">
           <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
             Hủy
           </Button>

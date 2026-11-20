@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
-import { Button, Badge } from '../../../components/common/index.js';
+import { TableActionButton } from '../../../components/common/index.js';
+import { Button, Badge, Modal } from '../../../components/common/index.js';
 import Spinner from '../../../components/common/Spinner.jsx';
 import { violationReportService } from '../services/violationReportApi.js';
+import { useModerationShortcuts } from '../hooks/useModerationShortcuts.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import { formatDateTime, formatDate } from '../../../utils/formatters.js';
 
@@ -26,6 +28,8 @@ const TARGET_TYPE_MAP = {
   CAMPAIGN: { label: 'Chiến dịch', color: 'bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]' },
   ORGANIZATION_ACCOUNT: { label: 'Tổ chức', color: 'bg-[#F4F3FF] text-[#5925DC] border-[#D9D6FE]' },
 };
+
+const DESTRUCTIVE_ACTIONS = new Set(['REMOVE_POST', 'HIDE_CAMPAIGN', 'PROPOSE_BAN']);
 
 const ACTION_LABEL_MAP = {
   REMOVE_POST: 'Gỡ bài viết vi phạm',
@@ -116,9 +120,10 @@ export default function ViolationReportsPage() {
   const [previewImage, setPreviewImage] = useState(null);
 
   // Form xử lý vi phạm trong VP-02
-  const [selectedAction, setSelectedAction] = useState('REMOVE_POST');
+  const [selectedAction, setSelectedAction] = useState('');
   const [actionReason, setActionReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [confirmDestructiveOpen, setConfirmDestructiveOpen] = useState(false);
   const listCacheRef = useRef({});
 
   // Tải danh sách báo cáo từ API thật GET /violation-reports (có cache theo tab/filter)
@@ -196,12 +201,10 @@ export default function ViolationReportsPage() {
       }
       setSelectedReport(detail);
 
-      // Cài đặt action mặc định theo loại đối tượng
-      const defaultOptions = getActionOptions(detail?.targetType);
-      if (defaultOptions.length > 0) {
-        setSelectedAction(defaultOptions[0].id);
-      }
+      // Yêu cầu Moderator chủ động chọn quyết định thay vì chọn sẵn hành động hủy diệt
+      setSelectedAction('');
       setActionReason('');
+      setConfirmDestructiveOpen(false);
       setViewMode('DETAIL');
     } catch (err) {
       console.error('Lỗi tải chi tiết báo cáo vi phạm:', err);
@@ -236,15 +239,21 @@ export default function ViolationReportsPage() {
     fetchReports({ force: true });
   };
 
-  // Xác nhận xử lý quyết định vi phạm
-  const handleConfirmAction = async () => {
-    if (!selectedReport) return;
-    const isDismiss = selectedAction === 'DISMISS';
+  useModerationShortcuts({
+    enabled: Boolean(previewImage) || (viewMode === 'DETAIL' && !confirmDestructiveOpen),
+    onEscape: () => {
+      if (previewImage) {
+        setPreviewImage(null);
+      } else if (viewMode === 'DETAIL' && !confirmDestructiveOpen) {
+        handleBackToQueue();
+      }
+    },
+  });
 
-    if (!isDismiss && !actionReason.trim()) {
-      toast.warn('Vui lòng nhập lý do xử lý vi phạm.');
-      return;
-    }
+  // Thực thi gọi API xử lý quyết định vi phạm
+  const executeResolveAction = async () => {
+    if (!selectedReport || !selectedAction || submitting) return;
+    const isDismiss = selectedAction === 'DISMISS';
 
     try {
       setSubmitting(true);
@@ -256,6 +265,7 @@ export default function ViolationReportsPage() {
 
       const label = ACTION_LABEL_MAP[selectedAction] || selectedAction;
       toast.success(`Đã thực thi [${label}] thành công!`);
+      setConfirmDestructiveOpen(false);
 
       // Optimistic UI: cập nhật trực tiếp trạng thái dòng trên bảng và xóa cache các tab khác
       const nextStatus = isDismiss ? 'DISMISSED' : 'RESOLVED';
@@ -277,6 +287,28 @@ export default function ViolationReportsPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Kiểm tra đầu vào và yêu cầu modal xác nhận đối với hành động hủy diệt
+  const handleConfirmAction = async () => {
+    if (!selectedReport) return;
+    if (!selectedAction) {
+      toast.warn('Vui lòng chọn quyết định xử lý vi phạm.');
+      return;
+    }
+    const isDismiss = selectedAction === 'DISMISS';
+
+    if (!isDismiss && !actionReason.trim()) {
+      toast.warn('Vui lòng nhập lý do xử lý vi phạm.');
+      return;
+    }
+
+    if (DESTRUCTIVE_ACTIONS.has(selectedAction)) {
+      setConfirmDestructiveOpen(true);
+      return;
+    }
+
+    await executeResolveAction();
   };
 
   const targetSnapshot = selectedReport?.targetSnapshot;
@@ -470,16 +502,13 @@ export default function ViolationReportsPage() {
 
                             {/* Nút xử lý */}
                             <td className="py-3.5 px-3.5 text-right whitespace-nowrap">
-                              <button
-                                type="button"
+                              <TableActionButton
+                                action="view"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleOpenDetail(rep);
                                 }}
-                                className="inline-flex items-center justify-center text-xs font-semibold px-3.5 py-1.5 rounded-xl bg-[#006B2C] text-white hover:bg-[#005523] transition-colors shadow-sm whitespace-nowrap cursor-pointer"
-                              >
-                                Chi tiết
-                              </button>
+                              />
                             </td>
                           </tr>
                         );
@@ -812,7 +841,7 @@ export default function ViolationReportsPage() {
                           </p>
                         )}
                         <p className="text-[11px]">
-                          Mọi báo cáo PENDING cùng đối tượng đã được đóng tự động.
+                          Mọi báo cáo đang chờ xử lý cùng đối tượng đã được đóng tự động.
                         </p>
                         <Button
                           variant="secondary"
@@ -827,33 +856,46 @@ export default function ViolationReportsPage() {
                       <div className="space-y-4">
                         {/* Radio options theo đúng targetType */}
                         <div className="space-y-2.5 text-xs">
-                          {getActionOptions(selectedReport.targetType).map((opt) => (
-                            <label
-                              key={opt.id}
-                              className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
-                                selectedAction === opt.id
-                                  ? 'border-primary bg-primary/5 text-primary shadow-2xs'
-                                  : 'border-neutral hover:bg-background text-text'
-                              }`}
-                            >
-                              <input
-                                type="radio"
-                                name="violationAction"
-                                value={opt.id}
-                                checked={selectedAction === opt.id}
-                                onChange={() => setSelectedAction(opt.id)}
-                                className="mt-0.5 text-primary focus:ring-primary"
-                              />
-                              <div className="space-y-0.5">
-                                <span className="font-bold block text-text">{opt.label}</span>
-                              </div>
-                            </label>
-                          ))}
+                          {getActionOptions(selectedReport.targetType).map((opt) => {
+                            const isDestructiveOpt = DESTRUCTIVE_ACTIONS.has(opt.id);
+                            const isSelected = selectedAction === opt.id;
+                            return (
+                              <label
+                                key={opt.id}
+                                className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                                  isSelected
+                                    ? isDestructiveOpt
+                                      ? 'border-error bg-error-light/40 text-error shadow-2xs'
+                                      : 'border-primary bg-primary/5 text-primary shadow-2xs'
+                                    : 'border-neutral hover:bg-background text-text'
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="violationAction"
+                                  value={opt.id}
+                                  checked={isSelected}
+                                  onChange={() => setSelectedAction(opt.id)}
+                                  className={`mt-0.5 ${isDestructiveOpt ? 'accent-[#D92D20]' : 'text-primary focus:ring-primary'}`}
+                                />
+                                <div className="space-y-0.5">
+                                  <span className={`font-bold block ${isSelected && isDestructiveOpt ? 'text-error' : 'text-text'}`}>
+                                    {opt.label}
+                                  </span>
+                                  {opt.desc && (
+                                    <span className="text-[11px] text-textSecondary block leading-relaxed">
+                                      {opt.desc}
+                                    </span>
+                                  )}
+                                </div>
+                              </label>
+                            );
+                          })}
                         </div>
 
                         {/* Ô nhập lý do xử lý */}
                         <div>
-                          <label className="block text-[11px] font-bold text-text mb-1.5">
+                          <label htmlFor="violation-action-reason" className="block text-[11px] font-bold text-text mb-1.5">
                             Lý do xử lý{' '}
                             {selectedAction === 'DISMISS' ? (
                               <span className="font-normal text-textSecondary">(Tùy chọn khi bác bỏ)</span>
@@ -862,6 +904,7 @@ export default function ViolationReportsPage() {
                             )}
                           </label>
                           <textarea
+                            id="violation-action-reason"
                             rows="4"
                             value={actionReason}
                             onChange={(e) => setActionReason(e.target.value)}
@@ -874,22 +917,21 @@ export default function ViolationReportsPage() {
                           />
                         </div>
 
-                        {/* Nút xác nhận */}
-                        <button
+                        {/* Nút xác nhận — đổi sang đỏ khi là hành động hủy diệt */}
+                        <Button
                           type="button"
-                          disabled={submitting}
+                          variant={DESTRUCTIVE_ACTIONS.has(selectedAction) ? 'danger' : 'primary'}
+                          loading={submitting}
+                          disabled={submitting || !selectedAction}
                           onClick={handleConfirmAction}
-                          className="w-full py-3 px-4 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-hover shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          className="w-full py-3 text-xs font-bold"
                         >
-                          {submitting ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                              <span>Đang gửi quyết định lên hệ thống...</span>
-                            </>
-                          ) : (
-                            <span>Xác nhận quyết định xử lý</span>
-                          )}
-                        </button>
+                          {submitting
+                            ? 'Đang gửi quyết định lên hệ thống...'
+                            : selectedAction
+                              ? ACTION_LABEL_MAP[selectedAction] || 'Xác nhận quyết định xử lý'
+                              : 'Chọn quyết định xử lý'}
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -900,9 +942,52 @@ export default function ViolationReportsPage() {
         )}
       </div>
 
+      {/* MODAL XÁC NHẬN HÀNH ĐỘNG HỦY DIỆT */}
+      <Modal
+        isOpen={confirmDestructiveOpen}
+        onClose={() => { if (!submitting) setConfirmDestructiveOpen(false); }}
+        title="Xác nhận thực thi biện pháp xử lý"
+      >
+        <div className="space-y-4 text-xs font-sans">
+          <div className="p-3.5 rounded-xl bg-error-light/50 border border-error/30 space-y-1.5">
+            <p className="font-bold text-error">
+              Hành động: {ACTION_LABEL_MAP[selectedAction] || selectedAction}
+            </p>
+            <p className="text-text leading-relaxed">
+              Thao tác này có tác động trực tiếp đến nội dung hoặc tài khoản tổ chức và sẽ được ghi nhận vào nhật ký kiểm toán. Bạn có chắc muốn tiếp tục?
+            </p>
+          </div>
+          <div className="p-3 rounded-xl bg-background border border-neutral">
+            <span className="text-[11px] font-bold text-textSecondary block mb-1">Lý do xử lý đã nhập:</span>
+            <p className="text-text whitespace-pre-wrap">{actionReason.trim()}</p>
+          </div>
+          <div className="flex justify-end gap-3 pt-2 border-t border-neutral">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={submitting}
+              onClick={() => setConfirmDestructiveOpen(false)}
+            >
+              Hủy bỏ
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              loading={submitting}
+              onClick={executeResolveAction}
+            >
+              {ACTION_LABEL_MAP[selectedAction] || 'Xác nhận thực thi'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       {/* MODAL XEM ẢNH FULL SIZE */}
       {previewImage && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Xem ảnh phóng to"
           className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-xs"
           onClick={() => setPreviewImage(null)}
         >
@@ -912,6 +997,8 @@ export default function ViolationReportsPage() {
           >
             <button
               type="button"
+              aria-label="Đóng ảnh phóng to"
+              title="Đóng"
               onClick={() => setPreviewImage(null)}
               className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center text-sm font-bold hover:bg-black transition-colors z-10 cursor-pointer"
             >

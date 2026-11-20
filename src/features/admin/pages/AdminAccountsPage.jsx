@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { useToast } from '../../../context/ToastContext.jsx';
+import { Modal, Button } from '../../../components/common/index.js';
 import AdminAccountsView from '../components/AdminAccountsView.jsx';
 import adminApi from '../services/adminApi.js';
 import useAdminPeriod from '../hooks/useAdminPeriod.js';
@@ -37,6 +38,8 @@ export default function AdminAccountsPage() {
   const [banProposals, setBanProposals] = useState([]);
   const [dismissedIds, setDismissedIds] = useState(() => getDismissedProposalIds());
   const [processingProposalId, setProcessingProposalId] = useState(null);
+  const [confirmProposal, setConfirmProposal] = useState(null);
+  const [proposalBanReason, setProposalBanReason] = useState('');
 
   // Phân trang thật theo API 135 (BE trả totalElements/totalPages đúng tổng số tài khoản, không phải
   // số viết cứng từ bản thiết kế mẫu); đổi trang thì tải lại đúng trang đó từ server.
@@ -234,22 +237,35 @@ export default function AdminAccountsPage() {
     }
   };
 
-  const handleApproveProposal = async (proposal) => {
+  const openConfirmProposalModal = (proposal) => {
     if (!proposal?.targetId) return;
+    setConfirmProposal(proposal);
+    setProposalBanReason(`Khóa theo đề xuất của Moderator (${proposal.actorName}): ${proposal.reason}`);
+  };
+
+  const handleApproveProposal = async () => {
+    const proposal = confirmProposal;
+    if (!proposal?.targetId || processingProposalId === proposal.id) return;
+    const trimmedReason = proposalBanReason.trim();
+    if (!trimmedReason) {
+      toast.warn('Vui lòng nhập lý do khóa tài khoản.');
+      return;
+    }
     setProcessingProposalId(proposal.id);
     try {
-      const banReason = `Khóa theo đề xuất của Moderator (${proposal.actorName}): ${proposal.reason}`;
-      await adminApi.banAccount(proposal.targetId, banReason);
+      await adminApi.banAccount(proposal.targetId, trimmedReason);
       const nextDismissed = [...dismissedIds, proposal.id];
       setDismissedIds(nextDismissed);
       saveDismissedProposalIds(nextDismissed);
+      setConfirmProposal(null);
+      setProposalBanReason('');
       toast.success(`Đã khóa tài khoản "${proposal.targetName}" theo đề xuất.`);
       if (onLogAction) {
         onLogAction({
           time: new Date().toLocaleString('vi-VN'),
           user: user?.fullName || 'Admin',
           role: 'Admin',
-          action: `Khóa tài khoản Tổ chức "${proposal.targetName}" theo đề xuất PROPOSE_BAN`,
+          action: `Khóa tài khoản Tổ chức "${proposal.targetName}" theo đề xuất khóa tài khoản`,
         });
       }
       await fetchAccountsAndProposals();
@@ -303,45 +319,46 @@ export default function AdminAccountsPage() {
               >
                 <div className="space-y-1.5 text-xs">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-bold text-sm text-[#191C19]">
+                    <span className="font-bold text-sm text-[#1F2A37]">
                       {proposal.targetName}
                     </span>
                     {proposal.targetEmail && (
-                      <span className="font-mono text-[#717971]">
+                      <span className="font-mono text-[#5B6776]">
                         ({proposal.targetEmail})
                       </span>
                     )}
                     <span className="px-2 py-0.5 rounded-md bg-[#FEE2E2] text-[#DC2626] font-bold text-[11px]">
                       {proposal.closedReportCount} báo cáo gom nhóm
                     </span>
-                    <span className="px-2 py-0.5 rounded-md bg-[#F6F9F4] border border-[#DDE5D9] text-[#414942] font-semibold text-[11px]">
+                    <span className="px-2 py-0.5 rounded-md bg-[#F6F9F4] border border-[#DDE5D9] text-[#5B6776] font-semibold text-[11px]">
                       {proposal.pastViolations} lần ghi nhận vi phạm
                     </span>
                   </div>
-                  <p className="text-[#414942]">
+                  <p className="text-[#5B6776]">
                     Lý do đề xuất:{' '}
-                    <strong className="text-[#191C19] italic">"{proposal.reason}"</strong>
+                    <strong className="text-[#1F2A37] italic">"{proposal.reason}"</strong>
                   </p>
-                  <p className="text-[11px] text-[#717971]">
-                    Đề xuất bởi: <strong className="text-[#414942]">{proposal.actorName}</strong> · Thời gian: {proposal.createdAt}
+                  <p className="text-[11px] text-[#5B6776]">
+                    Đề xuất bởi: <strong className="text-[#5B6776]">{proposal.actorName}</strong> · Thời gian: {proposal.createdAt}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
+                    disabled={processingProposalId === proposal.id}
                     onClick={() => handleDismissProposal(proposal.id)}
-                    className="px-3.5 py-2 rounded-xl border border-[#DDE5D9] bg-white hover:bg-[#F6F9F4] text-xs font-semibold text-[#414942] transition-colors"
+                    className="px-3.5 py-2 rounded-xl border border-[#DDE5D9] bg-white hover:bg-[#F6F9F4] text-xs font-semibold text-[#5B6776] transition-colors disabled:opacity-50"
                   >
                     Bỏ qua đề xuất
                   </button>
                   <button
                     type="button"
                     disabled={processingProposalId === proposal.id}
-                    onClick={() => handleApproveProposal(proposal)}
+                    onClick={() => openConfirmProposalModal(proposal)}
                     className="px-4 py-2 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-50"
                   >
-                    <span className="material-symbols-outlined text-sm">lock</span>
+                    <span className="material-symbols-outlined text-sm" aria-hidden="true">lock</span>
                     <span>
                       {processingProposalId === proposal.id ? 'Đang khóa...' : 'Khóa theo đề xuất'}
                     </span>
@@ -366,6 +383,55 @@ export default function AdminAccountsPage() {
         dateFilter={dateFilter}
         dateError={dateError}
       />
+
+      <Modal
+        isOpen={Boolean(confirmProposal)}
+        onClose={() => { if (!processingProposalId) setConfirmProposal(null); }}
+        title="Xác nhận khóa tài khoản theo đề xuất"
+      >
+        <div className="space-y-4 text-xs font-sans">
+          <div className="p-3.5 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B] space-y-1">
+            <p className="font-bold">
+              Tài khoản bị khóa: {confirmProposal?.targetName}
+            </p>
+            <p className="leading-relaxed">
+              Thao tác này sẽ tạm khóa quyền truy cập của tài khoản và ghi nhận vào nhật ký kiểm toán. Vui lòng kiểm tra kỹ lý do trước khi xác nhận.
+            </p>
+          </div>
+          <div>
+            <label htmlFor="proposal-ban-reason" className="block font-bold text-[#1F2A37] mb-1">
+              Lý do khóa tài khoản <span className="text-[#D92D20]">*</span>
+            </label>
+            <textarea
+              id="proposal-ban-reason"
+              rows={3}
+              disabled={Boolean(processingProposalId)}
+              value={proposalBanReason}
+              onChange={(e) => setProposalBanReason(e.target.value)}
+              className="w-full p-2.5 border border-[#DDE5D9] rounded-xl text-[#1F2A37] focus:outline-none focus:border-[#006B2C]"
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-2 border-t border-[#DDE5D9]">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={Boolean(processingProposalId)}
+              onClick={() => setConfirmProposal(null)}
+            >
+              Hủy bỏ
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              loading={Boolean(processingProposalId)}
+              disabled={Boolean(processingProposalId) || !proposalBanReason.trim()}
+              onClick={handleApproveProposal}
+            >
+              Xác nhận khóa tài khoản
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

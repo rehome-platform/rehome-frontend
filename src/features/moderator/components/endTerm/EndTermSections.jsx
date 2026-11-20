@@ -80,7 +80,7 @@ export function EndTermReconsignPanel({ sku, price, setPrice, resource, term, se
 export function EndTermTransferPanel({ partner, setPartner, partnerValidation, resource, setConfirm }) {
   return (
     <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50/50 p-4">
-      <h3 className="font-semibold text-amber-900">Chuyển giao cho tổ chức từ thiện (API 36)</h3>
+      <h3 className="font-semibold text-amber-900">Chuyển giao cho tổ chức từ thiện</h3>
       <p className="text-xs text-textSecondary">
         Sản phẩm đã ở trạng thái vô thừa nhận sau khi quá hạn xử lý. Vui lòng nhập tên đối tác từ thiện tiếp nhận để chuyển trạng thái sang <span className="font-semibold text-text">DONATED</span>.
       </p>

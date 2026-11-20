@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Badge, Button, Spinner } from '../../../components/common/index.js';
 import { formatCurrencyVND } from '../../../utils/formatters.js';
+import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
 import membershipAdminApi from '../services/membershipAdminApi.js';
 import GrantMembershipModal from './GrantMembershipModal.jsx';
 import CancelMembershipModal from './CancelMembershipModal.jsx';
@@ -43,6 +44,11 @@ export default function MembershipSubscriptionsPage() {
   const page = Number.isFinite(rawPage) && rawPage >= 0 ? rawPage : 0;
 
   const [searchInput, setSearchInput] = useState(q);
+  const {
+    debouncedQuery: debouncedQ,
+    isTooShort: isSearchTooShort,
+    hint: searchHint,
+  } = useDebouncedSearch(searchInput);
   const [items, setItems] = useState([]);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
@@ -57,14 +63,12 @@ export default function MembershipSubscriptionsPage() {
     setSearchInput(q);
   }, [q]);
 
-  // Gõ tới đâu tìm tới đó: chờ gõ xong (debounce) rồi mới đổi query param, khỏi gọi API mỗi phím
+  // Gõ tới đâu tìm tới đó: chờ đủ tối thiểu 2 ký tự & debounce 400ms rồi mới đổi query param
   useEffect(() => {
-    const trimmed = searchInput.trim();
-    if (trimmed === q) return;
-    const timer = setTimeout(() => updateParams({ q: trimmed }, true), 400);
-    return () => clearTimeout(timer);
+    if (debouncedQ === q) return;
+    updateParams({ q: debouncedQ }, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchInput]);
+  }, [debouncedQ]);
 
   const fetchSubscriptions = useCallback(async () => {
     const seq = ++seqRef.current;
@@ -141,7 +145,7 @@ export default function MembershipSubscriptionsPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-xl border border-[#E2E8E0]">
+      <div className="bg-white p-4 rounded-xl border border-[#DDE5D9]">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
           <div className="md:col-span-2">
             <label htmlFor="sub-search" className="block text-xs font-semibold text-[#1F2A37] mb-1">
@@ -155,6 +159,9 @@ export default function MembershipSubscriptionsPage() {
               placeholder="Tên, email hoặc mã thành viên..."
               className="w-full px-3 py-2 text-sm bg-white border border-[#DDE5D9] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#006B2C]/20 focus:border-[#006B2C]"
             />
+            {isSearchTooShort && (
+              <p className="mt-1 text-[11px] text-[#5f5f5f]">{searchHint}</p>
+            )}
           </div>
 
           <div>
@@ -232,11 +239,11 @@ export default function MembershipSubscriptionsPage() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-[#E2E8E0] overflow-hidden">
+      <div className="bg-white rounded-xl border border-[#DDE5D9] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#F6F9F4] border-b border-[#E2E8E0] text-xs font-semibold text-[#5B6776]">
+              <tr className="bg-[#F6F9F4] border-b border-[#DDE5D9] text-xs font-semibold text-[#5B6776]">
                 <th className="py-3 px-4 whitespace-nowrap">Thành viên</th>
                 <th className="py-3 px-4 whitespace-nowrap">Hạng</th>
                 <th className="py-3 px-4 whitespace-nowrap">Trạng thái</th>
@@ -246,7 +253,7 @@ export default function MembershipSubscriptionsPage() {
                 <th className="py-3 px-4 text-right whitespace-nowrap">Thao tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E2E8E0] text-sm text-[#1F2A37]">
+            <tbody className="divide-y divide-[#DDE5D9] text-sm text-[#1F2A37]">
               {loading && items.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-10 text-center text-sm text-[#5B6776]">
@@ -278,7 +285,7 @@ export default function MembershipSubscriptionsPage() {
                       className="hover:bg-[#F6F9F4] cursor-pointer transition-colors"
                     >
                       <td className="py-3 px-4">
-                        <p className="text-[#191C19]">{item.memberEmail || '-'}</p>
+                        <p className="text-[#1F2A37]">{item.memberEmail || '-'}</p>
                       </td>
                       <td className="py-3 px-4">
                         <TierBadge tier={item.tier} label={item.tierName || TIER_LABELS[item.tier] || item.tier} />
@@ -329,7 +336,7 @@ export default function MembershipSubscriptionsPage() {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8E0] bg-[#F6F9F4]/50 text-xs text-[#5B6776]">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-[#DDE5D9] bg-[#F6F9F4]/50 text-xs text-[#5B6776]">
           <span>
             Trang {page + 1} / {Math.max(totalPages, 1)}
           </span>

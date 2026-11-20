@@ -31,7 +31,7 @@ describe('Task 6: WarehouseInventoryPage includes tab for items returned to sell
       </MemoryRouter>
     );
 
-    const returnedTab = await screen.findByRole('button', { name: 'Gửi về người bán' });
+    const returnedTab = await screen.findByRole('button', { name: 'Đã hoàn trả người bán' });
     fireEvent.click(returnedTab);
 
     await waitFor(() => {
