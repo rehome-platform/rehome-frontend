@@ -15,6 +15,7 @@ import AdminDonutChart from '../components/AdminDonutChart.jsx';
 import useAdminPeriod from '../hooks/useAdminPeriod.js';
 import usePreviousTotal from '../hooks/usePreviousTotal.js';
 import { PAID_TIERS, TIER_SHORT_LABELS, TIER_HEX_COLOR } from '../membership/membershipConstants.js';
+import { DASHBOARD_TONES, DASHBOARD_CARD_CLASS } from '../../../constants/dashboardTheme.js';
 
 const DEFAULT_DASHBOARD = {
   revenue: 0,
@@ -204,8 +205,7 @@ export default function AdminDashboardPage() {
       value: dashboardData.platformRevenue || 0,
       description: 'Hoa hồng và phí rút hàng đã thu, chưa trừ chi đền bù',
       icon: 'trending_up',
-      iconBg: 'bg-[#E8F5E9]',
-      iconColor: 'text-[#006B2C]',
+      iconBox: DASHBOARD_TONES.primary.iconBox,
       badge: 'Theo khoảng thời gian đã chọn',
       // "Tiền đang giữ hộ" là số dư hiện tại (không lọc theo kỳ) nên không có "kỳ trước" để so sánh
       comparison: previousPeriodLabel && {
@@ -219,8 +219,7 @@ export default function AdminDashboardPage() {
       value: dashboardData.heldOrderAmount || 0,
       description: 'Người mua đã thanh toán nhưng đơn chưa hoàn tất, nền tảng chưa trả cho người bán',
       icon: 'lock_clock',
-      iconBg: 'bg-[#FFF3E0]',
-      iconColor: 'text-[#D97706]',
+      iconBox: DASHBOARD_TONES.warning.iconBox,
       badge: 'Số hiện tại',
       comparison: null,
     },
@@ -229,8 +228,12 @@ export default function AdminDashboardPage() {
   return (
     <div className="min-w-0 space-y-6">
       {/* Tab Switcher + (tab Doanh thu) Bộ lọc thời gian & Xuất Excel */}
-      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4 border-b border-[#DDE5D9] pb-4">
-        <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Các mục tổng quan">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-[#DDE5D9] pb-4">
+        <div
+          className="inline-flex flex-wrap items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-[#DDE5D9] shadow-card"
+          role="tablist"
+          aria-label="Các mục tổng quan"
+        >
           {TABS.map((tab) => (
             <button
               key={tab.id}
@@ -238,10 +241,10 @@ export default function AdminDashboardPage() {
               role="tab"
               aria-selected={activeTab === tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 ${
                 activeTab === tab.id
                   ? 'bg-[#006B2C] text-white shadow-sm'
-                  : 'bg-white border border-[#DDE5D9] text-[#5B6776] hover:bg-[#F6F9F4] hover:text-[#006B2C]'
+                  : 'text-[#5B6776] hover:bg-[#F6F9F4] hover:text-[#006B2C]'
               }`}
             >
               <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
@@ -271,7 +274,7 @@ export default function AdminDashboardPage() {
           {dateError && (
             <div
               role="alert"
-              className="px-4 py-2.5 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-xs font-semibold text-[#B91C1C]"
+              className="px-4 py-2.5 rounded-xl bg-[#FEF3F2] border border-[#FECDCA] text-xs font-semibold text-[#B42318]"
             >
               {dateError}
             </div>
@@ -280,7 +283,7 @@ export default function AdminDashboardPage() {
           {dashboardError && !dateError && (
             <div
               role="alert"
-              className="px-4 py-3 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-xs font-semibold text-[#B91C1C] flex items-center justify-between gap-3"
+              className="px-4 py-3 rounded-xl bg-[#FEF3F2] border border-[#FECDCA] text-xs font-semibold text-[#B42318] flex items-center justify-between gap-3"
             >
               <span>{dashboardError}</span>
               <Button
@@ -298,22 +301,22 @@ export default function AdminDashboardPage() {
             {revenueMetrics.map((m, idx) => (
               <div
                 key={m.label}
-                className="chart-fade-up bg-white p-5 rounded-2xl border border-[#DDE5D9] shadow-xs flex flex-col justify-between hover:border-[#006B2C]/40 transition-all duration-200"
+                className={`chart-fade-up ${DASHBOARD_CARD_CLASS} p-5 hover:-translate-y-0.5 flex flex-col justify-between`}
                 style={{ '--i': idx }}
               >
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-[#F6F9F4] text-[#5B6776] border border-[#DDE5D9]">
+                    <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-[#F6F9F4] text-[#5B6776] border border-[#DDE5D9]">
                       {m.badge}
                     </span>
                     <div
-                      className={`w-10 h-10 rounded-xl ${m.iconBg} ${m.iconColor} flex items-center justify-center shrink-0`}
+                      className={`w-10 h-10 rounded-xl ${m.iconBox} flex items-center justify-center shrink-0`}
                     >
-                      <span className="material-symbols-outlined text-[22px]">{m.icon}</span>
+                      <span className="material-symbols-outlined text-[21px]">{m.icon}</span>
                     </div>
                   </div>
-                  <p className="text-xs font-medium text-[#5B6776]">{m.label}</p>
-                  <p className="text-2xl font-black font-heading text-[#1F2A37] mt-1 tracking-tight">
+                  <p className="text-xs font-semibold text-[#5B6776]">{m.label}</p>
+                  <p className="text-2xl sm:text-3xl font-extrabold font-heading text-[#1F2A37] mt-1 tracking-tight">
                     {loading ? '...' : formatCurrencyVND(m.value)}
                   </p>
                   {m.comparison && !loading && (
@@ -328,25 +331,25 @@ export default function AdminDashboardPage() {
                   )}
                 </div>
 
-                <p className="text-[11px] text-[#5B6776] mt-3">{m.description}</p>
+                <p className="text-[11px] text-[#5B6776] mt-3 pt-2.5 border-t border-[#F6F9F4]">{m.description}</p>
               </div>
             ))}
           </div>
 
           {/* Tóm tắt gói thành viên: thẻ doanh thu nổi bật bên trái + biểu đồ tròn theo hạng bên phải */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <div className="chart-fade-up bg-white p-5 rounded-2xl border border-[#DDE5D9] shadow-xs flex flex-col justify-between hover:border-[#006B2C]/40 transition-all duration-200">
+            <div className={`chart-fade-up ${DASHBOARD_CARD_CLASS} p-5 hover:-translate-y-0.5 flex flex-col justify-between`}>
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-[#F6F9F4] text-[#5B6776] border border-[#DDE5D9]">
+                  <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-[#F6F9F4] text-[#5B6776] border border-[#DDE5D9]">
                     Theo khoảng thời gian đã chọn
                   </span>
-                  <div className="w-10 h-10 rounded-xl bg-[#E0F2F1] text-[#00685F] flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined text-[22px]">card_membership</span>
+                  <div className={`w-10 h-10 rounded-xl ${DASHBOARD_TONES.accent.iconBox} flex items-center justify-center shrink-0`}>
+                    <span className="material-symbols-outlined text-[21px]">card_membership</span>
                   </div>
                 </div>
-                <p className="text-xs font-medium text-[#5B6776]">Doanh thu gói thành viên</p>
-                <p className="text-2xl font-black font-heading text-[#1F2A37] mt-1 tracking-tight">
+                <p className="text-xs font-semibold text-[#5B6776]">Doanh thu gói thành viên</p>
+                <p className="text-2xl sm:text-3xl font-extrabold font-heading text-[#1F2A37] mt-1 tracking-tight">
                   {membershipLoading ? '...' : formatCurrencyVND(membershipRevenue)}
                 </p>
                 {previousPeriodLabel && !membershipLoading && (
@@ -360,12 +363,12 @@ export default function AdminDashboardPage() {
                   </div>
                 )}
               </div>
-              <p className="text-[11px] text-[#5B6776] mt-3">
+              <p className="text-[11px] text-[#5B6776] mt-3 pt-2.5 border-t border-[#F6F9F4]">
                 Tổng tiền thu được từ bán gói thành viên trong khoảng thời gian đã chọn.
               </p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col">
+            <div className={`${DASHBOARD_CARD_CLASS} p-6 flex flex-col`}>
               <h3 className="text-base font-bold text-[#1F2A37] font-heading">Gói thành viên</h3>
 
               <div className="flex-1 flex flex-col items-center justify-center gap-5 py-2">

@@ -4,6 +4,7 @@ import AdminAccountGrowthChart from './AdminAccountGrowthChart.jsx';
 import AdminDonutChart from './AdminDonutChart.jsx';
 import { getRoleLabel, getRoleBadgeStyle } from '../../../constants/roleLabels.js';
 import { formatAuditActionLabel, formatAuditTargetTypeLabel } from '../../../constants/auditLogLabels.js';
+import { DASHBOARD_TONES, DASHBOARD_CARD_CLASS } from '../../../constants/dashboardTheme.js';
 
 /**
  * View Tổng quan Dashboard Quản trị ReHome
@@ -79,22 +80,19 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
       title: 'Tổng số thành viên',
       value: stats.memberCount.toLocaleString('vi-VN'),
       icon: 'group',
-      iconBg: 'bg-[#ECFDF3]',
-      iconColor: 'text-[#006B2C]',
+      iconBox: DASHBOARD_TONES.primary.iconBox,
     },
     {
       title: 'Tổ chức đối tác',
       value: stats.orgCount.toLocaleString('vi-VN'),
       icon: 'verified',
-      iconBg: 'bg-[#E0F2F1]',
-      iconColor: 'text-[#00685F]',
+      iconBox: DASHBOARD_TONES.accent.iconBox,
     },
     {
       title: 'Nhân viên điểm kí gửi',
       value: stats.moderatorCount.toLocaleString('vi-VN'),
       icon: 'badge',
-      iconBg: 'bg-[#ECFDF3]',
-      iconColor: 'text-[#00873A]',
+      iconBox: DASHBOARD_TONES.warning.iconBox,
     },
   ];
 
@@ -134,19 +132,19 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
         {statCards.map((card, idx) => (
           <div
             key={idx}
-            className="chart-fade-up bg-white p-5 rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex items-center justify-between hover:border-[#006B2C]/40 transition-all duration-200"
+            className={`chart-fade-up ${DASHBOARD_CARD_CLASS} p-5 hover:-translate-y-0.5 flex items-center justify-between`}
             style={{ '--i': idx }}
           >
             <div>
-              <p className="text-xs font-medium text-[#5B6776]">{card.title}</p>
-              <p className="text-2xl font-extrabold text-[#1F2A37] mt-1 font-heading tracking-tight">
+              <p className="text-xs font-semibold text-[#5B6776]">{card.title}</p>
+              <p className="text-3xl font-extrabold text-[#1F2A37] mt-1 font-heading tracking-tight">
                 {isLoading ? '...' : card.value}
               </p>
             </div>
             <div
-              className={`w-12 h-12 rounded-2xl ${card.iconBg} ${card.iconColor} flex items-center justify-center shrink-0 shadow-inner`}
+              className={`w-11 h-11 rounded-xl ${card.iconBox} flex items-center justify-center shrink-0`}
             >
-              <span className="material-symbols-outlined text-2xl">
+              <span className="material-symbols-outlined text-[22px]">
                 {card.icon}
               </span>
             </div>

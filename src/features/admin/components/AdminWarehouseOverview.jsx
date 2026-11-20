@@ -18,7 +18,7 @@ const STOCK_GROUPS = [
     key: 'attention',
     title: 'Cần xử lý',
     statuses: [
-      { code: 'WAREHOUSE', label: 'Chờ Member quyết định', color: '#FEA619' },
+      { code: 'WAREHOUSE', label: 'Chờ thành viên quyết định', color: '#FEA619' },
       { code: 'UNCLAIMED', label: 'Không ai nhận', color: '#E4572E' },
       { code: 'RETURNED', label: 'Hàng trả về', color: '#7B61C9' },
       { code: 'PLATFORM_OWNED', label: 'Thuộc nền tảng', color: '#5B6776' },
