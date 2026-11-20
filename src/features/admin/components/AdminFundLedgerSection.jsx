@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Button, Modal, Spinner } from '../../../components/common/index.js';
+import { Button, Modal, Spinner, TableActionButton } from '../../../components/common/index.js';
 import { formatCurrencyVND, formatDateTime } from '../../../utils/formatters.js';
 import adminApi from '../services/adminApi.js';
 import { validateDateRange } from '../utils/adminDateUtils.js';
@@ -223,14 +223,10 @@ export default function AdminFundLedgerSection({ from, to }) {
                         {formatSignedAmount(entry.amount)}
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap text-right">
-                        <button
-                          type="button"
+                        <TableActionButton
+                          action="view"
                           onClick={() => setDetailEntry(entry)}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[#00685F] hover:bg-[#E0F2F1] font-semibold"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">visibility</span>
-                          Chi tiết
-                        </button>
+                        />
                       </td>
                     </tr>
                   );

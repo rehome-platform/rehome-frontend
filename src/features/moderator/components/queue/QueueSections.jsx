@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import Button from "../../../../components/common/Button.jsx";
 import Modal from "../../../../components/common/Modal.jsx";
+import TableActionButton from "../../../../components/common/TableActionButton.jsx";
 
 import { WORK_TYPES } from "../../pages/ConsignmentQueuePage.config.js";
 import { formatElapsedHours, withdrawalCounterLink } from '../../models/queueModel.js';
@@ -328,14 +329,10 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
       </td>
       <td className="py-3 px-3 text-center whitespace-nowrap align-middle">
         {onViewDetail ? (
-          <Button
-            size="sm"
-            variant="ghost"
-            className={QUEUE_TEXT_LINK_CLASS}
+          <TableActionButton
+            action="view"
             onClick={() => onViewDetail(item)}
-          >
-            Chi tiết
-          </Button>
+          />
         ) : (
           <span className="text-textSecondary">—</span>
         )}

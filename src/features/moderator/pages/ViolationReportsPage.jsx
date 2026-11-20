@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
+import { TableActionButton } from '../../../components/common/index.js';
 import { Button, Badge, Modal } from '../../../components/common/index.js';
 import Spinner from '../../../components/common/Spinner.jsx';
 import { violationReportService } from '../services/violationReportApi.js';
@@ -501,16 +502,13 @@ export default function ViolationReportsPage() {
 
                             {/* Nút xử lý */}
                             <td className="py-3.5 px-3.5 text-right whitespace-nowrap">
-                              <button
-                                type="button"
+                              <TableActionButton
+                                action="view"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleOpenDetail(rep);
                                 }}
-                                className="inline-flex items-center justify-center text-xs font-semibold px-3.5 py-1.5 rounded-xl bg-[#006B2C] text-white hover:bg-[#005523] transition-colors shadow-sm whitespace-nowrap cursor-pointer"
-                              >
-                                Chi tiết
-                              </button>
+                              />
                             </td>
                           </tr>
                         );

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Badge, Button, Modal, Table } from '../../../components/common/index.js';
+import { Badge, Button, Modal, Table, TableActionButton } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
 import violationWordAdminApi from '../services/violationWordAdminApi.js';
@@ -10,7 +10,7 @@ const PAGE_SIZE = 20;
 const CATEGORY_LABELS = {
   PROFANITY: 'Ngôn từ thô tục',
   FRAUD: 'Lừa đảo',
-  SPAM: 'Spam',
+  SPAM: 'Tin rác (Spam)',
   INAPPROPRIATE: 'Không phù hợp',
 };
 
@@ -205,14 +205,8 @@ export default function ViolationWordsPage() {
       header: 'Thao tác',
       render: (row) => (
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => handleOpenEdit(row)} className="gap-1">
-            <span className="material-symbols-outlined text-sm">edit</span>
-            <span>Sửa</span>
-          </Button>
-          <Button size="sm" variant="danger" onClick={() => setDeleteTarget(row)} className="gap-1">
-            <span className="material-symbols-outlined text-sm">delete</span>
-            <span>Xóa</span>
-          </Button>
+          <TableActionButton action="edit" onClick={() => handleOpenEdit(row)} />
+          <TableActionButton action="delete" onClick={() => setDeleteTarget(row)} />
         </div>
       ),
     },

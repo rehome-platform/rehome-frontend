@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { Button, Badge, Modal } from "../../../../components/common/index.js";
+import { Button, Badge, Modal, TableActionButton } from "../../../../components/common/index.js";
 import Spinner from "../../../../components/common/Spinner.jsx";
 import { useToast } from "../../../../context/ToastContext.jsx";
 import baseApi from "../../../../services/baseApi.js";
@@ -628,14 +628,11 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
                       </p>
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-3">
-                        <button
-                          type="button"
+                      <div className="flex items-center justify-end gap-2">
+                        <TableActionButton
+                          action="view"
                           onClick={() => setSelectedChangeModal(chg)}
-                          className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-neutral bg-surface hover:bg-background text-text transition-colors shadow-sm"
-                        >
-                          Xem chi tiết →
-                        </button>
+                        />
                         {chg.status === 'PENDING' && (
                           <>
                             <button
@@ -954,13 +951,10 @@ export function VerificationQueueTable({ loading, orgsQueue = [], handleOpenDeta
                     </td>
                     <td className="py-3 px-3 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          type="button"
+                        <TableActionButton
+                          action="view"
                           onClick={() => setDetailOrg(org)}
-                          className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-neutral bg-white text-text hover:bg-background transition-colors whitespace-nowrap cursor-pointer"
-                        >
-                          Chi tiết
-                        </button>
+                        />
                         <button
                           type="button"
                           onClick={() => handleOpenDetail(org)}
