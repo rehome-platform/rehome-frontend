@@ -22,6 +22,7 @@ import {
   productStatusLabelByKey,
   resolveProductStatusLabel,
 } from '../../../constants/productStatus.js';
+import { TABLE_COLUMN_LABELS } from '../../../constants/tableColumns.js';
 
 export const SUPPORTED_INVENTORY_STATUSES = [
   'ON_SALE',
@@ -284,7 +285,7 @@ export default function WarehouseInventoryPage() {
                       <th className="py-3 px-4 w-28">Ngày báo</th>
                       <th className="py-3 px-4">Lý do xuống cấp</th>
                       <th className="py-3 px-4">Trạng thái đền bù</th>
-                      <th className="py-3 px-4 text-right w-44">Thao tác</th>
+                      <th className="py-3 px-4 text-right w-44">{TABLE_COLUMN_LABELS.ACTIONS}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#e0e0e0]">
@@ -341,10 +342,10 @@ export default function WarehouseInventoryPage() {
                   <thead>
                     <tr className="bg-[#f4f4f4] border-b border-[#8a8a8a] text-[10px] font-bold uppercase tracking-wider text-[#5f5f5f] whitespace-nowrap">
                       <th className="py-2.5 px-4">Sản phẩm</th>
-                      <th className="py-2.5 px-4">Trạng thái</th>
+                      <th className="py-2.5 px-4">{TABLE_COLUMN_LABELS.STATUS}</th>
                       <th className="py-2.5 px-4">Kỳ ký gửi</th>
                       <th className="py-2.5 px-4 text-right">Giá bán</th>
-                      <th className="py-2.5 px-4 text-left w-[320px]">Thao tác</th>
+                      <th className="py-2.5 px-4 text-left w-[320px]">{TABLE_COLUMN_LABELS.ACTIONS}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#e0e0e0]">

@@ -1,4 +1,5 @@
 import { WarehouseHistoryTabs } from '../components/WarehouseHistoryTabs.jsx';
+import { TABLE_COLUMN_LABELS } from '../../../constants/tableColumns.js';
 import React, { useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Page, ResourceState, Pager, Status, money, date } from '../components/WarehouseUi.jsx';
@@ -181,7 +182,7 @@ export default function ConsignmentListPage() {
                     <th className="py-2.5 px-3">Member</th>
                     <th className="py-2.5 px-3">Giá mong muốn</th>
                     <th className="py-2.5 px-3">Gửi lúc</th>
-                    <th className="py-2.5 px-3 text-right">Hành động</th>
+                    <th className="py-2.5 px-3 text-right">{TABLE_COLUMN_LABELS.ACTIONS}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral">

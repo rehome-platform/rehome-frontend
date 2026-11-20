@@ -6,6 +6,7 @@ import Spinner from "../../../../components/common/Spinner.jsx";
 import { useToast } from "../../../../context/ToastContext.jsx";
 import baseApi from "../../../../services/baseApi.js";
 import { API_BASE_URL } from "../../../../configs/api.config.js";
+import { TABLE_COLUMN_LABELS } from "../../../../constants/tableColumns.js";
 
 gsap.registerPlugin(useGSAP);
 
@@ -588,7 +589,7 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
             <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
               <th className="py-2.5 px-4 w-1/3">Tên tổ chức</th>
               <th className="py-2.5 px-4">Nội dung chỉnh sửa</th>
-              <th className="py-2.5 px-4 text-right">Hành động</th>
+              <th className="py-2.5 px-4 text-right">{TABLE_COLUMN_LABELS.ACTIONS}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral">
@@ -896,9 +897,9 @@ export function VerificationQueueTable({ loading, orgsQueue = [], handleOpenDeta
               <th className="py-2.5 px-3">Tên tổ chức</th>
               <th className="py-2.5 px-3">Loại hình</th>
               <th className="py-2.5 px-3">Nộp lúc</th>
-              <th className="py-2.5 px-3">Đã chờ</th>
+              <th className="py-2.5 px-3">{TABLE_COLUMN_LABELS.WAITED}</th>
               <th className="py-2.5 px-3">Lần nộp</th>
-              <th className="py-2.5 px-3 text-right">Hành động</th>
+              <th className="py-2.5 px-3 text-right">{TABLE_COLUMN_LABELS.ACTIONS}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral">

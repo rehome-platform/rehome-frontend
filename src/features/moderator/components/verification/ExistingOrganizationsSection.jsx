@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Modal, Button } from '../../../../components/common/index.js';
 import Spinner from '../../../../components/common/Spinner.jsx';
 import { orgVerificationService } from '../../services/orgVerificationApi.js';
+import { TABLE_COLUMN_LABELS } from '../../../../constants/tableColumns.js';
 
 export function ExistingOrganizationsSection({
   loading,
@@ -127,8 +128,8 @@ export function ExistingOrganizationsSection({
                 <th className="py-3 px-3">Phạm vi</th>
                 <th className="py-3 px-3">Điểm nhận quyên góp</th>
                 <th className="py-3 px-3">Ngày xác minh</th>
-                <th className="py-3 px-3">Trạng thái</th>
-                <th className="py-3 px-3 text-right">Hành động</th>
+                <th className="py-3 px-3">{TABLE_COLUMN_LABELS.STATUS}</th>
+                <th className="py-3 px-3 text-right">{TABLE_COLUMN_LABELS.ACTIONS}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral">

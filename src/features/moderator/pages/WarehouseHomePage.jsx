@@ -16,6 +16,7 @@ import {
   extractQueueSubjectName,
 } from '../components/queue/QueueSections.jsx';
 import { formatElapsedHours, sortQueueItemsNewestFirst } from '../models/queueModel.js';
+import { TABLE_COLUMN_LABELS } from '../../../constants/tableColumns.js';
 
 const OVERDUE_HOURS = 48;
 const QUEUE_TYPES = [
@@ -201,10 +202,10 @@ export default function WarehouseHomePage() {
                 <thead>
                   <tr className="border-b border-neutral text-xs font-semibold text-textSecondary bg-[#F6F9F4]/80 whitespace-nowrap">
                     <th className="py-3 px-3.5">Loại việc</th>
-                    <th className="py-3 px-3.5">Đối tượng</th>
-                    <th className="py-3 px-3.5">Chờ</th>
+                    <th className="py-3 px-3.5">{TABLE_COLUMN_LABELS.TARGET}</th>
+                    <th className="py-3 px-3.5">{TABLE_COLUMN_LABELS.WAITED}</th>
                     <th className="py-3 px-3.5">Người nhận</th>
-                    <th className="py-3 px-3.5 text-right">Thao tác</th>
+                    <th className="py-3 px-3.5 text-right">{TABLE_COLUMN_LABELS.ACTIONS}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral/70">
