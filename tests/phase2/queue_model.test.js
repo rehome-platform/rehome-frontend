@@ -24,7 +24,8 @@ describe('Queue Model: taskTypeLabel & 7 Queue Types', () => {
     expect(taskTypeLabel({ type: 'PACKING' })).toBe('Đóng gói đơn hàng');
     expect(taskTypeLabel({ type: 'RETURN' })).toBe('Yêu cầu trả hàng');
     expect(taskTypeLabel({ type: 'ORG_VERIFICATION' })).toBe('Xác minh tổ chức');
-    expect(taskTypeLabel({ type: 'LEGAL_CHANGE' })).toBe('Đổi pháp lý tổ chức');
+    expect(taskTypeLabel({ type: 'LEGAL_CHANGE' })).toBe('Thay đổi pháp lý');
+    expect(taskTypeLabel({ type: 'DONATION_PREP' })).toBe('Chuẩn bị quyên góp');
     expect(taskTypeLabel({ type: 'VIOLATION_REPORT' })).toBe('Báo cáo vi phạm');
   });
 

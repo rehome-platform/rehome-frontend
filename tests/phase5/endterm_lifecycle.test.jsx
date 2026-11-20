@@ -129,7 +129,7 @@ it('renders scheduler term changes and UNCLAIMED using refreshed inventory data'
   expect(screen.getByText(/Kỳ 2/)).toBeInTheDocument();
   list.mockResolvedValue({ items: [{ ...item, sku: item.id, status: 'UNCLAIMED', decision: 'TAKE_BACK' }], totalPages: 1 });
   await act(async () => { vi.advanceTimersByTime(30000); });
-  expect(screen.getAllByText('Vô thừa nhận').length).toBeGreaterThan(1);
+  expect(screen.getAllByText('Quá hạn nhận lại').length).toBeGreaterThan(1);
   expect(screen.queryByText('Khách yêu cầu nhận lại')).not.toBeInTheDocument();
   expect(screen.queryByText('Đàm phán giá →')).not.toBeInTheDocument();
 });

@@ -383,7 +383,7 @@ describe('Web Updates (18/11): Receipt Edit/Void, Unhide Campaign, ON_HOLD Reass
     expect(screen.getByText(/Quá hạn 48h/i).closest('a')).toHaveAttribute('href', '/moderator/queue');
     expect(screen.getByText('Đơn chờ đóng gói').closest('a')).toHaveAttribute('href', '/moderator/packing');
     expect(screen.getByText('Chờ rút hàng').closest('a')).toHaveAttribute('href', '/moderator/queue?type=WITHDRAWAL');
-    expect(screen.getByText('Tồn kho đang bán').closest('a')).toHaveAttribute(
+    expect(screen.getByText('Sản phẩm đang bán').closest('a')).toHaveAttribute(
       'href',
       '/moderator/inventory?status=ON_SALE'
     );
