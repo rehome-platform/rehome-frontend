@@ -3,6 +3,8 @@
  * Đảm bảo độ tương phản WCAG AA, đồng bộ với thiết kế ReHome (#006B2C primary, #F6F9F4 background).
  */
 
+import { PRODUCT_STATUS_FALLBACK, productStatusLabelByKey } from '../../../constants/productStatus.js';
+
 export const STATUS_TONES = {
   success: {
     badgeClass: 'bg-[#ECFDF3] text-[#067647] border-[#ABEFC6]',
@@ -46,19 +48,22 @@ export const STATUS_META = {
   STOCKED: { label: 'Đã nhập kho', tone: 'success' },
 
   // Inventory & lifecycle
-  ON_SALE: { label: 'Đang bán', tone: 'success' },
-  WAREHOUSE: { label: 'Lưu kho, tạm ngừng bán', tone: 'info' },
-  RESERVED: { label: 'Đang giữ hàng', tone: 'warning' },
-  SOLD: { label: 'Đã bán', tone: 'success' },
-  WITHDRAWN: { label: 'Đã rút hàng', tone: 'neutral' },
-  DESTROYED: { label: 'Đã tiêu huỷ', tone: 'danger' },
-  WAITING_END_OF_TERM: { label: 'Chờ xử lý cuối kỳ', tone: 'warning' },
-  UNCLAIMED: { label: 'Vô thừa nhận', tone: 'neutral' },
-  DONATED: { label: 'Đã quyên góp', tone: 'purple' },
-  RETURNED: { label: 'Đã bàn giao', tone: 'neutral' },
+  ON_SALE: { label: productStatusLabelByKey('ON_SALE'), tone: 'success' },
+  WAREHOUSE: { label: productStatusLabelByKey('WAREHOUSE'), tone: 'info' },
+  WAREHOUSE_DEGRADED: { label: productStatusLabelByKey('WAREHOUSE_DEGRADED'), tone: 'danger' },
+  WAREHOUSE_TERM_EXPIRED: { label: productStatusLabelByKey('WAREHOUSE_TERM_EXPIRED'), tone: 'warning' },
+  WAREHOUSE_NEGOTIATING: { label: productStatusLabelByKey('WAREHOUSE_NEGOTIATING'), tone: 'info' },
+  RESERVED: { label: productStatusLabelByKey('RESERVED'), tone: 'warning' },
+  SOLD: { label: productStatusLabelByKey('SOLD'), tone: 'success' },
+  WITHDRAWN: { label: productStatusLabelByKey('WITHDRAWN'), tone: 'neutral' },
+  DESTROYED: { label: productStatusLabelByKey('DESTROYED'), tone: 'danger' },
+  WAITING_END_OF_TERM: { label: productStatusLabelByKey('WAITING_END_OF_TERM'), tone: 'warning' },
+  UNCLAIMED: { label: productStatusLabelByKey('UNCLAIMED'), tone: 'neutral' },
+  DONATED: { label: productStatusLabelByKey('DONATED'), tone: 'purple' },
+  RETURNED: { label: productStatusLabelByKey('RETURNED'), tone: 'neutral' },
   RETURNED_ONSITE: { label: 'Đã trả tại chỗ', tone: 'neutral' },
-  PLATFORM_OWNED: { label: 'Tài sản nền tảng', tone: 'purple' },
-  DEGRADED: { label: 'Hàng xuống cấp', tone: 'danger' },
+  PLATFORM_OWNED: { label: productStatusLabelByKey('PLATFORM_OWNED'), tone: 'purple' },
+  DEGRADED: { label: productStatusLabelByKey('DEGRADED'), tone: 'danger' },
 
   // Packing, returns, donations, moderation
   PACKING: { label: 'Đang đóng gói', tone: 'info' },
@@ -91,7 +96,7 @@ export function getStatusMeta(status, fallbackLabel) {
   const tone = STATUS_TONES[toneKey] || STATUS_TONES.neutral;
 
   return {
-    label: entry?.label || fallbackLabel || (typeof status === 'string' && status) || '—',
+    label: entry?.label || fallbackLabel || (/^[A-Z0-9_]+$/.test(key) ? PRODUCT_STATUS_FALLBACK : (typeof status === 'string' && status.trim()) || PRODUCT_STATUS_FALLBACK),
     tone: toneKey,
     badgeClass: tone.badgeClass,
     dotClass: tone.dotClass,
