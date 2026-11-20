@@ -8,6 +8,7 @@ import Button from '../../../components/common/Button.jsx';
 import { ownsClaim } from "../models/warehouseModel.js";
 import { withdrawalCounterLink } from '../models/queueModel.js';
 import { Page, Pager, ResourceState } from "../components/WarehouseUi.jsx";
+import { TABLE_COLUMN_LABELS } from '../../../constants/tableColumns.js';
 
 export function getQueueLinkTarget(item, typeParam) {
   const type = item?.type || typeParam;
@@ -109,12 +110,12 @@ export default function ConsignmentQueuePage() {
               <thead>
                 <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
                   <th className="py-2.5 px-4">Loại việc</th>
-                  <th className="py-2.5 px-3">Đối tượng</th>
+                  <th className="py-2.5 px-3">{TABLE_COLUMN_LABELS.TARGET}</th>
                   <th className="py-2.5 px-3">Tạo lúc</th>
-                  <th className="py-2.5 px-3">Đã chờ</th>
+                  <th className="py-2.5 px-3">{TABLE_COLUMN_LABELS.WAITED}</th>
                   <th className="py-2.5 px-3">Người nhận</th>
                   <th className="py-2.5 px-3 text-center w-24">Chi tiết</th>
-                  <th className="py-2.5 px-4 text-left w-[300px]">Hành động</th>
+                  <th className="py-2.5 px-4 text-left w-[300px]">{TABLE_COLUMN_LABELS.ACTIONS}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral">

@@ -1,7 +1,9 @@
 import { Phase2Error } from './warehouseTransportModel.js';
 
+const UI_ONLY_STATUSES = new Set(['WAITING_END_OF_TERM', 'TERM_EXPIRED', 'PLATFORM_FINAL', 'DEGRADED']);
+
 function supportedStatus(params) {
-  return params?.status && params.status !== 'WAITING_END_OF_TERM' ? params.status : undefined;
+  return params?.status && !UI_ONLY_STATUSES.has(params.status) ? params.status : undefined;
 }
 
 export function inventoryQuery(params) {

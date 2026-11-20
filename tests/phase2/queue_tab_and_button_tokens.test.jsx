@@ -209,9 +209,9 @@ describe('HQ-01: Tab selection in place, Claim flow, and "Mở việc" without a
     renderQueueApp();
 
     const packRow = (await screen.findByText('Nguyễn Văn B')).closest('tr');
-    // 7 columns: Nhận/Nhả việc được gộp vào cột Hành động (căn trái)
+    // 7 columns: Nhận/Nhả việc được gộp vào cột Thao tác (căn trái)
     const headers = screen.getAllByRole('columnheader').map((th) => th.textContent.trim());
-    expect(headers).toEqual(['Loại việc', 'Đối tượng', 'Tạo lúc', 'Đã chờ', 'Người nhận', 'Chi tiết', 'Hành động']);
+    expect(headers).toEqual(['Loại việc', 'Đối tượng', 'Tạo lúc', 'Đã chờ', 'Người nhận', 'Chi tiết', 'Thao tác']);
 
     const packDetailBtn = within(packRow).getByRole('button', { name: 'Chi tiết' });
     const packReleaseBtn = within(packRow).getByRole('button', { name: 'Nhả việc' });

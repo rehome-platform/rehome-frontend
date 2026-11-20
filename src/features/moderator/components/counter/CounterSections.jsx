@@ -481,7 +481,7 @@ export function CounterConsignmentTasks({ taskGroups }) {
                   to={`/moderator/inventory/${encodeURIComponent(detailSku)}`}
                   className="inline-flex items-center justify-center rounded-xl bg-[#006B2C] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#005523] whitespace-nowrap"
                 >
-                  Xem tồn kho
+                  Xem sản phẩm
                 </Link>
               )}
               {detailTask.formId && (

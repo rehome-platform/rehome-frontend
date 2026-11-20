@@ -16,6 +16,12 @@ import { listItems, resolveInventoryTermAndRates } from '../models/warehouseMode
 import { Page, Card, Photos, Status, ResourceState, date, money } from '../components/WarehouseUi.jsx';
 import { ReturnOutcomeDialog } from '../components/returns/ReturnSections.jsx';
 import { useToast } from '../../../context/ToastContext.jsx';
+import {
+  WAREHOUSE_REASON,
+  productStatusKey,
+  resolveProductStatusLabel,
+  warehouseReasonOf,
+} from '../../../constants/productStatus.js';
 
 export default function InventoryDetailPage() {
   const { sku } = useParams();
@@ -156,12 +162,12 @@ export default function InventoryDetailPage() {
 
   return (
     <Page
-      title="Chi tiết sản phẩm tồn kho"
+      title="Chi tiết sản phẩm"
       subtitle={`Mã SKU: ${sku}`}
       actions={
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => navigate('/moderator/inventory')}>
-            ← Quay lại tồn kho
+            ← Quay lại Quản lý sản phẩm
           </Button>
           <Button variant="outline" onClick={() => product.refresh()}>
             Tải lại
@@ -179,7 +185,7 @@ export default function InventoryDetailPage() {
             Sản phẩm với mã SKU <strong>{sku}</strong> đang được lưu trữ tại chi nhánh kho khác. Bạn chỉ có quyền kiểm kê và in tem đối với các sản phẩm thuộc kho bạn được phân công.
           </p>
           <Button variant="outline" onClick={() => navigate('/moderator/inventory')}>
-            Quay lại danh sách tồn kho
+            Quay lại Quản lý sản phẩm
           </Button>
         </div>
       )}
@@ -193,14 +199,23 @@ export default function InventoryDetailPage() {
             Hệ thống không tìm thấy bất kỳ sản phẩm nào có mã SKU: <strong>{sku}</strong>. Vui lòng kiểm tra lại tem nhãn hoặc quét lại mã QR.
           </p>
           <Button variant="outline" onClick={() => navigate('/moderator/inventory')}>
-            Quay lại danh sách tồn kho
+            Quay lại Quản lý sản phẩm
           </Button>
         </div>
       )}
 
       {!isForbidden && !isNotFound && <ResourceState resource={product} />}
 
-      {data && (
+      {data && (() => {
+        const statusItem = {
+          ...data,
+          warehouseReason:
+            data.warehouseReason ||
+            (activeCase && !activeCase.choice ? WAREHOUSE_REASON.DEGRADED : undefined) ||
+            (canNegotiate ? WAREHOUSE_REASON.NEGOTIATING : undefined) ||
+            warehouseReasonOf(data),
+        };
+        return (
         <div className="space-y-6">
           {/* 1. THẺ THÔNG TIN SẢN PHẨM */}
           <div className="rounded-2xl border border-[#8a8a8a] bg-white p-6 shadow-sm space-y-5">
@@ -208,7 +223,7 @@ export default function InventoryDetailPage() {
               <div className="space-y-1.5">
                 <div className="flex items-center gap-3">
                   <h2 className="text-xl font-bold text-[#191C19]">{data.name}</h2>
-                  <Status>{data.status}</Status>
+                  <Status label={resolveProductStatusLabel(statusItem)}>{productStatusKey(statusItem)}</Status>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <span className="font-mono font-bold bg-[#f4f4f4] px-2.5 py-1 rounded-lg border border-[#d0d0d0] text-[#191C19]">
@@ -426,8 +441,8 @@ export default function InventoryDetailPage() {
               </Card>
             )}
           </div>
-          )
-      }
+        );
+      })()}
 
           {/* Modal In tem mã vạch SKU */}
           <BarcodePrintModal isOpen={print} onClose={() => setPrint(false)} item={data} />
@@ -440,7 +455,7 @@ export default function InventoryDetailPage() {
             onUpdated={() => product.refresh()}
           />
 
-          {/* Modal Đăng bán lại từ chi tiết tồn kho */}
+          {/* Modal Đăng bán lại từ chi tiết sản phẩm */}
           <ReturnOutcomeDialog
             isOutcomeModalOpen={relistModalOpen}
             setIsOutcomeModalOpen={(open) => {

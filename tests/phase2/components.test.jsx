@@ -894,7 +894,7 @@ describe('ConsignmentDetailPage component behaviors', () => {
       expect(
         await screen.findByText('Sản phẩm không thuộc kho bạn quản lý'),
       ).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Quay lại danh sách tồn kho' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Quay lại Quản lý sản phẩm' })).toBeInTheDocument();
     });
   });
 

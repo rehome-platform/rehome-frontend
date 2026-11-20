@@ -8,6 +8,7 @@ import { formatCurrencyVND } from "../../../../utils/formatters.js";
 import { formatDeadlineWithCountdown } from "../WarehouseUi.jsx";
 import { ReturnEvidence, ReturnPhotoComparison } from './ReturnEvidence.jsx';
 import { useToast } from "../../../../context/ToastContext.jsx";
+import { TABLE_COLUMN_LABELS } from "../../../../constants/tableColumns.js";
 
 export function ReturnCompareDialog({ isCompareModalOpen, setIsCompareModalOpen, selectedItem }) {
   if (!selectedItem) return null;
@@ -1178,9 +1179,9 @@ export function ReturnQueueTable({
               <th className="py-3 px-3.5">Tên người mua</th>
               <th className="py-3 px-3.5">Số món</th>
               <th className="py-3 px-3.5">Gửi lúc</th>
-              <th className="py-3 px-3.5">Đã chờ</th>
-              <th className="py-3 px-3.5">Trạng thái</th>
-              <th className="py-3 px-3.5 text-right">Hành động</th>
+              <th className="py-3 px-3.5">{TABLE_COLUMN_LABELS.WAITED}</th>
+              <th className="py-3 px-3.5">{TABLE_COLUMN_LABELS.STATUS}</th>
+              <th className="py-3 px-3.5 text-right">{TABLE_COLUMN_LABELS.ACTIONS}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral">

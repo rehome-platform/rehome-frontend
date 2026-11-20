@@ -24,14 +24,14 @@ it('loads persistent history from the server on reload and paginates separately 
       createdAt: '2026-11-14T01:00:00Z', result: 'SUCCESS' }], totalPages: 2,
   }));
   const first = mount();
-  await screen.findByText('DH-0');
+  await screen.findByText('Đơn hàng DH-0');
   expect(screen.getByText('Nhân viên A')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Sau' }));
-  await screen.findByText('DH-1');
+  await screen.findByText('Đơn hàng DH-1');
   expect(list).toHaveBeenLastCalledWith('PACKING', { page: 1, size: 20 }, expect.any(Object));
   first.unmount();
   mount('/moderator/packing?view=history&historyPage=1');
-  await screen.findByText('DH-1');
+  await screen.findByText('Đơn hàng DH-1');
 });
 it('does not fetch history on the work tab; handles errors and retry without fake rows', async () => {
   const list = vi.spyOn(warehouseHistoryService, 'list').mockRejectedValueOnce(new Error('Không tải được lịch sử'))
@@ -61,7 +61,7 @@ it('prefers row.targetId over parsed row.target label when building detail links
   });
 
   mount('/moderator/consignments?view=history');
-  const link = await screen.findByRole('link', { name: 'CONSIGNMENT_FORM CF-0099' });
+  const link = await screen.findByRole('link', { name: 'Phiếu ký gửi CF-0099' });
   expect(link).toHaveAttribute(
     'href',
     '/moderator/consignments/550e8400-e29b-41d4-a716-446655440099',

@@ -76,23 +76,23 @@ describe('Task 5: Returned item ("Đã bàn giao") management in WarehouseInvent
 
     renderWithAuth(<WarehouseInventoryPage />);
 
-    // Renders "Đã bàn giao" tab & queries status: 'RETURNED'
-    const returnedTab = await screen.findByRole('button', { name: 'Đã bàn giao' });
+    // Renders "Chờ phân loại hoàn" tab & queries status: 'RETURNED'
+    const returnedTab = await screen.findByRole('button', { name: 'Chờ phân loại hoàn' });
     fireEvent.click(returnedTab);
     await waitFor(() => {
       expect(listSpy).toHaveBeenCalledWith(expect.objectContaining({ status: 'RETURNED' }), expect.anything());
     });
 
-    // Pending row shows Đã bàn giao + Chờ chọn phương án xử lý + Đăng bán lại, and NOT Tài sản nền tảng
+    // Pending row shows Chờ phân loại hoàn + Chờ chọn phương án xử lý + Đăng bán lại, and NOT Tài sản nền tảng
     const pendingRow = (await screen.findByText('Áo khoác dạ trả về')).closest('tr');
-    expect(within(pendingRow).getByText('Đã bàn giao')).toBeInTheDocument();
+    expect(within(pendingRow).getByText('Chờ phân loại hoàn')).toBeInTheDocument();
     expect(within(pendingRow).getByText('Chờ chọn phương án xử lý')).toBeInTheDocument();
     expect(within(pendingRow).queryByText(/Tài sản nền tảng/i)).not.toBeInTheDocument();
     const relistBtn = within(pendingRow).getByRole('button', { name: 'Đăng bán lại' });
 
     // Non-pending RETURNED row (e.g. LOST) does NOT expose Đăng bán lại or pending indicator
     const lostRow = screen.getByText('Váy trả thất lạc').closest('tr');
-    expect(within(lostRow).getByText('Đã bàn giao')).toBeInTheDocument();
+    expect(within(lostRow).getByText('Chờ phân loại hoàn')).toBeInTheDocument();
     expect(within(lostRow).queryByText('Chờ chọn phương án xử lý')).not.toBeInTheDocument();
     expect(within(lostRow).queryByRole('button', { name: 'Đăng bán lại' })).not.toBeInTheDocument();
 
@@ -153,7 +153,7 @@ describe('Task 5: Returned item ("Đã bàn giao") management in WarehouseInvent
     );
 
     await screen.findByText('Đầm midi lụa');
-    expect(screen.getAllByText('Đã bàn giao').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Chờ phân loại hoàn').length).toBeGreaterThan(0);
     expect(screen.getByText(/không thuộc sở hữu nền tảng/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Xem yêu cầu trả hàng/i })).toHaveAttribute(
       'href',

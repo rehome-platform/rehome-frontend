@@ -8,7 +8,9 @@ export const WORK_TYPES = [
   { key: 'WITHDRAWAL', label: 'Rút hàng' },
   { key: 'DONATION_PICKUP', label: 'Lấy đồ quyên góp' },
   { key: 'DONATION_REASSIGN', label: 'Chuyển lượt tạm giữ' },
+  { key: 'DONATION_PREP', label: 'Chuẩn bị quyên góp' },
   { key: 'RETURN', label: 'Trả hàng' },
   { key: 'ORG_VERIFICATION', label: 'Xác minh tổ chức' },
+  { key: 'LEGAL_CHANGE', label: 'Thay đổi pháp lý' },
   { key: 'VIOLATION_REPORT', label: 'Vi phạm' },
 ];

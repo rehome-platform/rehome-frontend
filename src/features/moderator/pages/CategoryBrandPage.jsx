@@ -8,6 +8,7 @@ import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
 import { useResource } from '../hooks/warehouseHooks.jsx';
 import { Page, ResourceState } from '../components/WarehouseUi.jsx';
 import { filterCatalogItems, formatTryOnSlot } from '../models/warehouseModel.js';
+import { TABLE_COLUMN_LABELS } from '../../../constants/tableColumns.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 
 export default function CategoryBrandPage() {
@@ -316,8 +317,8 @@ export default function CategoryBrandPage() {
                 <tr className="bg-[#f4f4f4] border-b border-[#8a8a8a] text-xs font-semibold text-[#5f5f5f] whitespace-nowrap">
                   <th className="py-2.5 px-4">{isCategory ? 'Danh mục' : 'Thương hiệu'}</th>
                   {isCategory && <th className="py-2.5 px-4">Slot thử đồ AI</th>}
-                  <th className="py-2.5 px-4">Trạng thái</th>
-                  <th className="py-2.5 px-4 text-right">Hành động</th>
+                  <th className="py-2.5 px-4">{TABLE_COLUMN_LABELS.STATUS}</th>
+                  <th className="py-2.5 px-4 text-right">{TABLE_COLUMN_LABELS.ACTIONS}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e0e0e0]">

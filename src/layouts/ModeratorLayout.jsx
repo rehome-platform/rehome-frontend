@@ -155,7 +155,7 @@ export default function ModeratorLayout({ children, apiColors = true }) {
           subItem: true,
           active: onPath('/moderator/consignments/print-queue', '/moderator/print-queue'),
         },
-        { to: '/moderator/inventory', label: 'Tồn kho', icon: 'inventory_2', active: onPath('/moderator/inventory', '/moderator/end-of-term') },
+        { to: '/moderator/inventory', label: 'Quản lý sản phẩm', icon: 'inventory_2', active: onPath('/moderator/inventory', '/moderator/end-of-term') },
       ],
     },
     {

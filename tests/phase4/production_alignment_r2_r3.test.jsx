@@ -170,15 +170,15 @@ describe('Requirement R3: Warehouse Activity History & GHN A5 Printing Alignment
       </MemoryRouter>
     );
 
-    expect(await screen.findByText('ORDER DH-00244')).toBeInTheDocument();
-    const orderLink = screen.getByRole('link', { name: 'ORDER DH-00244' });
+    expect(await screen.findByText('Đơn hàng DH-00244')).toBeInTheDocument();
+    const orderLink = screen.getByRole('link', { name: 'Đơn hàng DH-00244' });
     expect(orderLink).toHaveAttribute('href', '/moderator/packing?orderId=DH-00244');
 
     expect(screen.getByText('Tạo vận đơn GHN')).toBeInTheDocument();
     expect(screen.getByText('mod@rehome.vn')).toBeInTheDocument();
 
-    expect(screen.getByText('CONSIGNMENT_FORM CF-0012')).toBeInTheDocument();
-    const formLink = screen.getByRole('link', { name: 'CONSIGNMENT_FORM CF-0012' });
+    expect(screen.getByText('Phiếu ký gửi CF-0012')).toBeInTheDocument();
+    const formLink = screen.getByRole('link', { name: 'Phiếu ký gửi CF-0012' });
     expect(formLink).toHaveAttribute('href', '/moderator/consignments/CF-0012');
     expect(screen.getByText('Nhập kho')).toBeInTheDocument();
     expect(screen.getByText('Nhân viên kho Q7')).toBeInTheDocument();

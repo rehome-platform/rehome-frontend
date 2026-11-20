@@ -1,4 +1,5 @@
 import { WarehouseHistoryTabs } from '../components/WarehouseHistoryTabs.jsx';
+import { TABLE_COLUMN_LABELS } from '../../../constants/tableColumns.js';
 import React, { useState, useMemo } from "react";
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
@@ -318,9 +319,9 @@ export default function PackingOrdersPage() {
                       <th className="py-3 px-3">Người mua</th>
                       <th className="py-3 px-3">Số món</th>
                       <th className="py-3 px-3">Thời gian đặt</th>
-                      <th className="py-3 px-3">Chờ</th>
-                      <th className="py-3 px-3">Trạng thái</th>
-                      <th className="py-3 px-3 text-right">Thao tác</th>
+                      <th className="py-3 px-3">{TABLE_COLUMN_LABELS.WAITED}</th>
+                      <th className="py-3 px-3">{TABLE_COLUMN_LABELS.STATUS}</th>
+                      <th className="py-3 px-3 text-right">{TABLE_COLUMN_LABELS.ACTIONS}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral">
