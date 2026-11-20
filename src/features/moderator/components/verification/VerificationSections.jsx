@@ -559,10 +559,12 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
     const targetRequestId = rejectModalTarget.requestId || rejectModalTarget.refId || rejectModalTarget.id;
     setSubmittingAction(true);
     try {
-      await handleRejectLegalChange?.(targetRequestId, trimmed);
-      setRejectModalTarget(null);
-      setLegalRejectReason('');
-      setSelectedChangeModal(null);
+      const ok = await handleRejectLegalChange?.(targetRequestId, trimmed);
+      if (ok !== false) {
+        setRejectModalTarget(null);
+        setLegalRejectReason('');
+        setSelectedChangeModal(null);
+      }
     } finally {
       setSubmittingAction(false);
     }
@@ -573,9 +575,11 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
     const targetRequestId = approveModalTarget.requestId || approveModalTarget.refId || approveModalTarget.id;
     setSubmittingAction(true);
     try {
-      await handleApproveLegalChange?.(targetRequestId);
-      setApproveModalTarget(null);
-      setSelectedChangeModal(null);
+      const ok = await handleApproveLegalChange?.(targetRequestId);
+      if (ok !== false) {
+        setApproveModalTarget(null);
+        setSelectedChangeModal(null);
+      }
     } finally {
       setSubmittingAction(false);
     }
@@ -624,7 +628,7 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
                       </p>
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-3">
                         <button
                           type="button"
                           onClick={() => setSelectedChangeModal(chg)}
@@ -637,14 +641,14 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
                             <button
                               type="button"
                               onClick={() => openRejectModal(chg)}
-                              className="text-xs font-medium px-3 py-1.5 rounded-xl bg-error text-white hover:bg-red-700 transition-colors shadow-sm"
+                              className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-error bg-white text-error hover:bg-error-light transition-colors"
                             >
                               Từ chối
                             </button>
                             <button
                               type="button"
                               onClick={() => setApproveModalTarget(chg)}
-                              className="text-xs font-medium px-3 py-1.5 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors shadow-sm"
+                              className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors shadow-sm"
                             >
                               Duyệt đổi pháp lý
                             </button>
@@ -754,30 +758,27 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
             </div>
 
             {/* Footer hành động trong Modal */}
-            <div className="flex justify-end gap-2 pt-3 border-t border-neutral">
-              <Button variant="outline" onClick={() => setSelectedChangeModal(null)} className="rounded-xl">
+            <div className="flex items-center justify-between gap-3 pt-3 border-t border-neutral">
+              <Button variant="ghost" onClick={() => setSelectedChangeModal(null)} className="rounded-xl">
                 Đóng
               </Button>
               {selectedChangeModal.status === 'PENDING' && (
-                <>
+                <div className="flex items-center gap-3">
                   <Button
-                    variant="danger"
+                    variant="danger-outline"
                     onClick={() => openRejectModal(selectedChangeModal)}
-                    className="rounded-xl bg-error text-white hover:bg-red-700"
+                    className="rounded-xl"
                   >
                     Từ chối
                   </Button>
                   <Button
                     variant="primary"
-                    onClick={() => {
-                      handleApproveLegalChange?.(selectedChangeModal.requestId || selectedChangeModal.refId || selectedChangeModal.id);
-                      setSelectedChangeModal(null);
-                    }}
-                    className="rounded-xl bg-primary text-white hover:bg-primary-hover font-bold"
+                    onClick={() => setApproveModalTarget(selectedChangeModal)}
+                    className="rounded-xl font-bold"
                   >
                     Duyệt đổi pháp lý
                   </Button>
-                </>
+                </div>
               )}
             </div>
           </div>
@@ -820,9 +821,10 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
             <Button
               size="sm"
               variant="danger"
+              loading={submittingAction}
               disabled={submittingAction || !legalRejectReason.trim()}
               onClick={confirmRejectLegalChange}
-              className="rounded-xl bg-error text-white hover:bg-red-700 disabled:opacity-50"
+              className="rounded-xl"
             >
               {submittingAction ? 'Đang xử lý...' : 'Xác nhận từ chối'}
             </Button>
@@ -855,9 +857,10 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
             <Button
               size="sm"
               variant="primary"
+              loading={submittingAction}
               disabled={submittingAction}
               onClick={confirmApproveLegalChange}
-              className="rounded-xl bg-primary text-white hover:bg-primary-hover font-bold"
+              className="rounded-xl font-bold"
             >
               {submittingAction ? 'Đang duyệt...' : 'Xác nhận duyệt'}
             </Button>

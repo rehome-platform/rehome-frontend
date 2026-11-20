@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
+import Tooltip from '../../../components/common/Tooltip.jsx';
 import CatalogEditor from '../components/CatalogEditor.jsx';
 import { catalogService } from '../services/warehouseApi.js';
 import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
@@ -169,13 +170,16 @@ export default function CategoryBrandPage() {
             }`}
         >
           <span>{feedback.message}</span>
-          <button
-            type="button"
-            onClick={() => setFeedback(null)}
-            className="text-xs font-bold px-2 py-0.5 hover:opacity-75"
-          >
-            ✕
-          </button>
+          <Tooltip content="Đóng thông báo">
+            <button
+              type="button"
+              aria-label="Đóng thông báo"
+              onClick={() => setFeedback(null)}
+              className="text-xs font-bold px-2 py-0.5 hover:opacity-75 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-current"
+            >
+              ✕
+            </button>
+          </Tooltip>
         </div>
       )}
 
@@ -225,13 +229,16 @@ export default function CategoryBrandPage() {
               className="w-full rounded-xl border-[#8a8a8a] text-xs py-2 pl-3 pr-8 focus:border-[#2b2b2b] focus:ring-1 focus:ring-[#2b2b2b]"
             />
             {keyword && (
-              <button
-                type="button"
-                onClick={() => setKeyword('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[#7a7a7a] hover:text-black font-bold"
-              >
-                ✕
-              </button>
+              <Tooltip content="Xóa từ khóa tìm kiếm" className="absolute right-2 top-1/2 -translate-y-1/2">
+                <button
+                  type="button"
+                  aria-label="Xóa từ khóa tìm kiếm"
+                  onClick={() => setKeyword('')}
+                  className="text-xs text-[#5B6776] hover:text-black font-bold p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                >
+                  ✕
+                </button>
+              </Tooltip>
             )}
           </div>
         </div>
@@ -328,11 +335,11 @@ export default function CategoryBrandPage() {
                   return (
                     <tr
                       key={item.id}
-                      className={`hover:bg-[#fcfdfc] transition-colors ${isHidden ? 'bg-[#fafafa] text-[#8a8a8a]' : 'text-[#191C19]'
+                      className={`hover:bg-[#fcfdfc] transition-colors ${isHidden ? 'bg-[#fafafa] text-[#5B6776]' : 'text-[#191C19]'
                         }`}
                     >
                       <td className="py-3 px-4 font-semibold text-xs">
-                        <span className={isHidden ? 'line-through text-[#8a8a8a]' : ''}>{item.name}</span>
+                        <span className={isHidden ? 'line-through text-[#5B6776]' : ''}>{item.name}</span>
                       </td>
 
                       {isCategory && (
@@ -386,7 +393,7 @@ export default function CategoryBrandPage() {
                           <button
                             type="button"
                             onClick={() => setDeleting({ kind, item })}
-                            className="px-3 py-1.5 rounded-lg border border-[#D92D20] bg-[#D92D20] text-white hover:bg-[#B42318] font-semibold transition-colors cursor-pointer whitespace-nowrap"
+                            className="px-3 py-1.5 rounded-lg border border-[#FECDCA] bg-white text-[#D92D20] hover:bg-[#FEF3F2] hover:border-[#D92D20] font-semibold transition-colors cursor-pointer whitespace-nowrap"
                           >
                             Xóa
                           </button>

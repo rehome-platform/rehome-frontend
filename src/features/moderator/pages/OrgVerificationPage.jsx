@@ -1,5 +1,6 @@
 import Spinner from '../../../components/common/Spinner.jsx';
 import { useOrgVerification } from '../hooks/useOrgVerification.jsx';
+import { useModerationShortcuts } from '../hooks/useModerationShortcuts.js';
 import {
   VerificationRejectDialog,
   VerificationChecklist,
@@ -11,7 +12,7 @@ import {
 } from '../components/verification/VerificationSections.jsx';
 import React, { useState, useEffect } from "react";
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
-import { Button, Modal } from "../../../components/common/index.js";
+import { Button, Modal, Tooltip } from "../../../components/common/index.js";
 import baseApi from '../../../services/baseApi.js';
 import { API_BASE_URL } from '../../../configs/api.config.js';
 
@@ -224,6 +225,23 @@ function AuthenticatedImage({ src, alt, className }) {
  */
 export default function OrgVerificationPage() {
   const model = useOrgVerification();
+  const isDetailPending =
+    model.viewMode === 'DETAIL' &&
+    model.selectedOrg &&
+    !['REJECTED', 'APPROVED', 'VERIFIED'].includes(model.selectedOrg.status) &&
+    !model.viewingDoc &&
+    !model.sections?.VerificationRejectDialog?.isRejectModalOpen;
+
+  useModerationShortcuts({
+    enabled: model.viewMode === 'DETAIL',
+    onApprove: isDetailPending && model.isChecklistComplete && !model.approvingOrg ? model.handleApproveOrg : undefined,
+    onReject: isDetailPending && !model.approvingOrg ? () => model.setIsRejectModalOpen(true) : undefined,
+    onEscape:
+      !model.viewingDoc && !model.sections?.VerificationRejectDialog?.isRejectModalOpen
+        ? model.handleBackToList
+        : undefined,
+  });
+
   return (
     <ModeratorLayout>
       <div className="space-y-6">
@@ -394,25 +412,29 @@ export default function OrgVerificationPage() {
                   </div>
                 ) : (
                   <div className="pt-2 flex flex-wrap items-center gap-3">
-                    <button
-                      type="button"
-                      disabled={!model.isChecklistComplete || model.approvingOrg}
-                      onClick={model.handleApproveOrg}
-                      className={`py-2.5 px-5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 ${model.isChecklistComplete && !model.approvingOrg
-                          ? 'bg-primary text-white hover:bg-primary-hover shadow-sm cursor-pointer'
-                          : 'bg-neutral-light text-textSecondary border border-neutral cursor-not-allowed'
-                        }`}
-                    >
-                      {model.approvingOrg ? 'Đang xác thực...' : 'Xác thực tổ chức'}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={model.approvingOrg}
-                      onClick={() => model.setIsRejectModalOpen(true)}
-                      className="py-2.5 px-4 rounded-xl border border-error text-error hover:bg-error-light text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Từ chối kèm lý do
-                    </button>
+                    <Tooltip content="Xác thực tổ chức" shortcut="A">
+                      <button
+                        type="button"
+                        disabled={!model.isChecklistComplete || model.approvingOrg}
+                        onClick={model.handleApproveOrg}
+                        className={`py-2.5 px-5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 ${model.isChecklistComplete && !model.approvingOrg
+                            ? 'bg-primary text-white hover:bg-primary-hover shadow-sm cursor-pointer'
+                            : 'bg-neutral-light text-textSecondary border border-neutral cursor-not-allowed'
+                          }`}
+                      >
+                        {model.approvingOrg ? 'Đang xác thực...' : 'Xác thực tổ chức'}
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Từ chối kèm lý do" shortcut="R">
+                      <button
+                        type="button"
+                        disabled={model.approvingOrg}
+                        onClick={() => model.setIsRejectModalOpen(true)}
+                        className="py-2.5 px-4 rounded-xl border border-error text-error hover:bg-error-light text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Từ chối kèm lý do
+                      </button>
+                    </Tooltip>
                     {!model.isChecklistComplete && (
                       <span className="text-xs text-error font-medium">
                         Còn {model.mandatoryItemsLeft} bước bắt buộc chưa tích — nút Xác thực đang khóa

@@ -154,9 +154,16 @@ describe('ViolationReportsPage UI & Design Tokens', () => {
     expect(screen.getByText(/Danh sách các lượt báo cáo từ Member \(2\)/i)).toBeInTheDocument();
     expect(screen.getByText(/1 lần vi phạm trước đây/i)).toBeInTheDocument();
 
-    // Confirm button has bg-primary, rounded-xl
-    const submitBtn = screen.getByRole('button', { name: /Xác nhận quyết định xử lý/i });
-    expect(submitBtn.className).toContain('bg-primary');
+    // Initially no destructive action is pre-selected -> submit button is disabled
+    const idleBtn = screen.getByRole('button', { name: /Chọn quyết định xử lý/i });
+    expect(idleBtn).toBeDisabled();
+    expect(idleBtn.className).toContain('rounded-xl');
+
+    // Selecting destructive action switches submit button to danger red with explicit label
+    fireEvent.click(screen.getByRole('radio', { name: /Gỡ bài viết/i }));
+    const submitBtn = screen.getByRole('button', { name: /Gỡ bài viết vi phạm/i });
+    expect(submitBtn).toBeEnabled();
+    expect(submitBtn.className).toContain('bg-[#D92D20]');
     expect(submitBtn.className).toContain('rounded-xl');
 
     // Back button returns to queue

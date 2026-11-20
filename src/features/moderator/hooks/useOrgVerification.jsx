@@ -325,10 +325,12 @@ export function useOrgVerification() {
       notify('success', 'Đã duyệt yêu cầu đổi thông tin pháp lý thành công! Ghi nhận vào Audit Log hệ thống.');
       setViewMode('LIST');
       setSelectedChange(null);
+      return true;
     } catch (err) {
       console.error('Lỗi khi duyệt đổi pháp lý:', err);
       const serverMsg = err?.message || err?.response?.data?.message;
       notify('error', serverMsg ? `Có lỗi xảy ra khi duyệt đổi pháp lý:\n${serverMsg}` : 'Có lỗi xảy ra khi duyệt đổi pháp lý.');
+      return false;
     }
   };
 
@@ -346,10 +348,12 @@ export function useOrgVerification() {
       notify('success', 'Đã từ chối yêu cầu đổi thông tin pháp lý.');
       setViewMode('LIST');
       setSelectedChange(null);
+      return true;
     } catch (err) {
       console.error('Lỗi khi từ chối đổi pháp lý:', err);
       const serverMsg = err?.message || err?.response?.data?.message;
       notify('error', serverMsg ? `Có lỗi xảy ra khi từ chối đổi pháp lý:\n${serverMsg}` : 'Có lỗi xảy ra khi từ chối đổi pháp lý.');
+      return false;
     }
   };
 
