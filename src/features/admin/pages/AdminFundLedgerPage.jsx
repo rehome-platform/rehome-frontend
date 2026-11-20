@@ -13,7 +13,7 @@ export default function AdminFundLedgerPage() {
 
   return (
     <div className="min-w-0 space-y-6">
-      <div className="flex flex-col xl:flex-row xl:items-end justify-end gap-4 border-b border-[#E2E8E0] pb-4">
+      <div className="flex flex-col xl:flex-row xl:items-end justify-end gap-4 border-b border-[#DDE5D9] pb-4">
         <AdminPeriodFilter filter={filter} />
       </div>
 

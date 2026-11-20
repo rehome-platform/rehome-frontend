@@ -114,7 +114,7 @@ export default function MembershipPlansPage() {
 
   return (
     <div className="space-y-4">
-      <div className="p-6 bg-white rounded-xl border border-[#E2E8E0] space-y-4">
+      <div className="p-6 bg-white rounded-xl border border-[#DDE5D9] space-y-4">
         {error && (
           <div className="flex items-center justify-between gap-3 rounded-xl border border-[#D92D20]/30 bg-[#FFF5F5] px-4 py-3 text-sm text-[#D92D20]">
             <span>{error}</span>
@@ -179,11 +179,11 @@ export default function MembershipPlansPage() {
               },
               { label: 'Đang sử dụng', value: `${detailPlan.activeSubscriberCount ?? 0} thành viên` },
             ].map((r) => (
-              <div key={r.label} className="px-3 py-2.5 rounded-xl border border-[#E2E8E0] bg-[#F6F9F4]/40">
+              <div key={r.label} className="px-3 py-2.5 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]/40">
                 <dt className="text-[10px] uppercase tracking-wide text-[#5B6776] font-semibold mb-0.5">
                   {r.label}
                 </dt>
-                <dd className="text-[#191C19] font-semibold">{r.value}</dd>
+                <dd className="text-[#1F2A37] font-semibold">{r.value}</dd>
               </div>
             ))}
           </dl>

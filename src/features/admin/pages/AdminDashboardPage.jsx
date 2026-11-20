@@ -229,7 +229,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="min-w-0 space-y-6">
       {/* Tab Switcher + (tab Doanh thu) Bộ lọc thời gian & Xuất Excel */}
-      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4 border-b border-[#E2E8E0] pb-4">
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4 border-b border-[#DDE5D9] pb-4">
         <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Các mục tổng quan">
           {TABS.map((tab) => (
             <button
@@ -241,7 +241,7 @@ export default function AdminDashboardPage() {
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${
                 activeTab === tab.id
                   ? 'bg-[#006B2C] text-white shadow-sm'
-                  : 'bg-white border border-[#E2E8E0] text-[#414942] hover:bg-[#F0F5EE] hover:text-[#006B2C]'
+                  : 'bg-white border border-[#DDE5D9] text-[#5B6776] hover:bg-[#F6F9F4] hover:text-[#006B2C]'
               }`}
             >
               <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
@@ -298,12 +298,12 @@ export default function AdminDashboardPage() {
             {revenueMetrics.map((m, idx) => (
               <div
                 key={m.label}
-                className="chart-fade-up bg-white p-5 rounded-2xl border border-[#E2E8E0] shadow-xs flex flex-col justify-between hover:border-[#006B2C]/40 transition-all duration-200"
+                className="chart-fade-up bg-white p-5 rounded-2xl border border-[#DDE5D9] shadow-xs flex flex-col justify-between hover:border-[#006B2C]/40 transition-all duration-200"
                 style={{ '--i': idx }}
               >
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-[#F8FAF8] text-[#414942] border border-[#E2E8E0]">
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-[#F6F9F4] text-[#5B6776] border border-[#DDE5D9]">
                       {m.badge}
                     </span>
                     <div
@@ -312,8 +312,8 @@ export default function AdminDashboardPage() {
                       <span className="material-symbols-outlined text-[22px]">{m.icon}</span>
                     </div>
                   </div>
-                  <p className="text-xs font-medium text-[#717971]">{m.label}</p>
-                  <p className="text-2xl font-black font-heading text-[#191C19] mt-1 tracking-tight">
+                  <p className="text-xs font-medium text-[#5B6776]">{m.label}</p>
+                  <p className="text-2xl font-black font-heading text-[#1F2A37] mt-1 tracking-tight">
                     {loading ? '...' : formatCurrencyVND(m.value)}
                   </p>
                   {m.comparison && !loading && (
@@ -328,25 +328,25 @@ export default function AdminDashboardPage() {
                   )}
                 </div>
 
-                <p className="text-[11px] text-[#717971] mt-3">{m.description}</p>
+                <p className="text-[11px] text-[#5B6776] mt-3">{m.description}</p>
               </div>
             ))}
           </div>
 
           {/* Tóm tắt gói thành viên: thẻ doanh thu nổi bật bên trái + biểu đồ tròn theo hạng bên phải */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <div className="chart-fade-up bg-white p-5 rounded-2xl border border-[#E2E8E0] shadow-xs flex flex-col justify-between hover:border-[#006B2C]/40 transition-all duration-200">
+            <div className="chart-fade-up bg-white p-5 rounded-2xl border border-[#DDE5D9] shadow-xs flex flex-col justify-between hover:border-[#006B2C]/40 transition-all duration-200">
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-[#F8FAF8] text-[#414942] border border-[#E2E8E0]">
+                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-[#F6F9F4] text-[#5B6776] border border-[#DDE5D9]">
                     Theo khoảng thời gian đã chọn
                   </span>
                   <div className="w-10 h-10 rounded-xl bg-[#E0F2F1] text-[#00685F] flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-[22px]">card_membership</span>
                   </div>
                 </div>
-                <p className="text-xs font-medium text-[#717971]">Doanh thu gói thành viên</p>
-                <p className="text-2xl font-black font-heading text-[#191C19] mt-1 tracking-tight">
+                <p className="text-xs font-medium text-[#5B6776]">Doanh thu gói thành viên</p>
+                <p className="text-2xl font-black font-heading text-[#1F2A37] mt-1 tracking-tight">
                   {membershipLoading ? '...' : formatCurrencyVND(membershipRevenue)}
                 </p>
                 {previousPeriodLabel && !membershipLoading && (
@@ -360,13 +360,13 @@ export default function AdminDashboardPage() {
                   </div>
                 )}
               </div>
-              <p className="text-[11px] text-[#717971] mt-3">
+              <p className="text-[11px] text-[#5B6776] mt-3">
                 Tổng tiền thu được từ bán gói thành viên trong khoảng thời gian đã chọn.
               </p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-[#E2E8E0] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col">
-              <h3 className="text-base font-bold text-[#191C19] font-heading">Gói thành viên</h3>
+            <div className="bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col">
+              <h3 className="text-base font-bold text-[#1F2A37] font-heading">Gói thành viên</h3>
 
               <div className="flex-1 flex flex-col items-center justify-center gap-5 py-2">
                 <AdminDonutChart
@@ -383,14 +383,14 @@ export default function AdminDashboardPage() {
                       key={s.key}
                       className="rounded-xl border border-[#DDE5D9] bg-[#F6F9F4] px-2 py-2.5 text-center"
                     >
-                      <span className="flex items-center justify-center gap-1.5 text-xs font-medium text-[#414942]">
+                      <span className="flex items-center justify-center gap-1.5 text-xs font-medium text-[#5B6776]">
                         <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }}></span>
                         {s.label}
                       </span>
-                      <span className="block mt-1 text-lg font-extrabold text-[#191C19] font-heading leading-none">
+                      <span className="block mt-1 text-lg font-extrabold text-[#1F2A37] font-heading leading-none">
                         {tierCountsLoading ? '...' : s.value}
                       </span>
-                      <span className="block mt-0.5 text-[11px] text-[#717971]">
+                      <span className="block mt-0.5 text-[11px] text-[#5B6776]">
                         {tierCountsLoading
                           ? '...'
                           : `${Math.round((s.value / Math.max(1, totalTierMembers)) * 100)}%`}

@@ -97,7 +97,7 @@ export default function VoucherTemplatesPage() {
   const columns = [
     {
       header: 'Tên',
-      render: (row) => <span className="font-semibold text-[#191C19]">{row.name}</span>,
+      render: (row) => <span className="font-semibold text-[#1F2A37]">{row.name}</span>,
     },
     {
       header: 'Loại',
@@ -154,7 +154,7 @@ export default function VoucherTemplatesPage() {
   ];
 
   return (
-    <div className="p-6 bg-white rounded-xl border border-[#E2E8E0] space-y-5">
+    <div className="p-6 bg-white rounded-xl border border-[#DDE5D9] space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <p className="text-xs text-[#5B6776] mt-0.5">
@@ -168,7 +168,7 @@ export default function VoucherTemplatesPage() {
       </div>
 
       <div className="flex items-center gap-2">
-        <label htmlFor="voucher-status-filter" className="text-xs font-medium text-[#414942]">
+        <label htmlFor="voucher-status-filter" className="text-xs font-medium text-[#5B6776]">
           Trạng thái:
         </label>
         <select
@@ -176,13 +176,13 @@ export default function VoucherTemplatesPage() {
           aria-label="Lọc theo trạng thái"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-xl border border-[#E2E8E0] bg-white px-3 py-2 text-xs font-medium text-[#191C19] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30"
+          className="rounded-xl border border-[#DDE5D9] bg-white px-3 py-2 text-xs font-medium text-[#1F2A37] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30"
         >
           <option value="ALL">Tất cả</option>
           <option value="ACTIVE">Đang phát</option>
           <option value="INACTIVE">Ngừng phát</option>
         </select>
-        <span className="text-xs text-[#717971]">
+        <span className="text-xs text-[#5B6776]">
           {filteredTemplates.length}/{templates.length} mẫu
         </span>
       </div>
@@ -215,29 +215,29 @@ export default function VoucherTemplatesPage() {
       >
         {detailTemplate && (
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-            <div className="sm:col-span-2 px-3 py-2.5 rounded-xl border border-[#E2E8E0] bg-[#F6F9F4]/40">
+            <div className="sm:col-span-2 px-3 py-2.5 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]/40">
               <dt className="text-[10px] uppercase tracking-wide text-[#5B6776] font-semibold mb-0.5">Mô tả</dt>
-              <dd className="text-[#191C19] font-medium">{detailTemplate.description || '—'}</dd>
+              <dd className="text-[#1F2A37] font-medium">{detailTemplate.description || '—'}</dd>
             </div>
-            <div className="px-3 py-2.5 rounded-xl border border-[#E2E8E0] bg-[#F6F9F4]/40">
+            <div className="px-3 py-2.5 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]/40">
               <dt className="text-[10px] uppercase tracking-wide text-[#5B6776] font-semibold mb-0.5">Loại</dt>
-              <dd className="text-[#191C19] font-semibold">
+              <dd className="text-[#1F2A37] font-semibold">
                 {VOUCHER_TYPE_LABELS[detailTemplate.type] || detailTemplate.type}
               </dd>
             </div>
-            <div className="px-3 py-2.5 rounded-xl border border-[#E2E8E0] bg-[#F6F9F4]/40">
+            <div className="px-3 py-2.5 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]/40">
               <dt className="text-[10px] uppercase tracking-wide text-[#5B6776] font-semibold mb-0.5">Mức giảm</dt>
-              <dd className="text-[#191C19] font-semibold">{formatDiscountDisplay(detailTemplate)}</dd>
+              <dd className="text-[#1F2A37] font-semibold">{formatDiscountDisplay(detailTemplate)}</dd>
             </div>
-            <div className="px-3 py-2.5 rounded-xl border border-[#E2E8E0] bg-[#F6F9F4]/40">
+            <div className="px-3 py-2.5 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]/40">
               <dt className="text-[10px] uppercase tracking-wide text-[#5B6776] font-semibold mb-0.5">Đơn tối thiểu</dt>
-              <dd className="text-[#191C19] font-semibold">{formatVndCompact(detailTemplate.minOrderAmount)}</dd>
+              <dd className="text-[#1F2A37] font-semibold">{formatVndCompact(detailTemplate.minOrderAmount)}</dd>
             </div>
-            <div className="px-3 py-2.5 rounded-xl border border-[#E2E8E0] bg-[#F6F9F4]/40">
+            <div className="px-3 py-2.5 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]/40">
               <dt className="text-[10px] uppercase tracking-wide text-[#5B6776] font-semibold mb-0.5">Hiệu lực</dt>
-              <dd className="text-[#191C19] font-semibold">{detailTemplate.validDays} ngày</dd>
+              <dd className="text-[#1F2A37] font-semibold">{detailTemplate.validDays} ngày</dd>
             </div>
-            <div className="sm:col-span-2 px-3 py-2.5 rounded-xl border border-[#E2E8E0] bg-[#F6F9F4]/40">
+            <div className="sm:col-span-2 px-3 py-2.5 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]/40">
               <dt className="text-[10px] uppercase tracking-wide text-[#5B6776] font-semibold mb-1">Phát cho hạng</dt>
               <dd>
                 {Array.isArray(detailTemplate.tierRules) && detailTemplate.tierRules.length > 0 ? (
@@ -253,7 +253,7 @@ export default function VoucherTemplatesPage() {
                 )}
               </dd>
             </div>
-            <div className="px-3 py-2.5 rounded-xl border border-[#E2E8E0] bg-[#F6F9F4]/40">
+            <div className="px-3 py-2.5 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]/40">
               <dt className="text-[10px] uppercase tracking-wide text-[#5B6776] font-semibold mb-0.5">Trạng thái</dt>
               <dd>
                 <Badge variant={detailTemplate.active ? 'success' : 'default'}>

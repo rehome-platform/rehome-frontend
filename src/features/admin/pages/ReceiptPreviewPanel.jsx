@@ -59,33 +59,33 @@ export default function ReceiptPreviewPanel({ clauses, highlightId }) {
   );
 
   return (
-    <div className="rounded-xl border border-[#E2E8E0] bg-white">
-      <div className="px-4 py-3 border-b border-[#E2E8E0] bg-[#FAFBF9] rounded-t-xl">
-        <p className="text-center font-bold text-[#191C19]">BIÊN NHẬN KÝ GỬI HÀNG HOÁ</p>
+    <div className="rounded-xl border border-[#DDE5D9] bg-white">
+      <div className="px-4 py-3 border-b border-[#DDE5D9] bg-[#FAFBF9] rounded-t-xl">
+        <p className="text-center font-bold text-[#1F2A37]">BIÊN NHẬN KÝ GỬI HÀNG HOÁ</p>
         <p className="text-center text-xs text-[#5B6776] mt-0.5">Số KG-2026-000123 · Dữ liệu mẫu</p>
       </div>
 
-      <div className="p-4 space-y-4 text-sm text-[#191C19] max-h-[70vh] overflow-y-auto">
+      <div className="p-4 space-y-4 text-sm text-[#1F2A37] max-h-[70vh] overflow-y-auto">
         <ClauseBlock no={1} title="ĐIỀU 1 — HÀNG HOÁ">
           <p className="text-[#5B6776]">
-            Sản phẩm: <span className="text-[#191C19]">{SAMPLE.productName}</span>
+            Sản phẩm: <span className="text-[#1F2A37]">{SAMPLE.productName}</span>
           </p>
         </ClauseBlock>
 
         <ClauseBlock no={2} title="ĐIỀU 2 — GIÁ BÁN VÀ HOA HỒNG">
           <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-lg border border-[#E2E8E0] p-2">
+            <div className="rounded-lg border border-[#DDE5D9] p-2">
               <p className="text-xs text-[#5B6776]">Giá bán niêm yết</p>
               <p className="font-semibold text-[#006B2C]">{SAMPLE.agreedPrice}</p>
             </div>
-            <div className="rounded-lg border border-[#E2E8E0] p-2">
+            <div className="rounded-lg border border-[#DDE5D9] p-2">
               <p className="text-xs text-[#5B6776]">Giá sàn</p>
               <p className="font-semibold text-[#006B2C]">{SAMPLE.floorPrice}</p>
             </div>
           </div>
           <table className="w-full text-xs mt-1">
             <thead>
-              <tr className="text-[#5B6776] border-b border-[#E2E8E0]">
+              <tr className="text-[#5B6776] border-b border-[#DDE5D9]">
                 <th className="text-left py-1">Kỳ</th>
                 <th className="text-left py-1">Thời gian</th>
                 <th className="text-right py-1">Hoa hồng</th>
@@ -116,9 +116,9 @@ export default function ReceiptPreviewPanel({ clauses, highlightId }) {
         <ClauseBlock no={4} title="ĐIỀU 4 — HÀNG VÔ THỪA NHẬN">
           <p className="text-[#5B6776]">
             Hết {SAMPLE.totalDays} ngày, bạn chọn nhận lại hàng hoặc ký gửi lại{' '}
-            <span className="font-semibold text-[#191C19]">trước hạn ReHome thông báo</span> trên ứng
+            <span className="font-semibold text-[#1F2A37]">trước hạn ReHome thông báo</span> trên ứng
             dụng. Quá hạn mà không phản hồi, hàng được xem là vô thừa nhận:{' '}
-            <span className="font-semibold text-[#191C19]">bạn mất quyền sở hữu</span>.
+            <span className="font-semibold text-[#1F2A37]">bạn mất quyền sở hữu</span>.
           </p>
         </ClauseBlock>
 

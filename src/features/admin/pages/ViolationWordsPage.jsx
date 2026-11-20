@@ -27,7 +27,7 @@ const SEVERITY_VARIANTS = {
 const ACTION_LABELS = {
   AUTO_FLAG: 'Tự động gắn cờ',
   AUTO_REJECT: 'Tự động từ chối',
-  NOTIFY_ADMIN: 'Thông báo admin',
+  NOTIFY_ADMIN: 'Thông báo quản trị viên',
 };
 
 export { CATEGORY_LABELS, SEVERITY_LABELS, ACTION_LABELS };
@@ -155,7 +155,7 @@ export default function ViolationWordsPage() {
   const columns = [
     {
       header: 'Từ khóa',
-      render: (row) => <span className="font-semibold text-[#191C19]">{row.word}</span>,
+      render: (row) => <span className="font-semibold text-[#1F2A37]">{row.word}</span>,
     },
     {
       header: 'Nhóm',
@@ -220,7 +220,7 @@ export default function ViolationWordsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="bg-white p-6 rounded-xl border border-[#E2E8E0] space-y-4">
+      <div className="bg-white p-6 rounded-xl border border-[#DDE5D9] space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             {totalElements > 0 && (
@@ -236,7 +236,7 @@ export default function ViolationWordsPage() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-end gap-3 pt-2 border-t border-[#E2E8E0]">
+        <div className="flex flex-wrap items-end gap-3 pt-2 border-t border-[#DDE5D9]">
           <div>
             <label htmlFor="vw-keyword" className="block text-xs font-medium text-[#5B6776] mb-1">
               Từ khóa
@@ -247,7 +247,7 @@ export default function ViolationWordsPage() {
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               placeholder="Tìm theo từ..."
-              className="px-3 py-1.5 text-sm rounded-xl border border-[#E2E8E0] text-[#191C19] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/20"
+              className="px-3 py-1.5 text-sm rounded-xl border border-[#DDE5D9] text-[#1F2A37] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/20"
             />
             {isKeywordTooShort && (
               <p className="mt-1 text-[11px] text-[#5f5f5f]">{keywordHint}</p>
@@ -262,7 +262,7 @@ export default function ViolationWordsPage() {
               id="vw-category"
               value={category}
               onChange={handleFilterChange(setCategory)}
-              className="px-3 py-1.5 text-sm rounded-xl border border-[#E2E8E0] bg-white text-[#191C19]"
+              className="px-3 py-1.5 text-sm rounded-xl border border-[#DDE5D9] bg-white text-[#1F2A37]"
             >
               <option value="">Tất cả nhóm</option>
               {Object.entries(CATEGORY_LABELS).map(([val, label]) => (
@@ -281,7 +281,7 @@ export default function ViolationWordsPage() {
               id="vw-severity"
               value={severity}
               onChange={handleFilterChange(setSeverity)}
-              className="px-3 py-1.5 text-sm rounded-xl border border-[#E2E8E0] bg-white text-[#191C19]"
+              className="px-3 py-1.5 text-sm rounded-xl border border-[#DDE5D9] bg-white text-[#1F2A37]"
             >
               <option value="">Tất cả mức độ</option>
               {Object.entries(SEVERITY_LABELS).map(([val, label]) => (
@@ -300,7 +300,7 @@ export default function ViolationWordsPage() {
               id="vw-active"
               value={isActive}
               onChange={handleFilterChange(setIsActive)}
-              className="px-3 py-1.5 text-sm rounded-xl border border-[#E2E8E0] bg-white text-[#191C19]"
+              className="px-3 py-1.5 text-sm rounded-xl border border-[#DDE5D9] bg-white text-[#1F2A37]"
             >
               <option value="">Tất cả</option>
               <option value="true">Đang áp dụng</option>
@@ -328,7 +328,7 @@ export default function ViolationWordsPage() {
         </div>
       )}
 
-      <div className="bg-white p-6 rounded-xl border border-[#E2E8E0] space-y-3">
+      <div className="bg-white p-6 rounded-xl border border-[#DDE5D9] space-y-3">
         <Table
           columns={columns}
           data={items}

@@ -78,13 +78,13 @@ export default function AdminRevenueBreakdownCard({ dashboardData = {}, onViewDe
   });
 
   return (
-    <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-[#E2E8E0] shadow-xs flex flex-col justify-between">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E2E8E0] pb-3 mb-4">
+    <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-xs flex flex-col justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#DDE5D9] pb-3 mb-4">
         <div>
-          <h3 className="text-base font-bold text-[#191C19] font-heading">
+          <h3 className="text-base font-bold text-[#1F2A37] font-heading">
             Cơ Cấu Doanh Thu Nền Tảng
           </h3>
-          <p className="text-xs text-[#717971] mt-0.5">
+          <p className="text-xs text-[#5B6776] mt-0.5">
             Tỷ trọng hoa hồng Kỳ 1, Kỳ 2, Kỳ 3, phí rút hàng &amp; doanh thu gói thành viên ({totalSoldItemsCount} món đã bán · Biên nền tảng {netProfitMarginPercent}%)
           </p>
         </div>
@@ -101,14 +101,14 @@ export default function AdminRevenueBreakdownCard({ dashboardData = {}, onViewDe
       </div>
 
       {!hasRevenue ? (
-        <div className="p-6 my-auto rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center flex flex-col items-center justify-center">
+        <div className="p-6 my-auto rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-center flex flex-col items-center justify-center">
           <div className="w-12 h-12 rounded-2xl bg-[#E8F5E9] text-[#006B2C] flex items-center justify-center mb-3">
             <span className="material-symbols-outlined text-2xl">pie_chart</span>
           </div>
-          <h4 className="text-sm font-bold text-[#191C19]">
+          <h4 className="text-sm font-bold text-[#1F2A37]">
             Chưa phát sinh doanh thu nền tảng trong khoảng thời gian này
           </h4>
-          <p className="text-xs text-[#717971] max-w-sm mt-1">
+          <p className="text-xs text-[#5B6776] max-w-sm mt-1">
             Hoa hồng ({formatCurrencyVND(commissionRevenue)}), phí rút hàng ({formatCurrencyVND(withdrawalFeeRevenue)}) và doanh thu gói thành viên ({formatCurrencyVND(membershipRevenue)}) sẽ hiển thị tự động khi có giao dịch hoàn tất.
           </p>
         </div>
@@ -142,15 +142,15 @@ export default function AdminRevenueBreakdownCard({ dashboardData = {}, onViewDe
                 )}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-3">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#717971]">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#5B6776]">
                   Doanh thu
                 </span>
-                <span className="text-sm font-black text-[#191C19] font-heading leading-tight mt-0.5">
+                <span className="text-sm font-black text-[#1F2A37] font-heading leading-tight mt-0.5">
                   {formatCurrencyVND(platformRevenue)}
                 </span>
               </div>
             </div>
-            <div className="mt-2 text-[11px] text-[#414942] text-center">
+            <div className="mt-2 text-[11px] text-[#5B6776] text-center">
               Hoa hồng: <strong className="text-[#006B2C]">{formatCurrencyVND(commissionRevenue)}</strong>
               {' · '}
               Phí rút: <strong className="text-[#673AB7]">{formatCurrencyVND(withdrawalFeeRevenue)}</strong>
@@ -163,18 +163,18 @@ export default function AdminRevenueBreakdownCard({ dashboardData = {}, onViewDe
             {segments.map((seg) => (
               <div
                 key={seg.key}
-                className="p-2.5 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] space-y-1.5"
+                className="p-2.5 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] space-y-1.5"
               >
                 <div className="flex items-center justify-between gap-2 text-xs">
-                  <span className="flex items-center gap-2 font-semibold text-[#191C19]">
+                  <span className="flex items-center gap-2 font-semibold text-[#1F2A37]">
                     <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${seg.dotClass}`} />
                     <span>{seg.label}</span>
                   </span>
-                  <span className="font-bold text-[#191C19] whitespace-nowrap">
+                  <span className="font-bold text-[#1F2A37] whitespace-nowrap">
                     {formatCurrencyVND(seg.value)} ({seg.pctLabel}%)
                   </span>
                 </div>
-                <div className="w-full h-1.5 bg-[#E2E8E0] rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-[#DDE5D9] rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-300"
                     style={{
@@ -184,8 +184,8 @@ export default function AdminRevenueBreakdownCard({ dashboardData = {}, onViewDe
                   />
                 </div>
                 {seg.sales !== null && (
-                  <p className="text-[10px] text-[#717971]">
-                    Doanh thu bán hàng hóa: <span className="font-semibold text-[#414942]">{formatCurrencyVND(seg.sales)}</span>
+                  <p className="text-[10px] text-[#5B6776]">
+                    Doanh thu bán hàng hóa: <span className="font-semibold text-[#5B6776]">{formatCurrencyVND(seg.sales)}</span>
                   </p>
                 )}
               </div>
@@ -195,12 +195,12 @@ export default function AdminRevenueBreakdownCard({ dashboardData = {}, onViewDe
       )}
 
       {/* Khoản chi đền bù tách riêng khỏi doanh thu nền tảng */}
-      <div className="mt-4 pt-3 border-t border-[#E2E8E0] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div className="mt-4 pt-3 border-t border-[#DDE5D9] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-xs">
           <span className="px-2 py-0.5 rounded-md bg-[#FFF3E0] text-[#D97706] font-bold text-[10px] border border-[#FDE68A]">
             Khoản chi riêng
           </span>
-          <span className="text-[#414942] font-medium">
+          <span className="text-[#5B6776] font-medium">
             Chi đền bù hàng xuống cấp (không trừ vào doanh thu nền tảng):
           </span>
         </div>

@@ -16,7 +16,7 @@ export default function ComparisonBadge({ current, previous, loading, label, cla
   if (loading) {
     return (
       <span
-        className={`inline-block h-4 w-24 rounded bg-[#E2E8E0] animate-pulse align-middle ${className}`}
+        className={`inline-block h-4 w-24 rounded bg-[#DDE5D9] animate-pulse align-middle ${className}`}
         aria-label="Đang tải số liệu để so sánh"
       />
     );
@@ -37,7 +37,7 @@ export default function ComparisonBadge({ current, previous, loading, label, cla
   const percent = ((current - previous) / Math.abs(previous)) * 100;
   const isFlat = Math.abs(percent) < 0.05;
   const isUp = percent > 0;
-  const colorClass = isFlat ? 'text-[#717971]' : isUp ? 'text-[#006B2C]' : 'text-[#DC2626]';
+  const colorClass = isFlat ? 'text-[#5B6776]' : isUp ? 'text-[#006B2C]' : 'text-[#DC2626]';
   const icon = isFlat ? 'trending_flat' : isUp ? 'trending_up' : 'trending_down';
   // Né "-0.0%" (số 0 âm) khi đi ngang; toFixed(1) đã tự có dấu "-" cho số âm nên chỉ cần thêm "+" khi tăng
   const displayPercent = isFlat ? '0.0' : percent.toFixed(1);

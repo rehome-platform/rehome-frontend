@@ -319,27 +319,27 @@ export default function AdminAccountsPage() {
               >
                 <div className="space-y-1.5 text-xs">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-bold text-sm text-[#191C19]">
+                    <span className="font-bold text-sm text-[#1F2A37]">
                       {proposal.targetName}
                     </span>
                     {proposal.targetEmail && (
-                      <span className="font-mono text-[#717971]">
+                      <span className="font-mono text-[#5B6776]">
                         ({proposal.targetEmail})
                       </span>
                     )}
                     <span className="px-2 py-0.5 rounded-md bg-[#FEE2E2] text-[#DC2626] font-bold text-[11px]">
                       {proposal.closedReportCount} báo cáo gom nhóm
                     </span>
-                    <span className="px-2 py-0.5 rounded-md bg-[#F6F9F4] border border-[#DDE5D9] text-[#414942] font-semibold text-[11px]">
+                    <span className="px-2 py-0.5 rounded-md bg-[#F6F9F4] border border-[#DDE5D9] text-[#5B6776] font-semibold text-[11px]">
                       {proposal.pastViolations} lần ghi nhận vi phạm
                     </span>
                   </div>
-                  <p className="text-[#414942]">
+                  <p className="text-[#5B6776]">
                     Lý do đề xuất:{' '}
-                    <strong className="text-[#191C19] italic">"{proposal.reason}"</strong>
+                    <strong className="text-[#1F2A37] italic">"{proposal.reason}"</strong>
                   </p>
-                  <p className="text-[11px] text-[#717971]">
-                    Đề xuất bởi: <strong className="text-[#414942]">{proposal.actorName}</strong> · Thời gian: {proposal.createdAt}
+                  <p className="text-[11px] text-[#5B6776]">
+                    Đề xuất bởi: <strong className="text-[#5B6776]">{proposal.actorName}</strong> · Thời gian: {proposal.createdAt}
                   </p>
                 </div>
 
@@ -348,7 +348,7 @@ export default function AdminAccountsPage() {
                     type="button"
                     disabled={processingProposalId === proposal.id}
                     onClick={() => handleDismissProposal(proposal.id)}
-                    className="px-3.5 py-2 rounded-xl border border-[#DDE5D9] bg-white hover:bg-[#F6F9F4] text-xs font-semibold text-[#414942] transition-colors disabled:opacity-50"
+                    className="px-3.5 py-2 rounded-xl border border-[#DDE5D9] bg-white hover:bg-[#F6F9F4] text-xs font-semibold text-[#5B6776] transition-colors disabled:opacity-50"
                   >
                     Bỏ qua đề xuất
                   </button>

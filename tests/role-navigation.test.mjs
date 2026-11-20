@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { transformSync } from 'esbuild';
 import * as roleConfig from '../src/configs/role.config.js';
+import * as roleLabels from '../src/constants/roleLabels.js';
 
 // Component logic tests with mocked React hooks, authentication and router.
 // These do not simulate browser rendering, real login, or backend authorization.
@@ -38,11 +39,31 @@ function harness(file, role = 'admin', authenticated = true) {
       if (name.includes('AuthContext')) return { useAuth: () => auth };
       if (name.includes('NotificationContext')) return { useNotification: () => ({ unreadCount: 0 }) };
       if (name.includes('role.config')) return roleConfig;
+      if (name.includes('roleLabels')) return roleLabels;
+      if (name.includes('UserAccountDropdown')) {
+        const subMod = { exports: {} };
+        const subSrc = readFileSync(new URL('../src/components/common/UserAccountDropdown.jsx', import.meta.url), 'utf8');
+        vm.runInNewContext(transformSync(subSrc, { loader: 'jsx', format: 'cjs' }).code, {
+          module: subMod, exports: subMod.exports,
+          require(subName) {
+            if (subName === 'react') return React;
+            if (subName === 'react-router-dom') return { Link: 'Link' };
+            if (subName.includes('roleLabels')) return roleLabels;
+            return {};
+          },
+        });
+        return { __esModule: true, default: subMod.exports.default };
+      }
       // Other imported components stay opaque; tests exercise each target separately.
       return new Proxy({ __esModule: true, default: name }, { get: (target, key) => target[key] ?? String(key) });
     },
   });
-  const render = (props = {}) => { cursor = 0; return module.exports.default(props); };
+  const expand = (node) => {
+    if (!node || typeof node !== 'object') return node;
+    if (typeof node.type === 'function') return expand(node.type(node.props));
+    return { ...node, props: { ...node.props, children: (node.props.children || []).map(expand) } };
+  };
+  const render = (props = {}) => { cursor = 0; return expand(module.exports.default(props)); };
   function nodes(node) {
     if (!node || typeof node !== 'object') return [];
     return [node, ...(node.props.children || []).flatMap(nodes)];

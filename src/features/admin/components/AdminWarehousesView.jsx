@@ -437,7 +437,7 @@ export default function AdminWarehousesView({ onLogAction }) {
           <button
             onClick={() => fetchWarehouses()}
             disabled={loading}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-[#E2E8E0] bg-white text-xs font-semibold text-[#414942] hover:bg-[#F8FAF8] hover:text-[#006B2C] transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-[#DDE5D9] bg-white text-xs font-semibold text-[#5B6776] hover:bg-[#F6F9F4] hover:text-[#006B2C] transition-colors"
           >
             <span className={`material-symbols-outlined text-base ${loading ? 'animate-spin' : ''}`}>
               refresh
@@ -457,7 +457,7 @@ export default function AdminWarehousesView({ onLogAction }) {
       {/* Search & Status Filter Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative max-w-md w-full">
-          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#717971] text-[20px]">
+          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5B6776] text-[20px]">
             search
           </span>
           <input
@@ -465,14 +465,14 @@ export default function AdminWarehousesView({ onLogAction }) {
             placeholder="Tìm kiếm điểm kí gửi theo tên, địa chỉ chi nhánh..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#E2E8E0] bg-white text-xs text-[#191C19] focus:outline-none focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15 transition-all shadow-xs"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#DDE5D9] bg-white text-xs text-[#1F2A37] focus:outline-none focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15 transition-all shadow-xs"
           />
         </div>
         <select
           aria-label="Lọc trạng thái địa điểm ký gửi"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3.5 py-2.5 rounded-xl border border-[#E2E8E0] bg-white text-xs font-medium text-[#191C19] focus:outline-none focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15 shadow-xs"
+          className="px-3.5 py-2.5 rounded-xl border border-[#DDE5D9] bg-white text-xs font-medium text-[#1F2A37] focus:outline-none focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15 shadow-xs"
         >
           <option value="ALL">Tất cả trạng thái</option>
           <option value="ACTIVE">Đang hoạt động</option>
@@ -482,14 +482,14 @@ export default function AdminWarehousesView({ onLogAction }) {
 
       {/* Loading & Error States */}
       {loading && warehouses.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-[#E2E8E0] p-12 text-center flex flex-col items-center justify-center gap-3">
+        <div className="bg-white rounded-2xl border border-[#DDE5D9] p-12 text-center flex flex-col items-center justify-center gap-3">
           <Spinner size="lg" />
-          <p className="text-xs font-semibold text-[#717971]">Đang tải danh sách điểm kí gửi từ hệ thống...</p>
+          <p className="text-xs font-semibold text-[#5B6776]">Đang tải danh sách điểm kí gửi từ hệ thống...</p>
         </div>
       ) : apiError ? (
         <div className="bg-white rounded-2xl border border-[#FEE2E2] p-8 text-center space-y-3">
           <span className="material-symbols-outlined text-3xl text-[#DC2626]">error</span>
-          <p className="text-sm font-bold text-[#191C19]">{apiError}</p>
+          <p className="text-sm font-bold text-[#1F2A37]">{apiError}</p>
           <button
             onClick={() => fetchWarehouses()}
             className="px-4 py-2 bg-[#006B2C] text-white text-xs font-semibold rounded-xl"
@@ -498,12 +498,12 @@ export default function AdminWarehousesView({ onLogAction }) {
           </button>
         </div>
       ) : filteredWarehouses.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-[#E2E8E0] p-12 text-center space-y-3">
-          <div className="w-12 h-12 rounded-full bg-[#F0F5EE] text-[#006B2C] flex items-center justify-center mx-auto">
+        <div className="bg-white rounded-2xl border border-[#DDE5D9] p-12 text-center space-y-3">
+          <div className="w-12 h-12 rounded-full bg-[#F6F9F4] text-[#006B2C] flex items-center justify-center mx-auto">
             <span className="material-symbols-outlined text-2xl">warehouse</span>
           </div>
-          <h3 className="text-base font-bold text-[#191C19]">Chưa có điểm kí gửi nào</h3>
-          <p className="text-xs text-[#717971] max-w-sm mx-auto">
+          <h3 className="text-base font-bold text-[#1F2A37]">Chưa có điểm kí gửi nào</h3>
+          <p className="text-xs text-[#5B6776] max-w-sm mx-auto">
             Hệ thống chưa ghi nhận điểm kí gửi nào phù hợp. Vui lòng thêm điểm kí gửi mới.
           </p>
           <Button onClick={handleOpenCreate} className="bg-[#006B2C] text-white text-xs mt-2">
@@ -521,8 +521,8 @@ export default function AdminWarehousesView({ onLogAction }) {
               key={w.id}
               className={`p-6 rounded-2xl border bg-white shadow-xs flex flex-col justify-between transition-all ${
                 w.status === 'HIDDEN'
-                  ? 'border-[#E2E8E0] bg-[#FAFAF9] opacity-80'
-                  : 'border-[#E2E8E0] hover:border-[#006B2C]/50'
+                  ? 'border-[#DDE5D9] bg-[#FAFAF9] opacity-80'
+                  : 'border-[#DDE5D9] hover:border-[#006B2C]/50'
               }`}
             >
               <div>
@@ -531,7 +531,7 @@ export default function AdminWarehousesView({ onLogAction }) {
                     <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-[#E8F5E9] text-[#006B2C] border border-[#C8E6C9]">
                       {w.code || w.id}
                     </span>
-                    <h3 className="font-bold text-sm text-[#191C19]">{w.name}</h3>
+                    <h3 className="font-bold text-sm text-[#1F2A37]">{w.name}</h3>
                   </div>
                   {w.status === 'ACTIVE' ? (
                     <Badge variant="success">Đang hoạt động</Badge>
@@ -540,44 +540,44 @@ export default function AdminWarehousesView({ onLogAction }) {
                   )}
                 </div>
 
-                <div className="space-y-2 text-xs text-[#414942]">
+                <div className="space-y-2 text-xs text-[#5B6776]">
                   <p className="flex items-start space-x-2">
-                    <span className="material-symbols-outlined text-sm text-[#717971] shrink-0 mt-0.5">
+                    <span className="material-symbols-outlined text-sm text-[#5B6776] shrink-0 mt-0.5">
                       location_on
                     </span>
                     <span>{w.address}</span>
                   </p>
                   <p className="flex items-center space-x-2">
-                    <span className="material-symbols-outlined text-sm text-[#717971] shrink-0">
+                    <span className="material-symbols-outlined text-sm text-[#5B6776] shrink-0">
                       schedule
                     </span>
                     <span>{w.openingHours}</span>
                   </p>
                   <p className="flex items-center space-x-2">
-                    <span className="material-symbols-outlined text-sm text-[#717971] shrink-0">
+                    <span className="material-symbols-outlined text-sm text-[#5B6776] shrink-0">
                       pin_drop
                     </span>
-                    <span className="font-mono text-[11px] text-[#717971]">{w.coordinates}</span>
+                    <span className="font-mono text-[11px] text-[#5B6776]">{w.coordinates}</span>
                   </p>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-[#F0F4EE] text-center">
-                  <div className="p-2.5 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0]">
-                    <p className="text-[10px] text-[#717971]">Nhân sự</p>
-                    <p className="text-sm font-bold text-[#191C19] mt-0.5">{w.moderatorCount} người</p>
+                  <div className="p-2.5 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9]">
+                    <p className="text-[10px] text-[#5B6776]">Nhân sự</p>
+                    <p className="text-sm font-bold text-[#1F2A37] mt-0.5">{w.moderatorCount} người</p>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0]">
-                    <p className="text-[10px] text-[#717971]">Sản phẩm tồn</p>
+                  <div className="p-2.5 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9]">
+                    <p className="text-[10px] text-[#5B6776]">Sản phẩm tồn</p>
                     <p
                       className={`text-sm font-bold mt-0.5 ${
-                        w.inventoryCount > 0 ? 'text-[#006B2C]' : 'text-[#717971]'
+                        w.inventoryCount > 0 ? 'text-[#006B2C]' : 'text-[#5B6776]'
                       }`}
                     >
                       {w.inventoryCount} món
                     </p>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0]">
-                    <p className="text-[10px] text-[#717971]">Đơn đang xử lý</p>
+                  <div className="p-2.5 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9]">
+                    <p className="text-[10px] text-[#5B6776]">Đơn đang xử lý</p>
                     <p className="text-sm font-bold text-[#D97706] mt-0.5">{w.activeOrders} đơn</p>
                   </div>
                 </div>
@@ -628,8 +628,8 @@ export default function AdminWarehousesView({ onLogAction }) {
       >
         <form onSubmit={handleSave} className="space-y-5">
           {/* ===== Tên điểm kí gửi (full width) ===== */}
-          <div className="p-4 rounded-2xl border border-[#E2E8E0] bg-[#FBFDFB] space-y-3.5">
-            <div className="flex items-center gap-2 text-xs font-bold text-[#191C19]">
+          <div className="p-4 rounded-2xl border border-[#DDE5D9] bg-[#FBFDFB] space-y-3.5">
+            <div className="flex items-center gap-2 text-xs font-bold text-[#1F2A37]">
               <span className="material-symbols-outlined text-[18px] text-[#006B2C]">store</span>
               <span>Thông tin điểm kí gửi</span>
             </div>
@@ -645,17 +645,17 @@ export default function AdminWarehousesView({ onLogAction }) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* ===== Cột trái: Địa chỉ ===== */}
             <div className="space-y-4">
-              <div className="p-4 rounded-2xl border border-[#E2E8E0] bg-[#FBFDFB] space-y-3.5">
+              <div className="p-4 rounded-2xl border border-[#DDE5D9] bg-[#FBFDFB] space-y-3.5">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-xs font-bold text-[#191C19]">
+                  <div className="flex items-center gap-2 text-xs font-bold text-[#1F2A37]">
                     <span className="material-symbols-outlined text-[18px] text-[#006B2C]">location_city</span>
-                    <span>Địa chỉ <span className="text-[#BA1A1A]">*</span></span>
+                    <span>Địa chỉ <span className="text-[#D92D20]">*</span></span>
                   </div>
-                  <span className="text-[11px] text-[#717971]">Hành chính 2 cấp sau 01/07/2025</span>
+                  <span className="text-[11px] text-[#5B6776]">Hành chính 2 cấp sau 01/07/2025</span>
                 </div>
 
                 <div>
-                  <label htmlFor="warehouse-province-select" className="text-[11px] font-medium text-[#414942] block mb-1">
+                  <label htmlFor="warehouse-province-select" className="text-[11px] font-medium text-[#5B6776] block mb-1">
                     Tỉnh / Thành phố
                   </label>
                   <select
@@ -664,7 +664,7 @@ export default function AdminWarehousesView({ onLogAction }) {
                     value={formData.provinceId}
                     onChange={handleProvinceChange}
                     disabled={loadingProvinces}
-                    className="w-full px-3 py-2.5 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+                    className="w-full px-3 py-2.5 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#1F2A37] focus:outline-none focus:border-[#006B2C]"
                   >
                     <option value="">-- Chọn Tỉnh / Thành phố --</option>
                     {provinces.map((p) => (
@@ -676,7 +676,7 @@ export default function AdminWarehousesView({ onLogAction }) {
                 </div>
 
                 <div>
-                  <label htmlFor="warehouse-ward-select" className="text-[11px] font-medium text-[#414942] block mb-1">
+                  <label htmlFor="warehouse-ward-select" className="text-[11px] font-medium text-[#5B6776] block mb-1">
                     Phường / Xã
                   </label>
                   <select
@@ -685,7 +685,7 @@ export default function AdminWarehousesView({ onLogAction }) {
                     value={formData.wardCode}
                     onChange={handleWardChange}
                     disabled={loadingWards || !formData.provinceId}
-                    className="w-full px-3 py-2.5 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C] disabled:bg-[#F5F5F5] disabled:text-[#9E9E9E]"
+                    className="w-full px-3 py-2.5 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#1F2A37] focus:outline-none focus:border-[#006B2C] disabled:bg-[#F5F5F5] disabled:text-[#9E9E9E]"
                   >
                     <option value="">
                       {loadingWards
@@ -703,8 +703,8 @@ export default function AdminWarehousesView({ onLogAction }) {
                 </div>
 
                 <div>
-                  <label htmlFor="warehouse-street-address-input" className="text-[11px] font-medium text-[#414942] block mb-1">
-                    Số nhà, tên đường <span className="text-[#BA1A1A]">*</span>
+                  <label htmlFor="warehouse-street-address-input" className="text-[11px] font-medium text-[#5B6776] block mb-1">
+                    Số nhà, tên đường <span className="text-[#D92D20]">*</span>
                   </label>
                   <input
                     id="warehouse-street-address-input"
@@ -713,15 +713,15 @@ export default function AdminWarehousesView({ onLogAction }) {
                     value={formData.streetAddress}
                     onChange={(e) => setFormData({ ...formData, streetAddress: e.target.value })}
                     placeholder="Ví dụ: 123 Nguyễn Thị Thập"
-                    className="w-full px-3 py-2.5 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+                    className="w-full px-3 py-2.5 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#1F2A37] focus:outline-none focus:border-[#006B2C]"
                   />
                 </div>
 
                 {(formData.streetAddress || formData.wardName || formData.provinceName) && (
-                  <div className="text-[11px] text-[#414942] bg-white p-2.5 rounded-xl border border-[#E2E8E0] flex items-start gap-1.5">
+                  <div className="text-[11px] text-[#5B6776] bg-white p-2.5 rounded-xl border border-[#DDE5D9] flex items-start gap-1.5">
                     <span className="material-symbols-outlined text-sm text-[#006B2C] shrink-0">pin_drop</span>
                     <span>
-                      <span className="font-medium text-[#191C19]">Địa chỉ đầy đủ: </span>
+                      <span className="font-medium text-[#1F2A37]">Địa chỉ đầy đủ: </span>
                       {[formData.streetAddress.trim(), formData.wardName, formData.provinceName]
                         .filter(Boolean)
                         .join(', ')}
@@ -733,11 +733,11 @@ export default function AdminWarehousesView({ onLogAction }) {
 
             {/* ===== Cột phải: Tọa độ & Giờ mở cửa ===== */}
             <div className="space-y-4">
-            <div className="p-4 rounded-2xl border border-[#E2E8E0] bg-[#FBFDFB] space-y-3.5">
+            <div className="p-4 rounded-2xl border border-[#DDE5D9] bg-[#FBFDFB] space-y-3.5">
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-[#191C19]">
+                <div className="flex items-center gap-2 text-xs font-bold text-[#1F2A37]">
                   <span className="material-symbols-outlined text-[18px] text-[#006B2C]">map</span>
-                  <span>Tọa độ bản đồ <span className="text-[#BA1A1A]">*</span></span>
+                  <span>Tọa độ bản đồ <span className="text-[#D92D20]">*</span></span>
                 </div>
                 <button
                   type="button"
@@ -754,7 +754,7 @@ export default function AdminWarehousesView({ onLogAction }) {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-medium text-[#414942] block mb-1">
+                  <label className="text-[11px] font-medium text-[#5B6776] block mb-1">
                     Vĩ độ (Latitude)
                   </label>
                   <input
@@ -764,11 +764,11 @@ export default function AdminWarehousesView({ onLogAction }) {
                     value={formData.latitude}
                     onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
                     placeholder="10.7769"
-                    className="w-full px-3 py-2.5 text-xs font-mono rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+                    className="w-full px-3 py-2.5 text-xs font-mono rounded-xl border border-[#DDE5D9] bg-white text-[#1F2A37] focus:outline-none focus:border-[#006B2C]"
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-medium text-[#414942] block mb-1">
+                  <label className="text-[11px] font-medium text-[#5B6776] block mb-1">
                     Kinh độ (Longitude)
                   </label>
                   <input
@@ -778,7 +778,7 @@ export default function AdminWarehousesView({ onLogAction }) {
                     value={formData.longitude}
                     onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
                     placeholder="106.7009"
-                    className="w-full px-3 py-2.5 text-xs font-mono rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+                    className="w-full px-3 py-2.5 text-xs font-mono rounded-xl border border-[#DDE5D9] bg-white text-[#1F2A37] focus:outline-none focus:border-[#006B2C]"
                   />
                 </div>
               </div>
@@ -791,7 +791,7 @@ export default function AdminWarehousesView({ onLogAction }) {
             </div>
           </div>
 
-          <div className="flex justify-end space-x-2 pt-3 border-t border-[#E2E8E0]">
+          <div className="flex justify-end space-x-2 pt-3 border-t border-[#DDE5D9]">
             <Button
               variant="ghost"
               disabled={isSubmitting}
@@ -821,42 +821,42 @@ export default function AdminWarehousesView({ onLogAction }) {
       {/* Modal Cảnh Báo: Chặn ẩn kho khi còn tồn kho (Nghiệp vụ F-155 / L-11) */}
       {stockBlockModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
-          <div className="w-full max-w-md bg-white rounded-2xl border border-[#E2E8E0] shadow-2xl p-6 space-y-4">
+          <div className="w-full max-w-md bg-white rounded-2xl border border-[#DDE5D9] shadow-2xl p-6 space-y-4">
             <div className="flex items-start gap-3">
               <div className="w-11 h-11 rounded-xl bg-[#FFF3E0] text-[#D97706] flex items-center justify-center shrink-0 border border-[#FFE0B2]">
                 <span className="material-symbols-outlined text-2xl">warning</span>
               </div>
               <div className="flex-1">
-                <h3 className="text-base font-bold text-[#191C19] font-heading">
+                <h3 className="text-base font-bold text-[#1F2A37] font-heading">
                   Chưa thể ẩn điểm kí gửi này!
                 </h3>
-                <p className="text-xs text-[#717971] mt-1 leading-relaxed">
+                <p className="text-xs text-[#5B6776] mt-1 leading-relaxed">
                   Theo quy định vận hành của ReHome, chỉ được phép ẩn điểm kí gửi khi{' '}
-                  <strong className="text-[#191C19]">hết toàn bộ hàng kí gửi</strong> đang lưu giữ.
+                  <strong className="text-[#1F2A37]">hết toàn bộ hàng kí gửi</strong> đang lưu giữ.
                 </p>
               </div>
             </div>
 
-            <div className="p-3.5 bg-[#F8FAF8] rounded-xl border border-[#E2E8E0] text-xs space-y-2">
+            <div className="p-3.5 bg-[#F6F9F4] rounded-xl border border-[#DDE5D9] text-xs space-y-2">
               <div className="flex justify-between">
-                <span className="text-[#717971]">Điểm kí gửi:</span>
-                <span className="font-bold text-[#191C19]">{stockBlockModal.name}</span>
+                <span className="text-[#5B6776]">Điểm kí gửi:</span>
+                <span className="font-bold text-[#1F2A37]">{stockBlockModal.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#717971]">Số sản phẩm còn tồn:</span>
-                <span className="font-black text-[#BA1A1A]">
+                <span className="text-[#5B6776]">Số sản phẩm còn tồn:</span>
+                <span className="font-black text-[#D92D20]">
                   {stockBlockModal.inventoryCount} món
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#717971]">Đơn hàng đang xử lý:</span>
+                <span className="text-[#5B6776]">Đơn hàng đang xử lý:</span>
                 <span className="font-bold text-[#D97706]">
                   {stockBlockModal.activeOrders} đơn
                 </span>
               </div>
             </div>
 
-            <p className="text-[11px] text-[#717971] italic">
+            <p className="text-[11px] text-[#5B6776] italic">
               Vui lòng điều chuyển sản phẩm sang điểm kí gửi khác hoặc hoàn tất thanh lý toàn bộ hàng hóa
               trước khi tiến hành đóng hoặc ẩn địa điểm ký gửi.
             </p>

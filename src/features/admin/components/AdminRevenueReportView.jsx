@@ -115,10 +115,10 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {}, s
         <>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl font-extrabold text-[#191C19] font-heading">
+              <h2 className="text-xl font-extrabold text-[#1F2A37] font-heading">
                 Báo Cáo Doanh Thu Nền Tảng Theo Kỳ Kí Gửi
               </h2>
-              <p className="text-xs text-[#717971] mt-0.5">
+              <p className="text-xs text-[#5B6776] mt-0.5">
                 Doanh thu hoa hồng được chốt lũy tiến (10% - 15% - 20%) cho các đơn hoàn thành ({dashboardData.totalSoldItemsCount || 0} món · Biên nền tảng {dashboardData.netProfitMarginPercent || 0}%)
               </p>
             </div>
@@ -129,17 +129,17 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {}, s
             {termCards.map((card) => (
               <div
                 key={card.label}
-                className="bg-white p-5 rounded-2xl border border-[#E2E8E0] shadow-xs space-y-2"
+                className="bg-white p-5 rounded-2xl border border-[#DDE5D9] shadow-xs space-y-2"
               >
-                <p className="text-xs font-bold text-[#414942]">{card.label}</p>
+                <p className="text-xs font-bold text-[#5B6776]">{card.label}</p>
                 <div>
-                  <p className="text-[11px] text-[#717971]">Hoa hồng thu được</p>
+                  <p className="text-[11px] text-[#5B6776]">Hoa hồng thu được</p>
                   <p className={`text-xl font-black font-heading ${card.accent}`}>
                     {formatCurrencyVND(card.commission)}
                   </p>
                 </div>
-                <p className="text-[11px] text-[#717971] pt-2 border-t border-[#F0F4EE]">
-                  Doanh thu bán hàng hóa: <strong className="text-[#191C19]">{formatCurrencyVND(card.sales)}</strong>
+                <p className="text-[11px] text-[#5B6776] pt-2 border-t border-[#F0F4EE]">
+                  Doanh thu bán hàng hóa: <strong className="text-[#1F2A37]">{formatCurrencyVND(card.sales)}</strong>
                 </p>
               </div>
             ))}
@@ -148,19 +148,19 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {}, s
       )}
 
       {/* Bảng danh sách món đã bán */}
-      <div className="bg-white rounded-2xl border border-[#E2E8E0] shadow-xs p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E2E8E0] pb-3">
+      <div className="bg-white rounded-2xl border border-[#DDE5D9] shadow-xs p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#DDE5D9] pb-3">
           <div>
-            <h3 className="text-base font-bold text-[#191C19] font-heading">
+            <h3 className="text-base font-bold text-[#1F2A37] font-heading">
               Danh Sách Món Đã Bán Theo Kỳ
             </h3>
-            <p className="text-xs text-[#717971]">
-              Tổng cộng <strong className="text-[#191C19]">{itemsPage.totalElements}</strong> món trong đơn hoàn thành
+            <p className="text-xs text-[#5B6776]">
+              Tổng cộng <strong className="text-[#1F2A37]">{itemsPage.totalElements}</strong> món trong đơn hoàn thành
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <label htmlFor="revenue-term-select" className="text-xs font-medium text-[#414942]">
+            <label htmlFor="revenue-term-select" className="text-xs font-medium text-[#5B6776]">
               Kỳ ký gửi:
             </label>
             <select
@@ -171,7 +171,7 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {}, s
                 setTerm(e.target.value);
                 setPage(0);
               }}
-              className="rounded-xl border border-[#E2E8E0] bg-white px-3 py-2 text-xs font-medium text-[#191C19] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30"
+              className="rounded-xl border border-[#DDE5D9] bg-white px-3 py-2 text-xs font-medium text-[#1F2A37] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30"
             >
               <option value="ALL">Tất cả kỳ</option>
               <option value="1">Kỳ 1</option>
@@ -182,7 +182,7 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {}, s
         </div>
 
         {loading ? (
-          <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center flex flex-col items-center justify-center gap-3 text-xs text-[#717971]">
+          <div className="p-8 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-center flex flex-col items-center justify-center gap-3 text-xs text-[#5B6776]">
             <Spinner size="lg" />
             <span>Đang tải danh sách món đã bán theo kỳ...</span>
           </div>
@@ -199,20 +199,20 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {}, s
             </Button>
           </div>
         ) : itemsPage.content.length === 0 ? (
-          <div className="p-10 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center space-y-2">
+          <div className="p-10 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-center space-y-2">
             <span className="material-symbols-outlined text-3xl text-[#006B2C]">query_stats</span>
-            <h4 className="text-sm font-bold text-[#191C19]">
+            <h4 className="text-sm font-bold text-[#1F2A37]">
               Chưa có món đã bán nào phù hợp
             </h4>
-            <p className="text-xs text-[#717971]">
+            <p className="text-xs text-[#5B6776]">
               Không ghi nhận món hàng thuộc đơn hoàn thành trong khoảng thời gian hoặc kỳ đã chọn.
             </p>
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto rounded-xl border border-[#E2E8E0]">
+            <div className="overflow-x-auto rounded-xl border border-[#DDE5D9]">
               <table className="w-full text-left text-xs min-w-[720px]">
-                <thead className="bg-[#F8FAF8] text-[#717971] tracking-wider font-semibold border-b border-[#E2E8E0]">
+                <thead className="bg-[#F6F9F4] text-[#5B6776] tracking-wider font-semibold border-b border-[#DDE5D9]">
                   <tr>
                     <th className="py-3 px-4 whitespace-nowrap">Sản phẩm</th>
                     <th className="py-3 px-4 whitespace-nowrap">Đơn hàng</th>
@@ -222,17 +222,17 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {}, s
                     <th className="py-3 px-4 whitespace-nowrap">Ngày hoàn thành</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#E2E8E0]">
+                <tbody className="divide-y divide-[#DDE5D9]">
                   {itemsPage.content.map((item) => (
-                    <tr key={item.orderItemId} className="hover:bg-[#F8FAF8]/70 transition-colors">
+                    <tr key={item.orderItemId} className="hover:bg-[#F6F9F4]/70 transition-colors">
                       <td className="py-3 px-4">
-                        <p className="font-bold text-[#191C19]">{item.productName || '—'}</p>
-                        <p className="text-[11px] font-mono text-[#717971]">{item.productId || '—'}</p>
+                        <p className="font-bold text-[#1F2A37]">{item.productName || '—'}</p>
+                        <p className="text-[11px] font-mono text-[#5B6776]">{item.productId || '—'}</p>
                       </td>
                       <td className="py-3 px-4 font-mono font-semibold text-[#00685F] whitespace-nowrap">
                         {item.orderNo || '—'}
                       </td>
-                      <td className="py-3 px-4 text-right font-semibold text-[#191C19] whitespace-nowrap">
+                      <td className="py-3 px-4 text-right font-semibold text-[#1F2A37] whitespace-nowrap">
                         {formatCurrencyVND(item.price)}
                       </td>
                       <td className="py-3 px-4 text-center whitespace-nowrap">
@@ -241,18 +241,18 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {}, s
                             Kỳ {item.termApplied}
                           </span>
                         ) : (
-                          <span className="text-[#717971]">—</span>
+                          <span className="text-[#5B6776]">—</span>
                         )}
                       </td>
                       <td className="py-3 px-4 text-right whitespace-nowrap">
                         <p className="font-bold text-[#006B2C]">
                           {item.commissionAmount != null ? formatCurrencyVND(item.commissionAmount) : '—'}
                         </p>
-                        <p className="text-[11px] text-[#717971]">
+                        <p className="text-[11px] text-[#5B6776]">
                           ({formatRatePercent(item.commissionRate)})
                         </p>
                       </td>
-                      <td className="py-3 px-4 font-mono text-[#717971] whitespace-nowrap">
+                      <td className="py-3 px-4 font-mono text-[#5B6776] whitespace-nowrap">
                         {formatDateTime(item.completedAt)}
                       </td>
                     </tr>
@@ -261,16 +261,16 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {}, s
               </table>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 text-xs text-[#717971]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 text-xs text-[#5B6776]">
               <span>
-                Trang <strong className="text-[#191C19]">{currentPage + 1}</strong> / {totalPages}
+                Trang <strong className="text-[#1F2A37]">{currentPage + 1}</strong> / {totalPages}
               </span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
                   disabled={currentPage <= 0}
-                  className="px-3 py-1.5 rounded-xl border border-[#E2E8E0] bg-white hover:bg-[#F8FAF8] text-[#191C19] font-semibold disabled:opacity-40"
+                  className="px-3 py-1.5 rounded-xl border border-[#DDE5D9] bg-white hover:bg-[#F6F9F4] text-[#1F2A37] font-semibold disabled:opacity-40"
                 >
                   Trước
                 </button>
@@ -278,7 +278,7 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {}, s
                   type="button"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={currentPage + 1 >= totalPages}
-                  className="px-3 py-1.5 rounded-xl border border-[#E2E8E0] bg-white hover:bg-[#F8FAF8] text-[#191C19] font-semibold disabled:opacity-40"
+                  className="px-3 py-1.5 rounded-xl border border-[#DDE5D9] bg-white hover:bg-[#F6F9F4] text-[#1F2A37] font-semibold disabled:opacity-40"
                 >
                   Sau
                 </button>

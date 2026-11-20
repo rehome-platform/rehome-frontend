@@ -84,8 +84,13 @@ describe('Admin Violation Report Flow (Audit Logs & Moderator PROPOSE_BAN)', () 
       expect(screen.getAllByText(/Đề xuất khóa tổ chức/i).length).toBeGreaterThan(0);
     });
 
+    expect(screen.getAllByText('Nhân viên điểm kí gửi').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText('MODERATOR')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Xem chi tiết nhật ký/i }));
+
     expect(screen.getByText(/Tổ chức tái phạm đăng chiến dịch giả mạo lần thứ 3/i)).toBeInTheDocument();
-    expect(screen.getByText(/RESOLVED \(4 báo cáo\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Đã xử lý \(4 báo cáo\)/i)).toBeInTheDocument();
   });
 
   it('displays Moderator PROPOSE_BAN proposals in AdminAccountsPage and allows Admin to ban the organization or dismiss', async () => {
@@ -175,7 +180,7 @@ describe('Admin Violation Report Flow (Audit Logs & Moderator PROPOSE_BAN)', () 
 
     const sidebarLinks = screen.getAllByRole('link');
     const labels = sidebarLinks.map((a) => a.textContent.trim());
-    const modIdx = labels.findIndex((t) => t.includes('Quản lý Moderator'));
+    const modIdx = labels.findIndex((t) => t.includes('Quản lý nhân sự'));
     const banPropIdx = labels.findIndex((t) => t.includes('Đề xuất khóa tài khoản'));
     expect(modIdx).toBeGreaterThanOrEqual(0);
     expect(banPropIdx).toBe(modIdx + 1);
