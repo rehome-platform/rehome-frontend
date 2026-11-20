@@ -95,6 +95,8 @@ export default function AdminDashboardPage() {
   // Số thành viên đang hoạt động theo hạng (Bạc/Vàng/Kim cương) - số hiện tại, không theo khoảng thời gian lọc
   const [tierCounts, setTierCounts] = useState(null);
   const [tierCountsLoading, setTierCountsLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   const dashSeqRef = useRef(0);
 
@@ -105,6 +107,7 @@ export default function AdminDashboardPage() {
     const loadData = async () => {
       try {
         setLoading(true);
+        setDashboardError('');
         const dashRes = await adminApi.getDashboard({
           from: activeRange.apiFrom,
           to: activeRange.apiTo,
@@ -115,6 +118,9 @@ export default function AdminDashboardPage() {
       } catch (err) {
         if (reqId === dashSeqRef.current) {
           console.error('Lỗi tải dữ liệu dashboard:', err);
+          setDashboardError(
+            err?.response?.data?.message || err?.message || 'Không thể tải dữ liệu doanh thu từ máy chủ.'
+          );
         }
       } finally {
         if (reqId === dashSeqRef.current) {
@@ -124,7 +130,7 @@ export default function AdminDashboardPage() {
     };
 
     loadData();
-  }, [activeRange.apiFrom, activeRange.apiTo, dateError]);
+  }, [activeRange.apiFrom, activeRange.apiTo, dateError, reloadKey]);
 
   // Tóm tắt gói thành viên & voucher cho tab Doanh thu (xem chi tiết đầy đủ ở trang Danh sách thành viên)
   useEffect(() => {
@@ -268,6 +274,22 @@ export default function AdminDashboardPage() {
               className="px-4 py-2.5 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-xs font-semibold text-[#B91C1C]"
             >
               {dateError}
+            </div>
+          )}
+
+          {dashboardError && !dateError && (
+            <div
+              role="alert"
+              className="px-4 py-3 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-xs font-semibold text-[#B91C1C] flex items-center justify-between gap-3"
+            >
+              <span>{dashboardError}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setReloadKey((k) => k + 1)}
+              >
+                Thử lại
+              </Button>
             </div>
           )}
 

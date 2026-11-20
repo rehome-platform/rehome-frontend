@@ -253,7 +253,14 @@ export default function ConfigPage() {
     setErrorMessage('');
 
     try {
-      const configKeyMap = SYSTEM_CONFIG_FIELDS.filter(item => specs[item.key]).map(({ key, group, field, percent }) => {
+      const dirtySet = new Set(dirtyFields);
+      const targetItems = SYSTEM_CONFIG_FIELDS.filter(
+        item => specs[item.key] && dirtySet.has(`${item.group}.${item.field}`)
+      );
+      if (targetItems.length === 0) {
+        return;
+      }
+      const configKeyMap = targetItems.map(({ key, group, field, percent }) => {
         const raw = configs[group][field];
         const value = percent ? Number((Number(raw) / 100).toPrecision(15)) : Number(raw);
         const spec = specs[key];
@@ -414,9 +421,9 @@ export default function ConfigPage() {
           type="submit"
           form="config-form"
           loading={saving}
-          disabled={loading || !loaded}
+          disabled={loading || !loaded || !hasChanges}
           className={`shrink-0 shadow-sm rounded-xl text-white ${
-            hasChanges ? 'bg-[#006B2C] hover:bg-[#005523]' : 'bg-[#006B2C]/70 hover:bg-[#006B2C]'
+            hasChanges ? 'bg-[#006B2C] hover:bg-[#005523]' : 'bg-[#006B2C]/70'
           }`}
         >
           <span className="material-symbols-outlined text-sm mr-1.5">save</span>

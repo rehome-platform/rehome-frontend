@@ -378,7 +378,7 @@ function AccountRow({
               acc.role === 'Member'
                 ? 'bg-[#E8F5E9] text-[#006B2C]'
                 : acc.role === 'Organizer'
-                ? 'bg-[#FFF3E0] text-[#FEA619]'
+                ? 'bg-[#FFF3E0] text-[#B45309]'
                 : 'bg-[#E0F2F1] text-[#00685F]'
             }`}
           >
@@ -405,7 +405,7 @@ function AccountRow({
             acc.role === 'Member'
               ? 'bg-[#E8F5E9] text-[#006B2C]'
               : acc.role === 'Organizer'
-              ? 'bg-[#FFF3E0] text-[#FEA619]'
+              ? 'bg-[#FFF3E0] text-[#B45309]'
               : 'bg-[#E0F2F1] text-[#00685F]'
           }`}
         >
