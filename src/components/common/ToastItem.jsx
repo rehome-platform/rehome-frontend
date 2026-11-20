@@ -97,22 +97,22 @@ export default function ToastItem({ toast, onDismiss }) {
       badgeText: 'Lỗi',
     },
     warn: {
-      color: '#FEA619',
-      bgColor: '#FEF0C7',
+      color: '#B54708',
+      bgColor: '#FFFAEB',
       borderColor: '#FEDF89',
       icon: (
-        <svg className="w-5 h-5 flex-shrink-0 text-[#FEA619]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-5 h-5 flex-shrink-0 text-[#B54708]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
       ),
       badgeText: 'Cảnh báo',
     },
     info: {
-      color: '#006B2C',
-      bgColor: '#E8F5E9',
-      borderColor: '#A5D6A7',
+      color: '#00685F',
+      bgColor: '#E0F2F1',
+      borderColor: '#99F6E4',
       icon: (
-        <svg className="w-5 h-5 flex-shrink-0 text-[#006B2C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-5 h-5 flex-shrink-0 text-[#00685F]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
@@ -126,8 +126,7 @@ export default function ToastItem({ toast, onDismiss }) {
     <div
       ref={itemRef}
       role="alert"
-      className="pointer-events-auto relative overflow-hidden rounded-2xl bg-white border border-[#DDE5D9] p-4 shadow-[0_8px_30px_rgb(0,0,0,0.08)] flex items-start gap-3 w-full font-sans transition-shadow"
-      style={{ minWidth: '320px', maxWidth: '420px' }}
+      className="pointer-events-auto relative overflow-hidden rounded-2xl bg-white border border-[#DDE5D9] p-4 shadow-[0_8px_30px_rgb(0,0,0,0.08)] flex items-start gap-3 w-full sm:w-[360px] max-w-[420px] font-sans transition-shadow"
     >
       <div className="mt-0.5">{currentConfig.icon}</div>
       <div className="flex-1 text-xs text-[#191C19] leading-relaxed pr-2">
@@ -137,7 +136,7 @@ export default function ToastItem({ toast, onDismiss }) {
         type="button"
         aria-label="Đóng thông báo"
         onClick={dismiss}
-        className="text-[#717971] hover:text-[#191C19] text-sm p-1 font-bold leading-none cursor-pointer transition-colors"
+        className="text-[#5B6776] hover:text-[#191C19] text-sm p-1 font-bold leading-none cursor-pointer transition-colors rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#006B2C]/50"
       >
         ✕
       </button>

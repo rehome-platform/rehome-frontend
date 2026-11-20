@@ -140,10 +140,10 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
             >
               <div className="px-4 py-2.5 border-b border-[#E2E8E0]">
                 <p className="text-xs font-bold text-[#191C19] truncate">{displayName}</p>
-                <p className="text-[11px] text-[#717971] truncate">{displayEmail}</p>
+                <p className="text-[11px] text-[#5B6776] truncate">{displayEmail}</p>
                 <div className="mt-1.5">
                   <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7]">
-                    ROLE_ADMIN
+                    Quản trị viên
                   </span>
                 </div>
               </div>

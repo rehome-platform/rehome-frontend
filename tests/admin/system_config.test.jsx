@@ -46,7 +46,7 @@ const saveButton = () => screen.getByRole('button', { name: /Lưu thay đổi/ }
 const tab = (name) => fireEvent.click(screen.getByRole('button', { name }));
 async function mount() {
   render(<ConfigPage />);
-  await waitFor(() => expect(saveButton()).toBeEnabled());
+  await waitFor(() => expect(screen.getByLabelText(/Độ dài một kỳ/)).toBeEnabled());
 }
 
 beforeEach(() => {
@@ -93,8 +93,11 @@ describe('Admin system configuration HTTP contract', () => {
     for (const input of screen.getAllByRole('spinbutton')) expect(input).toBeEnabled();
   });
 
-  it('sends all 25 catalog keys, preserves fractional percentages, and refreshes from the server after saving', async () => {
+  it('sends only dirty catalog keys, preserves fractional percentages, and refreshes from the server after saving', async () => {
     await mount();
+    expect(saveButton()).toBeDisabled();
+    tab(/2\. Giá/);
+    fireEvent.change(screen.getByLabelText(/Hoa hồng kỳ 1/), { target: { value: '12.5' } });
     tab(/3\. Ví/);
     fireEvent.change(screen.getByLabelText(/Số tiền rút tối thiểu/), { target: { value: '80000' } });
     fireEvent.change(screen.getByLabelText(/Số lần rút tối đa/), { target: { value: '7' } });
@@ -106,8 +109,8 @@ describe('Admin system configuration HTTP contract', () => {
     expect(baseApi.put).toHaveBeenCalledWith('/api/admin/config/min_payout_amount', { value: '80000' });
     expect(baseApi.put).toHaveBeenCalledWith('/api/admin/config/max_payout_requests_per_day', { value: '7' });
     expect(baseApi.put).toHaveBeenCalledWith('/api/admin/config/order_payment_timeout_minutes', { value: '30' });
-    expect(baseApi.put).toHaveBeenCalledWith('/api/admin/config/commission_rate_term1', { value: '0.1234' });
-    expect(baseApi.put).toHaveBeenCalledTimes(25);
+    expect(baseApi.put).toHaveBeenCalledWith('/api/admin/config/commission_rate_term1', { value: '0.125' });
+    expect(baseApi.put).toHaveBeenCalledTimes(4);
     expect(baseApi.get).toHaveBeenCalledTimes(2);
     tab(/3\. Ví/);
     expect(screen.getByLabelText(/Số lần rút tối đa/)).toHaveValue(6);
@@ -117,6 +120,8 @@ describe('Admin system configuration HTTP contract', () => {
 
   it('does not report success or log a completed save if any PUT fails', async () => {
     await mount();
+    tab(/3\. Ví/);
+    fireEvent.change(screen.getByLabelText(/Số tiền rút tối thiểu/), { target: { value: '80000' } });
     baseApi.put.mockImplementation(async (url, body) => {
       if (url.endsWith('/min_payout_amount')) throw { response: { data: { message: 'Không thể lưu ví' } } };
       return response({ value: body.value });
@@ -136,12 +141,13 @@ describe('Admin system configuration HTTP contract', () => {
     expect(saveButton()).toBeDisabled();
     expect(screen.getByLabelText(/Độ dài một kỳ/)).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: /Thử lại/ }));
-    await waitFor(() => expect(saveButton()).toBeEnabled());
+    await waitFor(() => expect(screen.getByLabelText(/Độ dài một kỳ/)).toBeEnabled());
     expect(screen.getByLabelText(/Độ dài một kỳ/)).toHaveValue(45);
   });
 
   it('does not claim success when the post-save GET fails', async () => {
     await mount();
+    fireEvent.change(screen.getByLabelText(/Độ dài một kỳ/), { target: { value: '50' } });
     baseApi.get.mockRejectedValueOnce(new Error('Không xác minh được cấu hình'));
     fireEvent.click(saveButton());
     expect(await screen.findByRole('alert')).toHaveTextContent('Không xác minh được cấu hình');
@@ -180,8 +186,7 @@ describe('Admin system configuration HTTP contract', () => {
     fireEvent.click(saveButton());
     await screen.findByText(/Đã đồng bộ tham số/);
     expect(baseApi.put).toHaveBeenCalledWith('/api/admin/config/points_cost_per_live_tryon', { value: '0' });
-    expect(baseApi.put).toHaveBeenCalledWith('/api/admin/config/points_vnd_per_point', { value: '10000' });
-    expect(baseApi.put).toHaveBeenCalledTimes(28);
+    expect(baseApi.put).toHaveBeenCalledTimes(1);
   });
 
   it('keeps keys omitted by the server disabled and does not send them on save', async () => {
@@ -189,6 +194,7 @@ describe('Admin system configuration HTTP contract', () => {
     await mount();
     tab(/3\. Ví/);
     expect(screen.getByLabelText(/Số tiền rút tối thiểu/)).toBeDisabled();
+    fireEvent.change(screen.getByLabelText(/Số lần rút tối đa/), { target: { value: '7' } });
     fireEvent.click(saveButton());
     await screen.findByText(/Đã đồng bộ tham số/);
     expect(baseApi.put).not.toHaveBeenCalledWith('/api/admin/config/min_payout_amount', expect.anything());

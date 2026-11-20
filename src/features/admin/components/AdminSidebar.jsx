@@ -211,12 +211,14 @@ export default function AdminSidebar({
               </div>
             </div>
             <button
+              type="button"
               onClick={() => logout && logout()}
               disabled={loggingOut}
               title="Đăng xuất"
-              className="p-1.5 text-[#717971] hover:text-[#BA1A1A] hover:bg-white rounded-xl transition-colors shrink-0 disabled:opacity-50"
+              aria-label="Đăng xuất"
+              className="p-2 text-[#5B6776] hover:text-[#BA1A1A] hover:bg-white rounded-xl transition-colors shrink-0 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#006B2C]/40"
             >
-              <span className="material-symbols-outlined text-[18px]">logout</span>
+              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">logout</span>
             </button>
           </div>
         </div>

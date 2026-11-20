@@ -52,14 +52,23 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
   const [banSubmitting, setBanSubmitting] = useState(false);
   const [banPreview, setBanPreview] = useState(null);
   const [banPreviewLoading, setBanPreviewLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   const loadProposals = useCallback(async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const [auditRes, accountsRes] = await Promise.allSettled([
         adminApi.getBanProposals({ page: 0, size: 50 }),
         adminApi.getAccounts({ page: 0, size: 100 }),
       ]);
+
+      if (auditRes.status === 'rejected') {
+        const err = auditRes.reason;
+        setLoadError(
+          err?.response?.data?.message || err?.message || 'Không thể tải danh sách đề xuất khóa tài khoản.'
+        );
+      }
 
       const rawLogs =
         auditRes.status === 'fulfilled'
@@ -348,14 +357,30 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
         </div>
       </div>
 
+      {loadError && (
+        <div
+          role="alert"
+          className="px-4 py-3 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-xs font-semibold text-[#B91C1C] flex items-center justify-between gap-3"
+        >
+          <span>{loadError}</span>
+          <button
+            type="button"
+            onClick={loadProposals}
+            className="px-3 py-1.5 rounded-lg border border-[#FECACA] bg-white hover:bg-[#FEF2F2] text-xs font-bold text-[#991B1B]"
+          >
+            Thử lại
+          </button>
+        </div>
+      )}
+
       {/* Bảng Danh sách Đề xuất khóa */}
       <div
         className={`bg-white border border-[#E2E8E0] rounded-2xl overflow-hidden shadow-xs transition-opacity duration-150 ${
           loading && proposals.length > 0 ? 'opacity-60 pointer-events-none' : ''
         }`}
       >
-        <div className="overflow-hidden">
-          <table className="w-full table-fixed text-left border-collapse text-xs">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[920px] text-left border-collapse text-xs">
             <thead>
               <tr className="bg-[#F8FAF8] border-b border-[#E2E8E0] text-[11px] font-bold text-[#717971] tracking-wider">
                 <th className="py-3.5 px-4 whitespace-nowrap w-[18%]">Tổ chức</th>

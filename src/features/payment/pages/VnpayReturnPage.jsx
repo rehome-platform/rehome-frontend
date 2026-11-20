@@ -50,6 +50,7 @@ export default function VnpayReturnPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!searchParams.get('vnp_TxnRef') || !searchParams.get('vnp_SecureHash')) {
@@ -64,6 +65,8 @@ export default function VnpayReturnPage() {
     });
 
     let cancelled = false;
+    setLoading(true);
+    setError('');
     baseApi
       .get(API_ENDPOINTS.VNPAY.RETURN_INFO, { params })
       .then((res) => {
@@ -84,7 +87,10 @@ export default function VnpayReturnPage() {
     return () => {
       cancelled = true;
     };
-  }, [searchParams]);
+  }, [searchParams, reloadKey]);
+
+  const handleRetry = () => setReloadKey((k) => k + 1);
+  const hasParams = Boolean(searchParams.get('vnp_TxnRef') && searchParams.get('vnp_SecureHash'));
 
   const view = result ? STATUS_VIEW[result.status] || STATUS_VIEW.PENDING : null;
 
@@ -94,28 +100,62 @@ export default function VnpayReturnPage() {
 
       <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-[#E5EAE7] p-8 text-center">
         {loading && (
-          <>
+          <div role="status" aria-live="polite">
             <div className="w-10 h-10 border-4 border-[#006B2C] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
             <p className="text-sm font-semibold text-[#5B6776]">Đang xác nhận kết quả thanh toán...</p>
-          </>
+          </div>
         )}
 
         {!loading && error && (
           <>
             <div
+              aria-hidden="true"
               className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold"
               style={{ backgroundColor: '#FDECEC', color: '#DC2626' }}
             >
               !
             </div>
             <h1 className="text-lg font-bold text-[#1F2A37] mb-2">Không thể xác nhận thanh toán</h1>
-            <p className="text-sm text-[#5B6776] mb-6">{error}</p>
+            <p className="text-sm text-[#5B6776] mb-5">{error}</p>
+            {hasParams && (
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="px-4 py-2 rounded-xl bg-[#006B2C] text-white text-xs font-bold hover:bg-[#005523] transition-colors"
+              >
+                Thử kiểm tra lại
+              </button>
+            )}
+          </>
+        )}
+
+        {!loading && !error && !result && (
+          <>
+            <div
+              aria-hidden="true"
+              className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold"
+              style={{ backgroundColor: '#FEF6E7', color: '#B45309' }}
+            >
+              …
+            </div>
+            <h1 className="text-lg font-bold text-[#1F2A37] mb-2">Chưa có dữ liệu giao dịch</h1>
+            <p className="text-sm text-[#5B6776] mb-5">
+              Hệ thống chưa ghi nhận kết quả trả về từ VNPay. Vui lòng thử kiểm tra lại sau ít giây.
+            </p>
+            <button
+              type="button"
+              onClick={handleRetry}
+              className="px-4 py-2 rounded-xl bg-[#006B2C] text-white text-xs font-bold hover:bg-[#005523] transition-colors"
+            >
+              Kiểm tra lại trạng thái
+            </button>
           </>
         )}
 
         {!loading && !error && result && (
           <>
             <div
+              aria-hidden="true"
               className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold"
               style={{ backgroundColor: view.bg, color: view.color }}
             >
@@ -127,31 +167,41 @@ export default function VnpayReturnPage() {
             <p className="text-sm text-[#5B6776] mb-6">{view.desc}</p>
 
             <div className="text-left bg-[#F6F9F4] rounded-xl p-4 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-[#5B6776]">Mã đơn hàng</span>
-                <span className="font-semibold text-[#1F2A37]">{result.orderId}</span>
+              <div className="flex justify-between gap-3">
+                <span className="text-[#5B6776] shrink-0">Mã đơn hàng</span>
+                <span className="font-semibold text-[#1F2A37] text-right break-all">{result.orderId}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-[#5B6776]">Số tiền</span>
-                <span className="font-semibold text-[#1F2A37]">{formatCurrency(result.amount)}</span>
+              <div className="flex justify-between gap-3">
+                <span className="text-[#5B6776] shrink-0">Số tiền</span>
+                <span className="font-semibold text-[#1F2A37] text-right">{formatCurrency(result.amount)}</span>
               </div>
               {result.vnpTransactionNo && (
-                <div className="flex justify-between">
-                  <span className="text-[#5B6776]">Mã giao dịch VNPay</span>
-                  <span className="font-semibold text-[#1F2A37]">{result.vnpTransactionNo}</span>
+                <div className="flex justify-between gap-3">
+                  <span className="text-[#5B6776] shrink-0">Mã giao dịch VNPay</span>
+                  <span className="font-semibold text-[#1F2A37] text-right break-all">{result.vnpTransactionNo}</span>
                 </div>
               )}
               {result.paidAt && (
-                <div className="flex justify-between">
-                  <span className="text-[#5B6776]">Thời gian</span>
-                  <span className="font-semibold text-[#1F2A37]">{formatDate(result.paidAt)}</span>
+                <div className="flex justify-between gap-3">
+                  <span className="text-[#5B6776] shrink-0">Thời gian</span>
+                  <span className="font-semibold text-[#1F2A37] text-right">{formatDate(result.paidAt)}</span>
                 </div>
               )}
             </div>
+
+            {result.status === 'PENDING' && (
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="mt-4 px-4 py-2 rounded-xl border border-[#DDE5D9] bg-white hover:bg-[#F6F9F4] text-xs font-bold text-[#1F2A37] transition-colors"
+              >
+                Kiểm tra lại trạng thái
+              </button>
+            )}
           </>
         )}
 
-        <p className="text-xs text-[#9AA5B1] mt-6">
+        <p className="text-xs text-[#5B6776] mt-6">
           Bạn có thể đóng trang này và quay lại ứng dụng ReHome để xem chi tiết đơn hàng.
         </p>
       </div>

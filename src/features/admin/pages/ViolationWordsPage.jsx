@@ -85,8 +85,11 @@ export default function ViolationWordsPage() {
   }, [keyword, category, severity, isActive, page]);
 
   useEffect(() => {
-    fetchWords();
-  }, [fetchWords]);
+    const timer = setTimeout(() => {
+      fetchWords();
+    }, keyword ? 350 : 0);
+    return () => clearTimeout(timer);
+  }, [fetchWords, keyword]);
 
   const handleFilterChange = (setter) => (e) => {
     setter(e.target.value);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import { Modal, Button } from '../../../components/common/index.js';
 import { useAuth } from '../../../context/AuthContext.jsx';
 
@@ -14,34 +14,52 @@ export default function SuspiciousCounterfeitModal({ isOpen, onClose, returnItem
   } catch {
     user = null;
   }
+  const noteId = useId();
   const [moderatorNote, setModeratorNote] = useState('');
   const [verdict, setVerdict] = useState('COUNTERFEIT'); // 'COUNTERFEIT' | 'GENUINE'
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (isOpen) {
+      setModeratorNote('');
+      setVerdict('COUNTERFEIT');
+      setSubmitting(false);
+    }
+  }, [isOpen, returnItem?.id]);
+
   if (!returnItem) return null;
 
-  const handleSubmit = (e) => {
+  const handleClose = () => {
+    if (!submitting) onClose?.();
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting || !moderatorNote.trim()) return;
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
+    try {
       if (onConfirmVerdict) {
-        onConfirmVerdict({
+        const result = await onConfirmVerdict({
           itemId: returnItem.id,
           verdict,
           conclusion: verdict,
           moderator: user?.accountId || user?.id || 'MODERATOR',
-          note: moderatorNote,
+          note: moderatorNote.trim(),
         });
+        if (result === false) return;
       }
-      onClose();
-    }, 300);
+      onClose?.();
+    } catch {
+      // Giữ nguyên modal và nội dung ghi chú để Moderator thử lại khi API lỗi
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title="Thẩm Định Hàng Nghi Giả"
     >
       <form onSubmit={handleSubmit} className="space-y-4 font-sans text-xs">
@@ -54,12 +72,14 @@ export default function SuspiciousCounterfeitModal({ isOpen, onClose, returnItem
 
         <div className="space-y-3 pt-1">
           <div>
-            <label className="block font-bold text-text mb-1.5">
+            <span className="block font-bold text-text mb-1.5">
               Kết luận thẩm định:
-            </label>
+            </span>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
+                aria-pressed={verdict === 'COUNTERFEIT'}
+                disabled={submitting}
                 onClick={() => setVerdict('COUNTERFEIT')}
                 className={`p-3 rounded-xl border-2 text-left transition-all ${
                   verdict === 'COUNTERFEIT'
@@ -68,7 +88,7 @@ export default function SuspiciousCounterfeitModal({ isOpen, onClose, returnItem
                 }`}
               >
                 <div className="flex items-center space-x-1.5 mb-1 font-bold">
-                  <span className="material-symbols-outlined text-sm">gavel</span>
+                  <span className="material-symbols-outlined text-sm" aria-hidden="true">gavel</span>
                   <span>Xác nhận HÀNG GIẢ</span>
                 </div>
                 <p className="text-[10px] opacity-85">Hoàn tiền người mua, tiêu hủy món hàng, không giải ngân người bán.</p>
@@ -76,6 +96,8 @@ export default function SuspiciousCounterfeitModal({ isOpen, onClose, returnItem
 
               <button
                 type="button"
+                aria-pressed={verdict === 'GENUINE'}
+                disabled={submitting}
                 onClick={() => setVerdict('GENUINE')}
                 className={`p-3 rounded-xl border-2 text-left transition-all ${
                   verdict === 'GENUINE'
@@ -84,7 +106,7 @@ export default function SuspiciousCounterfeitModal({ isOpen, onClose, returnItem
                 }`}
               >
                 <div className="flex items-center space-x-1.5 mb-1 font-bold">
-                  <span className="material-symbols-outlined text-sm">verified</span>
+                  <span className="material-symbols-outlined text-sm" aria-hidden="true">verified</span>
                   <span>Xác nhận CHÍNH HÃNG</span>
                 </div>
                 <p className="text-[10px] opacity-85">Bác bỏ khiếu nại hàng giả, tiếp tục quy trình kiểm định thông thường.</p>
@@ -93,11 +115,13 @@ export default function SuspiciousCounterfeitModal({ isOpen, onClose, returnItem
           </div>
 
           <div>
-            <label className="block font-bold text-text mb-1">
-              Ghi chú thẩm định chi tiết của Moderator:
+            <label htmlFor={noteId} className="block font-bold text-text mb-1">
+              Ghi chú thẩm định chi tiết của Moderator <span className="text-error">*</span>
             </label>
             <textarea
+              id={noteId}
               required
+              disabled={submitting}
               rows={3}
               value={moderatorNote}
               onChange={(e) => setModeratorNote(e.target.value)}
@@ -107,14 +131,14 @@ export default function SuspiciousCounterfeitModal({ isOpen, onClose, returnItem
           </div>
         </div>
 
-        <div className="flex justify-end space-x-2 pt-3 border-t border-neutral">
-          <Button variant="outline" className="rounded-xl border-neutral" onClick={onClose}>Hủy</Button>
+        <div className="flex justify-end gap-2 pt-3 border-t border-neutral">
+          <Button variant="outline" disabled={submitting} className="rounded-xl border-neutral" onClick={handleClose}>Hủy</Button>
           <Button
             type="submit"
+            variant={verdict === 'COUNTERFEIT' ? 'danger' : 'primary'}
             loading={submitting}
-            className={`rounded-xl px-4 font-bold text-white ${
-              verdict === 'COUNTERFEIT' ? 'bg-error hover:bg-red-700' : 'bg-primary hover:bg-primary-hover'
-            }`}
+            disabled={submitting || !moderatorNote.trim()}
+            className="rounded-xl px-4 font-bold"
           >
             Lưu kết luận & Thực thi
           </Button>

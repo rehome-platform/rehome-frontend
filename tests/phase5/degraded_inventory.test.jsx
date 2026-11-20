@@ -68,6 +68,6 @@ it.each([403, 404, 409])('keeps the proposal open on create error %s', async sta
   openPage();
   await fillProposal();
   fireEvent.click(screen.getByRole('button', { name: /Gửi đề xuất cho/ }));
-  await waitFor(() => expect(window.alert).toHaveBeenCalledWith(expect.stringContaining(`Create error ${status}`)));
+  expect(await screen.findByRole('alert')).toHaveTextContent(`Create error ${status}`);
   expect(screen.getByRole('button', { name: /Gửi đề xuất cho/ })).toBeInTheDocument();
 });

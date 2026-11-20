@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import Header from '../../../components/header.jsx';
 import Badge from '../../../components/common/Badge.jsx';
@@ -15,9 +16,18 @@ import '../styles/profile-password.css';
  */
 export default function ProfilePage() {
   const { user, updateProfile, changePassword, logout } = useAuth();
+  const [searchParams] = useSearchParams();
+  const resolveTab = (val) => (['profile', 'security', 'sessions'].includes(val) ? val : 'profile');
 
   // Tab: 'profile' | 'security' | 'sessions'
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState(() => resolveTab(searchParams.get('tab')));
+
+  useEffect(() => {
+    const paramTab = searchParams.get('tab');
+    if (paramTab && ['profile', 'security', 'sessions'].includes(paramTab)) {
+      setActiveTab(paramTab);
+    }
+  }, [searchParams]);
 
   // Profile Form state
   const initialProfile = profileFormValues(user);

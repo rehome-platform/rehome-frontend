@@ -185,8 +185,13 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
       const from = new Date(now.getTime() - quickMinutes * 60000);
       return { from: from.toISOString(), to: now.toISOString() };
     }
-    const from = activeRange.apiFrom ? `${activeRange.apiFrom}T${fromTime || '00:00'}:00Z` : undefined;
-    const to = activeRange.apiTo ? `${activeRange.apiTo}T${toTime || '23:59'}:59Z` : undefined;
+    const toIsoLocal = (dateStr, timeStr, seconds) => {
+      if (!dateStr) return undefined;
+      const d = new Date(`${dateStr}T${timeStr}:${seconds}`);
+      return Number.isNaN(d.getTime()) ? `${dateStr}T${timeStr}:${seconds}Z` : d.toISOString();
+    };
+    const from = toIsoLocal(activeRange.apiFrom, fromTime || '00:00', '00');
+    const to = toIsoLocal(activeRange.apiTo, toTime || '23:59', '59');
     return { from, to };
   };
 
@@ -597,9 +602,9 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
             loading ? 'opacity-60 pointer-events-none' : ''
           }`}
         >
-          <div className="overflow-hidden">
-            <table className="w-full table-fixed text-left text-xs">
-              <thead className="bg-[#F8FAF8] text-[#717971] tracking-wider font-semibold border-b border-[#E2E8E0]">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[920px] text-left text-xs">
+              <thead className="bg-[#F8FAF8] text-[#5B6776] tracking-wider font-semibold border-b border-[#E2E8E0]">
                 <tr>
                   <th className="w-[4%] py-2.5 pl-4 pr-1"></th>
                   <th className="w-[12%] py-2.5 px-3 whitespace-nowrap">Thời gian</th>
@@ -619,15 +624,27 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
                           isExpanded ? 'bg-[#F8FAF8]' : ''
                         }`}
                       >
-                        {/* Expand toggle chevron */}
-                        <td className="py-2.5 pl-4 pr-1 text-[#717971] align-middle">
-                          <span
-                            className={`material-symbols-outlined text-base transition-transform duration-200 inline-block ${
-                              isExpanded ? 'rotate-90 text-[#006B2C]' : ''
-                            }`}
+                        {/* Expand toggle chevron (hỗ trợ bàn phím Enter/Space) */}
+                        <td className="py-2.5 pl-4 pr-1 text-[#5B6776] align-middle">
+                          <button
+                            type="button"
+                            aria-expanded={isExpanded}
+                            aria-label={isExpanded ? 'Thu gọn chi tiết nhật ký' : 'Xem chi tiết nhật ký'}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedLogId(isExpanded ? null : log.id);
+                            }}
+                            className="inline-flex items-center justify-center rounded-md p-0.5 hover:bg-[#EBF1E8] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#006B2C]/40"
                           >
-                            chevron_right
-                          </span>
+                            <span
+                              aria-hidden="true"
+                              className={`material-symbols-outlined text-base transition-transform duration-200 inline-block ${
+                                isExpanded ? 'rotate-90 text-[#006B2C]' : ''
+                              }`}
+                            >
+                              chevron_right
+                            </span>
+                          </button>
                         </td>
 
                         {/* Timestamp: tách 2 dòng ngày/giờ để luôn hiện đủ, không bị cắt */}
@@ -641,7 +658,7 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
                           <span className="font-semibold text-[#191C19]">{log.user}</span>
                           <span
                             className={`ml-1.5 inline-block px-1.5 py-0.5 rounded-md text-[9px] font-bold ${
-                              log.role === 'Admin'
+                              String(log.role || '').toUpperCase() === 'ADMIN'
                                 ? 'bg-[#E8F5E9] text-[#006B2C]'
                                 : 'bg-[#E0F2F1] text-[#00685F]'
                             }`}

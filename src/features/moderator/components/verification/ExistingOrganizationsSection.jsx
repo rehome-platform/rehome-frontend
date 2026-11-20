@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Modal, Button } from '../../../../components/common/index.js';
+import { Modal, Button, Tooltip } from '../../../../components/common/index.js';
 import Spinner from '../../../../components/common/Spinner.jsx';
 import { orgVerificationService } from '../../services/orgVerificationApi.js';
 import { TABLE_COLUMN_LABELS } from '../../../../constants/tableColumns.js';
@@ -78,13 +78,16 @@ export function ExistingOrganizationsSection({
             className="w-full bg-transparent text-xs text-text placeholder-textSecondary focus:outline-none"
           />
           {searchTerm && (
-            <button
-              type="button"
-              onClick={() => setSearchTerm('')}
-              className="text-textSecondary hover:text-text text-xs"
-            >
-              ✕
-            </button>
+            <Tooltip content="Xóa từ khóa tìm kiếm">
+              <button
+                type="button"
+                aria-label="Xóa từ khóa tìm kiếm"
+                onClick={() => setSearchTerm('')}
+                className="text-textSecondary hover:text-text text-xs p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              >
+                ✕
+              </button>
+            </Tooltip>
           )}
         </div>
 

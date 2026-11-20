@@ -23,6 +23,7 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
   });
 
   const [recentActivities, setRecentActivities] = useState([]);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     loadOverviewData();
@@ -31,6 +32,7 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
   const loadOverviewData = async () => {
     try {
       setIsLoading(true);
+      setLoadError('');
 
       const [membersRes, orgsRes, modsRes, auditRes] = await Promise.allSettled([
         adminApi.getAccounts({ role: 'MEMBER', size: 1 }),
@@ -38,6 +40,13 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
         adminApi.getModerators({ size: 1 }),
         adminApi.getAuditLogs({ size: 6 }),
       ]);
+
+      const failedCount = [membersRes, orgsRes, modsRes, auditRes].filter(
+        (r) => r.status === 'rejected'
+      ).length;
+      if (failedCount > 0) {
+        setLoadError('Không thể tải đầy đủ dữ liệu tổng quan từ máy chủ. Vui lòng thử lại.');
+      }
 
       const memberCount = membersRes.status === 'fulfilled' ? (membersRes.value?.totalElements ?? (Array.isArray(membersRes.value) ? membersRes.value.length : 0)) : 0;
       const orgCount = orgsRes.status === 'fulfilled' ? (orgsRes.value?.totalElements ?? (Array.isArray(orgsRes.value) ? orgsRes.value.length : 0)) : 0;
@@ -110,6 +119,22 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
 
   return (
     <div className="space-y-6">
+      {loadError && (
+        <div
+          role="alert"
+          className="px-4 py-3 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-xs font-semibold text-[#B91C1C] flex items-center justify-between gap-3"
+        >
+          <span>{loadError}</span>
+          <button
+            type="button"
+            onClick={loadOverviewData}
+            className="px-3 py-1.5 rounded-lg border border-[#FECACA] bg-white hover:bg-[#FEF2F2] text-xs font-bold text-[#991B1B]"
+          >
+            Thử lại
+          </button>
+        </div>
+      )}
+
       {/* 3 Thẻ chỉ số tổng quan */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {statCards.map((card, idx) => (
@@ -196,8 +221,12 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
           </button>
         </div>
 
-        {recentActivities.length === 0 ? (
-          <div className="p-10 text-center text-xs text-[#717971]">
+        {isLoading && recentActivities.length === 0 ? (
+          <div role="status" className="p-10 text-center text-xs text-[#5B6776]">
+            Đang tải hoạt động gần đây...
+          </div>
+        ) : recentActivities.length === 0 ? (
+          <div className="p-10 text-center text-xs text-[#5B6776]">
             Chưa có ghi nhận hoạt động nào gần đây trong hệ thống.
           </div>
         ) : (

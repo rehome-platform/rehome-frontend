@@ -189,14 +189,15 @@ export default function ModeratorLayout({ children, apiColors = true }) {
       {/* Sidebar Desktop & Mobile Drawer */}
       {isMobileMenuOpen && (
         <button
+          type="button"
           aria-label="Đóng menu"
-          className="fixed inset-0 z-20 bg-black/40 backdrop-blur-[1px] lg:hidden"
+          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-[1px] lg:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
       <aside
         ref={sidebarRef}
-        className={`${isMobileMenuOpen ? 'flex' : 'hidden'} lg:flex w-72 ${isSidebarCollapsed ? 'lg:w-20' : 'lg:w-72'} bg-surface border-r border-neutral flex-col fixed inset-y-0 z-30 shadow-sm`}
+        className={`${isMobileMenuOpen ? 'flex' : 'hidden'} lg:flex w-72 ${isSidebarCollapsed ? 'lg:w-20' : 'lg:w-72'} bg-surface border-r border-neutral flex-col fixed inset-y-0 z-40 shadow-sm`}
       >
         {/* Nút thu gọn / mở rộng sidebar (Desktop) */}
         <button

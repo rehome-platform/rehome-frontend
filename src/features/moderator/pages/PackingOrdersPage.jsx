@@ -3,6 +3,7 @@ import { TABLE_COLUMN_LABELS } from '../../../constants/tableColumns.js';
 import React, { useState, useMemo } from "react";
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
+import Tooltip from '../../../components/common/Tooltip.jsx';
 import QRScannerModal from '../../../components/QRScannerModal.jsx';
 import { Page, ResourceState } from "../components/WarehouseUi.jsx";
 import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
@@ -280,13 +281,16 @@ export default function PackingOrdersPage() {
                   className="w-full text-xs outline-none bg-transparent"
                 />
                 {keyword && (
-                  <button
-                    type="button"
-                    onClick={() => setKeyword('')}
-                    className="text-textSecondary hover:text-text text-xs font-bold"
-                  >
-                    ✕
-                  </button>
+                  <Tooltip content="Xóa từ khóa tìm kiếm">
+                    <button
+                      type="button"
+                      aria-label="Xóa từ khóa tìm kiếm"
+                      onClick={() => setKeyword('')}
+                      className="text-textSecondary hover:text-text text-xs font-bold p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    >
+                      ✕
+                    </button>
+                  </Tooltip>
                 )}
               </div>
               <div className="text-xs text-textSecondary">
@@ -295,15 +299,18 @@ export default function PackingOrdersPage() {
             </div>
 
             {claimError && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-800 flex justify-between items-center">
+              <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-800 flex justify-between items-center">
                 <span>{claimError}</span>
-                <button
-                  type="button"
-                  onClick={() => setClaimError('')}
-                  className="font-bold hover:text-amber-900"
-                >
-                  ✕
-                </button>
+                <Tooltip content="Đóng thông báo lỗi">
+                  <button
+                    type="button"
+                    aria-label="Đóng thông báo lỗi"
+                    onClick={() => setClaimError('')}
+                    className="font-bold hover:text-amber-900 p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700/40"
+                  >
+                    ✕
+                  </button>
+                </Tooltip>
               </div>
             )}
 

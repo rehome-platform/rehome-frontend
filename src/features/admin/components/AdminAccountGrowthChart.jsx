@@ -97,7 +97,7 @@ export default function AdminAccountGrowthChart({ footerNote }) {
 
   const points = growthData.points || [];
   const maxCount = Math.max(1, ...points.map((p) => Number(p.count || 0)));
-  const yTicks = [maxCount, Math.round(maxCount * 0.66), Math.round(maxCount * 0.33), 0];
+  const yTicks = [...new Set([maxCount, Math.round(maxCount * 0.66), Math.round(maxCount * 0.33), 0])];
 
   const chartLeft = 48;
   const chartRight = 568;
@@ -233,7 +233,7 @@ export default function AdminAccountGrowthChart({ footerNote }) {
                       x={chartLeft - 8}
                       y={yVal + 3}
                       fontSize="10"
-                      fill="#8E998D"
+                      fill="#5B6776"
                       textAnchor="end"
                     >
                       {tick}
@@ -295,11 +295,17 @@ export default function AdminAccountGrowthChart({ footerNote }) {
             </svg>
           </div>
 
-          {activePoint && (
-            <div className="px-3 py-1.5 rounded-lg bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-[#191C19] text-center font-medium">
-              {activePoint.label} ({activePoint.periodStart} → {activePoint.periodEnd}): {activePoint.count} đăng ký
-            </div>
-          )}
+          <div className="min-h-[2.25rem] flex items-center justify-center">
+            {activePoint ? (
+              <div className="w-full px-3 py-1.5 rounded-lg bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-[#191C19] text-center font-medium">
+                {activePoint.label} ({activePoint.periodStart} → {activePoint.periodEnd}): {Number(activePoint.count || 0).toLocaleString('vi-VN')} đăng ký
+              </div>
+            ) : (
+              <p className="text-[11px] text-[#5B6776]">
+                Di chuột hoặc chọn mốc trên biểu đồ để xem chi tiết số lượng đăng ký.
+              </p>
+            )}
+          </div>
         </div>
       )}
 

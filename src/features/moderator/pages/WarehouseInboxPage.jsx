@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
-import { Button } from '../../../components/common/index.js';
+import { Button, Tooltip } from '../../../components/common/index.js';
 import Spinner from '../../../components/common/Spinner.jsx';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { warehouseInboxService } from '../services/warehouseInboxApi.js';
@@ -655,14 +655,16 @@ export default function WarehouseInboxPage() {
                   {pendingImages.map((img, i) => (
                     <div key={i} className="relative group w-14 h-14 rounded-lg overflow-hidden border border-neutral bg-surface">
                       <img src={img} alt="Ảnh đính kèm" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => removePendingImage(i)}
-                        className="absolute top-0 right-0 bg-black/70 text-white rounded-bl p-1 text-[10px] hover:bg-black transition-colors"
-                        title="Xóa ảnh"
-                      >
-                        ✕
-                      </button>
+                      <Tooltip content="Xóa ảnh đính kèm" className="absolute top-0 right-0">
+                        <button
+                          type="button"
+                          aria-label={`Xóa ảnh đính kèm ${i + 1}`}
+                          onClick={() => removePendingImage(i)}
+                          className="bg-black/75 hover:bg-[#D92D20] text-white rounded-bl px-1.5 py-0.5 text-[10px] font-bold transition-colors"
+                        >
+                          ✕
+                        </button>
+                      </Tooltip>
                     </div>
                   ))}
                   {uploadingImage && (

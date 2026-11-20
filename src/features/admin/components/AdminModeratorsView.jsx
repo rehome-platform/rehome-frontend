@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import adminApi from '../services/adminApi';
-import { Button, Spinner } from '../../../components/common/index.js';
+import { Button, Spinner, Modal } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 
 /**
@@ -29,6 +29,9 @@ export default function AdminModeratorsView({ onLogAction }) {
   const [selectedNewWarehouseId, setSelectedNewWarehouseId] = useState('');
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
   const [detailTarget, setDetailTarget] = useState(null);
+  const [toggleStatusTarget, setToggleStatusTarget] = useState(null);
+  const [toggleStatusReason, setToggleStatusReason] = useState('');
+  const [togglingStatus, setTogglingStatus] = useState(false);
 
   // Create Form State
   const [formData, setFormData] = useState({
@@ -44,9 +47,12 @@ export default function AdminModeratorsView({ onLogAction }) {
     loadWarehouses();
   }, []);
 
-  // Fetch moderators when filters change
+  // Fetch moderators when filters change (debounce 350ms cho từ khóa tìm kiếm)
   useEffect(() => {
-    loadModerators();
+    const timer = setTimeout(() => {
+      loadModerators();
+    }, searchKeyword ? 350 : 0);
+    return () => clearTimeout(timer);
   }, [searchKeyword, statusFilter, warehouseFilter]);
 
   const loadWarehouses = async () => {
@@ -151,17 +157,29 @@ export default function AdminModeratorsView({ onLogAction }) {
     }
   };
 
-  const handleToggleStatus = async (mod) => {
+  const handleToggleStatus = (mod) => {
+    if (!mod || togglingStatus) return;
+    setToggleStatusTarget(mod);
+    setToggleStatusReason(
+      mod.status === 'ACTIVE' ? 'Admin tạm khóa tài khoản nhân viên kiểm duyệt' : ''
+    );
+  };
+
+  const handleConfirmToggleStatus = async () => {
+    const mod = toggleStatusTarget;
+    if (!mod || togglingStatus) return;
     const isCurrentlyActive = mod.status === 'ACTIVE';
     const actionLabel = isCurrentlyActive ? 'khóa' : 'mở khóa';
-    if (!window.confirm(`Bạn có chắc muốn ${actionLabel} tài khoản Moderator ${mod.fullName || mod.name}?`)) {
+    if (isCurrentlyActive && !toggleStatusReason.trim()) {
+      toast.warn('Vui lòng nhập lý do khóa tài khoản.');
       return;
     }
 
+    setTogglingStatus(true);
     try {
       const accountId = mod.accountId || mod.id;
       if (isCurrentlyActive) {
-        await adminApi.banAccount(accountId, 'Admin tạm khóa tài khoản nhân viên kiểm duyệt');
+        await adminApi.banAccount(accountId, toggleStatusReason.trim());
       } else {
         await adminApi.unbanAccount(accountId);
       }
@@ -177,9 +195,14 @@ export default function AdminModeratorsView({ onLogAction }) {
         });
       }
 
+      setToggleStatusTarget(null);
+      setToggleStatusReason('');
+      setDetailTarget(null);
       await loadModerators();
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || `Lỗi khi ${actionLabel} tài khoản`);
+    } finally {
+      setTogglingStatus(false);
     }
   };
 
@@ -347,9 +370,9 @@ export default function AdminModeratorsView({ onLogAction }) {
             isLoading ? 'opacity-60 pointer-events-none' : ''
           }`}
         >
-          <div className="overflow-hidden">
-            <table className="w-full table-fixed text-left text-xs">
-              <thead className="bg-[#F6F9F4] text-[#717971] tracking-wider font-semibold border-b border-[#DDE5D9]">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[920px] text-left text-xs">
+              <thead className="bg-[#F6F9F4] text-[#5B6776] tracking-wider font-semibold border-b border-[#DDE5D9]">
                 <tr>
                   <th className="py-3 px-4 whitespace-nowrap w-[13%]">Mã nhân viên</th>
                   <th className="py-3 px-4 whitespace-nowrap w-[18%]">Họ tên</th>
@@ -525,24 +548,21 @@ export default function AdminModeratorsView({ onLogAction }) {
                   </button>
                   <button
                     type="button"
-                    onClick={async () => {
-                      await handleToggleStatus(detailTarget);
-                      setDetailTarget(null);
-                    }}
+                    onClick={() => handleToggleStatus(detailTarget)}
                     className={`px-4 py-2 text-xs font-semibold rounded-xl border flex items-center gap-1.5 ${
                       !dLocked
                         ? "text-[#DC2626] border-[#DC2626]/30 hover:bg-[#FEE2E2]/50"
                         : "text-[#006B2C] border-[#006B2C]/30 hover:bg-[#E8F5E9]"
                     }`}
                   >
-                    <span className="material-symbols-outlined text-base">{!dLocked ? "lock" : "lock_open"}</span>
+                    <span className="material-symbols-outlined text-base" aria-hidden="true">{!dLocked ? "lock" : "lock_open"}</span>
                     <span>{!dLocked ? "Khóa tài khoản" : "Mở khóa tài khoản"}</span>
                   </button>
                 </div>
                 <button
                   type="button"
                   onClick={() => setDetailTarget(null)}
-                  className="px-4 py-2 text-xs font-semibold bg-[#006B2C] text-white hover:bg-[#005523] rounded-xl shadow-sm"
+                  className="px-4 py-2 text-xs font-semibold border border-[#DDE5D9] bg-white text-[#414942] hover:bg-[#F6F9F4] rounded-xl"
                 >
                   Đóng
                 </button>
@@ -798,6 +818,58 @@ export default function AdminModeratorsView({ onLogAction }) {
           </div>
         </div>
       )}
+
+      {/* Modal Xác nhận Khóa / Mở khóa Moderator */}
+      <Modal
+        isOpen={Boolean(toggleStatusTarget)}
+        onClose={() => { if (!togglingStatus) setToggleStatusTarget(null); }}
+        title={toggleStatusTarget?.status === 'ACTIVE' ? 'Xác nhận khóa tài khoản Moderator' : 'Xác nhận mở khóa tài khoản Moderator'}
+      >
+        <div className="space-y-4 text-xs font-sans">
+          <p className="text-[#414942] leading-relaxed">
+            Bạn có chắc muốn{' '}
+            <strong className={toggleStatusTarget?.status === 'ACTIVE' ? 'text-[#D92D20]' : 'text-[#006B2C]'}>
+              {toggleStatusTarget?.status === 'ACTIVE' ? 'khóa' : 'mở khóa'}
+            </strong>{' '}
+            tài khoản Moderator{' '}
+            <strong className="text-[#191C19]">{toggleStatusTarget?.fullName || toggleStatusTarget?.name}</strong>?
+          </p>
+          {toggleStatusTarget?.status === 'ACTIVE' && (
+            <div>
+              <label htmlFor="mod-toggle-reason" className="block font-bold text-[#1F2A37] mb-1">
+                Lý do khóa tài khoản <span className="text-[#D92D20]">*</span>
+              </label>
+              <textarea
+                id="mod-toggle-reason"
+                rows={3}
+                disabled={togglingStatus}
+                value={toggleStatusReason}
+                onChange={(e) => setToggleStatusReason(e.target.value)}
+                className="w-full p-2.5 border border-[#DDE5D9] rounded-xl text-[#1F2A37] focus:outline-none focus:border-[#006B2C]"
+              />
+            </div>
+          )}
+          <div className="flex justify-end gap-3 pt-2 border-t border-[#DDE5D9]">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={togglingStatus}
+              onClick={() => setToggleStatusTarget(null)}
+            >
+              Hủy
+            </Button>
+            <Button
+              size="sm"
+              variant={toggleStatusTarget?.status === 'ACTIVE' ? 'danger' : 'primary'}
+              loading={togglingStatus}
+              disabled={togglingStatus || (toggleStatusTarget?.status === 'ACTIVE' && !toggleStatusReason.trim())}
+              onClick={handleConfirmToggleStatus}
+            >
+              {toggleStatusTarget?.status === 'ACTIVE' ? 'Xác nhận khóa' : 'Xác nhận mở khóa'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

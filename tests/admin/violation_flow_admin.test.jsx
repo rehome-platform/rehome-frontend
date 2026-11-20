@@ -151,9 +151,12 @@ describe('Admin Violation Report Flow (Audit Logs & Moderator PROPOSE_BAN)', () 
     expect(screen.getAllByText('Quỹ Từ Thiện Ánh Sáng').length).toBeGreaterThan(0);
     expect(screen.getByText(/Tái phạm nhiều lần quy chế chiến dịch quyên góp/i)).toBeInTheDocument();
 
-    // Click button to ban directly from the proposal card
+    // Click button to open ban confirmation modal from the proposal card
     const banBtn = screen.getByRole('button', { name: /Khóa theo đề xuất/i });
     fireEvent.click(banBtn);
+
+    const confirmBtn = await screen.findByRole('button', { name: /Xác nhận khóa tài khoản/i });
+    fireEvent.click(confirmBtn);
 
     await waitFor(() => {
       expect(adminApi.banAccount).toHaveBeenCalledWith(

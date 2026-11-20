@@ -1,4 +1,5 @@
 import { useReturnProcessing } from '../hooks/useReturnProcessing.jsx';
+import { useModerationShortcuts } from '../hooks/useModerationShortcuts.js';
 import {
   ReturnCompareDialog,
   ReturnOutcomeDialog,
@@ -16,6 +17,7 @@ import {
 } from "../components/returns/ReturnSections.jsx";
 import React from "react";
 import Button from '../../../components/common/Button.jsx';
+import Tooltip from '../../../components/common/Tooltip.jsx';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 
 /**
@@ -31,6 +33,25 @@ import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
  */
 export default function ReturnProcessingPage() {
   const model = useReturnProcessing();
+  const canReviewShortcuts =
+    model.viewMode === 'REVIEW' &&
+    model.selectedItem?.status === 'PENDING_APPROVAL' &&
+    !model.sections.ReturnRejectDialog?.isRejectModalOpen &&
+    !model.sections.ReturnCompareDialog?.isCompareModalOpen;
+
+  useModerationShortcuts({
+    enabled: model.viewMode === 'REVIEW' || model.viewMode === 'INSPECT',
+    onApprove: canReviewShortcuts ? model.sections.ReturnReviewDecision?.handleApproveAndCreateWaybill : undefined,
+    onReject: canReviewShortcuts ? () => model.sections.ReturnReviewDecision?.setIsRejectModalOpen?.(true) : undefined,
+    onEscape:
+      !model.sections.ReturnRejectDialog?.isRejectModalOpen &&
+      !model.sections.ReturnCompareDialog?.isCompareModalOpen &&
+      !model.sections.DegradedCaseModal?.isOpen &&
+      !model.sections.ReturnOutcomeDialog?.isOutcomeModalOpen
+        ? model.handleBackToQueue
+        : undefined,
+  });
+
   return (
     <ModeratorLayout>
       <div className="space-y-6">
@@ -98,13 +119,16 @@ export default function ReturnProcessingPage() {
                   className="w-full text-xs py-2 px-3 rounded-xl border border-neutral bg-surface text-text placeholder:text-textSecondary focus:outline-none focus:border-primary"
                 />
                 {model.searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => model.setSearchQuery('')}
-                    className="absolute right-2.5 top-2 text-textSecondary hover:text-text text-xs"
-                  >
-                    ✕
-                  </button>
+                  <Tooltip content="Xóa từ khóa tìm kiếm" className="absolute right-2 top-1/2 -translate-y-1/2">
+                    <button
+                      type="button"
+                      aria-label="Xóa từ khóa tìm kiếm"
+                      onClick={() => model.setSearchQuery('')}
+                      className="text-textSecondary hover:text-text text-xs p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    >
+                      ✕
+                    </button>
+                  </Tooltip>
                 )}
               </div>
             </div>
@@ -150,14 +174,17 @@ export default function ReturnProcessingPage() {
             {/* Header TH-02 */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral pb-3">
               <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={model.handleBackToQueue}
-                  className="w-8 h-8 flex items-center justify-center rounded-xl border border-neutral text-sm text-text hover:bg-background transition-colors"
-                  title="Quay lại hàng đợi"
-                >
-                  ←
-                </button>
+                <Tooltip content="Quay lại hàng đợi" shortcut="Esc">
+                  <button
+                    type="button"
+                    aria-label="Quay lại hàng đợi"
+                    title="Quay lại hàng đợi"
+                    onClick={model.handleBackToQueue}
+                    className="w-8 h-8 flex items-center justify-center rounded-xl border border-neutral text-sm text-text hover:bg-background transition-colors"
+                  >
+                    ←
+                  </button>
+                </Tooltip>
                 <div>
                   <span className="text-xs text-textSecondary">Yêu cầu trả hàng · </span>
                   <span className="text-sm font-bold text-text">{model.selectedItem.code}</span>
@@ -192,14 +219,17 @@ export default function ReturnProcessingPage() {
             {/* Header TH-03 */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral pb-3">
               <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={model.handleBackToQueue}
-                  className="w-8 h-8 flex items-center justify-center rounded-xl border border-neutral text-sm text-text hover:bg-background transition-colors"
-                  title="Quay lại hàng đợi"
-                >
-                  ←
-                </button>
+                <Tooltip content="Quay lại hàng đợi" shortcut="Esc">
+                  <button
+                    type="button"
+                    aria-label="Quay lại hàng đợi"
+                    title="Quay lại hàng đợi"
+                    onClick={model.handleBackToQueue}
+                    className="w-8 h-8 flex items-center justify-center rounded-xl border border-neutral text-sm text-text hover:bg-background transition-colors"
+                  >
+                    ←
+                  </button>
+                </Tooltip>
                 <div>
                   <span className="text-xs text-textSecondary">Yêu cầu trả hàng · </span>
                   <span className="text-sm font-bold text-text">

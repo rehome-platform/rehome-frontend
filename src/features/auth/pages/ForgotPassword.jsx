@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import Logo from '../../../components/common/Logo.jsx';
 import { Button } from '../../../components/common/index.js';
@@ -17,6 +17,8 @@ export default function PasswordRecovery({ reset = false }) {
   const validLink = !validateEmail(linkEmail) && !!resetToken.trim();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -106,12 +108,58 @@ export default function PasswordRecovery({ reset = false }) {
               <>
                 <p id="password-policy" className="text-sm text-[#5B6776]">Mật khẩu mới phải có từ 6 đến 72 ký tự.</p>
                 <label htmlFor="new-password" className="block text-sm font-semibold">Mật khẩu mới</label>
-                <input id="new-password" type="password" autoComplete="new-password" required minLength={6} maxLength={72}
-                  disabled={loading} value={newPassword} onChange={(event) => setNewPassword(event.target.value)}
-                  aria-describedby="password-policy" className={inputClass} />
+                <div className="relative">
+                  <input
+                    id="new-password"
+                    type={showNewPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    required
+                    minLength={6}
+                    maxLength={72}
+                    disabled={loading}
+                    value={newPassword}
+                    onChange={(event) => { setNewPassword(event.target.value); setError(''); }}
+                    aria-describedby="password-policy"
+                    className={`${inputClass} pr-10`}
+                  />
+                  <button
+                    type="button"
+                    aria-label={showNewPassword ? 'Ẩn mật khẩu mới' : 'Hiện mật khẩu mới'}
+                    aria-pressed={showNewPassword}
+                    onClick={() => setShowNewPassword((v) => !v)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-[#5B6776] hover:text-[#1F2A37] rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-[#006B2C]/40"
+                  >
+                    <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                      {showNewPassword ? 'visibility_off' : 'visibility'}
+                    </span>
+                  </button>
+                </div>
                 <label htmlFor="confirm-password" className="block text-sm font-semibold">Xác nhận mật khẩu mới</label>
-                <input id="confirm-password" type="password" autoComplete="new-password" required minLength={6} maxLength={72}
-                  disabled={loading} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className={inputClass} />
+                <div className="relative">
+                  <input
+                    id="confirm-password"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    required
+                    minLength={6}
+                    maxLength={72}
+                    disabled={loading}
+                    value={confirmPassword}
+                    onChange={(event) => { setConfirmPassword(event.target.value); setError(''); }}
+                    className={`${inputClass} pr-10`}
+                  />
+                  <button
+                    type="button"
+                    aria-label={showConfirmPassword ? 'Ẩn mật khẩu xác nhận' : 'Hiện mật khẩu xác nhận'}
+                    aria-pressed={showConfirmPassword}
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-[#5B6776] hover:text-[#1F2A37] rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-[#006B2C]/40"
+                  >
+                    <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                      {showConfirmPassword ? 'visibility_off' : 'visibility'}
+                    </span>
+                  </button>
+                </div>
               </>
             ) : (
               <>
