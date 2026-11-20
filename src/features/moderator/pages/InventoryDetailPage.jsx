@@ -106,14 +106,21 @@ export default function InventoryDetailPage() {
   const sellingPrice = data?.currentPrice ?? data?.agreedPrice;
   const termAndRates = resolveInventoryTermAndRates(data);
 
+  const [degradedError, setDegradedError] = useState('');
+
   const handleSendDegradedProposal = async () => {
     if (degradedLock.current || degradedUploadPending || !['ON_SALE', 'RETURNED'].includes(data?.status) || submittedCase || !data?.id) return;
+    setDegradedError('');
     if (!degradedNotes.trim()) {
-      alert('Vui lòng nhập mô tả chi tiết hư hỏng hoặc nguyên nhân xuống cấp.');
+      const msg = 'Vui lòng nhập mô tả chi tiết hư hỏng hoặc nguyên nhân xuống cấp.';
+      setDegradedError(msg);
+      toast.warn(msg);
       return;
     }
     if (!degradedPhotos.length) {
-      alert('Vui lòng tải lên ít nhất 1 ảnh hiện trạng hư hỏng.');
+      const msg = 'Vui lòng tải lên ít nhất 1 ảnh hiện trạng hư hỏng.';
+      setDegradedError(msg);
+      toast.warn(msg);
       return;
     }
     degradedLock.current = true;
@@ -126,9 +133,12 @@ export default function InventoryDetailPage() {
       });
       setDegradedModalOpen(false);
       setSubmittedCase(created);
+      toast.success('Đã gửi đề xuất hàng xuống cấp thành công.');
       product.refresh();
     } catch (err) {
-      alert(err.message || 'Lỗi khi gửi đề xuất hàng xuống cấp.');
+      const msg = err?.message || 'Lỗi khi gửi đề xuất hàng xuống cấp.';
+      setDegradedError(msg);
+      toast.error(msg);
     } finally {
       degradedLock.current = false;
       setIsSubmittingDegraded(false);
@@ -507,17 +517,30 @@ export default function InventoryDetailPage() {
 
                 {/* Mô tả hư hỏng */}
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#191C19]">
+                  <label htmlFor="degraded-notes-input" className="block font-bold text-[#191C19]">
                     Mô tả hiện trạng hư hỏng / nguyên nhân xuống cấp <span className="text-red-600">*</span>
                   </label>
                   <textarea
+                    id="degraded-notes-input"
                     rows={3}
                     value={degradedNotes}
-                    onChange={(e) => setDegradedNotes(e.target.value)}
+                    onChange={(e) => {
+                      setDegradedNotes(e.target.value);
+                      if (degradedError) setDegradedError('');
+                    }}
                     placeholder="VD: Sản phẩm bị ẩm mốc góc dưới, xước mặt kính hoặc sờn rách trong quá trình lưu kho..."
-                    className="w-full rounded-xl border border-[#8a8a8a] p-2.5 text-xs text-[#191C19] focus:border-[#006B2C] focus:outline-none"
+                    className="w-full rounded-xl border border-[#DDE5D9] p-2.5 text-xs text-[#191C19] focus:border-[#006B2C] focus:outline-none"
                   />
                 </div>
+
+                {degradedError && (
+                  <div
+                    role="alert"
+                    className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700"
+                  >
+                    {degradedError}
+                  </div>
+                )}
 
                 {/* Upload ảnh hư hỏng thực tế */}
                 <div className="space-y-1">

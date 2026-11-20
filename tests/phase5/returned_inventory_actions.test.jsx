@@ -219,9 +219,7 @@ describe('Task 5: Returned item ("Đã bàn giao") management in WarehouseInvent
 
     // Attempt 1: backend returns 409 -> modal stays open, surfaces error, no fake frontend status
     fireEvent.click(screen.getByRole('button', { name: /Gửi đề xuất cho/i }));
-    await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith(expect.stringContaining('Chỉ mở ca xử lý hàng xuống cấp'));
-    });
+    expect(await screen.findByRole('alert')).toHaveTextContent('Chỉ mở ca xử lý hàng xuống cấp');
     expect(screen.getByRole('button', { name: /Gửi đề xuất cho/i })).toBeInTheDocument();
 
     // Attempt 2: backend Option C deployed -> succeeds and refreshes product status to WAREHOUSE

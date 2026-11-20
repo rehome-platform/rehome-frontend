@@ -280,7 +280,7 @@ export default function WarehouseInventoryPage() {
               {status === 'DEGRADED' ? (
                 <table className="min-w-[700px] w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-[#FFF8E1] border-b border-[#FFE082] text-[10px] font-bold uppercase tracking-wider text-[#B78103] whitespace-nowrap">
+                    <tr className="bg-[#FFFAEB] border-b border-[#FEDF89] text-[10px] font-bold uppercase tracking-wider text-[#B54708] whitespace-nowrap">
                       <th className="py-3 px-4">Sản phẩm</th>
                       <th className="py-3 px-4 w-28">Ngày báo</th>
                       <th className="py-3 px-4">Lý do xuống cấp</th>
