@@ -6,6 +6,7 @@ import Badge from '../../../components/common/Badge.jsx';
 import { Button } from '../../../components/common/index.js';
 import authService from '../services/auth.service.js';
 import { validatePhone, validatePassword, validateConfirmPassword } from '../../../utils/validators.js';
+import { getRoleLabel } from '../../../constants/roleLabels.js';
 import '../styles/profile-password.css';
 
 /**
@@ -269,18 +270,21 @@ function ProfileAvatar({ user }) {
 }
 
 function ProfileAccountFacts({ user, isAdmin }) {
+  const roleDisplay = getRoleLabel(
+    user.authorities || user.rawRole || user.role || (isAdmin ? 'ADMIN' : 'MODERATOR')
+  );
   return (
     <div className="w-full mt-6 pt-6 border-t border-[#DDE5D9] space-y-3 text-left text-xs">
       <div className="flex justify-between items-center">
-        <span className="text-[#5B6776]">Mã tài khoản (Code):</span>
+        <span className="text-[#5B6776]">Mã tài khoản:</span>
         <span className="font-mono font-bold text-[#1F2A37]">
           {user.memberCode || (isAdmin ? 'ADM-OFFICIAL' : 'MOD-OFFICIAL')}
         </span>
       </div>
       <div className="flex justify-between items-center">
-        <span className="text-[#5B6776]">Quyền hạn (Authority):</span>
-        <span className="font-mono text-[11px] font-semibold text-[#006B2C]">
-          {user.authorities || user.rawRole || (isAdmin ? 'ROLE_ADMIN' : 'ROLE_MODERATOR')}
+        <span className="text-[#5B6776]">Vai trò:</span>
+        <span className="text-[11px] font-semibold text-[#006B2C]">
+          {roleDisplay}
         </span>
       </div>
       <div className="flex justify-between items-center">
@@ -319,17 +323,17 @@ function ProfileSummary({ user, isAdmin, setActiveTab }) {
       </h2>
       <p className="text-xs text-[#5B6776] mt-0.5">{account.email}</p>
 
-      <div className="mt-3 flex items-center gap-2">
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
         {isAdmin ? (
           <Badge variant="info" className="bg-[#E0F2F1] text-[#00685F] border-[#80CBC4] font-bold">
-            Quản trị viên (Admin)
+            Quản trị viên
           </Badge>
         ) : (
-          <Badge variant="success" className="bg-[#E8F5E9] text-[#006B2C] border-[#A5D6A7] font-bold">
-            Nhân viên Điểm kí gửi (Moderator)
+          <Badge variant="success" className="bg-[#ECFDF3] text-[#006B2C] border-[#ABEFC6] font-bold">
+            Nhân viên điểm kí gửi
           </Badge>
         )}
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#E8F5E9] text-[#006B2C]">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#ECFDF3] text-[#006B2C]">
           <span className="w-1.5 h-1.5 rounded-full bg-[#006B2C] animate-pulse"></span>
           Đang hoạt động
         </span>
@@ -665,11 +669,11 @@ function ProfileSessions({ user, logout }) {
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-[#1F2A37]">Phiên hoạt động hiện tại</span>
                 <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#006B2C] text-white">
-                  Active Session
+                  Đang hoạt động
                 </span>
               </div>
               <p className="text-[11px] text-[#5B6776] mt-0.5">
-                Tài khoản: {user?.email} • Vai trò: {user?.authorities || user?.role}
+                Tài khoản: {user?.email} • Vai trò: {getRoleLabel(user?.authorities || user?.role)}
               </p>
             </div>
           </div>

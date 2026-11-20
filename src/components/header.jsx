@@ -26,14 +26,14 @@ export default function Header() {
     ...(isAdmin
       ? [
           {
-            label: 'Cổng Quản trị Admin',
+            label: 'Cổng Quản trị',
             icon: 'admin_panel_settings',
             onClick: () => navigate('/admin'),
           },
         ]
       : [
           {
-            label: 'Cổng Vận hành Điểm kí gửi (Moderator)',
+            label: 'Cổng Vận hành Điểm kí gửi',
             icon: 'warehouse',
             onClick: () => navigate('/moderator/counter'),
           },
@@ -85,13 +85,13 @@ export default function Header() {
                 {isAdmin ? (
                   <>
                     <span className="w-2 h-2 rounded-full bg-[#00685F]"></span>
-                    <span className="text-[#00685F]">Quản trị viên (Admin)</span>
+                    <span className="text-[#00685F]">Quản trị viên</span>
                   </>
                 ) : (
                   <>
                     <span className="w-2 h-2 rounded-full bg-[#006B2C]"></span>
                     <span className="text-[#006B2C]">
-                      {user?.memberCode ? `${user.memberCode} • Moderator` : 'Nhân viên Điểm kí gửi (Mod)'}
+                      {user?.memberCode ? `${user.memberCode} • Nhân viên điểm kí gửi` : 'Nhân viên điểm kí gửi'}
                     </span>
                   </>
                 )}

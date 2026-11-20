@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import adminApi from '../services/adminApi';
 import AdminAccountGrowthChart from './AdminAccountGrowthChart.jsx';
 import AdminDonutChart from './AdminDonutChart.jsx';
+import { getRoleLabel, getRoleBadgeStyle } from '../../../constants/roleLabels.js';
+import { formatAuditActionLabel, formatAuditTargetTypeLabel } from '../../../constants/auditLogLabels.js';
 
 /**
  * View Tổng quan Dashboard Quản trị ReHome
@@ -74,10 +76,10 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
 
   const statCards = [
     {
-      title: 'Tổng số Member',
+      title: 'Tổng số thành viên',
       value: stats.memberCount.toLocaleString('vi-VN'),
       icon: 'group',
-      iconBg: 'bg-[#E8F5E9]',
+      iconBg: 'bg-[#ECFDF3]',
       iconColor: 'text-[#006B2C]',
     },
     {
@@ -88,34 +90,26 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
       iconColor: 'text-[#00685F]',
     },
     {
-      title: 'Nhân viên Moderator',
+      title: 'Nhân viên điểm kí gửi',
       value: stats.moderatorCount.toLocaleString('vi-VN'),
       icon: 'badge',
-      iconBg: 'bg-[#E8F8F5]',
+      iconBg: 'bg-[#ECFDF3]',
       iconColor: 'text-[#00873A]',
     },
   ];
 
   // Các lát của biểu đồ tròn "Tài khoản theo vai trò"
   const roleSegments = [
-    { key: 'member', label: 'Member', value: stats.memberCount, color: '#006B2C' },
+    { key: 'member', label: 'Thành viên', value: stats.memberCount, color: '#006B2C' },
     { key: 'organization', label: 'Tổ chức', value: stats.orgCount, color: '#FEA619' },
-    { key: 'moderator', label: 'Moderator', value: stats.moderatorCount, color: '#00685F' },
+    { key: 'moderator', label: 'Nhân viên', value: stats.moderatorCount, color: '#00685F' },
   ];
   const totalForPct = Math.max(stats.totalAccounts, 1);
 
-  const getRoleBadge = (role) => {
-    switch (role) {
-      case 'ADMIN':
-        return { label: 'Admin', color: 'bg-[#E8F5E9] text-[#006B2C]' };
-      case 'MODERATOR':
-        return { label: 'Moderator', color: 'bg-[#E0F2F1] text-[#00685F]' };
-      case 'ORGANIZATION':
-        return { label: 'Tổ chức', color: 'bg-[#FFF3E0] text-[#D97706]' };
-      default:
-        return { label: 'Member', color: 'bg-[#F1F5F9] text-[#475569]' };
-    }
-  };
+  const getRoleBadge = (role) => ({
+    label: getRoleLabel(role),
+    color: getRoleBadgeStyle(role),
+  });
 
   return (
     <div className="space-y-6">
@@ -144,8 +138,8 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
             style={{ '--i': idx }}
           >
             <div>
-              <p className="text-xs font-medium text-[#717971]">{card.title}</p>
-              <p className="text-2xl font-extrabold text-[#191C19] mt-1 font-heading tracking-tight">
+              <p className="text-xs font-medium text-[#5B6776]">{card.title}</p>
+              <p className="text-2xl font-extrabold text-[#1F2A37] mt-1 font-heading tracking-tight">
                 {isLoading ? '...' : card.value}
               </p>
             </div>
@@ -167,7 +161,7 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
 
         {/* Biểu đồ Tròn Donut: Tài khoản theo vai trò (5 cột / 12) */}
         <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col">
-          <h3 className="text-base font-bold text-[#191C19] font-heading">
+          <h3 className="text-base font-bold text-[#1F2A37] font-heading">
             Tài khoản theo vai trò
           </h3>
 
@@ -187,14 +181,14 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
                   key={seg.key}
                   className="rounded-xl border border-[#DDE5D9] bg-[#F6F9F4] px-2 py-2.5 text-center"
                 >
-                  <span className="flex items-center justify-center gap-1.5 text-xs font-medium text-[#414942]">
+                  <span className="flex items-center justify-center gap-1.5 text-xs font-medium text-[#5B6776]">
                     <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: seg.color }}></span>
                     {seg.label}
                   </span>
-                  <span className="block mt-1 text-lg font-extrabold text-[#191C19] font-heading leading-none">
+                  <span className="block mt-1 text-lg font-extrabold text-[#1F2A37] font-heading leading-none">
                     {seg.value}
                   </span>
-                  <span className="block mt-0.5 text-[11px] text-[#717971]">
+                  <span className="block mt-0.5 text-[11px] text-[#5B6776]">
                     {Math.round((seg.value / totalForPct) * 100)}%
                   </span>
                 </div>
@@ -208,7 +202,7 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
       <div className="bg-white rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
         <div className="p-6 border-b border-[#DDE5D9] flex items-center justify-between">
           <div>
-            <h3 className="text-base font-bold text-[#191C19] font-heading">
+            <h3 className="text-base font-bold text-[#1F2A37] font-heading">
               Hoạt động gần đây
             </h3>
           </div>
@@ -232,7 +226,7 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#F6F9F4] text-[#717971] tracking-wider font-semibold border-b border-[#DDE5D9]">
+              <thead className="bg-[#F6F9F4] text-[#5B6776] tracking-wider font-semibold border-b border-[#DDE5D9]">
                 <tr>
                   <th className="py-3 px-6 whitespace-nowrap">Thời gian</th>
                   <th className="py-3 px-6 whitespace-nowrap">Người thực hiện</th>
@@ -252,24 +246,26 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
                       key={act.id}
                       className="hover:bg-[#F6F9F4]/70 transition-colors duration-100"
                     >
-                      <td className="py-3.5 px-6 font-mono text-[#717971] whitespace-nowrap">
+                      <td className="py-3.5 px-6 font-mono text-[#5B6776] whitespace-nowrap">
                         {timeDisplay}
                       </td>
                       <td className="py-3.5 px-6 whitespace-nowrap">
-                        <span className="font-semibold text-[#191C19] mr-2">
+                        <span className="font-semibold text-[#1F2A37] mr-2">
                           {actorDisplay}
                         </span>
                         <span
-                          className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${roleBadge.color}`}
+                          className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${roleBadge.color}`}
                         >
-                          [{roleBadge.label}]
+                          {roleBadge.label}
                         </span>
                       </td>
-                      <td className="py-3.5 px-6 font-medium text-[#191C19]">
-                        <span className="font-bold text-[#006B2C]">{act.actionType}</span>
+                      <td className="py-3.5 px-6 font-medium text-[#1F2A37]">
+                        <span className="font-bold text-[#006B2C]">
+                          {formatAuditActionLabel(act.actionType)}
+                        </span>
                         {act.targetType && (
-                          <span className="text-[#717971] ml-2">
-                            (Đối tượng: {act.targetType} {act.targetId ? `#${act.targetId}` : ''})
+                          <span className="text-[#5B6776] ml-2">
+                            (Đối tượng: {formatAuditTargetTypeLabel(act.targetType)} {act.targetId ? `#${act.targetId}` : ''})
                           </span>
                         )}
                       </td>
