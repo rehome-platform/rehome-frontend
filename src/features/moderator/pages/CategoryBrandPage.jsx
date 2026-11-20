@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
 import Tooltip from '../../../components/common/Tooltip.jsx';
+import TableActionButton from '../../../components/common/TableActionButton.jsx';
 import CatalogEditor from '../components/CatalogEditor.jsx';
 import { catalogService } from '../services/warehouseApi.js';
 import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
@@ -366,37 +367,31 @@ export default function CategoryBrandPage() {
 
                       <td className="py-3 px-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2 text-xs whitespace-nowrap">
-                          <button
-                            type="button"
+                          <TableActionButton
+                            action="edit"
                             onClick={() => setEditor({ kind, item })}
-                            className="px-3 py-1.5 rounded-lg border border-neutral bg-white text-[#191C19] hover:bg-[#F6F9F4] font-semibold transition-colors cursor-pointer whitespace-nowrap"
-                          >
-                            Sửa
-                          </button>
+                          />
                           {!isHidden ? (
-                            <button
-                              type="button"
+                            <TableActionButton
+                              action="view"
+                              icon="visibility_off"
+                              label="Ẩn"
                               onClick={() => setHiding({ kind, item })}
-                              className="px-3 py-1.5 rounded-lg border border-[#FECDCA] bg-[#FEF3F2] text-[#B42318] hover:bg-[#FEE4E2] font-semibold transition-colors cursor-pointer whitespace-nowrap"
-                            >
-                              Ẩn
-                            </button>
+                              className="border-[#FECDCA] text-[#B42318] hover:bg-[#FEF3F2] hover:border-[#D92D20] hover:text-[#B42318]"
+                            />
                           ) : (
-                            <button
-                              type="button"
+                            <TableActionButton
+                              action="view"
+                              icon="visibility"
+                              label="Hiện lại"
                               onClick={() => handleUnhide(item)}
-                              className="px-3 py-1.5 rounded-lg border border-[#A5D6A7] bg-[#E8F5E9] text-[#006B2C] hover:bg-[#D1FADF] font-semibold transition-colors cursor-pointer whitespace-nowrap"
-                            >
-                              Hiện lại
-                            </button>
+                              className="border-[#ABEFC6] text-[#006B2C] hover:bg-[#ECFDF3] hover:border-[#006B2C] hover:text-[#006B2C]"
+                            />
                           )}
-                          <button
-                            type="button"
+                          <TableActionButton
+                            action="delete"
                             onClick={() => setDeleting({ kind, item })}
-                            className="px-3 py-1.5 rounded-lg border border-[#FECDCA] bg-white text-[#D92D20] hover:bg-[#FEF3F2] hover:border-[#D92D20] font-semibold transition-colors cursor-pointer whitespace-nowrap"
-                          >
-                            Xóa
-                          </button>
+                          />
                         </div>
                       </td>
                     </tr>

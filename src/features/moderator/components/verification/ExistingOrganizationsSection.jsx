@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Modal, Button, Tooltip } from '../../../../components/common/index.js';
+import { Modal, Button, Tooltip, TableActionButton } from '../../../../components/common/index.js';
 import Spinner from '../../../../components/common/Spinner.jsx';
 import { orgVerificationService } from '../../services/orgVerificationApi.js';
 import { TABLE_COLUMN_LABELS } from '../../../../constants/tableColumns.js';
@@ -282,14 +282,11 @@ export function ExistingOrganizationsSection({
 
                       {/* Cột 7: Nút Xem chi tiết */}
                       <td className="py-3 px-3 text-right">
-                        <button
-                          type="button"
+                        <TableActionButton
+                          action="view"
+                          label="Xem hồ sơ"
                           onClick={() => handleOpenOrgDetail(org)}
-                          className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-surface hover:bg-background border border-neutral text-text transition-colors shadow-sm inline-flex items-center gap-1"
-                        >
-                          <span className="material-symbols-outlined text-sm text-primary">visibility</span>
-                          <span>Xem hồ sơ</span>
-                        </button>
+                        />
                       </td>
                     </tr>
                   );
