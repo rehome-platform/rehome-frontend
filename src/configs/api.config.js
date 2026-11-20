@@ -97,7 +97,7 @@ export const API_ENDPOINTS = {
     RECEIPT_VOID: (id) => `/consignment-receipts/${moderatorId(id)}/void`,
     RECEIPT_PDF: (id) => `/consignment-receipts/${moderatorId(id)}/pdf`,
 
-    // API 36, 37, 38, 39, 40, 41, 42, 43: Tồn kho & Sản phẩm
+    // API 36, 37, 38, 39, 40, 41, 42, 43: Quản lý sản phẩm
     CREATE_PRODUCT: "/products",
     CONFIRM_UNCLAIMED_TRANSFER: (id) => `/products/${moderatorId(id)}/unclaimed/confirm-transfer`,
     PRODUCT_SKU_LABEL: (id) => `/products/${moderatorId(id)}/sku-label`,

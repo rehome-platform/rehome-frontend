@@ -107,7 +107,7 @@ export default function ConsignmentPrintQueuePage() {
               </tr>)}</tbody>
             </table>
           </div>
-          <p className="text-xs text-textSecondary">Món đã tải tem sẽ rời hàng đợi. Bạn có thể in lại tại Tồn kho.</p>
+          <p className="text-xs text-textSecondary">Món đã tải tem sẽ rời hàng đợi. Bạn có thể in lại tại Quản lý sản phẩm.</p>
         </Card>
         <div className="space-y-4">
           <Card title="Xem trước một tem · 70 × 37 mm">

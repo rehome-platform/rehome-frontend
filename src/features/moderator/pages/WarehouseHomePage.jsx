@@ -181,7 +181,7 @@ export default function WarehouseHomePage() {
         <Stat label={`Quá hạn ${OVERDUE_HOURS}h`} value={overdue} icon="schedule" tone="alert" to="/moderator/queue" />
         <Stat label="Đơn chờ đóng gói" value={countOf(packing.data)} icon="package_2" tone="warning" to="/moderator/packing" />
         <Stat label="Chờ rút hàng" value={countOf(withdrawal.data)} icon="assignment_return" tone="warning" to="/moderator/queue?type=WITHDRAWAL" />
-        <Stat label="Tồn kho đang bán" value={countOf(onSale.data)} icon="inventory_2" tone="success" to="/moderator/inventory?status=ON_SALE" />
+        <Stat label="Sản phẩm đang bán" value={countOf(onSale.data)} icon="inventory_2" tone="success" to="/moderator/inventory?status=ON_SALE" />
       </div>
 
       <div className="grid gap-6">

@@ -805,7 +805,7 @@ export default function WarehouseInboxPage() {
                     }
                     className="w-full mt-2.5 text-xs font-semibold py-2 border border-neutral rounded-xl bg-surface hover:bg-background text-text transition-colors cursor-pointer whitespace-nowrap"
                   >
-                    Mở trong Tồn kho
+                    Mở trong Quản lý sản phẩm
                   </button>
                 </div>
               )}
