@@ -1,56 +1,60 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-
-// Auth Pages (Chỉ dành cho Admin & Moderator)
-import {
-  LoginPage,
-  ForgotPassword,
-  ProfilePage,
-} from '../features/auth/pages/index.js';
 import PrivateRoute from './PrivateRoute.jsx';
-import ResetPassword from '../features/auth/pages/ResetPassword.jsx';
-import VnpayReturnPage from '../features/payment/pages/VnpayReturnPage.jsx';
 
-// Moderator Pages (Cổng Vận Hành Điểm Kí Gửi & Kiểm Duyệt)
-import {
-  CounterPage,
-  ConsignmentListPage,
-  ConsignmentDetailPage,
-  ConsignmentPrintQueuePage,
-  InventoryDetailPage,
-  EndOfTermPage,
-  ConsignmentQueuePage,
-  WarehouseInventoryPage,
-  PackingOrdersPage,
-  ReturnProcessingPage,
-  OrgVerificationPage,
-  ViolationReportsPage,
-  DonationsPage,
-  CategoryBrandPage,
-  WarehouseInboxPage,
-  WarehouseHomePage,
-  ReConsignNegotiationPage,
-} from '../features/moderator/pages/index.js';
+// Auth & Payment Pages (lazy-loaded theo route để giảm bundle ban đầu)
+const LoginPage = lazy(() => import('../features/auth/pages/LoginPage.jsx'));
+const ForgotPassword = lazy(() => import('../features/auth/pages/ForgotPassword.jsx'));
+const ProfilePage = lazy(() => import('../features/auth/pages/ProfilePage.jsx'));
+const ResetPassword = lazy(() => import('../features/auth/pages/ResetPassword.jsx'));
+const VnpayReturnPage = lazy(() => import('../features/payment/pages/VnpayReturnPage.jsx'));
+const NotFoundPage = lazy(() => import('../pages/NotFoundPage.jsx'));
+
+// Moderator Pages (Cổng Vận Hành Điểm Ký Gửi & Kiểm Duyệt)
+const CounterPage = lazy(() => import('../features/moderator/pages/CounterPage.jsx'));
+const ConsignmentListPage = lazy(() => import('../features/moderator/pages/ConsignmentListPage.jsx'));
+const ConsignmentDetailPage = lazy(() => import('../features/moderator/pages/ConsignmentDetailPage.jsx'));
+const ConsignmentPrintQueuePage = lazy(() => import('../features/moderator/pages/ConsignmentPrintQueuePage.jsx'));
+const InventoryDetailPage = lazy(() => import('../features/moderator/pages/InventoryDetailPage.jsx'));
+const EndOfTermPage = lazy(() => import('../features/moderator/pages/EndOfTermPage.jsx'));
+const ConsignmentQueuePage = lazy(() => import('../features/moderator/pages/ConsignmentQueuePage.jsx'));
+const WarehouseInventoryPage = lazy(() => import('../features/moderator/pages/WarehouseInventoryPage.jsx'));
+const PackingOrdersPage = lazy(() => import('../features/moderator/pages/PackingOrdersPage.jsx'));
+const ReturnProcessingPage = lazy(() => import('../features/moderator/pages/ReturnProcessingPage.jsx'));
+const OrgVerificationPage = lazy(() => import('../features/moderator/pages/OrgVerificationPage.jsx'));
+const ViolationReportsPage = lazy(() => import('../features/moderator/pages/ViolationReportsPage.jsx'));
+const DonationsPage = lazy(() => import('../features/moderator/pages/DonationsPage.jsx'));
+const CategoryBrandPage = lazy(() => import('../features/moderator/pages/CategoryBrandPage.jsx'));
+const WarehouseInboxPage = lazy(() => import('../features/moderator/pages/WarehouseInboxPage.jsx'));
+const WarehouseHomePage = lazy(() => import('../features/moderator/pages/WarehouseHomePage.jsx'));
+const ReConsignNegotiationPage = lazy(() => import('../features/moderator/pages/ReConsignNegotiationPage.jsx'));
 
 // Admin Pages & Shared Layout (Cổng Quản Trị Hệ Thống)
-import AdminLayout from '../layouts/AdminLayout.jsx';
-import {
-  AdminDashboardPage,
-  AdminFundLedgerPage,
-  AdminAccountsPage,
-  AdminModeratorsPage,
-  AdminBanProposalsPage,
-  AdminWarehousesPage,
-  ConfigPage,
-  AdminAuditLogsPage,
-  ViolationWordsPage,
-  MembershipPlansPage,
-  MembershipSubscriptionsPage,
-  MembershipSubscriptionDetailPage,
-  VoucherTemplatesPage,
-  ReceiptClauseTemplatesPage,
-} from '../features/admin/pages/index.js';
+const AdminLayout = lazy(() => import('../layouts/AdminLayout.jsx'));
+const AdminDashboardPage = lazy(() => import('../features/admin/pages/AdminDashboardPage.jsx'));
+const AdminFundLedgerPage = lazy(() => import('../features/admin/pages/AdminFundLedgerPage.jsx'));
+const AdminAccountsPage = lazy(() => import('../features/admin/pages/AdminAccountsPage.jsx'));
+const AdminModeratorsPage = lazy(() => import('../features/admin/pages/AdminModeratorsPage.jsx'));
+const AdminBanProposalsPage = lazy(() => import('../features/admin/pages/AdminBanProposalsPage.jsx'));
+const AdminWarehousesPage = lazy(() => import('../features/admin/pages/AdminWarehousesPage.jsx'));
+const ConfigPage = lazy(() => import('../features/admin/pages/ConfigPage.jsx'));
+const AdminAuditLogsPage = lazy(() => import('../features/admin/pages/AdminAuditLogsPage.jsx'));
+const ViolationWordsPage = lazy(() => import('../features/admin/pages/ViolationWordsPage.jsx'));
+const ReceiptClauseTemplatesPage = lazy(() => import('../features/admin/pages/ReceiptClauseTemplatesPage.jsx'));
+const MembershipPlansPage = lazy(() => import('../features/admin/membership/MembershipPlansPage.jsx'));
+const MembershipSubscriptionsPage = lazy(() => import('../features/admin/membership/MembershipSubscriptionsPage.jsx'));
+const MembershipSubscriptionDetailPage = lazy(() => import('../features/admin/membership/MembershipSubscriptionDetailPage.jsx'));
+const VoucherTemplatesPage = lazy(() => import('../features/admin/membership/VoucherTemplatesPage.jsx'));
+
+function RouteFallback() {
+  return (
+    <div role="status" className="min-h-screen flex flex-col items-center justify-center bg-[#F6F9F4] text-[#1F2A37]">
+      <div className="w-9 h-9 border-4 border-[#006B2C] border-t-transparent rounded-full animate-spin mb-3" />
+      <p className="text-xs font-semibold text-[#5B6776]">Đang tải trang ReHome...</p>
+    </div>
+  );
+}
 
 /**
  * Root Redirect Handler (Điều hướng gốc /)
@@ -66,9 +70,9 @@ function RootRedirect() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F8FAF8] text-[#191C19]">
+      <div role="status" className="min-h-screen flex flex-col items-center justify-center bg-[#F6F9F4] text-[#1F2A37]">
         <div className="w-10 h-10 border-4 border-[#006B2C] border-t-transparent rounded-full animate-spin mb-3"></div>
-        <p className="text-xs font-semibold text-[#717971]">Đang kiểm tra phiên đăng nhập ReHome...</p>
+        <p className="text-xs font-semibold text-[#5B6776]">Đang kiểm tra phiên đăng nhập ReHome...</p>
       </div>
     );
   }
@@ -89,6 +93,7 @@ function RootRedirect() {
 export default function AppRouter() {
   const location = useLocation();
   return (
+    <Suspense fallback={<RouteFallback />}>
     <Routes>
       {/* 1. Public & Auth Routes (Chỉ cho Admin & Moderator) */}
       <Route path="/" element={<RootRedirect />} />
@@ -258,8 +263,9 @@ export default function AppRouter() {
         <Route path="system" element={<Navigate to="/admin/users" replace />} />
       </Route>
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* Fallback 404 */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
+    </Suspense>
   );
 }
