@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Badge, Button, Modal, Table } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
+import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
 import violationWordAdminApi from '../services/violationWordAdminApi.js';
 import ViolationWordModal from './ViolationWordModal.jsx';
 
@@ -35,6 +36,11 @@ export default function ViolationWordsPage() {
   const toast = useToast();
 
   const [keyword, setKeyword] = useState('');
+  const {
+    debouncedQuery: debouncedKeyword,
+    isTooShort: isKeywordTooShort,
+    hint: keywordHint,
+  } = useDebouncedSearch(keyword);
   const [category, setCategory] = useState('');
   const [severity, setSeverity] = useState('');
   const [isActive, setIsActive] = useState('');
@@ -60,7 +66,7 @@ export default function ViolationWordsPage() {
     setError('');
     try {
       const data = await violationWordAdminApi.search({
-        keyword: keyword.trim(),
+        keyword: debouncedKeyword,
         category,
         severity,
         isActive: isActive === '' ? undefined : isActive === 'true',
@@ -82,14 +88,15 @@ export default function ViolationWordsPage() {
     } finally {
       if (reqId === seqRef.current) setLoading(false);
     }
-  }, [keyword, category, severity, isActive, page]);
+  }, [debouncedKeyword, category, severity, isActive, page]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchWords();
-    }, keyword ? 350 : 0);
-    return () => clearTimeout(timer);
-  }, [fetchWords, keyword]);
+    setPage(0);
+  }, [debouncedKeyword]);
+
+  useEffect(() => {
+    fetchWords();
+  }, [fetchWords]);
 
   const handleFilterChange = (setter) => (e) => {
     setter(e.target.value);
@@ -238,10 +245,13 @@ export default function ViolationWordsPage() {
               id="vw-keyword"
               type="text"
               value={keyword}
-              onChange={handleFilterChange(setKeyword)}
+              onChange={(e) => setKeyword(e.target.value)}
               placeholder="Tìm theo từ..."
               className="px-3 py-1.5 text-sm rounded-xl border border-[#E2E8E0] text-[#191C19] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/20"
             />
+            {isKeywordTooShort && (
+              <p className="mt-1 text-[11px] text-[#5f5f5f]">{keywordHint}</p>
+            )}
           </div>
 
           <div>

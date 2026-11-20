@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Badge, Button, Spinner } from '../../../components/common/index.js';
 import { formatCurrencyVND } from '../../../utils/formatters.js';
+import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
 import membershipAdminApi from '../services/membershipAdminApi.js';
 import GrantMembershipModal from './GrantMembershipModal.jsx';
 import CancelMembershipModal from './CancelMembershipModal.jsx';
@@ -43,6 +44,11 @@ export default function MembershipSubscriptionsPage() {
   const page = Number.isFinite(rawPage) && rawPage >= 0 ? rawPage : 0;
 
   const [searchInput, setSearchInput] = useState(q);
+  const {
+    debouncedQuery: debouncedQ,
+    isTooShort: isSearchTooShort,
+    hint: searchHint,
+  } = useDebouncedSearch(searchInput);
   const [items, setItems] = useState([]);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
@@ -57,14 +63,12 @@ export default function MembershipSubscriptionsPage() {
     setSearchInput(q);
   }, [q]);
 
-  // Gõ tới đâu tìm tới đó: chờ gõ xong (debounce) rồi mới đổi query param, khỏi gọi API mỗi phím
+  // Gõ tới đâu tìm tới đó: chờ đủ tối thiểu 2 ký tự & debounce 400ms rồi mới đổi query param
   useEffect(() => {
-    const trimmed = searchInput.trim();
-    if (trimmed === q) return;
-    const timer = setTimeout(() => updateParams({ q: trimmed }, true), 400);
-    return () => clearTimeout(timer);
+    if (debouncedQ === q) return;
+    updateParams({ q: debouncedQ }, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchInput]);
+  }, [debouncedQ]);
 
   const fetchSubscriptions = useCallback(async () => {
     const seq = ++seqRef.current;
@@ -155,6 +159,9 @@ export default function MembershipSubscriptionsPage() {
               placeholder="Tên, email hoặc mã thành viên..."
               className="w-full px-3 py-2 text-sm bg-white border border-[#DDE5D9] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#006B2C]/20 focus:border-[#006B2C]"
             />
+            {isSearchTooShort && (
+              <p className="mt-1 text-[11px] text-[#5f5f5f]">{searchHint}</p>
+            )}
           </div>
 
           <div>

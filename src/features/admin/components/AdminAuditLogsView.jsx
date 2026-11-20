@@ -3,6 +3,7 @@ import adminApi from '../services/adminApi.js';
 import AdminPeriodFilter from './AdminPeriodFilter.jsx';
 import useAdminPeriod from '../hooks/useAdminPeriod.js';
 import { Spinner } from '../../../components/common/index.js';
+import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
 
 // Nhãn gọn cho Đối tượng tác động hiển thị trên bảng (chi tiết đầy đủ nằm ở hàng xổ xuống)
 const TARGET_TYPE_LABEL = {
@@ -47,6 +48,11 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
 
   // Bộ lọc
   const [actorSearch, setActorSearch] = useState(''); // Filter Người thực hiện (tên/email, khớp ở backend)
+  const {
+    debouncedQuery: debouncedActorSearch,
+    isTooShort: isActorSearchTooShort,
+    hint: actorSearchHint,
+  } = useDebouncedSearch(actorSearch);
   const [selectedActorRole, setSelectedActorRole] = useState('ALL'); // Filter vai trò người thực hiện
   const [selectedTargetType, setSelectedTargetType] = useState('ALL'); // Filter Đối tượng tác động
   const [selectedActionType, setSelectedActionType] = useState('ALL');
@@ -204,7 +210,7 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
         page: 0,
         size: 50,
       };
-      if (actorSearch.trim()) params.search = actorSearch.trim();
+      if (debouncedActorSearch) params.search = debouncedActorSearch;
       if (selectedActorRole !== 'ALL') params.actorRole = selectedActorRole;
       if (selectedTargetType !== 'ALL') params.targetType = selectedTargetType;
       if (selectedActionType !== 'ALL') params.actionType = selectedActionType;
@@ -311,11 +317,9 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
   };
 
   useEffect(() => {
-    // Gõ "Người thực hiện" mới cần chờ gõ xong rồi mới gọi API; các bộ lọc khác (select/ngày) áp dụng ngay
-    const timer = setTimeout(fetchAuditLogs, actorSearch ? 400 : 0);
-    return () => clearTimeout(timer);
+    fetchAuditLogs();
   }, [
-    actorSearch,
+    debouncedActorSearch,
     selectedActorRole,
     selectedTargetType,
     selectedActionType,
@@ -486,14 +490,19 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-[#F0F4EE]">
           <div className="flex flex-wrap items-center gap-2.5">
             {/* Filter "Người thực hiện": tìm theo tên hoặc email, backend tự khớp cả tên tổ chức */}
-            <input
-              type="text"
-              value={actorSearch}
-              onChange={(e) => setActorSearch(e.target.value)}
-              placeholder="Người thực hiện (tên hoặc email)"
-              aria-label="Lọc theo người thực hiện"
-              className="px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors w-56"
-            />
+            <div className="flex flex-col">
+              <input
+                type="text"
+                value={actorSearch}
+                onChange={(e) => setActorSearch(e.target.value)}
+                placeholder="Người thực hiện (tên hoặc email)"
+                aria-label="Lọc theo người thực hiện"
+                className="px-3 py-2 text-xs rounded-xl border border-[#E2E8E0] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors w-56"
+              />
+              {isActorSearchTooShort && (
+                <p className="mt-1 text-[11px] text-[#5f5f5f]">{actorSearchHint}</p>
+              )}
+            </div>
 
             {/* Filter vai trò của người thực hiện */}
             <select
