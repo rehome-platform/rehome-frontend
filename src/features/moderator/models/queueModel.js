@@ -9,9 +9,10 @@ export const QUEUE_TYPE_LABELS = {
   ITEM_WITHDRAWAL: 'Rút hàng',
   DONATION_PICKUP: 'Lấy món quyên góp',
   DONATION_REASSIGN: 'Chuyển lượt quyên góp tạm giữ',
+  DONATION_PREP: 'Chuẩn bị quyên góp',
   RETURN: 'Yêu cầu trả hàng',
   ORG_VERIFICATION: 'Xác minh tổ chức',
-  LEGAL_CHANGE: 'Đổi pháp lý tổ chức',
+  LEGAL_CHANGE: 'Thay đổi pháp lý',
   VIOLATION_REPORT: 'Báo cáo vi phạm',
 };
 
