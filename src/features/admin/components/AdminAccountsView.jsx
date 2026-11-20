@@ -292,7 +292,7 @@ function AccountActions({
       <button
         ref={buttonRef}
         onClick={() => setOpenActionMenuId(isOpen ? null : acc.id)}
-        className="p-1 rounded-lg text-[#717971] hover:text-[#191C19] hover:bg-[#E9F0E5] transition-colors"
+        className="p-1 rounded-lg text-[#5B6776] hover:text-[#1F2A37] hover:bg-[#E9F0E5] transition-colors"
         title="Tùy chọn"
       >
         <span className="material-symbols-outlined text-lg">
@@ -311,7 +311,7 @@ function AccountActions({
               setDrawerAccount(acc);
               close();
             }}
-            className="w-full px-3 py-1.5 text-xs text-[#414942] hover:bg-[#F6F9F4] flex items-center gap-2"
+            className="w-full px-3 py-1.5 text-xs text-[#5B6776] hover:bg-[#F6F9F4] flex items-center gap-2"
           >
             <span className="material-symbols-outlined text-base">
               visibility
@@ -384,17 +384,17 @@ function AccountRow({
           >
             {acc.initials}
           </div>
-          <p className="font-bold text-[#191C19]">{acc.name}</p>
+          <p className="font-bold text-[#1F2A37]">{acc.name}</p>
         </div>
       </td>
 
       {/* Email */}
-      <td className="py-3.5 px-6 font-mono text-[#414942] whitespace-nowrap">
+      <td className="py-3.5 px-6 font-mono text-[#5B6776] whitespace-nowrap">
         {acc.email}
       </td>
 
       {/* Phone */}
-      <td className="py-3.5 px-6 font-mono text-[#717971] whitespace-nowrap">
+      <td className="py-3.5 px-6 font-mono text-[#5B6776] whitespace-nowrap">
         {acc.phone}
       </td>
 
@@ -414,7 +414,7 @@ function AccountRow({
       </td>
 
       {/* Created Date */}
-      <td className="py-3.5 px-6 text-[#717971] whitespace-nowrap font-mono">
+      <td className="py-3.5 px-6 text-[#5B6776] whitespace-nowrap font-mono">
         {acc.createdAt}
       </td>
 
@@ -449,11 +449,11 @@ function AccountRow({
 function AccountsPagination({ count, page, onPageChange, totalElements, totalPages }) {
   const currentPage = page ?? 0;
   return (
-    <div className="p-4 border-t border-[#DDE5D9] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#717971]">
+    <div className="p-4 border-t border-[#DDE5D9] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#5B6776]">
       <span>
-        Trang <strong className="text-[#191C19]">{currentPage + 1}</strong> / {Math.max(totalPages || 1, 1)}
+        Trang <strong className="text-[#1F2A37]">{currentPage + 1}</strong> / {Math.max(totalPages || 1, 1)}
         {' · '}
-        Tổng số <strong className="text-[#191C19]">{(totalElements ?? count).toLocaleString('vi-VN')}</strong> tài khoản
+        Tổng số <strong className="text-[#1F2A37]">{(totalElements ?? count).toLocaleString('vi-VN')}</strong> tài khoản
       </span>
       <div className="flex items-center gap-1 font-medium">
         <button
@@ -483,10 +483,10 @@ function AccountsEmptyState({ handleResetFilter }) {
       <div className="w-16 h-16 rounded-2xl bg-[#E8F5E9] text-[#006B2C] flex items-center justify-center mb-4">
         <span className="material-symbols-outlined text-3xl">search_off</span>
       </div>
-      <h3 className="text-base font-bold text-[#191C19] font-heading">
+      <h3 className="text-base font-bold text-[#1F2A37] font-heading">
         Không tìm thấy tài khoản phù hợp
       </h3>
-      <p className="text-xs text-[#717971] max-w-sm mt-1 mb-5">
+      <p className="text-xs text-[#5B6776] max-w-sm mt-1 mb-5">
         Vui lòng kiểm tra lại từ khóa tìm kiếm hoặc điều chỉnh bộ lọc để xem kết quả.
       </p>
       <button
@@ -510,7 +510,7 @@ function AccountsTable({
     <div className="bg-white rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs">
-          <thead className="bg-[#F6F9F4] text-[#717971] tracking-wider font-semibold border-b border-[#DDE5D9]">
+          <thead className="bg-[#F6F9F4] text-[#5B6776] tracking-wider font-semibold border-b border-[#DDE5D9]">
             <tr>
               <th className="py-3 px-6 whitespace-nowrap">Họ tên</th>
               <th className="py-3 px-6 whitespace-nowrap">Email</th>
@@ -549,7 +549,7 @@ function AccountsTable({
         totalPages={totalPages}
       />
       {accountsLoading && (
-        <div className="px-4 pb-3 flex items-center gap-2 text-[11px] text-[#717971]">
+        <div className="px-4 pb-3 flex items-center gap-2 text-[11px] text-[#5B6776]">
           <Spinner size="xs" />
           <span>Đang tải trang kế tiếp...</span>
         </div>
@@ -566,7 +566,7 @@ function AccountsFilters({
     <div className="bg-white p-4 rounded-2xl border border-[#DDE5D9] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
       {/* Search Input */}
       <div className="relative flex-1">
-        <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#717971] text-lg">
+        <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5B6776] text-lg">
           search
         </span>
         <input
@@ -583,18 +583,18 @@ function AccountsFilters({
         <select
           value={selectedRole}
           onChange={(e) => setSelectedRole(e.target.value)}
-          className="px-3 py-2.5 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
+          className="px-3 py-2.5 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#5B6776] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
         >
           <option value="ALL">Vai trò: Tất cả</option>
-          <option value="member">Thành viên (Member)</option>
-          <option value="organizer">Tổ chức từ thiện (Organizer)</option>
-          <option value="moderator">Kiểm định viên (Moderator)</option>
+          <option value="member">Thành viên</option>
+          <option value="organizer">Tổ chức từ thiện</option>
+          <option value="moderator">Nhân viên điểm kí gửi</option>
         </select>
 
         <select
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
-          className="px-3 py-2.5 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#414942] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
+          className="px-3 py-2.5 text-xs rounded-xl border border-[#DDE5D9] bg-white text-[#5B6776] font-medium outline-none hover:border-[#006B2C]/50 transition-colors"
         >
           <option value="ALL">Trạng thái: Tất cả</option>
           <option value="ACTIVE">Hoạt động</option>
@@ -622,19 +622,19 @@ function AccountInformation({ drawerAccount }) {
   return (
     <>
       <div className="space-y-3">
-        <p className="text-[11px] font-bold text-[#717971] uppercase tracking-wider">
+        <p className="text-[11px] font-bold text-[#5B6776] uppercase tracking-wider">
           Thông tin liên hệ
         </p>
         <div className="bg-white rounded-xl border border-[#DDE5D9] p-3.5 space-y-2 text-xs">
           <div className="flex justify-between">
-            <span className="text-[#717971]">Email:</span>
-            <span className="font-mono font-medium text-[#191C19]">
+            <span className="text-[#5B6776]">Email:</span>
+            <span className="font-mono font-medium text-[#1F2A37]">
               {drawerAccount.email}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-[#717971]">Số điện thoại:</span>
-            <span className="font-mono font-medium text-[#191C19]">
+            <span className="text-[#5B6776]">Số điện thoại:</span>
+            <span className="font-mono font-medium text-[#1F2A37]">
               {drawerAccount.phone}
             </span>
           </div>
@@ -643,19 +643,19 @@ function AccountInformation({ drawerAccount }) {
 
       {/* Thông tin tài khoản */}
       <div className="space-y-3">
-        <p className="text-[11px] font-bold text-[#717971] uppercase tracking-wider">
+        <p className="text-[11px] font-bold text-[#5B6776] uppercase tracking-wider">
           Thông tin tài khoản
         </p>
         <div className="bg-white rounded-xl border border-[#DDE5D9] p-3.5 space-y-2 text-xs">
           <div className="flex justify-between">
-            <span className="text-[#717971]">Vai trò:</span>
+            <span className="text-[#5B6776]">Vai trò:</span>
             <span className="font-bold text-[#006B2C]">
               {drawerAccount.role}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-[#717971]">Ngày tạo:</span>
-            <span className="font-mono text-[#191C19]">
+            <span className="text-[#5B6776]">Ngày tạo:</span>
+            <span className="font-mono text-[#1F2A37]">
               {drawerAccount.createdAt}
             </span>
           </div>
@@ -668,11 +668,11 @@ function AccountInformation({ drawerAccount }) {
 function AccountHistory({ history }) {
   return (
     <div className="space-y-3">
-      <p className="text-[11px] font-bold text-[#717971] uppercase tracking-wider">
+      <p className="text-[11px] font-bold text-[#5B6776] uppercase tracking-wider">
         Lịch sử Khóa / Mở khóa
       </p>
       {history.length === 0 ? (
-        <div className="p-4 bg-[#F6F9F4] rounded-xl text-center text-xs text-[#717971]">
+        <div className="p-4 bg-[#F6F9F4] rounded-xl text-center text-xs text-[#5B6776]">
           Chưa ghi nhận lịch sử xử phạt nào.
         </div>
       ) : (
@@ -684,7 +684,7 @@ function AccountHistory({ history }) {
                   hist.action === 'Khóa' ? 'bg-[#DC2626]' : 'bg-[#006B2C]'
                 }`}
               />
-              <p className="text-[11px] font-mono text-[#717971]">
+              <p className="text-[11px] font-mono text-[#5B6776]">
                 {hist.date} -{' '}
                 <span
                   className={`font-bold ${
@@ -697,7 +697,7 @@ function AccountHistory({ history }) {
                 </span>{' '}
                 bởi {hist.actor}
               </p>
-              <p className="mt-1 text-[#414942] italic bg-[#F6F9F4] p-2 rounded-lg border border-[#DDE5D9]">
+              <p className="mt-1 text-[#5B6776] italic bg-[#F6F9F4] p-2 rounded-lg border border-[#DDE5D9]">
                 Lý do: {hist.reason}
               </p>
             </div>
@@ -722,12 +722,12 @@ function AccountDetailsDrawer({
         <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col justify-between border-l border-[#DDE5D9] animate-slideLeft">
           {/* Drawer Header */}
           <div className="p-6 border-b border-[#DDE5D9] flex items-center justify-between">
-            <h3 className="text-base font-bold text-[#191C19] font-heading">
+            <h3 className="text-base font-bold text-[#1F2A37] font-heading">
               Chi tiết tài khoản
             </h3>
             <button
               onClick={() => setDrawerAccount(null)}
-              className="p-1.5 rounded-xl text-[#717971] hover:text-[#191C19] hover:bg-[#F6F9F4]"
+              className="p-1.5 rounded-xl text-[#5B6776] hover:text-[#1F2A37] hover:bg-[#F6F9F4]"
             >
               <span className="material-symbols-outlined text-xl">close</span>
             </button>
@@ -741,10 +741,10 @@ function AccountDetailsDrawer({
                 {drawerAccount.initials}
               </div>
               <div>
-                <h4 className="text-base font-bold text-[#191C19]">
+                <h4 className="text-base font-bold text-[#1F2A37]">
                   {drawerAccount.name}
                 </h4>
-                <p className="text-xs text-[#717971]">#{drawerAccount.code}</p>
+                <p className="text-xs text-[#5B6776]">#{drawerAccount.code}</p>
                 <span
                   className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                     drawerAccount.status === 'ACTIVE'
@@ -843,12 +843,12 @@ function LockAccountModal({
             </span>
           </div>
           <div className="flex-1">
-            <h3 className="text-base font-bold text-[#191C19] font-heading">
+            <h3 className="text-base font-bold text-[#1F2A37] font-heading">
               Khóa tài khoản này?
             </h3>
-            <p className="text-xs text-[#717971] mt-1 leading-relaxed">
+            <p className="text-xs text-[#5B6776] mt-1 leading-relaxed">
               Tài khoản{' '}
-              <span className="font-semibold text-[#191C19]">
+              <span className="font-semibold text-[#1F2A37]">
                 {lockModalAccount.name}
               </span>{' '}
               sẽ không thể đăng nhập vào hệ thống quầy và cổng quyên góp cho
@@ -860,12 +860,12 @@ function LockAccountModal({
         {/* Target Account Info Badge */}
         <div className="p-3 bg-[#F6F9F4] rounded-xl border border-[#DDE5D9] flex items-center justify-between text-xs">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#E9F0E5] text-[#191C19] flex items-center justify-center font-bold text-xs">
+            <div className="w-8 h-8 rounded-lg bg-[#E9F0E5] text-[#1F2A37] flex items-center justify-center font-bold text-xs">
               {lockModalAccount.initials}
             </div>
             <div>
-              <p className="font-bold text-[#191C19]">{lockModalAccount.name}</p>
-              <p className="text-[11px] text-[#717971]">{lockModalAccount.email}</p>
+              <p className="font-bold text-[#1F2A37]">{lockModalAccount.name}</p>
+              <p className="text-[11px] text-[#5B6776]">{lockModalAccount.email}</p>
             </div>
           </div>
           <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#E8F5E9] text-[#006B2C]">
@@ -893,10 +893,10 @@ function LockAccountModal({
         {/* Textarea Reason */}
         <div>
           <div className="flex items-center justify-between text-xs mb-1.5">
-            <label className="font-semibold text-[#191C19]">
+            <label className="font-semibold text-[#1F2A37]">
               Lý do khóa <span className="text-[#DC2626]">*</span>
             </label>
-            <span className="text-[11px] text-[#717971]">
+            <span className="text-[11px] text-[#5B6776]">
               {lockReason.length} / 300
             </span>
           </div>
@@ -938,7 +938,7 @@ function LockAccountModal({
           <button
             onClick={() => setLockModalAccount(null)}
             disabled={isLocking}
-            className="px-4 py-2 text-xs font-semibold text-[#414942] hover:bg-[#F6F9F4] rounded-xl transition-colors border border-[#DDE5D9] disabled:opacity-50"
+            className="px-4 py-2 text-xs font-semibold text-[#5B6776] hover:bg-[#F6F9F4] rounded-xl transition-colors border border-[#DDE5D9] disabled:opacity-50"
           >
             Hủy
           </button>

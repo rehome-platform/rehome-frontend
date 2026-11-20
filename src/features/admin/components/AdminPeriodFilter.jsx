@@ -3,7 +3,7 @@ import React from 'react';
 const YEAR_CHOICES = 6; // năm hiện tại và 5 năm trước đó
 
 const INPUT_CLASS =
-  'rounded-xl border border-[#E2E8E0] bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30 disabled:opacity-50';
+  'rounded-xl border border-[#DDE5D9] bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30 disabled:opacity-50';
 
 /**
  * Bộ lọc khoảng thời gian dùng chung của các trang Admin (xem useAdminPeriod).
@@ -42,7 +42,7 @@ export default function AdminPeriodFilter({
 
   return (
     <div className="flex flex-wrap items-end gap-3">
-      <label className="flex items-center gap-2 text-xs text-[#414942]">
+      <label className="flex items-center gap-2 text-xs text-[#5B6776]">
         <span className="shrink-0">{label}</span>
         <select
           aria-label={`${label}${suffix}`}
@@ -70,7 +70,7 @@ export default function AdminPeriodFilter({
       </label>
 
       {period === 'DAY' && (
-        <label className="flex flex-col gap-1 text-xs text-[#414942]">
+        <label className="flex flex-col gap-1 text-xs text-[#5B6776]">
           <span>Ngày</span>
           <input
             type="date"
@@ -85,7 +85,7 @@ export default function AdminPeriodFilter({
       )}
 
       {period === 'WEEK_PICK' && (
-        <label className="flex flex-col gap-1 text-xs text-[#414942]">
+        <label className="flex flex-col gap-1 text-xs text-[#5B6776]">
           <span>Tuần</span>
           <input
             type="week"
@@ -100,7 +100,7 @@ export default function AdminPeriodFilter({
       )}
 
       {period === 'MONTH_PICK' && (
-        <label className="flex flex-col gap-1 text-xs text-[#414942]">
+        <label className="flex flex-col gap-1 text-xs text-[#5B6776]">
           <span>Tháng</span>
           <input
             type="month"
@@ -115,7 +115,7 @@ export default function AdminPeriodFilter({
       )}
 
       {period === 'YEAR_PICK' && (
-        <label className="flex flex-col gap-1 text-xs text-[#414942]">
+        <label className="flex flex-col gap-1 text-xs text-[#5B6776]">
           <span>Năm</span>
           <select
             aria-label={`Chọn năm${suffix}`}
@@ -135,7 +135,7 @@ export default function AdminPeriodFilter({
 
       {period === 'CUSTOM' && (
         <>
-          <label className="flex flex-col gap-1 text-xs text-[#414942]">
+          <label className="flex flex-col gap-1 text-xs text-[#5B6776]">
             <span>Từ ngày</span>
             <input
               type="date"
@@ -146,7 +146,7 @@ export default function AdminPeriodFilter({
               className={INPUT_CLASS}
             />
           </label>
-          <label className="flex flex-col gap-1 text-xs text-[#414942]">
+          <label className="flex flex-col gap-1 text-xs text-[#5B6776]">
             <span>Đến ngày</span>
             <input
               type="date"

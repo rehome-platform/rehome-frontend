@@ -45,7 +45,7 @@ function NumberFieldCard({ id, label, value, onChange, error, editing, dirty, on
       }`}
     >
       <div className="flex items-start justify-between gap-3">
-        <label htmlFor={id} className="text-xs font-semibold text-[#191C19] leading-snug">
+        <label htmlFor={id} className="text-xs font-semibold text-[#1F2A37] leading-snug">
           {label}
         </label>
         <button
@@ -72,8 +72,8 @@ function NumberFieldCard({ id, label, value, onChange, error, editing, dirty, on
         {...inputProps}
         className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-bold font-mono outline-none transition-all ${
           editing
-            ? 'border-[#006B2C] bg-white text-[#191C19] focus:ring-2 focus:ring-[#006B2C]/15'
-            : 'border-transparent bg-[#F0F4EE] text-[#191C19] cursor-default'
+            ? 'border-[#006B2C] bg-white text-[#1F2A37] focus:ring-2 focus:ring-[#006B2C]/15'
+            : 'border-transparent bg-[#F0F4EE] text-[#1F2A37] cursor-default'
         }`}
       />
       {error && <p className="text-[11px] text-[#D92D20] font-medium">{error}</p>}
@@ -518,7 +518,7 @@ export default function VoucherTemplateModal({
           </label>
         </div>
 
-        <div className="border-t border-[#E2E8E0] pt-4">
+        <div className="border-t border-[#DDE5D9] pt-4">
           <p className="text-xs font-semibold text-[#1F2A37] mb-2">
             Phát cho hạng thành viên (chọn hạng và số lượng / tháng từ 1–10)
           </p>
@@ -528,7 +528,7 @@ export default function VoucherTemplateModal({
               return (
                 <div
                   key={tier}
-                  className="flex items-center justify-between gap-3 p-2.5 rounded-xl border border-[#E2E8E0] bg-[#F6F9F4]/60"
+                  className="flex items-center justify-between gap-3 p-2.5 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]/60"
                 >
                   <label
                     htmlFor={`tier-check-${tier}`}
@@ -568,7 +568,7 @@ export default function VoucherTemplateModal({
           ) : null}
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#E2E8E0]">
+        <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#DDE5D9]">
           <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
             Hủy
           </Button>

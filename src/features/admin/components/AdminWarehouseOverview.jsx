@@ -75,12 +75,12 @@ function TermColumns({ terms }) {
               y={bottom - h - 7}
               fontSize="13"
               fontWeight="700"
-              fill="#191C19"
+              fill="#1F2A37"
               textAnchor="middle"
             >
               {t.count}
             </text>
-            <text x={cx} y={bottom + 20} fontSize="12" fontWeight="600" fill="#414942" textAnchor="middle">
+            <text x={cx} y={bottom + 20} fontSize="12" fontWeight="600" fill="#5B6776" textAnchor="middle">
               {t.label}
             </text>
           </g>
@@ -181,7 +181,7 @@ export default function AdminWarehouseOverview() {
     {
       title: 'Tác vụ quá hạn cần xử lý',
       value: `${overdue.toLocaleString('vi-VN')} việc`,
-      valueClass: overdue > 0 ? 'text-[#DC2626]' : 'text-[#191C19]',
+      valueClass: overdue > 0 ? 'text-[#DC2626]' : 'text-[#1F2A37]',
       icon: 'pending_actions',
       iconBg: overdue > 0 ? 'bg-[#FEF2F2]' : 'bg-[#E8F5E9]',
       iconColor: overdue > 0 ? 'text-[#DC2626]' : 'text-[#006B2C]',
@@ -206,10 +206,10 @@ export default function AdminWarehouseOverview() {
       >
         <span className="flex items-center gap-2 min-w-0">
           <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: row.color }}></span>
-          <span className="font-semibold text-[#191C19] truncate">{row.label}</span>
+          <span className="font-semibold text-[#1F2A37] truncate">{row.label}</span>
         </span>
-        <span className="font-bold text-[#191C19] whitespace-nowrap">
-          {count.toLocaleString('vi-VN')} món <span className="font-medium text-[#717971]">({pct}%)</span>
+        <span className="font-bold text-[#1F2A37] whitespace-nowrap">
+          {count.toLocaleString('vi-VN')} món <span className="font-medium text-[#5B6776]">({pct}%)</span>
         </span>
       </div>
     );
@@ -241,8 +241,8 @@ export default function AdminWarehouseOverview() {
             style={{ '--i': idx }}
           >
             <div>
-              <p className="text-xs font-medium text-[#717971]">{card.title}</p>
-              <p className={`text-2xl font-extrabold mt-1 font-heading tracking-tight ${card.valueClass || 'text-[#191C19]'}`}>
+              <p className="text-xs font-medium text-[#5B6776]">{card.title}</p>
+              <p className={`text-2xl font-extrabold mt-1 font-heading tracking-tight ${card.valueClass || 'text-[#1F2A37]'}`}>
                 {loading ? '...' : card.value}
               </p>
             </div>
@@ -257,30 +257,30 @@ export default function AdminWarehouseOverview() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Tồn kho theo trạng thái: biểu đồ tròn + danh sách (màu chấm trùng màu lát) */}
-        <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-[#E2E8E0] shadow-xs space-y-4">
-          <div className="border-b border-[#E2E8E0] pb-3">
-            <h3 className="text-base font-bold text-[#191C19] font-heading">Hàng ký gửi theo trạng thái</h3>
-            <p className="text-xs text-[#717971] mt-0.5">
-              Tổng <strong className="text-[#191C19]">{loading ? '...' : totalStock.toLocaleString('vi-VN')}</strong> món đang được ký gửi
+        <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-xs space-y-4">
+          <div className="border-b border-[#DDE5D9] pb-3">
+            <h3 className="text-base font-bold text-[#1F2A37] font-heading">Hàng ký gửi theo trạng thái</h3>
+            <p className="text-xs text-[#5B6776] mt-0.5">
+              Tổng <strong className="text-[#1F2A37]">{loading ? '...' : totalStock.toLocaleString('vi-VN')}</strong> món đang được ký gửi
             </p>
           </div>
 
           {loading ? (
-            <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center flex flex-col items-center justify-center gap-3 text-xs text-[#717971]">
+            <div className="p-8 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-center flex flex-col items-center justify-center gap-3 text-xs text-[#5B6776]">
               <Spinner size="lg" />
               <span>Đang tải hàng ký gửi theo trạng thái...</span>
             </div>
           ) : !stockByStatus ? (
-            <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center text-xs text-[#717971]">
+            <div className="p-8 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-center text-xs text-[#5B6776]">
               Máy chủ chưa trả số liệu hàng ký gửi theo trạng thái.
             </div>
           ) : totalStock === 0 ? (
-            <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center flex flex-col items-center">
+            <div className="p-8 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-center flex flex-col items-center">
               <div className="w-12 h-12 rounded-xl bg-[#E0F2F1] text-[#00685F] flex items-center justify-center mb-2">
                 <span className="material-symbols-outlined text-2xl">inventory_2</span>
               </div>
-              <h4 className="text-xs font-bold text-[#191C19]">Hiện chưa có sản phẩm ký gửi</h4>
-              <p className="text-[11px] text-[#717971] mt-0.5">Số liệu sẽ cập nhật khi có sản phẩm được tiếp nhận.</p>
+              <h4 className="text-xs font-bold text-[#1F2A37]">Hiện chưa có sản phẩm ký gửi</h4>
+              <p className="text-[11px] text-[#5B6776] mt-0.5">Số liệu sẽ cập nhật khi có sản phẩm được tiếp nhận.</p>
             </div>
           ) : (
             <div className="flex flex-col md:flex-row items-center gap-6">
@@ -294,9 +294,9 @@ export default function AdminWarehouseOverview() {
 
               <div className="flex-1 w-full space-y-4">
                 {groups.map((group) => (
-                  <div key={group.key} className="p-3.5 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] space-y-3">
+                  <div key={group.key} className="p-3.5 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] space-y-3">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs font-bold text-[#191C19]">{group.title}</p>
+                      <p className="text-xs font-bold text-[#1F2A37]">{group.title}</p>
                       <span className="text-xs font-extrabold text-[#006B2C] whitespace-nowrap">
                         {group.subtotal.toLocaleString('vi-VN')} món
                       </span>
@@ -310,19 +310,19 @@ export default function AdminWarehouseOverview() {
         </div>
 
         {/* Tồn kho theo kỳ ký gửi */}
-        <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-[#E2E8E0] shadow-xs space-y-4">
-          <div className="border-b border-[#E2E8E0] pb-3">
-            <h3 className="text-base font-bold text-[#191C19] font-heading">Hàng ký gửi theo kỳ</h3>
-            <p className="text-xs text-[#717971] mt-0.5">Số món đang ký gửi theo kỳ hiện tại của sản phẩm</p>
+        <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-xs space-y-4">
+          <div className="border-b border-[#DDE5D9] pb-3">
+            <h3 className="text-base font-bold text-[#1F2A37] font-heading">Hàng ký gửi theo kỳ</h3>
+            <p className="text-xs text-[#5B6776] mt-0.5">Số món đang ký gửi theo kỳ hiện tại của sản phẩm</p>
           </div>
 
           {loading ? (
-            <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center flex flex-col items-center justify-center gap-3 text-xs text-[#717971]">
+            <div className="p-8 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-center flex flex-col items-center justify-center gap-3 text-xs text-[#5B6776]">
               <Spinner size="lg" />
               <span>Đang tải hàng ký gửi theo kỳ...</span>
             </div>
           ) : termTotal === 0 ? (
-            <div className="p-8 rounded-xl bg-[#F8FAF8] border border-[#E2E8E0] text-center text-xs text-[#717971]">
+            <div className="p-8 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-center text-xs text-[#5B6776]">
               Chưa có sản phẩm tồn thuộc các kỳ ký gửi.
             </div>
           ) : (
@@ -330,11 +330,11 @@ export default function AdminWarehouseOverview() {
               <TermColumns terms={termStocks} />
               <div className="grid grid-cols-3 gap-2">
                 {termStocks.map((t) => (
-                  <div key={t.label} className="rounded-lg bg-[#F8FAF8] border border-[#E2E8E0] px-2 py-2 text-center">
-                    <p className="text-[11px] font-semibold text-[#414942]">
+                  <div key={t.label} className="rounded-lg bg-[#F6F9F4] border border-[#DDE5D9] px-2 py-2 text-center">
+                    <p className="text-[11px] font-semibold text-[#5B6776]">
                       {t.label}: {t.count} món
                     </p>
-                    <p className="text-[10px] text-[#717971]">{Math.round((t.count / termTotal) * 100)}%</p>
+                    <p className="text-[10px] text-[#5B6776]">{Math.round((t.count / termTotal) * 100)}%</p>
                   </div>
                 ))}
               </div>

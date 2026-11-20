@@ -177,12 +177,12 @@ export default function AdminRevenueTrendChart() {
   const hasRevenue = trend.total > 0 || amounts.some((a) => a > 0);
 
   return (
-    <div className="bg-white p-6 rounded-2xl border border-[#E2E8E0] shadow-xs flex flex-col gap-5">
+    <div className="bg-white p-6 rounded-2xl border border-[#DDE5D9] shadow-xs flex flex-col gap-5">
       <div>
-        <h3 className="text-base font-bold text-[#191C19] font-heading">
+        <h3 className="text-base font-bold text-[#1F2A37] font-heading">
           Doanh thu nền tảng theo thời gian
         </h3>
-        <p className="text-xs text-[#717971] mt-0.5">
+        <p className="text-xs text-[#5B6776] mt-0.5">
           {trend.from && trend.to && !dateError
             ? `Hoa hồng và phí rút hàng đã thu, từ ${fullDate(trend.from)} đến ${fullDate(trend.to)}`
             : 'Hoa hồng và phí rút hàng đã thu, theo từng kỳ'}
@@ -215,12 +215,12 @@ export default function AdminRevenueTrendChart() {
           </button>
         </div>
       ) : loading ? (
-        <div className="h-64 flex flex-col items-center justify-center gap-3 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-[#717971]">
+        <div className="h-64 flex flex-col items-center justify-center gap-3 rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-[#5B6776]">
           <Spinner size="lg" />
           <span>Đang tải biểu đồ doanh thu...</span>
         </div>
       ) : !hasRevenue ? (
-        <div className="h-64 flex items-center justify-center rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-[#717971] text-center px-4">
+        <div className="h-64 flex items-center justify-center rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-[#5B6776] text-center px-4">
           Chưa phát sinh doanh thu nền tảng trong khoảng thời gian đã chọn.
         </div>
       ) : (
@@ -228,7 +228,7 @@ export default function AdminRevenueTrendChart() {
           {/* Ba con số chính để đọc nhanh trước khi nhìn biểu đồ */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] px-4 py-3">
-              <p className="text-[11px] font-medium text-[#717971]">Tổng doanh thu</p>
+              <p className="text-[11px] font-medium text-[#5B6776]">Tổng doanh thu</p>
               <p className="mt-0.5 text-lg font-black text-[#006B2C] font-heading">
                 {formatCurrencyVND(trend.total)}
               </p>
@@ -242,13 +242,13 @@ export default function AdminRevenueTrendChart() {
               </div>
             </div>
             <div className="rounded-xl bg-[#F6F9F4] border border-[#DDE5D9] px-4 py-3">
-              <p className="text-[11px] font-medium text-[#717971]">Trung bình mỗi {unit}</p>
-              <p className="mt-0.5 text-lg font-black text-[#191C19] font-heading">
+              <p className="text-[11px] font-medium text-[#5B6776]">Trung bình mỗi {unit}</p>
+              <p className="mt-0.5 text-lg font-black text-[#1F2A37] font-heading">
                 {formatCurrencyVND(average)}
               </p>
             </div>
             <div className="rounded-xl bg-[#FFF8EC] border border-[#FDE3B0] px-4 py-3">
-              <p className="flex items-center gap-1.5 text-[11px] font-medium text-[#717971]">
+              <p className="flex items-center gap-1.5 text-[11px] font-medium text-[#5B6776]">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLOR_BEST }}></span>
                 Cao nhất ({unit})
               </p>
@@ -256,7 +256,7 @@ export default function AdminRevenueTrendChart() {
                 {formatCurrencyVND(maxAmount)}
               </p>
               {bestIdx >= 0 && (
-                <p className="text-[11px] text-[#717971]">{periodName(points[bestIdx], shownGranularity)}</p>
+                <p className="text-[11px] text-[#5B6776]">{periodName(points[bestIdx], shownGranularity)}</p>
               )}
             </div>
           </div>
@@ -315,7 +315,7 @@ export default function AdminRevenueTrendChart() {
                           y={chartBottom - barHeight - 6}
                           fontSize="10"
                           fontWeight="600"
-                          fill={isBest ? '#B7740B' : '#414942'}
+                          fill={isBest ? '#B7740B' : '#5B6776'}
                           textAnchor="middle"
                           pointerEvents="none"
                         >
@@ -347,7 +347,7 @@ export default function AdminRevenueTrendChart() {
                   const col = columns[idx];
                   if (!col) return null;
                   return (
-                    <text key={col.pt.label} x={col.center} y={232} fontSize="10" fill="#717971" textAnchor="middle">
+                    <text key={col.pt.label} x={col.center} y={232} fontSize="10" fill="#5B6776" textAnchor="middle">
                       {axisLabel(col.pt, shownGranularity)}
                     </text>
                   );
@@ -356,13 +356,13 @@ export default function AdminRevenueTrendChart() {
             </div>
 
             {/* Chú thích luôn chiếm chỗ để biểu đồ không bị nhảy khi rê chuột */}
-            <div className="min-h-[2.25rem] px-3 py-2 rounded-lg bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-center text-[#191C19]">
+            <div className="min-h-[2.25rem] px-3 py-2 rounded-lg bg-[#F6F9F4] border border-[#DDE5D9] text-xs text-center text-[#1F2A37]">
               {activePoint ? (
                 <span className="font-medium">
                   {periodName(activePoint, shownGranularity)}: <strong>{formatCurrencyVND(activePoint.amount)}</strong>
                 </span>
               ) : (
-                <span className="text-[#717971]">
+                <span className="text-[#5B6776]">
                   Rê chuột (hoặc nhấn Tab) vào từng cột để xem doanh thu chi tiết · đơn vị: đồng
                 </span>
               )}

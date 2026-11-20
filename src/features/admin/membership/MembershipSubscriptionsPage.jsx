@@ -145,7 +145,7 @@ export default function MembershipSubscriptionsPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-xl border border-[#E2E8E0]">
+      <div className="bg-white p-4 rounded-xl border border-[#DDE5D9]">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
           <div className="md:col-span-2">
             <label htmlFor="sub-search" className="block text-xs font-semibold text-[#1F2A37] mb-1">
@@ -239,11 +239,11 @@ export default function MembershipSubscriptionsPage() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-[#E2E8E0] overflow-hidden">
+      <div className="bg-white rounded-xl border border-[#DDE5D9] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#F6F9F4] border-b border-[#E2E8E0] text-xs font-semibold text-[#5B6776]">
+              <tr className="bg-[#F6F9F4] border-b border-[#DDE5D9] text-xs font-semibold text-[#5B6776]">
                 <th className="py-3 px-4 whitespace-nowrap">Thành viên</th>
                 <th className="py-3 px-4 whitespace-nowrap">Hạng</th>
                 <th className="py-3 px-4 whitespace-nowrap">Trạng thái</th>
@@ -253,7 +253,7 @@ export default function MembershipSubscriptionsPage() {
                 <th className="py-3 px-4 text-right whitespace-nowrap">Thao tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E2E8E0] text-sm text-[#1F2A37]">
+            <tbody className="divide-y divide-[#DDE5D9] text-sm text-[#1F2A37]">
               {loading && items.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-10 text-center text-sm text-[#5B6776]">
@@ -285,7 +285,7 @@ export default function MembershipSubscriptionsPage() {
                       className="hover:bg-[#F6F9F4] cursor-pointer transition-colors"
                     >
                       <td className="py-3 px-4">
-                        <p className="text-[#191C19]">{item.memberEmail || '-'}</p>
+                        <p className="text-[#1F2A37]">{item.memberEmail || '-'}</p>
                       </td>
                       <td className="py-3 px-4">
                         <TierBadge tier={item.tier} label={item.tierName || TIER_LABELS[item.tier] || item.tier} />
@@ -336,7 +336,7 @@ export default function MembershipSubscriptionsPage() {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8E0] bg-[#F6F9F4]/50 text-xs text-[#5B6776]">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-[#DDE5D9] bg-[#F6F9F4]/50 text-xs text-[#5B6776]">
           <span>
             Trang {page + 1} / {Math.max(totalPages, 1)}
           </span>

@@ -72,10 +72,10 @@ export default function OpeningHoursPicker({ value, onChange }) {
   };
 
   return (
-    <div className="space-y-3 p-3.5 rounded-xl border border-[#E2E8E0] bg-[#FBFDFB]">
+    <div className="space-y-3 p-3.5 rounded-xl border border-[#DDE5D9] bg-[#FBFDFB]">
       <div className="flex items-center justify-between">
-        <label className="block text-xs font-semibold text-[#191C19]">
-          Giờ mở cửa phục vụ tại quầy <span className="text-[#BA1A1A]">*</span>
+        <label className="block text-xs font-semibold text-[#1F2A37]">
+          Giờ mở cửa phục vụ tại quầy <span className="text-[#D92D20]">*</span>
         </label>
         <span className="text-[11px] font-medium text-[#006B2C] bg-[#E8F5E9] px-2 py-0.5 rounded-md">
           {formatOpeningHours(openTime, closeTime, selectedDays)}
@@ -85,24 +85,24 @@ export default function OpeningHoursPicker({ value, onChange }) {
       {/* Chọn khung giờ */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <span className="text-[11px] text-[#717971] block mb-1">Giờ mở cửa</span>
+          <span className="text-[11px] text-[#5B6776] block mb-1">Giờ mở cửa</span>
           <div className="relative">
             <input
               type="time"
               value={openTime}
               onChange={handleOpenTimeChange}
-              className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+              className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-[#DDE5D9] bg-white text-[#1F2A37] focus:outline-none focus:border-[#006B2C]"
             />
           </div>
         </div>
         <div>
-          <span className="text-[11px] text-[#717971] block mb-1">Giờ đóng cửa</span>
+          <span className="text-[11px] text-[#5B6776] block mb-1">Giờ đóng cửa</span>
           <div className="relative">
             <input
               type="time"
               value={closeTime}
               onChange={handleCloseTimeChange}
-              className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-[#E2E8E0] bg-white text-[#191C19] focus:outline-none focus:border-[#006B2C]"
+              className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-[#DDE5D9] bg-white text-[#1F2A37] focus:outline-none focus:border-[#006B2C]"
             />
           </div>
         </div>
@@ -110,14 +110,14 @@ export default function OpeningHoursPicker({ value, onChange }) {
 
       {/* Preset nhanh */}
       <div className="flex items-center gap-1.5 flex-wrap pt-1">
-        <span className="text-[11px] text-[#717971] mr-1">Chọn nhanh:</span>
+        <span className="text-[11px] text-[#5B6776] mr-1">Chọn nhanh:</span>
         <button
           type="button"
           onClick={() => applyPreset('ALL')}
           className={`px-2 py-1 text-[11px] font-medium rounded-xl border transition-colors ${
             selectedDays.length === 7
               ? 'bg-[#006B2C] text-white border-[#006B2C]'
-              : 'bg-white text-[#414942] border-[#E2E8E0] hover:bg-[#F0F5EE]'
+              : 'bg-white text-[#5B6776] border-[#DDE5D9] hover:bg-[#F6F9F4]'
           }`}
         >
           Cả tuần (T2 - CN)
@@ -128,7 +128,7 @@ export default function OpeningHoursPicker({ value, onChange }) {
           className={`px-2 py-1 text-[11px] font-medium rounded-xl border transition-colors ${
             selectedDays.length === 6 && !selectedDays.includes('Chủ nhật')
               ? 'bg-[#006B2C] text-white border-[#006B2C]'
-              : 'bg-white text-[#414942] border-[#E2E8E0] hover:bg-[#F0F5EE]'
+              : 'bg-white text-[#5B6776] border-[#DDE5D9] hover:bg-[#F6F9F4]'
           }`}
         >
           Thứ 2 - Thứ 7
@@ -141,7 +141,7 @@ export default function OpeningHoursPicker({ value, onChange }) {
             !selectedDays.includes('Thứ 7') &&
             !selectedDays.includes('Chủ nhật')
               ? 'bg-[#006B2C] text-white border-[#006B2C]'
-              : 'bg-white text-[#414942] border-[#E2E8E0] hover:bg-[#F0F5EE]'
+              : 'bg-white text-[#5B6776] border-[#DDE5D9] hover:bg-[#F6F9F4]'
           }`}
         >
           Thứ 2 - Thứ 6
@@ -150,7 +150,7 @@ export default function OpeningHoursPicker({ value, onChange }) {
 
       {/* Chọn các ngày trong tuần */}
       <div>
-        <span className="text-[11px] text-[#717971] block mb-1.5">Các ngày làm việc trong tuần:</span>
+        <span className="text-[11px] text-[#5B6776] block mb-1.5">Các ngày làm việc trong tuần:</span>
         <div className="grid grid-cols-7 gap-1">
           {DAYS_OF_WEEK.map((day) => {
             const isSelected = selectedDays.includes(day);
@@ -162,7 +162,7 @@ export default function OpeningHoursPicker({ value, onChange }) {
                 className={`py-1.5 text-center text-xs font-semibold rounded-xl border transition-all ${
                   isSelected
                     ? 'bg-[#006B2C] text-white border-[#006B2C] shadow-xs'
-                    : 'bg-white text-[#717971] border-[#E2E8E0] hover:border-[#006B2C]/50'
+                    : 'bg-white text-[#5B6776] border-[#DDE5D9] hover:border-[#006B2C]/50'
                 }`}
                 title={day}
               >

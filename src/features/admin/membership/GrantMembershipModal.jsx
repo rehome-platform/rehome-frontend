@@ -182,7 +182,7 @@ export default function GrantMembershipModal({ isOpen, onClose, onSuccess, membe
           {selectedMember ? (
             <div className="flex items-center justify-between p-3 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]">
               <div>
-                <p className="text-sm font-semibold text-[#191C19]">
+                <p className="text-sm font-semibold text-[#1F2A37]">
                   {selectedMember.fullName || selectedMember.memberName || 'Thành viên'}
                 </p>
                 <p className="text-xs text-[#5B6776]">
@@ -219,7 +219,7 @@ export default function GrantMembershipModal({ isOpen, onClose, onSuccess, membe
                 </div>
               )}
               {!searching && searchResults.length > 0 && (
-                <ul className="max-h-40 overflow-y-auto border border-[#DDE5D9] rounded-xl divide-y divide-[#E2E8E0]">
+                <ul className="max-h-40 overflow-y-auto border border-[#DDE5D9] rounded-xl divide-y divide-[#DDE5D9]">
                   {searchResults.map((acc) => (
                     <li key={acc.id}>
                       <button
@@ -234,7 +234,7 @@ export default function GrantMembershipModal({ isOpen, onClose, onSuccess, membe
                         }
                         className="w-full text-left px-3 py-2 hover:bg-[#F6F9F4] transition-colors"
                       >
-                        <p className="text-sm font-medium text-[#191C19]">{acc.fullName || acc.email}</p>
+                        <p className="text-sm font-medium text-[#1F2A37]">{acc.fullName || acc.email}</p>
                         <p className="text-xs text-[#5B6776]">
                           {acc.email} {acc.code ? `• ${acc.code}` : ''}
                         </p>

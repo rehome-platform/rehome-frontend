@@ -193,7 +193,7 @@ export default function ViolationWordModal({ isOpen, onClose, word = null, onSuc
           </label>
         </div>
 
-        <div className="flex justify-end gap-3 pt-3 border-t border-[#E2E8E0]">
+        <div className="flex justify-end gap-3 pt-3 border-t border-[#DDE5D9]">
           <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
             Hủy
           </Button>
