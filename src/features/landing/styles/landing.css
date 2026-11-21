@@ -1,0 +1,240 @@
+/* Kiểu dáng & hiệu ứng GPU-accelerated cho Trang Tiếp thị / Trang đích ReHome */
+
+.landing-hero-mesh {
+  background-color: #F6F9F4;
+  background-image:
+    radial-gradient(circle at 8% 12%, rgba(0, 107, 44, 0.095), transparent 44%),
+    radial-gradient(circle at 88% 14%, rgba(254, 166, 25, 0.16), transparent 38%),
+    radial-gradient(circle at 60% 85%, rgba(0, 104, 95, 0.08), transparent 44%);
+}
+
+.landing-editorial-grid {
+  background-image:
+    linear-gradient(to right, rgba(0, 107, 44, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 107, 44, 0.045) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+.landing-dot-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Quầng sáng nền trôi mượt bằng transform GPU */
+@keyframes landing-orb {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(18px, -14px, 0) scale(1.06);
+  }
+}
+
+.landing-orb-float {
+  will-change: transform;
+  animation: landing-orb 16s ease-in-out infinite;
+}
+
+.landing-orb-float-slow {
+  will-change: transform;
+  animation: landing-orb 22s ease-in-out infinite reverse;
+}
+
+/* Hiệu ứng vệt sáng chéo trên nút CTA chính khi hover */
+.landing-btn-shine {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.landing-btn-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 45%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.28),
+    transparent
+  );
+  transform: translateX(-160%) skewX(-20deg);
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.landing-btn-shine:hover::after,
+.landing-btn-shine:focus-visible::after {
+  transform: translateX(280%) skewX(-20deg);
+}
+
+/* Tia sáng quét mượt cho khung AI Try-On và khung QR */
+@keyframes landing-scan-beam {
+  0% {
+    transform: translate3d(0, -100%, 0);
+    opacity: 0;
+  }
+  15%, 85% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate3d(0, 440%, 0);
+    opacity: 0;
+  }
+}
+
+.landing-scan-beam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 22%;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(52, 211, 153, 0.28) 55%,
+    rgba(254, 166, 25, 0.4) 92%,
+    transparent
+  );
+  border-bottom: 1.5px solid rgba(254, 166, 25, 0.75);
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation: landing-scan-beam 3.6s ease-in-out infinite;
+}
+
+/* Hiệu ứng chuyển tab mượt trong mockup Hero */
+@keyframes landing-tab-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.landing-tab-panel {
+  animation: landing-tab-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Vầng sáng spotlight tương tác theo con trỏ trên thẻ Dark Emerald */
+.landing-spotlight-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.landing-spotlight-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    360px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(254, 166, 25, 0.14),
+    rgba(52, 211, 153, 0.08) 40%,
+    transparent 68%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.landing-spotlight-card:hover::before {
+  opacity: 1;
+}
+
+.landing-spotlight-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Vòng sóng lan tỏa nhẹ cho chấm trạng thái trực tiếp */
+@keyframes landing-pulse-ring {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.7;
+  }
+  70% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+
+.landing-pulse-ring {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.landing-pulse-ring::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background-color: currentColor;
+  animation: landing-pulse-ring 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+/* Dải thương hiệu chạy mượt */
+@keyframes landing-marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.landing-marquee-viewport {
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+}
+
+.landing-marquee-track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation: landing-marquee 32s linear infinite;
+}
+
+.landing-marquee-viewport:hover .landing-marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-orb-float,
+  .landing-orb-float-slow,
+  .landing-scan-beam,
+  .landing-tab-panel,
+  .landing-pulse-ring::after {
+    animation: none !important;
+  }
+
+  .landing-btn-shine::after {
+    display: none;
+  }
+
+  .landing-marquee-viewport {
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+
+  .landing-marquee-track {
+    animation: none;
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .landing-marquee-duplicate {
+    display: none;
+  }
+}
