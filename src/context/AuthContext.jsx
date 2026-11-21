@@ -1,14 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import baseApi, {
+import {
   getUser,
   saveUser,
   getToken,
   getRefreshToken,
-  refreshAccessToken,
   removeTokens,
   isTokenExpired,
-} from '../services/baseApi.js';
-import authService, { isMemberRole } from '../features/auth/services/auth.service.js';
+} from '../services/tokenStorage.js';
+
+const loadBaseApi = () => import('../services/baseApi.js');
+const loadAuthService = () => import('../features/auth/services/auth.service.js');
 
 export const AuthContext = createContext(null);
 
@@ -17,7 +18,7 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(getToken() || getRefreshToken()));
   const [loading, setLoading] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(() => Boolean(getToken() || getRefreshToken()));
 
   // Khôi phục và đồng bộ phiên đăng nhập từ backend khi load lại trang
   const refreshAuth = useCallback(async () => {
@@ -32,8 +33,10 @@ export const AuthProvider = ({ children }) => {
 
     try {
       if ((!token || isTokenExpired(token)) && refreshToken) {
+        const { refreshAccessToken } = await loadBaseApi();
         await refreshAccessToken();
       }
+      const { default: authService } = await loadAuthService();
       const freshUser = await authService.getCurrentUser();
       if (freshUser) {
         setUser(freshUser);
@@ -59,6 +62,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     setLoading(true);
     try {
+      const { default: authService } = await loadAuthService();
       const data = await authService.login(credentials);
       if (data?.user) {
         setUser(data.user);
@@ -73,6 +77,7 @@ export const AuthProvider = ({ children }) => {
   const loginWithGoogle = async (googleToken = null) => {
     setLoading(true);
     try {
+      const { default: authService } = await loadAuthService();
       const data = await authService.loginWithGoogle(googleToken);
       if (data?.user) {
         setUser(data.user);
@@ -85,6 +90,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateProfile = async (profileData) => {
+    const [{ default: baseApi }, { default: authService, isMemberRole }] = await Promise.all([
+      loadBaseApi(),
+      loadAuthService(),
+    ]);
     // Profile owns this request's loading state; auth loading would unmount PrivateRoute and lose feedback banners.
     // Đối với Moderator/Staff và Admin (hoặc vai trò không có endpoint riêng): gọi PUT /api/auth/me
     if (user && !isMemberRole(user.role || user.authorities)) {
@@ -134,6 +143,7 @@ export const AuthProvider = ({ children }) => {
         newPasswordRepeat: args[2] || args[1],
       };
     }
+    const { default: authService } = await loadAuthService();
     return await authService.changePassword(payload);
   };
 
@@ -146,6 +156,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setIsAuthenticated(false);
     try {
+      const { default: authService } = await loadAuthService();
       await authService.logout();
     } catch {
       // Ignore logout network error since local session is already cleared

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import Logo from '../../../components/common/Logo.jsx';
-import { Button } from '../../../components/common/index.js';
+import Button from '../../../components/common/Button.jsx';
 import { authService } from '../services/auth.service.js';
 import { validateEmail, validatePassword, validateConfirmPassword } from '../../../utils/validators.js';
 
@@ -120,14 +120,14 @@ export default function PasswordRecovery({ reset = false }) {
                     value={newPassword}
                     onChange={(event) => { setNewPassword(event.target.value); setError(''); }}
                     aria-describedby="password-policy"
-                    className={`${inputClass} pr-10`}
+                    className={`${inputClass} pr-11`}
                   />
                   <button
                     type="button"
                     aria-label={showNewPassword ? 'Ẩn mật khẩu mới' : 'Hiện mật khẩu mới'}
                     aria-pressed={showNewPassword}
                     onClick={() => setShowNewPassword((v) => !v)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-[#5B6776] hover:text-[#1F2A37] rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-[#006B2C]/40"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-[#5B6776] hover:text-[#1F2A37] rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#006B2C]/40"
                   >
                     <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
                       {showNewPassword ? 'visibility_off' : 'visibility'}
@@ -146,14 +146,14 @@ export default function PasswordRecovery({ reset = false }) {
                     disabled={loading}
                     value={confirmPassword}
                     onChange={(event) => { setConfirmPassword(event.target.value); setError(''); }}
-                    className={`${inputClass} pr-10`}
+                    className={`${inputClass} pr-11`}
                   />
                   <button
                     type="button"
                     aria-label={showConfirmPassword ? 'Ẩn mật khẩu xác nhận' : 'Hiện mật khẩu xác nhận'}
                     aria-pressed={showConfirmPassword}
                     onClick={() => setShowConfirmPassword((v) => !v)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-[#5B6776] hover:text-[#1F2A37] rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-[#006B2C]/40"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-[#5B6776] hover:text-[#1F2A37] rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#006B2C]/40"
                   >
                     <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
                       {showConfirmPassword ? 'visibility_off' : 'visibility'}
