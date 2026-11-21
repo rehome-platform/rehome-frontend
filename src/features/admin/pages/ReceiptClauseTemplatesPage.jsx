@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Input, Modal } from '../../../components/common/index.js';
+import { Button, Input, Modal, TableActionButton } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import receiptClauseAdminApi from '../services/receiptClauseAdminApi.js';
 import ReceiptPreviewPanel from './ReceiptPreviewPanel.jsx';
@@ -289,14 +289,8 @@ export default function ReceiptClauseTemplatesPage() {
                       </button>
                     </div>
                     <div className="flex items-center gap-2 pt-1 border-t border-[#F0F2EF]">
-                      <Button size="sm" variant="outline" onClick={() => startEdit(clause)} className="gap-1">
-                        <span className="material-symbols-outlined text-sm">edit</span>
-                        <span>Sửa</span>
-                      </Button>
-                      <Button size="sm" variant="danger" onClick={() => setDeleteTarget(clause)} className="gap-1">
-                        <span className="material-symbols-outlined text-sm">delete</span>
-                        <span>Xóa</span>
-                      </Button>
+                      <TableActionButton action="edit" onClick={() => startEdit(clause)} />
+                      <TableActionButton action="delete" onClick={() => setDeleteTarget(clause)} />
                     </div>
                   </div>
                 ))

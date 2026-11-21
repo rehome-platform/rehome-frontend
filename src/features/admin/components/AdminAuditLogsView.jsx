@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import adminApi from '../services/adminApi.js';
 import AdminPeriodFilter from './AdminPeriodFilter.jsx';
 import useAdminPeriod from '../hooks/useAdminPeriod.js';
-import { Spinner } from '../../../components/common/index.js';
+import { Button, Spinner } from '../../../components/common/index.js';
 import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
 import {
   AUDIT_TARGET_TYPE_LABELS,
@@ -451,17 +451,20 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={fetchAuditLogs}
               disabled={loading}
-              className="px-3 py-1.5 text-xs font-semibold text-[#006B2C] hover:bg-[#E8F5E9] rounded-xl transition-colors flex items-center gap-1 border border-[#006B2C]/30"
+              className="gap-1.5 whitespace-nowrap"
               title="Làm mới nhật ký"
             >
-              <span className={`material-symbols-outlined text-base ${loading ? 'animate-spin' : ''}`}>
+              <span aria-hidden="true" className={`material-symbols-outlined text-base ${loading ? 'animate-spin' : ''}`}>
                 refresh
               </span>
               <span>{loading ? 'Đang tải...' : 'Làm mới'}</span>
-            </button>
+            </Button>
 
             {(actorSearch ||
               selectedActorRole !== 'ALL' ||
@@ -471,13 +474,16 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
               fromTime ||
               toTime ||
               quickMinutes) && (
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
                 onClick={handleResetFilter}
-                className="px-3 py-1.5 text-xs font-semibold text-[#5B6776] hover:text-[#1F2A37] hover:bg-[#F0F4EE] rounded-xl transition-colors flex items-center gap-1"
+                className="gap-1"
               >
-                <span className="material-symbols-outlined text-base">restart_alt</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-base">restart_alt</span>
                 <span>Xóa bộ lọc</span>
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -500,13 +506,16 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
           <p className="text-xs text-[#5B6776] max-w-sm mt-1 mb-5">
             Thử điều chỉnh lại khoảng thời gian hoặc đối tượng tác động để tìm kiếm lại.
           </p>
-          <button
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
             onClick={handleResetFilter}
-            className="px-4 py-2 bg-[#006B2C] text-white text-xs font-semibold rounded-xl hover:bg-[#005222] transition-colors flex items-center gap-1.5 shadow-sm"
+            className="gap-1.5"
           >
-            <span className="material-symbols-outlined text-sm">restart_alt</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-sm">restart_alt</span>
             <span>Xóa toàn bộ bộ lọc</span>
-          </button>
+          </Button>
         </div>
       ) : (
         /* Audit Table - gọn, mỗi ô một dòng, chi tiết đầy đủ nằm trong hàng mở rộng */

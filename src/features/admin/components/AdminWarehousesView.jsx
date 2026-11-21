@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Badge, Modal, Input, Spinner } from '../../../components/common/index.js';
+import { Button, Badge, Modal, Input, Spinner, TableActionButton } from '../../../components/common/index.js';
 import adminApi from '../services/adminApi.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import OpeningHoursPicker from './OpeningHoursPicker.jsx';
@@ -434,22 +434,28 @@ export default function AdminWarehousesView({ onLogAction }) {
       {/* Header & Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4">
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => fetchWarehouses()}
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
             disabled={loading}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-[#DDE5D9] bg-white text-xs font-semibold text-[#5B6776] hover:bg-[#F6F9F4] hover:text-[#006B2C] transition-colors"
+            onClick={() => fetchWarehouses()}
+            className="gap-1.5 whitespace-nowrap"
           >
-            <span className={`material-symbols-outlined text-base ${loading ? 'animate-spin' : ''}`}>
+            <span aria-hidden="true" className={`material-symbols-outlined text-base ${loading ? 'animate-spin' : ''}`}>
               refresh
             </span>
             <span>Làm mới</span>
-          </button>
+          </Button>
           <Button
+            type="button"
+            variant="primary"
+            size="md"
             onClick={handleOpenCreate}
-            className="bg-[#006B2C] hover:bg-[#005221] text-white text-xs shrink-0 rounded-xl px-4 py-2.5"
+            className="gap-1.5 shrink-0 whitespace-nowrap"
           >
-            <span className="material-symbols-outlined text-[18px] mr-1.5">add_location_alt</span>
-            Thêm điểm kí gửi mới
+            <span aria-hidden="true" className="material-symbols-outlined text-[18px]">add_location_alt</span>
+            <span>Thêm điểm kí gửi mới</span>
           </Button>
         </div>
       </div>
@@ -490,12 +496,13 @@ export default function AdminWarehousesView({ onLogAction }) {
         <div className="bg-white rounded-2xl border border-[#FEE2E2] p-8 text-center space-y-3">
           <span className="material-symbols-outlined text-3xl text-[#DC2626]">error</span>
           <p className="text-sm font-bold text-[#1F2A37]">{apiError}</p>
-          <button
+          <Button
+            variant="primary"
+            size="sm"
             onClick={() => fetchWarehouses()}
-            className="px-4 py-2 bg-[#006B2C] text-white text-xs font-semibold rounded-xl"
           >
             Thử kết nối lại
-          </button>
+          </Button>
         </div>
       ) : filteredWarehouses.length === 0 ? (
         <div className="bg-white rounded-2xl border border-[#DDE5D9] p-12 text-center space-y-3">
@@ -506,7 +513,7 @@ export default function AdminWarehousesView({ onLogAction }) {
           <p className="text-xs text-[#5B6776] max-w-sm mx-auto">
             Hệ thống chưa ghi nhận điểm kí gửi nào phù hợp. Vui lòng thêm điểm kí gửi mới.
           </p>
-          <Button onClick={handleOpenCreate} className="bg-[#006B2C] text-white text-xs mt-2">
+          <Button variant="primary" size="sm" onClick={handleOpenCreate} className="mt-2">
             Thêm điểm kí gửi đầu tiên
           </Button>
         </div>
@@ -592,26 +599,33 @@ export default function AdminWarehousesView({ onLogAction }) {
                 )}
                 {(!w.inventoryCount || w.inventoryCount === 0) && <div></div>}
 
-                <div className="flex items-center space-x-2">
-                  <Button size="sm" variant="outline" className="rounded-xl" onClick={() => handleOpenEdit(w)}>
-                    Sửa thông tin
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={w.status === 'ACTIVE' ? 'danger' : 'outline'}
-                    disabled={togglingId === w.id}
-                    className="rounded-xl"
-                    onClick={() => handleToggleHide(w)}
-                  >
-                    {togglingId === w.id ? (
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                        <span>Đang xử lý...</span>
-                      </div>
-                    ) : (
-                      w.status === 'ACTIVE' ? 'Ẩn điểm kí gửi' : 'Mở hoạt động'
-                    )}
-                  </Button>
+                <div className="flex items-center gap-2">
+                  <TableActionButton
+                    action="edit"
+                    label="Sửa thông tin"
+                    onClick={() => handleOpenEdit(w)}
+                  />
+                  {w.status === 'ACTIVE' ? (
+                    <TableActionButton
+                      action="view"
+                      icon="visibility_off"
+                      label={togglingId === w.id ? 'Đang xử lý...' : 'Ẩn điểm kí gửi'}
+                      loading={togglingId === w.id}
+                      disabled={togglingId === w.id}
+                      onClick={() => handleToggleHide(w)}
+                      className="border-[#FECDCA] text-[#B42318] hover:bg-[#FEF3F2] hover:border-[#D92D20] hover:text-[#B42318]"
+                    />
+                  ) : (
+                    <TableActionButton
+                      action="view"
+                      icon="visibility"
+                      label={togglingId === w.id ? 'Đang xử lý...' : 'Mở hoạt động'}
+                      loading={togglingId === w.id}
+                      disabled={togglingId === w.id}
+                      onClick={() => handleToggleHide(w)}
+                      className="border-[#ABEFC6] text-[#006B2C] hover:bg-[#ECFDF3] hover:border-[#006B2C] hover:text-[#006B2C]"
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -793,26 +807,20 @@ export default function AdminWarehousesView({ onLogAction }) {
 
           <div className="flex justify-end space-x-2 pt-3 border-t border-[#DDE5D9]">
             <Button
-              variant="ghost"
+              type="button"
+              variant="outline"
               disabled={isSubmitting}
-              className="rounded-xl"
               onClick={() => setIsModalOpen(false)}
             >
               Hủy
             </Button>
             <Button
               type="submit"
+              variant="primary"
+              loading={isSubmitting}
               disabled={isSubmitting}
-              className="bg-[#006B2C] text-white hover:bg-[#005523] rounded-xl flex items-center gap-2"
             >
-              {isSubmitting ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Đang lưu...</span>
-                </>
-              ) : (
-                editingWarehouse ? 'Lưu cập nhật' : 'Tạo điểm kí gửi mới'
-              )}
+              {isSubmitting ? 'Đang lưu...' : (editingWarehouse ? 'Lưu cập nhật' : 'Tạo điểm kí gửi mới')}
             </Button>
           </div>
         </form>

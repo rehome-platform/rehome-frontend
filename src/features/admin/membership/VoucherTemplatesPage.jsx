@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Badge, Button, Modal, Table } from '../../../components/common/index.js';
+import { Badge, Button, Modal, Table, TableActionButton } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import { membershipAdminApi } from '../services/membershipAdminApi.js';
 import { VOUCHER_TYPE_LABELS } from './membershipConstants.js';
@@ -140,14 +140,8 @@ export default function VoucherTemplatesPage() {
       header: 'Thao tác',
       render: (row) => (
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => setDetailTemplate(row)} className="gap-1">
-            <span className="material-symbols-outlined text-sm">visibility</span>
-            <span>Xem chi tiết</span>
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => handleOpenEdit(row)} className="gap-1">
-            <span className="material-symbols-outlined text-sm">edit</span>
-            <span>Sửa</span>
-          </Button>
+          <TableActionButton action="view" onClick={() => setDetailTemplate(row)} />
+          <TableActionButton action="edit" onClick={() => handleOpenEdit(row)} />
         </div>
       ),
     },
