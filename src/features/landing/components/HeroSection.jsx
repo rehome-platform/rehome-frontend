@@ -175,9 +175,9 @@ export default function HeroSection({ stats, loading, hasLiveData, products = []
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-14 sm:pt-14 sm:pb-16 lg:pt-16 lg:pb-20 space-y-12">
         <div className="grid lg:grid-cols-12 gap-10 lg:gap-8 items-center">
           {/* Cột trái: Editorial Headline & CTA tải APK */}
-          <div className="lg:col-span-6 space-y-6">
-            <div className="hero-eyebrow inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/95 backdrop-blur-sm border border-[#DDE5D9] shadow-sm text-xs font-bold text-[#006B2C]">
-              <span className="landing-pulse-ring w-2 h-2 rounded-full bg-[#006B2C] text-[#006B2C]" />
+          <div className="lg:col-span-6 min-w-0 space-y-6">
+            <div className="hero-eyebrow inline-flex flex-wrap items-center gap-2 max-w-full px-4 py-1.5 rounded-full bg-white/95 backdrop-blur-sm border border-[#DDE5D9] shadow-sm text-xs font-bold text-[#006B2C]">
+              <span className="landing-pulse-ring w-2 h-2 rounded-full bg-[#006B2C] text-[#006B2C] shrink-0" />
               <AndroidIcon className="w-4 h-4 shrink-0" />
               <span>
                 ReHome Android v{APP_METADATA.version} • Tải miễn phí trên Google Drive
@@ -240,17 +240,17 @@ export default function HeroSection({ stats, loading, hasLiveData, products = []
           </div>
 
           {/* Cột phải: Composition ảnh Editorial + Mockup Android xếp lớp */}
-          <div className="lg:col-span-6 relative">
-            <div className="relative mx-auto max-w-[540px] flex flex-col sm:block">
+          <div className="lg:col-span-6 min-w-0 relative">
+            <div className="relative mx-auto w-full max-w-[540px] flex flex-col sm:block sm:pb-14">
               {/* Khung ảnh Editorial nền phía sau bên phải */}
-              <div className="hero-editorial-frame hidden sm:block ml-auto w-[78%] aspect-[4/5] rounded-[2rem] overflow-hidden border border-white shadow-card-hover bg-[#EBF1E8] relative">
+              <div className="hero-editorial-frame hidden sm:block ml-auto w-[80%] aspect-[4/5] rounded-[2rem] overflow-hidden border border-white shadow-card-hover bg-[#EBF1E8] relative">
                 <img
                   src={heroEditorialUrl}
                   alt="Bộ sưu tập thời trang tuần hoàn tuyển chọn tại ReHome"
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#062B19]/45 via-transparent to-transparent" />
-                <div className="absolute bottom-4 right-4 left-24 flex justify-end">
+                <div className="absolute top-4 right-4 z-10 flex justify-end">
                   <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/95 backdrop-blur-md border border-white shadow-lg whitespace-nowrap">
                     <ShieldCheckIcon className="w-4 h-4 text-[#006B2C] shrink-0" />
                     <span className="text-[11px] font-bold text-[#1F2A37]">
@@ -261,7 +261,7 @@ export default function HeroSection({ stats, loading, hasLiveData, products = []
               </div>
 
               {/* Khung điện thoại Android tinh xảo nổi phía trước bên trái */}
-              <div className="hero-phone-float relative sm:absolute sm:left-0 sm:bottom-6 z-10 mx-auto w-full max-w-[305px]">
+              <div className="hero-phone-float relative sm:absolute sm:left-0 sm:bottom-0 z-10 mx-auto w-full max-w-[305px] sm:max-w-[276px] xl:max-w-[298px]">
                 <div className="rounded-[2.2rem] bg-[#161F1B] p-2.5 shadow-[0_24px_50px_-12px_rgba(6,43,25,0.42)] border border-[#2C3E35]">
                   <div className="rounded-[1.75rem] bg-[#F6F9F4] overflow-hidden">
                     {/* Header App với camera punch-hole */}

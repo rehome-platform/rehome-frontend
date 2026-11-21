@@ -292,10 +292,13 @@ export default function LandingPage() {
     selectedProduct?.thumbnailUrl && !isBrokenSeedAssetUrl(selectedProduct.thumbnailUrl);
 
   return (
-    <div ref={containerRef} className="min-h-screen flex flex-col bg-[#F6F9F4] text-[#1F2A37]">
+    <div
+      ref={containerRef}
+      className="min-h-screen flex flex-col bg-[#F6F9F4] text-[#1F2A37] overflow-x-clip"
+    >
       <LandingNavbar />
 
-      <main className="flex-1">
+      <main className="flex-1 overflow-x-clip">
         <HeroSection
           stats={data.stats}
           loading={loading}

@@ -22,9 +22,12 @@
 
 /* Quầng sáng nền trôi mượt bằng transform GPU */
 @keyframes landing-orb {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translate3d(0, 0, 0) scale(1);
   }
+
   50% {
     transform: translate3d(18px, -14px, 0) scale(1.06);
   }
@@ -52,12 +55,10 @@
   position: absolute;
   inset: 0;
   width: 45%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.28),
-    transparent
-  );
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.28),
+      transparent);
   transform: translateX(-160%) skewX(-20deg);
   transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
@@ -75,9 +76,12 @@
     transform: translate3d(0, -100%, 0);
     opacity: 0;
   }
-  15%, 85% {
+
+  15%,
+  85% {
     opacity: 0.9;
   }
+
   100% {
     transform: translate3d(0, 440%, 0);
     opacity: 0;
@@ -90,13 +94,11 @@
   right: 0;
   top: 0;
   height: 22%;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgba(52, 211, 153, 0.28) 55%,
-    rgba(254, 166, 25, 0.4) 92%,
-    transparent
-  );
+  background: linear-gradient(to bottom,
+      transparent,
+      rgba(52, 211, 153, 0.28) 55%,
+      rgba(254, 166, 25, 0.4) 92%,
+      transparent);
   border-bottom: 1.5px solid rgba(254, 166, 25, 0.75);
   pointer-events: none;
   will-change: transform, opacity;
@@ -109,6 +111,7 @@
     opacity: 0;
     transform: translate3d(0, 8px, 0);
   }
+
   to {
     opacity: 1;
     transform: translate3d(0, 0, 0);
@@ -129,12 +132,10 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(
-    360px circle at var(--mx, 50%) var(--my, 50%),
-    rgba(254, 166, 25, 0.14),
-    rgba(52, 211, 153, 0.08) 40%,
-    transparent 68%
-  );
+  background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 50%),
+      rgba(254, 166, 25, 0.14),
+      rgba(52, 211, 153, 0.08) 40%,
+      transparent 68%);
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
@@ -145,7 +146,7 @@
   opacity: 1;
 }
 
-.landing-spotlight-card > * {
+.landing-spotlight-card > :not([aria-hidden='true']) {
   position: relative;
   z-index: 1;
 }
@@ -156,10 +157,12 @@
     transform: scale(0.95);
     opacity: 0.7;
   }
+
   70% {
     transform: scale(2.1);
     opacity: 0;
   }
+
   100% {
     transform: scale(2.1);
     opacity: 0;
@@ -187,12 +190,15 @@
   0% {
     transform: translate3d(0, 0, 0);
   }
+
   100% {
     transform: translate3d(-50%, 0, 0);
   }
 }
 
 .landing-marquee-viewport {
+  width: 100%;
+  max-width: 100%;
   overflow: hidden;
   mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
   -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
@@ -210,6 +216,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .landing-orb-float,
   .landing-orb-float-slow,
   .landing-scan-beam,

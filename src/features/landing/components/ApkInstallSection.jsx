@@ -31,13 +31,17 @@ export default function ApkInstallSection() {
   };
 
   return (
-    <section id="install-guide" className="py-20 sm:py-24 bg-[#F6F9F4]">
+    <section id="install-guide" className="relative overflow-hidden py-20 sm:py-24 bg-[#F6F9F4]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-14">
         {/* Khối Flagship Dark Emerald + Aurora Orbs + Spotlight + Thẻ QR */}
         <div
           onPointerMove={updateSpotlightCoords}
-          className="landing-spotlight-card relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#042414] via-[#063A1F] to-[#005A26] text-white p-7 sm:p-10 lg:p-12 shadow-elevated landing-dot-grid reveal-section"
+          className="landing-spotlight-card relative overflow-hidden rounded-[2rem] bg-[#042414] bg-gradient-to-br from-[#042414] via-[#063A1F] to-[#005A26] text-white p-5 sm:p-10 lg:p-12 shadow-elevated reveal-section"
         >
+          <div
+            aria-hidden="true"
+            className="landing-dot-grid absolute inset-0 pointer-events-none"
+          />
           {/* Hai quầng sáng aurora nền */}
           <div
             aria-hidden="true"
@@ -49,8 +53,8 @@ export default function ApkInstallSection() {
           />
 
           <div className="grid lg:grid-cols-12 gap-8 lg:gap-10 items-center relative z-10">
-            <div className="lg:col-span-8 space-y-5">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/15 text-xs font-bold text-white whitespace-nowrap">
+            <div className="lg:col-span-8 min-w-0 space-y-5">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/15 text-xs font-bold text-white whitespace-nowrap max-w-full">
                 <AndroidIcon className="w-4 h-4 text-[#FEA619] shrink-0" />
                 <span>
                   {APP_METADATA.platform} • Phiên bản {APP_METADATA.version}
@@ -68,13 +72,13 @@ export default function ApkInstallSection() {
               </p>
 
               <div className="flex flex-wrap gap-2.5 text-xs text-white/90">
-                <span className="px-3.5 py-1.5 rounded-full bg-black/25 border border-white/10 font-medium whitespace-nowrap">
+                <span className="max-w-full px-3.5 py-1.5 rounded-full bg-black/25 border border-white/10 font-medium sm:whitespace-nowrap">
                   Mã gói: <strong className="text-white">{APP_METADATA.packageName}</strong>
                 </span>
-                <span className="px-3.5 py-1.5 rounded-full bg-black/25 border border-white/10 font-medium whitespace-nowrap">
+                <span className="max-w-full px-3.5 py-1.5 rounded-full bg-black/25 border border-white/10 font-medium sm:whitespace-nowrap">
                   Yêu cầu: <strong className="text-white">{APP_METADATA.minAndroid}</strong>
                 </span>
-                <span className="px-3.5 py-1.5 rounded-full bg-black/25 border border-white/10 font-medium whitespace-nowrap">
+                <span className="max-w-full px-3.5 py-1.5 rounded-full bg-black/25 border border-white/10 font-medium sm:whitespace-nowrap">
                   Nguồn: <strong className="text-white">{APP_METADATA.distributionLabel}</strong>
                 </span>
               </div>
@@ -87,7 +91,7 @@ export default function ApkInstallSection() {
                     target="_blank"
                     rel="noopener noreferrer"
                     data-testid="install-apk-cta"
-                    className="landing-btn-shine inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-[#FEA619] hover:bg-[#E59412] text-[#1F2A37] font-bold text-sm sm:text-base shadow-elevated transition-all hover:-translate-y-0.5 whitespace-nowrap shrink-0"
+                    className="landing-btn-shine inline-flex items-center justify-center gap-2.5 px-5 sm:px-6 py-4 rounded-2xl bg-[#FEA619] hover:bg-[#E59412] text-[#1F2A37] font-bold text-sm sm:text-base shadow-elevated transition-all hover:-translate-y-0.5 whitespace-nowrap shrink-0"
                   >
                     <DownloadIcon className="w-5 h-5 shrink-0" />
                     <span>Tải tệp APK từ Google Drive</span>
@@ -119,7 +123,7 @@ export default function ApkInstallSection() {
             </div>
 
             {/* Thẻ mã QR với 4 góc scanner & tia quét mượt */}
-            <div className="lg:col-span-4 flex justify-center lg:justify-end">
+            <div className="lg:col-span-4 min-w-0 flex justify-center lg:justify-end">
               <div className="w-full max-w-[268px] rounded-3xl bg-white text-[#1F2A37] p-5 shadow-2xl border border-white/40 text-center space-y-3">
                 <div className="relative overflow-hidden rounded-2xl bg-[#F6F9F4] border border-[#DDE5D9] p-3.5">
                   {/* 4 góc khung quét camera */}

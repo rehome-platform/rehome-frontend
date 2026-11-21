@@ -100,7 +100,7 @@ export default function CommunitySection({ campaigns = [], organizations = [], l
           isSingleCampaign ? (
             /* Bố cục Spotlight toàn chiều rộng khi có 1 chiến dịch */
             <article className="community-card group rounded-3xl border border-[#DDE5D9] bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-all grid lg:grid-cols-12">
-              <div className="lg:col-span-5 aspect-[16/10] lg:aspect-auto min-h-[260px] bg-[#EBF1E8] overflow-hidden relative">
+              <div className="lg:col-span-5 min-w-0 aspect-[16/10] lg:aspect-auto min-h-[260px] bg-[#EBF1E8] overflow-hidden relative">
                 <CampaignCover
                   src={visibleCampaigns[0].coverUrl}
                   title={visibleCampaigns[0].title}
@@ -110,7 +110,7 @@ export default function CommunitySection({ campaigns = [], organizations = [], l
                 </span>
               </div>
 
-              <div className="lg:col-span-7 p-6 sm:p-8 flex flex-col justify-between gap-5">
+              <div className="lg:col-span-7 min-w-0 p-6 sm:p-8 flex flex-col justify-between gap-5">
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2 text-xs text-[#5B6776]">
                     <span className="px-2.5 py-1 rounded-full bg-[#E8F5E9] text-[#006B2C] font-bold whitespace-nowrap">
@@ -191,10 +191,10 @@ export default function CommunitySection({ campaigns = [], organizations = [], l
                     key={campaign.id}
                     className="community-card group rounded-3xl border border-[#DDE5D9] bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-all grid sm:grid-cols-12"
                   >
-                    <div className="sm:col-span-5 aspect-[16/10] sm:aspect-auto bg-[#EBF1E8] overflow-hidden">
+                    <div className="sm:col-span-5 min-w-0 aspect-[16/10] sm:aspect-auto bg-[#EBF1E8] overflow-hidden">
                       <CampaignCover src={campaign.coverUrl} title={campaign.title} />
                     </div>
-                    <div className="sm:col-span-7 p-5 flex flex-col justify-between gap-3">
+                    <div className="sm:col-span-7 min-w-0 p-5 flex flex-col justify-between gap-3">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-xs text-[#5B6776]">
                           <span className="font-bold text-[#006B2C] truncate">

@@ -55,9 +55,9 @@ export default function FeaturesSection({ categories = [], brands = [], loading 
           {/* Ô 1: Thử đồ AI & Live Try-On (Dark Emerald Spotlight + AI Scan Beam) */}
           <article
             onPointerMove={updateSpotlightCoords}
-            className="bento-card landing-spotlight-card lg:col-span-7 rounded-3xl bg-gradient-to-br from-[#062B19] via-[#083A22] to-[#0A542C] text-white p-6 sm:p-8 shadow-elevated grid sm:grid-cols-12 gap-6 items-center"
+            className="bento-card landing-spotlight-card lg:col-span-7 min-w-0 rounded-3xl bg-gradient-to-br from-[#062B19] via-[#083A22] to-[#0A542C] text-white p-6 sm:p-8 shadow-elevated grid sm:grid-cols-12 gap-6 items-center"
           >
-            <div className="sm:col-span-7 space-y-4">
+            <div className="sm:col-span-7 min-w-0 space-y-4">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FEA619] text-[#1F2A37] text-[11px] font-bold whitespace-nowrap">
                 <SparklesIcon className="w-3.5 h-3.5 shrink-0" />
                 <span>Công nghệ AI</span>
@@ -84,7 +84,7 @@ export default function FeaturesSection({ categories = [], brands = [], loading 
               )}
             </div>
 
-            <div className="sm:col-span-5">
+            <div className="sm:col-span-5 min-w-0">
               <div className="relative aspect-[4/3] sm:aspect-[3/4] rounded-2xl overflow-hidden border border-white/15 shadow-lg">
                 <img
                   src={aiTryonUrl}
@@ -98,7 +98,7 @@ export default function FeaturesSection({ categories = [], brands = [], loading 
           </article>
 
           {/* Ô 2: Ký gửi kiểm định tại kho (Timeline 4 bước) */}
-          <article className="bento-card lg:col-span-5 rounded-3xl bg-[#FBF9F4] border border-[#DDE5D9] p-6 sm:p-8 hover:shadow-card-hover transition-shadow flex flex-col justify-between gap-5">
+          <article className="bento-card lg:col-span-5 min-w-0 rounded-3xl bg-[#FBF9F4] border border-[#DDE5D9] p-6 sm:p-8 hover:shadow-card-hover transition-shadow flex flex-col justify-between gap-5">
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E8F5E9] text-[#006B2C] text-[11px] font-bold whitespace-nowrap">
@@ -127,7 +127,7 @@ export default function FeaturesSection({ categories = [], brands = [], loading 
           </article>
 
           {/* Ô 3: Sàn thời trang tuần hoàn tuyển chọn */}
-          <article className="bento-card lg:col-span-5 rounded-3xl bg-white border border-[#DDE5D9] p-6 sm:p-8 shadow-card hover:shadow-card-hover transition-shadow flex flex-col justify-between gap-5">
+          <article className="bento-card lg:col-span-5 min-w-0 rounded-3xl bg-white border border-[#DDE5D9] p-6 sm:p-8 shadow-card hover:shadow-card-hover transition-shadow flex flex-col justify-between gap-5">
             <div className="space-y-3">
               <div className="w-11 h-11 rounded-2xl bg-[#E8F5E9] text-[#006B2C] flex items-center justify-center">
                 <ShoppingBagIcon className="w-5 h-5" />
@@ -157,7 +157,7 @@ export default function FeaturesSection({ categories = [], brands = [], loading 
 
           {/* Ô 4: Quyên góp thiện nguyện & Danh mục tiếp nhận */}
           <article
-            className="bento-card lg:col-span-7 rounded-3xl border border-[#DDE5D9] p-6 sm:p-8 hover:shadow-card-hover transition-shadow flex flex-col justify-between gap-6"
+            className="bento-card lg:col-span-7 min-w-0 rounded-3xl border border-[#DDE5D9] p-6 sm:p-8 hover:shadow-card-hover transition-shadow flex flex-col justify-between gap-6"
             style={{
               background:
                 'linear-gradient(135deg, #F6F9F4 0%, #EBF4EC 60%, rgba(254,166,25,0.12) 100%)',
@@ -214,7 +214,7 @@ export default function FeaturesSection({ categories = [], brands = [], loading 
         </div>
 
         {/* Dải Brand Marquee từ API /brands */}
-        <div className="rounded-3xl border border-[#DDE5D9] bg-[#F6F9F4] py-6 px-4 sm:px-6 space-y-4 reveal-section">
+        <div className="min-w-0 overflow-hidden rounded-3xl border border-[#DDE5D9] bg-[#F6F9F4] py-6 px-4 sm:px-6 space-y-4 reveal-section">
           <div className="flex items-center justify-between gap-2 px-2">
             <h3 className="text-sm font-bold text-[#1F2A37] uppercase tracking-wider">
               Thương hiệu được đón nhận trên ReHome
