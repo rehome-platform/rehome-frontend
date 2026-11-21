@@ -198,7 +198,6 @@ describe('landingApi helpers', () => {
         };
       }
       if (url === '/warehouses') {
-        // Backend returns raw array List<WarehouseResponse>
         return {
           data: [{ id: 'w1', name: 'Kho Q1', address: 'TP.HCM' }],
         };
@@ -258,10 +257,10 @@ describe('LandingPage UI & APK CTA', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders live stats, products, campaigns, warehouses, membership plans (null -> Không giới hạn), APK CTA and 4 install steps', async () => {
+  it('renders live stats, 2 AI modes, horizontal products, inspection/warehouses, charity, about section, VIP plans, and 4 APK install steps', async () => {
     vi.spyOn(landingApi, 'fetchLandingData').mockResolvedValue(MOCK_LANDING_DATA);
 
-    render(
+    const { container } = render(
       <MemoryRouter initialEntries={['/landing']}>
         <LandingPage />
       </MemoryRouter>
@@ -281,12 +280,19 @@ describe('LandingPage UI & APK CTA', () => {
     expect(within(statsBlock).getByText('5')).toBeInTheDocument();
     expect(within(statsBlock).getByText('3')).toBeInTheDocument();
 
+    // #ai-studio (2 AI modes + About section)
+    expect(container.querySelector('#ai-studio')).toBeInTheDocument();
+    expect(screen.getAllByText(/LIVE TRY-ON REALTIME/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/TRỢ LÝ AI PHỐI ĐỒ/i).length).toBeGreaterThan(0);
+    expect(container.querySelector('#about')).toBeInTheDocument();
+    expect(screen.getByText(/Một nền tảng — Lợi ích trọn vẹn cho cả 3 phía/i)).toBeInTheDocument();
+
     // Products, campaigns, organizations, warehouses
     expect(screen.getAllByText('Áo khoác denim cổ điển').length).toBeGreaterThan(0);
     expect(screen.getByText('Nổi bật')).toBeInTheDocument();
     expect(screen.getAllByText('Tủ đồ ấm áp mùa đông').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Quỹ Hy Vọng Xanh').length).toBeGreaterThan(0);
-    expect(screen.getByText('Kho ReHome Quận 1')).toBeInTheDocument();
+    expect(screen.getAllByText('Kho ReHome Quận 1').length).toBeGreaterThan(0);
 
     // Membership plans with null limit rendered as "Không giới hạn"
     expect(screen.getByText('Gói Bạc')).toBeInTheDocument();
@@ -319,12 +325,46 @@ describe('LandingPage UI & APK CTA', () => {
     const allLinks = screen.getAllByRole('link');
     const portalLinks = allLinks.filter((el) => {
       const href = el.getAttribute('href');
-      return href === '/' || href?.startsWith('/login') || href?.startsWith('/admin') || href?.startsWith('/moderator');
+      return (
+        href === '/' ||
+        href?.startsWith('/login') ||
+        href?.startsWith('/admin') ||
+        href?.startsWith('/moderator')
+      );
     });
     expect(portalLinks).toHaveLength(0);
 
     const logoLinks = allLinks.filter((el) => el.getAttribute('href') === '/landing');
     expect(logoLinks.length).toBeGreaterThan(0);
+  });
+
+  it('switches interactive AI outfit combos in #ai-studio and sorts nearby warehouses in #warehouses', async () => {
+    vi.spyOn(landingApi, 'fetchLandingData').mockResolvedValue(MOCK_LANDING_DATA);
+
+    const { container } = render(
+      <MemoryRouter initialEntries={['/landing']}>
+        <LandingPage />
+      </MemoryRouter>
+    );
+
+    const styleGroup = await screen.findByRole('group', {
+      name: /Chọn phong cách phối đồ AI/i,
+    });
+    fireEvent.click(within(styleGroup).getByRole('button', { name: 'Năng động' }));
+
+    const aiSection = container.querySelector('#ai-studio');
+    expect(within(aiSection).getByText('Độ hợp gu: 94%')).toBeInTheDocument();
+    expect(within(aiSection).getByText('Quần jeans Levi’s 501 ống đứng')).toBeInTheDocument();
+
+    // Consignor earnings calculator & nearest warehouse finder
+    const warehousesSection = container.querySelector('#warehouses');
+    fireEvent.click(within(warehousesSection).getByRole('button', { name: /1\.000\.000/ }));
+    expect(within(warehousesSection).getByText(/900\.000/)).toBeInTheDocument();
+
+    fireEvent.click(within(warehousesSection).getByRole('button', { name: 'Hà Nội' }));
+    expect(within(warehousesSection).getByText('Gần bạn nhất')).toBeInTheDocument();
+    const warehouseHeadings = within(warehousesSection).getAllByRole('heading', { level: 4 });
+    expect(warehouseHeadings[0]).toHaveTextContent('Kho ReHome Cầu Giấy');
   });
 
   it('filters products by categoryId when clicking a category chip', async () => {
