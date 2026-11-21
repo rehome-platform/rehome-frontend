@@ -1,13 +1,15 @@
 import React, { useRef, useState } from 'react';
 import { formatCurrencyVND } from '../../../utils/formatters.js';
-import { APK_DOWNLOAD_URL } from '../constants/landingConstants.js';
+import { APK_DOWNLOAD_URL, BUYER_VOUCHER_PERKS } from '../constants/landingConstants.js';
 import { isBrokenSeedAssetUrl } from '../services/landingApi.js';
+import { updateSpotlightCoords } from '../utils/spotlight.js';
 import {
   AndroidIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   ShoppingBagIcon,
   SparklesIcon,
+  TicketPercentIcon,
 } from './LandingIcons.jsx';
 
 function ProductThumbnail({ src, alt }) {
@@ -300,6 +302,59 @@ export default function MarketplaceShowcase({
             })}
           </div>
         )}
+
+        {/* Lời mời gọi Kho Voucher dành riêng cho Người mua */}
+        <div
+          onPointerMove={updateSpotlightCoords}
+          className="landing-spotlight-card relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#042414] via-[#063A1F] to-[#005A26] text-white p-6 sm:p-8 shadow-elevated reveal-section"
+        >
+          <div
+            aria-hidden="true"
+            className="landing-dot-grid absolute inset-0 opacity-70 pointer-events-none"
+          />
+
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-3 max-w-2xl">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FEA619] text-[#1F2A37] text-[11px] font-extrabold uppercase tracking-wider whitespace-nowrap">
+                <TicketPercentIcon className="w-3.5 h-3.5 shrink-0" />
+                <span>Dành riêng cho người mua · Kho Voucher ReHome</span>
+              </span>
+              <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight leading-snug">
+                Mua đồ hiệu đã kiểm định, giảm thêm cực đã với Voucher trên App
+              </h3>
+              <p className="text-xs sm:text-sm text-white/80 leading-relaxed">
+                Người bán nhận tới 90% doanh thu, còn người mua cũng có đặc quyền riêng: lưu mã
+                giảm giá, ưu đãi đơn đầu tiên và freeship ngay trong mục Kho Voucher của ứng dụng
+                ReHome.
+              </p>
+            </div>
+
+            <a
+              href={APK_DOWNLOAD_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="landing-btn-shine inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-[#FEA619] hover:bg-[#E59412] text-[#1F2A37] text-sm font-bold shadow-elevated transition-colors whitespace-nowrap shrink-0"
+            >
+              <AndroidIcon className="w-4 h-4 shrink-0" />
+              <span>Tải APK để săn Voucher ngay</span>
+            </a>
+          </div>
+
+          <div className="relative z-10 grid sm:grid-cols-3 gap-3 mt-6 pt-5 border-t border-white/15">
+            {BUYER_VOUCHER_PERKS.map((perk) => (
+              <div
+                key={perk.id}
+                className="rounded-2xl bg-white/10 border border-dashed border-[#FEA619]/45 p-3.5 space-y-1.5"
+              >
+                <span className="inline-block px-2 py-0.5 rounded-md bg-[#FEA619]/20 text-[#FEA619] text-[10px] font-bold uppercase tracking-wider">
+                  {perk.tag}
+                </span>
+                <p className="text-sm font-bold text-white leading-snug">{perk.title}</p>
+                <p className="text-xs text-white/75 leading-relaxed">{perk.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </section>
   );

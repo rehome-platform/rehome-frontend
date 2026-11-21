@@ -95,6 +95,21 @@ export function ShoppingBagIcon({ className = 'w-5 h-5' }) {
   );
 }
 
+export function TicketPercentIcon({ className = 'w-5 h-5' }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1.5a2 2 0 0 0 0 3V15a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1.5a2 2 0 0 0 0-3V9z"
+      />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 15l6-6" />
+      <circle cx="9.5" cy="9.5" r="0.75" fill="currentColor" />
+      <circle cx="14.5" cy="14.5" r="0.75" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function MenuIcon({ className = 'w-6 h-6' }) {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>

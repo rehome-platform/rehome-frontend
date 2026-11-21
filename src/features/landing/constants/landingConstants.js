@@ -80,6 +80,27 @@ export const INSPECTION_CHECKLIST = [
 
 export const CONSIGN_EARNING_PRESETS = [250000, 500000, 1000000];
 
+export const BUYER_VOUCHER_PERKS = [
+  {
+    id: 'welcome',
+    tag: 'Đơn đầu tiên',
+    title: 'Voucher chào bạn mới',
+    desc: 'Giảm trực tiếp vào giỏ hàng ngay khi đặt món kiểm định đầu tiên trên ứng dụng.',
+  },
+  {
+    id: 'freeship',
+    tag: 'Tiết kiệm phí giao',
+    title: 'Mã Freeship & giảm theo đơn',
+    desc: 'Lưu nhanh 1 chạm trong Kho Voucher, áp dụng tự động khi thanh toán đơn hàng.',
+  },
+  {
+    id: 'vip-stack',
+    tag: 'Săn deal định kỳ',
+    title: 'Ưu đãi sự kiện & hạng VIP',
+    desc: 'Cập nhật mã giảm theo mùa và quyền lợi voucher riêng dành cho thành viên thân thiết.',
+  },
+];
+
 export const CITY_COORDS_PRESETS = [
   { id: 'hcm', label: 'TP. Hồ Chí Minh', lat: 10.7769, lng: 106.7009 },
   { id: 'hn', label: 'Hà Nội', lat: 21.0285, lng: 105.8542 },
