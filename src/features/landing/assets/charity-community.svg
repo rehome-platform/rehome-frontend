@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="800" y2="500" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F6F9F4" />
+      <stop offset="55%" stop-color="#EBF2E8" />
+      <stop offset="100%" stop-color="#DCE9DC" />
+    </linearGradient>
+    <radialGradient id="sunGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(180 90) rotate(35) scale(360 240)">
+      <stop offset="0%" stop-color="#FEA619" stop-opacity="0.22" />
+      <stop offset="100%" stop-color="#FEA619" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="tableGrad" x1="0" y1="360" x2="800" y2="500" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#E8DFD1" />
+      <stop offset="100%" stop-color="#D7C9B4" />
+    </linearGradient>
+    <linearGradient id="kraftFront" x1="220" y1="230" x2="580" y2="410" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#D7B286" />
+      <stop offset="100%" stop-color="#C09464" />
+    </linearGradient>
+    <linearGradient id="kraftBack" x1="220" y1="145" x2="580" y2="260" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#B98D5D" />
+      <stop offset="100%" stop-color="#9E7347" />
+    </linearGradient>
+  </defs>
+
+  <!-- Nền studio kem thực vật -->
+  <rect width="800" height="500" fill="url(#bgGrad)" />
+  <rect width="800" height="500" fill="url(#sunGlow)" />
+
+  <!-- Bóng lá nhiệt đới dịu nhẹ -->
+  <g opacity="0.14" fill="#006B2C">
+    <path d="M-20 40 C70 20 150 65 180 140 C110 140 40 105 -20 40 Z" />
+    <path d="M-10 120 C75 115 140 165 155 235 C85 225 25 185 -10 120 Z" />
+    <path d="M645 -10 C675 65 735 120 820 135 C775 65 715 15 645 -10 Z" />
+    <path d="M685 75 C725 135 765 170 825 185 C790 125 745 90 685 75 Z" />
+  </g>
+
+  <!-- Mặt bàn gỗ sồi sáng -->
+  <path d="M0 365 H800 V500 H0 Z" fill="url(#tableGrad)" />
+  <line x1="0" y1="365" x2="800" y2="365" stroke="#CBBBA3" stroke-width="2" />
+
+  <!-- Bóng đổ hộp quyên góp -->
+  <ellipse cx="400" cy="404" rx="225" ry="26" fill="#7D684E" opacity="0.22" />
+
+  <!-- Nắp hộp sau -->
+  <path d="M235 230 L270 155 L530 155 L565 230 Z" fill="url(#kraftBack)" />
+
+  <!-- Nếp gấp quần áo gọn gàng bên trong hộp -->
+  <!-- Áo len kem -->
+  <path d="M265 190 Q400 175 535 190 L542 238 H258 Z" fill="#FAF7F0" stroke="#E5DEC9" stroke-width="2" />
+  <!-- Áo khoác xanh rêu ReHome -->
+  <path d="M275 154 Q345 142 418 156 L422 214 H270 Z" fill="#006B2C" />
+  <path d="M292 172 Q345 162 402 174" stroke="#3E9862" stroke-width="3" stroke-linecap="round" opacity="0.65" />
+  <!-- Áo dệt kim vàng hổ phách ấm -->
+  <path d="M398 164 Q465 152 528 166 L532 222 H394 Z" fill="#FEA619" />
+  <path d="M412 182 Q465 173 514 184" stroke="#FFF2D6" stroke-width="3" stroke-linecap="round" opacity="0.55" />
+  <!-- Quần/áo xanh teal xếp lớp -->
+  <path d="M258 205 Q330 194 404 206 L408 242 H254 Z" fill="#00685F" />
+
+  <!-- Nắp mở hai bên hộp -->
+  <path d="M225 230 L175 268 L225 292 L245 230 Z" fill="#DFBE95" stroke="#B68B5C" stroke-width="1.5" />
+  <path d="M575 230 L625 268 L575 292 L555 230 Z" fill="#DFBE95" stroke="#B68B5C" stroke-width="1.5" />
+
+  <!-- Thân hộp kraft phía trước -->
+  <rect x="225" y="230" width="350" height="168" rx="12" fill="url(#kraftFront)" />
+  <rect x="225" y="230" width="350" height="12" fill="#B58758" opacity="0.45" />
+
+  <!-- Dải ruy-băng xanh lá ReHome buộc quanh hộp -->
+  <rect x="382" y="230" width="36" height="168" fill="#006B2C" />
+  <rect x="225" y="302" width="350" height="26" fill="#006B2C" />
+  <rect x="382" y="302" width="36" height="26" fill="#005523" />
+
+  <!-- Nơ ruy-băng -->
+  <path d="M400 315 C365 282 328 292 336 318 C344 338 380 326 400 315 Z" fill="#008338" />
+  <path d="M400 315 C435 282 472 292 464 318 C456 338 420 326 400 315 Z" fill="#008338" />
+  <circle cx="400" cy="315" r="11" fill="#FEA619" />
+
+  <!-- Nhãn trái tim tuần hoàn gắn trên hộp -->
+  <g transform="translate(470, 250)">
+    <rect x="0" y="0" width="64" height="36" rx="10" fill="#FFFFFF" opacity="0.92" />
+    <path d="M32 27 C32 27 21 20.5 21 14.8 C21 11.4 23.8 9 26.8 9 C28.9 9 30.8 10.2 32 12 C33.2 10.2 35.1 9 37.2 9 C40.2 9 43 11.4 43 14.8 C43 20.5 32 27 32 27 Z" fill="#006B2C" />
+  </g>
+</svg>

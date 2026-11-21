@@ -1,7 +1,6 @@
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useState, useEffect } from 'react';
 import AdminPeriodFilter from './AdminPeriodFilter.jsx';
-import { Spinner } from '../../../components/common/index.js';
+import { Button, Spinner, TableActionButton } from '../../../components/common/index.js';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import adminApi from '../services/adminApi.js';
 
@@ -52,7 +51,6 @@ export default function AdminAccountsView({
   const [lockModalAccount, setLockModalAccount] = useState(null);
   const [lockReason, setLockReason] = useState('');
   const [lockError, setLockError] = useState('');
-  const [openActionMenuId, setOpenActionMenuId] = useState(null);
 
   // Loading mutation states chống spam click
   const [isLocking, setIsLocking] = useState(false);
@@ -189,9 +187,10 @@ export default function AdminAccountsView({
       ) : (
         /* Accounts Table */
         <AccountsTable
-          filteredAccounts={filteredAccounts} openActionMenuId={openActionMenuId} setOpenActionMenuId={setOpenActionMenuId}
+          filteredAccounts={filteredAccounts}
           setDrawerAccount={setDrawerAccount} setLockModalAccount={setLockModalAccount}
           setLockReason={setLockReason} setLockError={setLockError} handleUnlockAccount={handleUnlockAccount}
+          unlockingId={unlockingId}
           page={page} onPageChange={onPageChange}
           totalElements={totalElements ?? accounts.length} totalPages={totalPages}
           accountsLoading={accountsLoading}
@@ -232,136 +231,44 @@ function withAccountStatus(account, status, historyEntry) {
   return { ...account, status, history: [historyEntry, ...account.history] };
 }
 
-// Menu "Tùy chọn" được đẩy ra document.body bằng Portal và định vị theo toạ độ thật của nút bấm
-// (position: fixed). Lý do: ô này nằm trong bảng có overflow-x-auto (để cuộn ngang) - cứ đặt
-// `position: absolute` bên trong bảng thì trình duyệt coi overflow-x-auto cũng cắt luôn theo
-// chiều dọc, nên menu của các dòng gần cuối bảng bị cắt mất, không thấy hết được các lựa chọn.
 function AccountActions({
-  acc, openActionMenuId, setOpenActionMenuId, setDrawerAccount,
-  setLockModalAccount, setLockReason, setLockError, handleUnlockAccount,
-  unlockingId,
+  acc, setDrawerAccount, setLockModalAccount, setLockReason, setLockError,
+  handleUnlockAccount, unlockingId,
 }) {
-  const isOpen = openActionMenuId === acc.id;
-  const buttonRef = useRef(null);
-  const menuRef = useRef(null);
-  const [menuPos, setMenuPos] = useState(null);
-
-  const close = () => setOpenActionMenuId(null);
-
-  useLayoutEffect(() => {
-    if (!isOpen || !buttonRef.current) {
-      setMenuPos(null);
-      return;
-    }
-    const updatePosition = () => {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
-    };
-    updatePosition();
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    // Cuộn trang hoặc đổi cỡ cửa sổ thì toạ độ nút không còn đúng nữa - đóng menu cho đơn giản,
-    // thay vì phải tính lại vị trí liên tục.
-    const handleOutsideOrEscape = (e) => {
-      if (e.type === 'keydown' && e.key !== 'Escape') return;
-      if (
-        e.type === 'mousedown' &&
-        (buttonRef.current?.contains(e.target) || menuRef.current?.contains(e.target))
-      ) {
-        return;
-      }
-      close();
-    };
-    document.addEventListener('mousedown', handleOutsideOrEscape);
-    document.addEventListener('keydown', handleOutsideOrEscape);
-    window.addEventListener('scroll', close, true);
-    window.addEventListener('resize', close);
-    return () => {
-      document.removeEventListener('mousedown', handleOutsideOrEscape);
-      document.removeEventListener('keydown', handleOutsideOrEscape);
-      window.removeEventListener('scroll', close, true);
-      window.removeEventListener('resize', close);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
-
   return (
-    <div className="inline-block relative">
-      <button
-        ref={buttonRef}
-        onClick={() => setOpenActionMenuId(isOpen ? null : acc.id)}
-        className="p-1 rounded-lg text-[#5B6776] hover:text-[#1F2A37] hover:bg-[#E9F0E5] transition-colors"
-        title="Tùy chọn"
-      >
-        <span className="material-symbols-outlined text-lg">
-          more_vert
-        </span>
-      </button>
-
-      {isOpen && menuPos && createPortal(
-        <div
-          ref={menuRef}
-          style={{ position: 'fixed', top: menuPos.top, right: menuPos.right }}
-          className="w-36 bg-white rounded-xl border border-[#DDE5D9] shadow-lg py-1.5 z-50 text-left animate-fadeIn"
-        >
-          <button
-            onClick={() => {
-              setDrawerAccount(acc);
-              close();
-            }}
-            className="w-full px-3 py-1.5 text-xs text-[#5B6776] hover:bg-[#F6F9F4] flex items-center gap-2"
-          >
-            <span className="material-symbols-outlined text-base">
-              visibility
-            </span>
-            <span>Xem chi tiết</span>
-          </button>
-
-          {acc.status === 'ACTIVE' ? (
-            <button
-              onClick={() => {
-                setLockModalAccount(acc);
-                setLockReason('');
-                setLockError('');
-                close();
-              }}
-              className="w-full px-3 py-1.5 text-xs text-[#DC2626] hover:bg-[#FEE2E2]/50 flex items-center gap-2 font-medium"
-            >
-              <span className="material-symbols-outlined text-base">
-                lock
-              </span>
-              <span>Khóa tài khoản</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => {
-                handleUnlockAccount(acc);
-                close();
-              }}
-              disabled={unlockingId === acc.id}
-              className="w-full px-3 py-1.5 text-xs text-[#006B2C] hover:bg-[#E8F5E9] flex items-center gap-2 font-medium disabled:opacity-50"
-            >
-              {unlockingId === acc.id ? (
-                <span className="w-3.5 h-3.5 border-2 border-[#006B2C] border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <span className="material-symbols-outlined text-base">
-                  lock_open
-                </span>
-              )}
-              <span>{unlockingId === acc.id ? 'Đang mở...' : 'Mở khóa'}</span>
-            </button>
-          )}
-        </div>,
-        document.body
+    <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+      <TableActionButton
+        action="view"
+        onClick={() => setDrawerAccount(acc)}
+      />
+      {acc.status === 'ACTIVE' ? (
+        <TableActionButton
+          action="view"
+          icon="lock"
+          label="Khóa tài khoản"
+          variant="danger-outline"
+          onClick={() => {
+            setLockModalAccount(acc);
+            setLockReason('');
+            setLockError('');
+          }}
+        />
+      ) : (
+        <TableActionButton
+          action="view"
+          icon="lock_open"
+          label={unlockingId === acc.id ? 'Đang mở...' : 'Mở khóa'}
+          disabled={unlockingId === acc.id}
+          className="border-[#ABEFC6] text-[#006B2C] hover:bg-[#ECFDF3] hover:border-[#006B2C] hover:text-[#006B2C]"
+          onClick={() => handleUnlockAccount(acc)}
+        />
       )}
     </div>
   );
 }
 
 function AccountRow({
-  acc, openActionMenuId, setOpenActionMenuId, setDrawerAccount,
+  acc, setDrawerAccount,
   setLockModalAccount, setLockReason, setLockError, handleUnlockAccount,
   unlockingId,
 }) {
@@ -433,10 +340,10 @@ function AccountRow({
         )}
       </td>
 
-      {/* Actions Menu */}
-      <td className="py-3.5 px-4 text-center relative whitespace-nowrap">
+      {/* Actions */}
+      <td className="py-3.5 px-6 text-right whitespace-nowrap">
         <AccountActions
-          acc={acc} openActionMenuId={openActionMenuId} setOpenActionMenuId={setOpenActionMenuId}
+          acc={acc}
           setDrawerAccount={setDrawerAccount} setLockModalAccount={setLockModalAccount}
           setLockReason={setLockReason} setLockError={setLockError} handleUnlockAccount={handleUnlockAccount}
           unlockingId={unlockingId}
@@ -489,20 +396,23 @@ function AccountsEmptyState({ handleResetFilter }) {
       <p className="text-xs text-[#5B6776] max-w-sm mt-1 mb-5">
         Vui lòng kiểm tra lại từ khóa tìm kiếm hoặc điều chỉnh bộ lọc để xem kết quả.
       </p>
-      <button
+      <Button
+        type="button"
+        variant="primary"
+        size="sm"
         onClick={handleResetFilter}
-        className="px-4 py-2 bg-[#006B2C] text-white text-xs font-semibold rounded-xl hover:bg-[#005523] transition-colors flex items-center gap-1.5 shadow-sm"
+        className="gap-1.5"
       >
-        <span className="material-symbols-outlined text-sm">filter_alt_off</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-sm">filter_alt_off</span>
         <span>Xóa bộ lọc</span>
-      </button>
+      </Button>
     </div>
   );
 }
 
 function AccountsTable({
   filteredAccounts,
-  openActionMenuId, setOpenActionMenuId, setDrawerAccount,
+  setDrawerAccount,
   setLockModalAccount, setLockReason, setLockError, handleUnlockAccount, unlockingId,
   page, onPageChange, totalElements, totalPages, accountsLoading,
 }) {
@@ -518,7 +428,7 @@ function AccountsTable({
               <th className="py-3 px-6 whitespace-nowrap">Vai trò</th>
               <th className="py-3 px-6 whitespace-nowrap">Ngày tạo</th>
               <th className="py-3 px-6 whitespace-nowrap">Trạng thái</th>
-              <th className="py-3 px-4 text-center whitespace-nowrap">Thao tác</th>
+              <th className="py-3 px-6 text-right whitespace-nowrap">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#DDE5D9]">
@@ -526,8 +436,6 @@ function AccountsTable({
               <AccountRow
                 key={acc.id}
                 acc={acc}
-                openActionMenuId={openActionMenuId}
-                setOpenActionMenuId={setOpenActionMenuId}
                 setDrawerAccount={setDrawerAccount}
                 setLockModalAccount={setLockModalAccount}
                 setLockReason={setLockReason}
@@ -605,13 +513,16 @@ function AccountsFilters({
         {dateFilter && <AdminPeriodFilter filter={dateFilter} name="tài khoản" label="Ngày tạo" />}
 
         {(searchKeyword || selectedRole !== 'ALL' || selectedStatus !== 'ALL' || (dateFilter && dateFilter.period !== 'ALL')) && (
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={handleResetFilter}
-            className="px-3 py-2.5 text-xs font-semibold text-[#006B2C] hover:text-[#005523] hover:bg-[#E8F5E9] rounded-xl transition-colors flex items-center gap-1"
+            className="gap-1 text-[#006B2C] hover:bg-[#E8F5E9]"
           >
-            <span className="material-symbols-outlined text-base">restart_alt</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-base">restart_alt</span>
             <span>Xóa bộ lọc</span>
-          </button>
+          </Button>
         )}
       </div>
     </div>
@@ -767,30 +678,35 @@ function AccountDetailsDrawer({
           {/* Drawer Footer Actions */}
           <div className="p-6 border-t border-[#DDE5D9] bg-[#F6F9F4]">
             {drawerAccount.status === 'ACTIVE' ? (
-              <button
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
                 onClick={() => {
                   setLockModalAccount(drawerAccount);
                   setLockReason('');
                   setLockError('');
                 }}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-[#DC2626] text-white hover:bg-[#B91C1C] transition-colors flex items-center justify-center gap-2 shadow-sm"
+                className="w-full py-2.5 gap-2"
               >
-                <span className="material-symbols-outlined text-base">lock</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-base">lock</span>
                 <span>Khóa tài khoản này</span>
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                loading={unlockingId === drawerAccount.id}
                 onClick={() => handleUnlockAccount(drawerAccount)}
                 disabled={unlockingId === drawerAccount.id}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-[#006B2C] text-white hover:bg-[#005523] transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+                className="w-full py-2.5 gap-2"
               >
-                {unlockingId === drawerAccount.id ? (
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <span className="material-symbols-outlined text-base">lock_open</span>
+                {unlockingId !== drawerAccount.id && (
+                  <span aria-hidden="true" className="material-symbols-outlined text-base">lock_open</span>
                 )}
                 <span>{unlockingId === drawerAccount.id ? 'Đang mở khóa...' : 'Mở khóa tài khoản'}</span>
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -935,30 +851,33 @@ function LockAccountModal({
 
         {/* Actions */}
         <div className="flex items-center justify-end gap-2.5 pt-2">
-          <button
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
             onClick={() => setLockModalAccount(null)}
             disabled={isLocking}
-            className="px-4 py-2 text-xs font-semibold text-[#5B6776] hover:bg-[#F6F9F4] rounded-xl transition-colors border border-[#DDE5D9] disabled:opacity-50"
           >
             Hủy
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            size="sm"
+            loading={isLocking}
             onClick={handleConfirmLock}
             disabled={isLocking}
-            className="px-4 py-2 text-xs font-semibold bg-[#DC2626] text-white hover:bg-[#B91C1C] rounded-xl transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+            className="gap-1.5"
           >
             {isLocking ? (
-              <div className="flex items-center gap-1.5">
-                <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Đang khóa...</span>
-              </div>
+              <span>Đang khóa...</span>
             ) : (
               <>
-                <span className="material-symbols-outlined text-base">lock</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-base">lock</span>
                 <span>Xác nhận khóa</span>
               </>
             )}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -344,25 +344,31 @@ export default function AdminAccountsPage() {
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     disabled={processingProposalId === proposal.id}
                     onClick={() => handleDismissProposal(proposal.id)}
-                    className="px-3.5 py-2 rounded-xl border border-[#DDE5D9] bg-white hover:bg-[#F6F9F4] text-xs font-semibold text-[#5B6776] transition-colors disabled:opacity-50"
                   >
                     Bỏ qua đề xuất
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="danger"
+                    size="sm"
+                    loading={processingProposalId === proposal.id}
                     disabled={processingProposalId === proposal.id}
                     onClick={() => openConfirmProposalModal(proposal)}
-                    className="px-4 py-2 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                    className="gap-1.5"
                   >
-                    <span className="material-symbols-outlined text-sm" aria-hidden="true">lock</span>
+                    {processingProposalId !== proposal.id && (
+                      <span className="material-symbols-outlined text-sm" aria-hidden="true">lock</span>
+                    )}
                     <span>
                       {processingProposalId === proposal.id ? 'Đang khóa...' : 'Khóa theo đề xuất'}
                     </span>
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}

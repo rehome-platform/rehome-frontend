@@ -113,7 +113,7 @@ export function ExistingOrganizationsSection({
               onClick={onRefresh}
               className="text-xs shrink-0 flex items-center gap-1.5"
             >
-              <span className="material-symbols-outlined text-sm">refresh</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-sm">refresh</span>
               <span>Làm mới</span>
             </Button>
           )}

@@ -200,7 +200,6 @@ export function VerificationRejectDialog({ isRejectModalOpen, setIsRejectModalOp
             variant="danger"
             disabled={rejectingOrg || !rejectReason.trim()}
             onClick={handleConfirmReject}
-            className="rounded-xl bg-error text-white hover:bg-red-700 disabled:opacity-50"
           >
             {rejectingOrg ? 'Đang xử lý...' : 'Xác nhận từ chối'}
           </Button>
@@ -635,20 +634,22 @@ export function VerificationLegalChanges({ legalChanges = [], handleApproveLegal
                         />
                         {chg.status === 'PENDING' && (
                           <>
-                            <button
-                              type="button"
+                            <Button
+                              size="sm"
+                              variant="danger-outline"
                               onClick={() => openRejectModal(chg)}
-                              className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-error bg-white text-error hover:bg-error-light transition-colors"
+                              className="whitespace-nowrap"
                             >
                               Từ chối
-                            </button>
-                            <button
-                              type="button"
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="primary"
                               onClick={() => setApproveModalTarget(chg)}
-                              className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors shadow-sm"
+                              className="whitespace-nowrap"
                             >
                               Duyệt đổi pháp lý
-                            </button>
+                            </Button>
                           </>
                         )}
                       </div>
@@ -951,21 +952,28 @@ export function VerificationQueueTable({ loading, orgsQueue = [], handleOpenDeta
                     </td>
                     <td className="py-3 px-3 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
-                        <TableActionButton
-                          action="view"
-                          onClick={() => setDetailOrg(org)}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleOpenDetail(org)}
-                          className={`text-xs font-medium px-3.5 py-1.5 rounded-xl transition-colors whitespace-nowrap cursor-pointer ${
-                            idx === 0 && activeQueueTab === 'PENDING'
-                              ? 'bg-primary text-white hover:bg-primary-hover shadow-sm'
-                              : 'border border-neutral text-text hover:bg-background'
-                          }`}
-                        >
-                          {activeQueueTab === 'PENDING' ? 'Xác minh' : 'Xem hồ sơ'}
-                        </button>
+                        {activeQueueTab === 'PENDING' ? (
+                          <>
+                            <TableActionButton
+                              action="view"
+                              onClick={() => setDetailOrg(org)}
+                            />
+                            <Button
+                              size="sm"
+                              variant={idx === 0 ? 'primary' : 'outline'}
+                              onClick={() => handleOpenDetail(org)}
+                              className="whitespace-nowrap"
+                            >
+                              Xác minh
+                            </Button>
+                          </>
+                        ) : (
+                          <TableActionButton
+                            action="view"
+                            label="Xem hồ sơ"
+                            onClick={() => handleOpenDetail(org)}
+                          />
+                        )}
                       </div>
                     </td>
                   </tr>

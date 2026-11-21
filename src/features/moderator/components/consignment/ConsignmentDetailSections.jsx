@@ -167,7 +167,8 @@ export function ConsignmentStartPanel({ resource, formId, proof, setFeedback, on
 
       <div className="flex flex-wrap gap-2 pt-1">
         <Button
-          className="flex-1 py-3 bg-[#006B2C] text-white hover:bg-[#005221] font-bold text-xs shadow-sm transition-all"
+          variant="primary"
+          className="flex-1 py-3 font-bold text-xs shadow-sm"
           loading={resource.busy}
           onClick={() =>
             resource.mutate(

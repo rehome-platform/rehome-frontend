@@ -627,8 +627,8 @@ function WithdrawalModalContent({ target, busy, onApprove, onReject, onClose }) 
                 Đóng
               </Button>
               <Button
-                variant="outline"
-                className="flex-1 py-2 text-xs font-bold border-red-600 text-red-600 hover:bg-red-50"
+                variant="danger-outline"
+                className="flex-1 py-2 text-xs font-bold"
                 disabled={busy}
                 onClick={() => {
                   setRejectMode(true);
@@ -639,7 +639,7 @@ function WithdrawalModalContent({ target, busy, onApprove, onReject, onClose }) 
               </Button>
               <Button
                 variant="primary"
-                className="flex-1 py-2 text-xs font-bold bg-[#006B2C] hover:bg-[#005523] text-white"
+                className="flex-1 py-2 text-xs font-bold"
                 loading={busy}
                 disabled={busy}
                 onClick={() => onApprove?.(target)}
@@ -682,8 +682,8 @@ function WithdrawalModalContent({ target, busy, onApprove, onReject, onClose }) 
                   Hủy
                 </Button>
                 <Button
-                  variant="primary"
-                  className="py-1.5 px-4 text-xs font-bold bg-red-600 hover:bg-red-700 text-white"
+                  variant="danger"
+                  className="py-1.5 px-4 text-xs font-bold"
                   loading={busy}
                   disabled={busy}
                   onClick={handleSubmitReject}

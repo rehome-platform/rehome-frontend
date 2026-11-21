@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, Modal, Table } from '../../../components/common/index.js';
+import { Badge, Button, Modal, Table, TableActionButton } from '../../../components/common/index.js';
 import { formatCurrencyVND } from '../../../utils/formatters.js';
 import { membershipAdminApi } from '../services/membershipAdminApi.js';
 import { TIER_LABELS, TIER_ORDER, formatQuotaValue } from './membershipConstants.js';
@@ -87,26 +87,16 @@ export default function MembershipPlansPage() {
       header: 'Thao tác',
       render: (row) => (
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
+          <TableActionButton
+            action="view"
             onClick={() => setDetailPlan(row)}
             aria-label={`Xem chi tiết gói ${row.tier}`}
-            className="gap-1"
-          >
-            <span className="material-symbols-outlined text-sm">visibility</span>
-            <span>Xem chi tiết</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
+          />
+          <TableActionButton
+            action="edit"
             onClick={() => setEditingPlan(row)}
             aria-label={`Sửa gói ${row.tier}`}
-            className="gap-1"
-          >
-            <span className="material-symbols-outlined text-sm">edit</span>
-            <span>Sửa</span>
-          </Button>
+          />
         </div>
       ),
     },

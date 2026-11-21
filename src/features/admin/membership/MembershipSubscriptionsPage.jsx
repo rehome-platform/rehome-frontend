@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Badge, Button, Spinner } from '../../../components/common/index.js';
+import { Badge, Button, Spinner, TableActionButton } from '../../../components/common/index.js';
 import { formatCurrencyVND } from '../../../utils/formatters.js';
 import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
 import membershipAdminApi from '../services/membershipAdminApi.js';
@@ -314,18 +314,24 @@ export default function MembershipSubscriptionsPage() {
                         className="py-3 px-4 text-right whitespace-nowrap"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <Button
-                          type="button"
-                          variant="danger"
-                          size="sm"
-                          disabled={isTerminal}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setCancellingSubscription(item);
-                          }}
-                        >
-                          Hủy gói
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <TableActionButton
+                            action="view"
+                            to={`/admin/membership-subscriptions/${item.id}`}
+                          />
+                          <Button
+                            type="button"
+                            variant="danger"
+                            size="sm"
+                            disabled={isTerminal}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCancellingSubscription(item);
+                            }}
+                          >
+                            Hủy gói
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );

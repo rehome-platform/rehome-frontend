@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from 'react-router-dom';
 
-import Button from "../../../../components/common/Button.jsx";
+import Button, { getButtonClasses } from "../../../../components/common/Button.jsx";
 
 import { Status, date } from "../WarehouseUi.jsx";
 
@@ -34,12 +34,23 @@ export function EndTermInventoryRow({ item, sku, change }) {
           )}
         </div>
       </div>
-      {item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT' ? <Link className="text-primary hover:underline" to={`/moderator/inventory/${encodeURIComponent(item.sku)}/re-consign`}>{item.reConsignStatus === 'PROPOSAL_SENT' ? 'Theo dõi xác nhận →' : 'Đàm phán giá →'}</Link> : <Button
-        variant={sku === item.sku ? 'primary' : 'outline'}
-        onClick={() => change('sku', item.sku)}
-      >
-        {sku === item.sku ? 'Đang mở' : 'Mở xử lý'}
-      </Button>}
+      {item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT' ? (
+        <Link
+          className={getButtonClasses({ variant: 'primary', size: 'sm', className: 'whitespace-nowrap' })}
+          to={`/moderator/inventory/${encodeURIComponent(item.sku)}/re-consign`}
+        >
+          {item.reConsignStatus === 'PROPOSAL_SENT' ? 'Theo dõi xác nhận →' : 'Đàm phán giá →'}
+        </Link>
+      ) : (
+        <Button
+          size="sm"
+          variant={sku === item.sku ? 'primary' : 'outline'}
+          className="whitespace-nowrap"
+          onClick={() => change('sku', item.sku)}
+        >
+          {sku === item.sku ? 'Đang mở' : 'Mở xử lý'}
+        </Button>
+      )}
     </div>
   );
 }

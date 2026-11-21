@@ -12,6 +12,7 @@ export default defineConfig({
       'tests/notification/**/*.test.{js,jsx}',
       'tests/admin/**/*.test.{js,jsx}',
       'tests/hooks/**/*.test.{js,jsx}',
+      'tests/landing/**/*.test.{js,jsx}',
     ],
     setupFiles: ['./tests/phase2/setup.js'],
     restoreMocks: true,
