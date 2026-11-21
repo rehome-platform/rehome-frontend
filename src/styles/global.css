@@ -1,7 +1,16 @@
 @import "./tailwind.css";
 
+@font-face {
+  font-family: 'Be Vietnam Pro Fallback';
+  src: local('Segoe UI'), local('Arial'), local('Roboto');
+  ascent-override: 97%;
+  descent-override: 27%;
+  line-gap-override: 0%;
+  size-adjust: 103%;
+}
+
 :root {
-  --font-system: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-system: 'Be Vietnam Pro', 'Be Vietnam Pro Fallback', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   /* Design Tokens from Design tokens.pdf */
   --primary: #006B2C;
   --primary-hover: #005523;

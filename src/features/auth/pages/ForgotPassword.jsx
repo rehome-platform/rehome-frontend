@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import Logo from '../../../components/common/Logo.jsx';
-import { Button } from '../../../components/common/index.js';
+import Button from '../../../components/common/Button.jsx';
 import { authService } from '../services/auth.service.js';
 import { validateEmail, validatePassword, validateConfirmPassword } from '../../../utils/validators.js';
 

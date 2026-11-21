@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext.jsx';
 import { useNotificationQueue, useWebSocket } from '../hooks/useWebSocket.js';
-import baseApi from '../services/baseApi.js';
-import { API_ENDPOINTS } from '../configs/api.config.js';
+
+const loadNotificationApi = () =>
+  Promise.all([import('../services/baseApi.js'), import('../configs/api.config.js')]);
 
 const NotificationContext = createContext();
 
@@ -54,6 +55,7 @@ export const NotificationProvider = ({ children }) => {
     const seq = ++fetchSeqRef.current;
     setLoading(true);
     try {
+      const [{ default: baseApi }, { API_ENDPOINTS }] = await loadNotificationApi();
       const res = await baseApi.get(API_ENDPOINTS.NOTIFICATIONS.LIST, {
         params: { page: 0, size: 20 },
       });
@@ -137,6 +139,7 @@ export const NotificationProvider = ({ children }) => {
     if (loadingMore || !hasMore || !isAuthenticated || isAdmin) return;
     setLoadingMore(true);
     try {
+      const [{ default: baseApi }, { API_ENDPOINTS }] = await loadNotificationApi();
       const nextPage = page + 1;
       const res = await baseApi.get(API_ENDPOINTS.NOTIFICATIONS.LIST, {
         params: { page: nextPage, size: 20 },
@@ -177,6 +180,7 @@ export const NotificationProvider = ({ children }) => {
     if (target && target.isRead) return;
 
     try {
+      const [{ default: baseApi }, { API_ENDPOINTS }] = await loadNotificationApi();
       try {
         await baseApi.patch(API_ENDPOINTS.NOTIFICATIONS.MARK_READ(id));
       } catch (reqErr) {
@@ -202,6 +206,7 @@ export const NotificationProvider = ({ children }) => {
 
   const markAllAsRead = useCallback(async () => {
     try {
+      const [{ default: baseApi }, { API_ENDPOINTS }] = await loadNotificationApi();
       try {
         await baseApi.patch(API_ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ);
       } catch (reqErr) {
