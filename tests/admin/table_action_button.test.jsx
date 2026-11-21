@@ -1,5 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
 import TableActionButton from '../../src/components/common/TableActionButton.jsx';
 
@@ -32,5 +33,19 @@ describe('TableActionButton', () => {
     expect(onView).toHaveBeenCalledTimes(1);
     expect(onEdit).toHaveBeenCalledTimes(1);
     expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders a Link with standardized outline classes when prop `to` is provided', () => {
+    render(
+      <MemoryRouter>
+        <TableActionButton action="view" to="/moderator/inventory/SKU-1" />
+      </MemoryRouter>
+    );
+
+    const viewLink = screen.getByRole('link', { name: 'Xem chi tiết' });
+    expect(viewLink).toHaveAttribute('href', '/moderator/inventory/SKU-1');
+    expect(viewLink.textContent).toContain('visibility');
+    expect(viewLink.className).toContain('border-[#DDE5D9]');
+    expect(viewLink.className).toContain('bg-white');
   });
 });
