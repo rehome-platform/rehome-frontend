@@ -2,9 +2,9 @@ import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import PrivateRoute from './PrivateRoute.jsx';
+import LoginPage from '../features/auth/pages/LoginPage.jsx';
 
-// Auth & Payment Pages (lazy-loaded theo route để giảm bundle ban đầu)
-const LoginPage = lazy(() => import('../features/auth/pages/LoginPage.jsx'));
+// Auth & Payment Pages (lazy-loaded theo route để giảm bundle ban đầu; LoginPage tải trực tiếp cho FCP/LCP)
 const ForgotPassword = lazy(() => import('../features/auth/pages/ForgotPassword.jsx'));
 const ProfilePage = lazy(() => import('../features/auth/pages/ProfilePage.jsx'));
 const ResetPassword = lazy(() => import('../features/auth/pages/ResetPassword.jsx'));

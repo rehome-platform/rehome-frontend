@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { StompClientService } from '../services/stompClientService.js';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { AuthContext } from './AuthContext.jsx';
 
 const defaultWebSocketValue = {
@@ -28,64 +27,117 @@ export const WebSocketProvider = ({
     customService ? customService.getStatus() : 'DISCONNECTED'
   );
   const [error, setError] = useState(null);
+  const [serviceState, setServiceState] = useState(() => customService || null);
 
-  const serviceRef = useRef(null);
+  const serviceRef = useRef(customService || null);
+  const serviceLoaderRef = useRef(null);
+  const mountedRef = useRef(true);
 
-  if (!serviceRef.current) {
-    if (customService) {
-      serviceRef.current = customService;
-    } else {
-      serviceRef.current = new StompClientService({
-        onStatusChange: (newStatus) => {
-          setStatus(newStatus);
-          if (newStatus === 'CONNECTED') {
-            setError(null);
-          }
-        },
-        onError: (err) => {
-          setError(err);
-        },
-      });
-    }
+  if (customService && serviceRef.current !== customService) {
+    serviceRef.current = customService;
   }
 
-  const service = serviceRef.current;
+  const ensureService = useCallback(async () => {
+    if (customService) return customService;
+    if (serviceRef.current) return serviceRef.current;
+    if (!serviceLoaderRef.current) {
+      serviceLoaderRef.current = import('../services/stompClientService.js')
+        .then(({ StompClientService }) => {
+          const instance = new StompClientService({
+            onStatusChange: (newStatus) => {
+              if (!mountedRef.current) return;
+              setStatus(newStatus);
+              if (newStatus === 'CONNECTED') {
+                setError(null);
+              }
+            },
+            onError: (err) => {
+              if (!mountedRef.current) return;
+              setError(err);
+            },
+          });
+          if (!mountedRef.current) {
+            instance.destroy();
+            return null;
+          }
+          serviceRef.current = instance;
+          setServiceState(instance);
+          return instance;
+        })
+        .catch((err) => {
+          serviceLoaderRef.current = null;
+          throw err;
+        });
+    }
+    return serviceLoaderRef.current;
+  }, [customService]);
 
   // Lắng nghe thay đổi trạng thái nếu dùng customService
   useEffect(() => {
-    if (customService && typeof customService.onStatusChange === 'undefined') {
-      setStatus(customService.getStatus?.() || 'DISCONNECTED');
+    if (customService) {
+      serviceRef.current = customService;
+      setServiceState(customService);
+      if (typeof customService.onStatusChange === 'undefined') {
+        setStatus(customService.getStatus?.() || 'DISCONNECTED');
+      }
     }
   }, [customService]);
 
   // Vòng đời kết nối theo trạng thái Authentication
   useEffect(() => {
-    if (!autoConnect || !service || isInitializing) return;
+    if (!autoConnect || isInitializing) return;
+    let cancelled = false;
 
     if (isAuthenticated) {
-      service.connect();
+      ensureService()
+        .then((svc) => {
+          if (!cancelled && svc) svc.connect();
+        })
+        .catch((err) => {
+          if (!cancelled) setError(err);
+        });
     } else if (isAuthenticated === false) {
-      service.disconnect();
+      serviceRef.current?.disconnect();
     }
-  }, [isAuthenticated, isInitializing, autoConnect, service]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, isInitializing, autoConnect, ensureService]);
 
   // Dọn dẹp khi unmount
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
-      if (!customService && service) {
-        service.destroy();
+      mountedRef.current = false;
+      serviceLoaderRef.current = null;
+      if (!customService && serviceRef.current) {
+        serviceRef.current.destroy();
+        serviceRef.current = null;
       }
     };
-  }, [customService, service]);
+  }, [customService]);
+
+  const activeService = customService || serviceState;
 
   const value = {
-    service,
+    service: activeService,
     status,
     isConnected: status === 'CONNECTED',
     isConnecting: status === 'CONNECTING',
     error,
-    reconnect: () => service?.connect(),
-    disconnect: () => service?.disconnect(),
+    reconnect: () => {
+      if (serviceRef.current) {
+        serviceRef.current.connect();
+      } else {
+        ensureService()
+          .then((svc) => svc?.connect())
+          .catch((err) => {
+            if (mountedRef.current) setError(err);
+          });
+      }
+    },
+    disconnect: () => serviceRef.current?.disconnect(),
   };
 
   return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>;
