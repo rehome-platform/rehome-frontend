@@ -51,7 +51,12 @@ export function WarehouseHistoryTabs({ type, children }) {
         <Button role="tab" aria-selected={history} variant={history ? 'primary' : 'outline'} onClick={() => update('view', 'history')}>Lịch sử</Button>
       </div>
       {history ? <section aria-label="Lịch sử thao tác kho" className="space-y-4">
-        <div className="flex justify-end"><Button variant="outline" onClick={resource.refresh}>Tải lại lịch sử</Button></div>
+        <div className="flex justify-end">
+          <Button variant="outline" onClick={resource.refresh} className="gap-1.5 whitespace-nowrap">
+            <span aria-hidden="true" className="material-symbols-outlined text-[16px]">refresh</span>
+            <span>Tải lại lịch sử</span>
+          </Button>
+        </div>
         <ResourceState resource={resource} />
         {!resource.loading && !resource.error && <div className="overflow-x-auto rounded-xl border border-neutral bg-surface">
           <table className="w-full min-w-[720px] text-left text-sm">

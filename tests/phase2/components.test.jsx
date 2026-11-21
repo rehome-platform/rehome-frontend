@@ -829,7 +829,7 @@ describe('ConsignmentDetailPage component behaviors', () => {
 
       expect(await screen.findByText('Áo khoác dạ Zara')).toBeInTheDocument();
       expect(screen.queryByText('Q7-AK-000845')).not.toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Chi tiết' })).toHaveAttribute(
+      expect(screen.getByRole('link', { name: 'Xem chi tiết' })).toHaveAttribute(
         'href',
         '/moderator/inventory/Q7-AK-000845',
       );

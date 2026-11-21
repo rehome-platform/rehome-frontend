@@ -570,9 +570,10 @@ export function ReturnMarkLostDialog({ markLostTarget, onClose, onConfirm, submi
           </Button>
           <Button
             size="sm"
+            variant="danger"
             loading={submitting}
             disabled={submitting}
-            className="bg-error hover:bg-red-700 text-white font-bold rounded-xl px-4"
+            className="font-bold px-4"
             onClick={onConfirm}
           >
             Xác nhận thất lạc

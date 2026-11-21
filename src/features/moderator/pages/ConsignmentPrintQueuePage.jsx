@@ -76,7 +76,12 @@ export default function ConsignmentPrintQueuePage() {
 
   return (
     <Page title="Hàng đợi in tem" subtitle="Món nhập kho xong tự vào đây. Tải PDF để in gom cả lô."
-      actions={<Button variant="outline" disabled={busy} onClick={resource.refresh}>Tải lại</Button>}>
+      actions={
+        <Button variant="outline" disabled={busy} onClick={resource.refresh} className="gap-1.5 whitespace-nowrap">
+          <span aria-hidden="true" className="material-symbols-outlined text-[16px]">refresh</span>
+          <span>Tải lại</span>
+        </Button>
+      }>
       <ResourceState resource={resource} />
       {feedback && <p role={feedback.error ? 'alert' : 'status'} className={`rounded-xl border p-4 text-sm ${feedback.error ? 'bg-red-50 text-red-800' : 'bg-green-50 text-green-800'}`}>{feedback.message}</p>}
       <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">

@@ -4,8 +4,9 @@ import { degradedCaseLabel, degradedInventoryItem } from '../models/degradedCase
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
-import Button from '../../../components/common/Button.jsx';
+import Button, { getButtonClasses } from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
+import TableActionButton from '../../../components/common/TableActionButton.jsx';
 import QRScannerModal from '../../../components/QRScannerModal.jsx';
 import { inventoryService } from '../services/warehouseApi.js';
 import { returnService, pendingReturnFromInventory } from '../services/returnApi.js';
@@ -203,8 +204,9 @@ export default function WarehouseInventoryPage() {
           <Button variant="outline" className="whitespace-nowrap" onClick={() => setScanner(true)}>
             Quét QR SKU
           </Button>
-          <Button variant="outline" className="whitespace-nowrap" onClick={resource.refresh}>
-            Tải lại
+          <Button variant="outline" className="gap-1.5 whitespace-nowrap" onClick={resource.refresh}>
+            <span aria-hidden="true" className="material-symbols-outlined text-[16px]">refresh</span>
+            <span>Tải lại</span>
           </Button>
         </div>
       }
@@ -346,14 +348,11 @@ export default function WarehouseInventoryPage() {
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="text-xs py-1.5 px-3 border-[#006B2C] text-[#006B2C] hover:bg-[#E8F5E9] font-semibold whitespace-nowrap"
+                          <TableActionButton
+                            action="view"
+                            label="Xem biên bản & ảnh"
                             onClick={() => setDegradedModalItem(item)}
-                          >
-                            Xem biên bản & ảnh
-                          </Button>
+                          />
                         </td>
                       </tr>
                     );})}
@@ -367,7 +366,7 @@ export default function WarehouseInventoryPage() {
                       <th className="py-2.5 px-4">{TABLE_COLUMN_LABELS.STATUS}</th>
                       <th className="py-2.5 px-4">Kỳ ký gửi</th>
                       <th className="py-2.5 px-4 text-right">Giá bán</th>
-                      <th className="py-2.5 px-4 text-left w-[320px]">{TABLE_COLUMN_LABELS.ACTIONS}</th>
+                      <th className="py-2.5 px-4 text-right">{TABLE_COLUMN_LABELS.ACTIONS}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#e0e0e0]">
@@ -425,39 +424,37 @@ export default function WarehouseInventoryPage() {
                           <td className="py-3.5 px-4 font-bold text-[#191C19] text-right whitespace-nowrap">
                             {item.currentPrice != null ? money(item.currentPrice) : (item.agreedPrice != null ? money(item.agreedPrice) : '—')}
                           </td>
-                          <td className="py-3.5 px-4 text-left align-middle whitespace-nowrap">
-                            <div className="grid grid-cols-[104px_128px_72px] items-center justify-items-start gap-2">
+                          <td className="py-3.5 px-4 text-right align-middle whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-2">
                               {pendingReturn ? (
                                 <Button
                                   size="sm"
-                                  variant="outline"
-                                  className="text-xs border-[#006B2C] text-[#006B2C] hover:bg-[#E8F5E9] font-semibold whitespace-nowrap"
+                                  variant="primary"
+                                  className="whitespace-nowrap"
                                   onClick={() => setRelistTarget(pendingReturn)}
                                 >
                                   Đăng bán lại
                                 </Button>
-                              ) : <span aria-hidden="true" />}
+                              ) : null}
                               {(item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT') && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(item.status) ? (
                                 <Link
                                   to={`/moderator/inventory/${encodeURIComponent(item.sku)}/re-consign`}
-                                  className="inline-flex items-center justify-center text-xs font-semibold text-[#006B2C] bg-[#E8F5E9] hover:bg-[#D1FADF] px-3 py-1.5 rounded-xl border border-[#A5D6A7] transition-colors whitespace-nowrap"
+                                  className={getButtonClasses({ variant: 'primary', size: 'sm', className: 'whitespace-nowrap' })}
                                 >
                                   {item.reConsignStatus === 'PROPOSAL_SENT' ? 'Theo dõi xác nhận' : 'Đàm phán giá'}
                                 </Link>
                               ) : item.status === 'RETURNED' ? (
                                 <Link
                                   to={`/moderator/inventory/${encodeURIComponent(item.sku)}`}
-                                  className="inline-flex items-center justify-center text-xs font-semibold text-error border border-error/40 hover:bg-error-light px-3 py-1.5 rounded-xl transition-colors whitespace-nowrap"
+                                  className={getButtonClasses({ variant: 'danger-outline', size: 'sm', className: 'whitespace-nowrap' })}
                                 >
                                   Báo xuống cấp
                                 </Link>
-                              ) : <span aria-hidden="true" />}
-                              <Link
-                                className="inline-flex items-center justify-center text-xs font-semibold py-1.5 px-3 bg-[#006B2C] text-white hover:bg-[#005523] rounded-xl shadow-sm transition-colors whitespace-nowrap"
+                              ) : null}
+                              <TableActionButton
+                                action="view"
                                 to={`/moderator/inventory/${encodeURIComponent(item.sku)}`}
-                              >
-                                Chi tiết
-                              </Link>
+                              />
                             </div>
                           </td>
                         </tr>
