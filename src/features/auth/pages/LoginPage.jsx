@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import rehomeLogo from '../../../assets/logo/rehome-logo.png';
 import { validateEmail, validatePassword } from '../../../utils/validators.js';
-import { Button } from '../../../components/common/index.js';
+import Button from '../../../components/common/Button.jsx';
 
 /**
  * Trang Đăng nhập Hệ thống Quản trị & Vận hành ReHome (Web)
@@ -100,10 +100,22 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#F6F9F4] flex flex-col justify-between items-center px-4 py-8 sm:py-12 select-none">
       {/* Main Login Card */}
-      <div className="w-full max-w-[440px] bg-white rounded-2xl border border-[#DDE5D9] shadow-card p-8 sm:p-10 my-auto transition-all duration-300">
+      <main className="w-full max-w-[440px] bg-white rounded-2xl border border-[#DDE5D9] shadow-card p-8 sm:p-10 my-auto transition-all duration-300">
+        <h1 className="sr-only">Đăng nhập hệ thống ReHome</h1>
         {/* Header Logo theo chuẩn Design tokens */}
         <div className="flex flex-col items-center text-center">
-          <img src={rehomeLogo} alt="ReHome" className="w-full max-w-[280px] h-auto object-contain" />
+          <picture className="block w-full max-w-[280px]">
+            <source srcSet="/rehome-logo.webp" type="image/webp" />
+            <img
+              src={rehomeLogo}
+              alt="ReHome"
+              width={280}
+              height={61}
+              fetchpriority="high"
+              decoding="async"
+              className="w-full max-w-[280px] h-auto object-contain"
+            />
+          </picture>
           <p className="mt-2 text-xs font-semibold text-[#5B6776] uppercase">Cổng Vận Hành Nội Bộ</p>
           <p className="text-xs text-[#5B6776] mt-3 max-w-xs leading-relaxed">
             Hệ thống đăng nhập dành cho Quản trị viên (Admin) và Nhân viên kiểm định kho (Moderator).
@@ -117,7 +129,14 @@ export default function LoginPage() {
             role="alert"
             className="mt-6 p-3.5 rounded-xl bg-[#FFF5F5] border border-[#D92D20]/30 text-[#D92D20] text-xs font-medium flex items-start gap-2.5 animate-shake"
           >
-            <span className="material-symbols-outlined text-base shrink-0 mt-0.5">error</span>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="w-4 h-4 shrink-0 mt-0.5"
+            >
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+            </svg>
             <div className="flex-1 leading-relaxed">{errorMessage}</div>
           </div>
         )}
@@ -148,9 +167,14 @@ export default function LoginPage() {
                     : 'border-[#DDE5D9] bg-white hover:border-[#006B2C]/50 focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15'
                   } text-[#1F2A37]`}
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-lg text-[#5B6776] pointer-events-none">
-                mail
-              </span>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="w-[18px] h-[18px] absolute right-3 top-1/2 -translate-y-1/2 text-[#5B6776] pointer-events-none"
+              >
+                <path d="M4 20q-.825 0-1.412-.587T2 18V6q0-.825.588-1.412T4 4h16q.825 0 1.413.588T22 6v12q0 .825-.587 1.413T20 20zm8-7 8-5V6l-8 5-8-5v2z" />
+              </svg>
             </div>
           </div>
 
@@ -197,9 +221,15 @@ export default function LoginPage() {
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5B6776] hover:text-[#1F2A37] transition-colors p-0.5 rounded"
                 title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
               >
-                <span className="material-symbols-outlined text-lg">
-                  {showPassword ? 'visibility_off' : 'visibility'}
-                </span>
+                {showPassword ? (
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className="w-[18px] h-[18px]">
+                    <path d="M11.83 9 15 12.16V12a3 3 0 0 0-3-3h-.17m-4.3.8 1.55 1.55c-.05.21-.08.43-.08.65a3 3 0 0 0 3 3c.22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53a5 5 0 0 1-5-5c0-.79.2-1.53.53-2.2M2 4.27l2.28 2.28.45.45C3.08 8.3 1.78 10 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.43.42L19.73 22 21 20.73 3.27 3M12 7a5 5 0 0 1 5 5c0 .64-.13 1.26-.36 1.82l2.93 2.93c1.5-1.25 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-4 .7l2.17 2.15C10.74 7.13 11.35 7 12 7Z" />
+                  </svg>
+                ) : (
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className="w-[18px] h-[18px]">
+                    <path d="M12 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0 8a5 5 0 0 1-5-5 5 5 0 0 1 5-5 5 5 0 0 1 5 5 5 5 0 0 1-5 5m0-12.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5Z" />
+                  </svg>
+                )}
               </button>
             </div>
           </div>
@@ -219,7 +249,9 @@ export default function LoginPage() {
                 <span>Đang xác thực với máy chủ...</span>
               ) : (
                 <>
-                  <span className="material-symbols-outlined text-lg">login</span>
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className="w-[18px] h-[18px]">
+                    <path d="M12 21v-2h7V5h-7V3h7q.825 0 1.413.588T21 5v14q0 .825-.587 1.413T19 21zm-2-4-1.375-1.45 2.55-2.55H3v-2h8.175l-2.55-2.55L10 7l5 5z" />
+                  </svg>
                   <span>Đăng nhập hệ thống</span>
                 </>
               )}
@@ -227,14 +259,14 @@ export default function LoginPage() {
           </div>
         </form>
 
-      </div>
+      </main>
 
       {/* Footer */}
-      <div className="mt-6 text-center text-xs text-[#5B6776] flex items-center justify-center gap-2">
+      <footer className="mt-6 text-center text-xs text-[#5B6776] flex items-center justify-center gap-2">
         <span>Cổng Điều Hành & Vận Hành Tập Trung ReHome</span>
         <span>•</span>
         <span>Quản trị viên & Nhân viên Điểm kí gửi</span>
-      </div>
+      </footer>
     </div>
   );
 }
