@@ -206,7 +206,7 @@ export default function LoginPage() {
                   if (errorMessage) setErrorMessage('');
                 }}
                 placeholder="••••••••"
-                className={`w-full pl-3.5 pr-10 py-2.5 text-sm rounded-xl border transition-all outline-none ${errorMessage
+                className={`w-full pl-3.5 pr-11 py-2.5 text-sm rounded-xl border transition-all outline-none ${errorMessage
                     ? 'border-[#D92D20] bg-[#FFF5F5] focus:ring-2 focus:ring-[#D92D20]/20'
                     : 'border-[#DDE5D9] bg-white hover:border-[#006B2C]/50 focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15'
                   } text-[#1F2A37]`}
@@ -218,7 +218,7 @@ export default function LoginPage() {
                 aria-pressed={showPassword}
                 disabled={isLoading}
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5B6776] hover:text-[#1F2A37] transition-colors p-0.5 rounded"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-[#5B6776] hover:text-[#1F2A37] transition-colors rounded-lg"
                 title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
               >
                 {showPassword ? (
