@@ -164,12 +164,13 @@ export default function ApkInstallSection() {
 
         {/* Hướng dẫn cài đặt APK ngắn gọn 4 bước dạng Stepper */}
         <div className="space-y-8">
-          <div className="max-w-2xl space-y-2.5 reveal-section">
+          <div className="space-y-2.5 reveal-section">
             <span className="inline-block px-3.5 py-1 rounded-full bg-white border border-[#DDE5D9] text-[#006B2C] text-xs font-bold uppercase tracking-wider">
               Hướng dẫn nhanh
             </span>
-            <h3 className="text-2xl sm:text-3xl font-bold text-[#1F2A37]">
-              Hướng dẫn cài đặt tệp APK trên Android (4 bước ngắn gọn)
+            <h3 className="text-2xl sm:text-3xl font-bold text-[#1F2A37] leading-snug">
+              Hướng dẫn cài đặt tệp APK trên Android{' '}
+              <span className="inline-block whitespace-nowrap">(4 bước ngắn gọn)</span>
             </h3>
             <p className="text-sm sm:text-base text-[#5B6776]">
               Vì tệp cài đặt được tải trực tiếp từ Google Drive, thiết bị Android chỉ cần xác nhận
