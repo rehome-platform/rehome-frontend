@@ -10,6 +10,7 @@ const ProfilePage = lazy(() => import('../features/auth/pages/ProfilePage.jsx'))
 const ResetPassword = lazy(() => import('../features/auth/pages/ResetPassword.jsx'));
 const VnpayReturnPage = lazy(() => import('../features/payment/pages/VnpayReturnPage.jsx'));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage.jsx'));
+const LandingPage = lazy(() => import('../features/landing/pages/LandingPage.jsx'));
 
 // Moderator Pages (Cổng Vận Hành Điểm Ký Gửi & Kiểm Duyệt)
 const CounterPage = lazy(() => import('../features/moderator/pages/CounterPage.jsx'));
@@ -58,9 +59,7 @@ function RouteFallback() {
 
 /**
  * Root Redirect Handler (Điều hướng gốc /)
- * Requirement A:
  * - Người dùng chưa đăng nhập truy cập / được chuyển trực tiếp đến trang Login.
- * - Không hiển thị Landing Page hoặc màn hình chọn vai trò trước khi đăng nhập.
  * - Nếu đã có session hợp lệ, chuyển thẳng tới dashboard theo vai trò:
  *     ADMIN -> /admin
  *     STAFF / MODERATOR -> /moderator/counter
@@ -95,8 +94,9 @@ export default function AppRouter() {
   return (
     <Suspense fallback={<RouteFallback />}>
     <Routes>
-      {/* 1. Public & Auth Routes (Chỉ cho Admin & Moderator) */}
+      {/* 1. Public & Auth Routes (Tách riêng /landing cho Trang đích và / -> /login cho Admin & Moderator) */}
       <Route path="/" element={<RootRedirect />} />
+      <Route path="/landing" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />

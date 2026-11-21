@@ -1,4 +1,5 @@
 User-agent: *
+Allow: /landing
 Allow: /login
 Disallow: /admin/
 Disallow: /moderator/
