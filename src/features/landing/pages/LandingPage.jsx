@@ -13,10 +13,11 @@ import {
 } from '../services/landingApi.js';
 import LandingNavbar from '../components/LandingNavbar.jsx';
 import HeroSection from '../components/HeroSection.jsx';
-import FeaturesSection from '../components/FeaturesSection.jsx';
+import AiStudioSection from '../components/AiStudioSection.jsx';
 import MarketplaceShowcase from '../components/MarketplaceShowcase.jsx';
-import CommunitySection from '../components/CommunitySection.jsx';
 import WarehousesSection from '../components/WarehousesSection.jsx';
+import CommunitySection from '../components/CommunitySection.jsx';
+import AboutRehomeSection from '../components/AboutRehomeSection.jsx';
 import MembershipPlansSection from '../components/MembershipPlansSection.jsx';
 import ApkInstallSection from '../components/ApkInstallSection.jsx';
 import LandingFooter from '../components/LandingFooter.jsx';
@@ -56,10 +57,12 @@ const INITIAL_DATA = {
 };
 
 const STAGGER_GROUP_SELECTORS = [
-  '.bento-card',
+  '.ai-card',
   '.lookbook-card',
+  '.consign-card',
   '.community-card',
   '.warehouse-card',
+  '.about-card',
   '.plan-card',
   '.install-step-card',
 ];
@@ -305,9 +308,11 @@ export default function LandingPage() {
           hasLiveData={data.hasLiveData}
           products={data.products}
           campaigns={data.campaigns}
+          warehouses={data.warehouses}
         />
 
-        <FeaturesSection
+        <AiStudioSection
+          products={data.products}
           categories={data.categories}
           brands={data.brands}
           loading={loading}
@@ -324,13 +329,15 @@ export default function LandingPage() {
           onOpenAppPrompt={setSelectedProduct}
         />
 
+        <WarehousesSection warehouses={data.warehouses} loading={loading} />
+
         <CommunitySection
           campaigns={data.campaigns}
           organizations={data.organizations}
           loading={loading}
         />
 
-        <WarehousesSection warehouses={data.warehouses} loading={loading} />
+        <AboutRehomeSection />
 
         <MembershipPlansSection plans={data.plans} loading={loading} />
 
@@ -349,26 +356,26 @@ export default function LandingPage() {
           onClick={() => setSelectedProduct(null)}
         >
           <div
-            className="w-full max-w-md rounded-3xl bg-white border border-[#DDE5D9] p-6 shadow-elevated space-y-5"
+            className="w-full max-w-sm rounded-3xl bg-white border border-[#DDE5D9] p-5 shadow-elevated space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3.5 min-w-0">
+              <div className="flex items-start gap-3 min-w-0">
                 {hasModalThumb && (
                   <img
                     src={selectedProduct.thumbnailUrl}
                     alt={selectedProduct.name}
-                    className="w-16 h-20 rounded-2xl object-cover border border-[#DDE5D9] shrink-0"
+                    className="w-14 h-[72px] rounded-2xl object-cover border border-[#DDE5D9] shrink-0"
                   />
                 )}
                 <div className="min-w-0">
-                  <span className="inline-block px-2.5 py-0.5 rounded-full bg-[#E8F5E9] text-[#006B2C] text-[11px] font-bold mb-1 whitespace-nowrap">
-                    Trải nghiệm trên Android
+                  <span className="inline-block px-2.5 py-0.5 rounded-full bg-[#E8F5E9] text-[#006B2C] text-[10px] font-bold mb-1 whitespace-nowrap">
+                    Live Try-On &amp; AI Phối đồ
                   </span>
-                  <h3 id="app-prompt-title" className="text-lg font-bold text-[#1F2A37] line-clamp-2">
+                  <h3 id="app-prompt-title" className="text-base font-bold text-[#1F2A37] line-clamp-2">
                     {selectedProduct.name}
                   </h3>
-                  <p className="text-base font-extrabold text-[#006B2C] mt-0.5">
+                  <p className="text-sm font-extrabold text-[#006B2C] mt-0.5">
                     {formatCurrencyVND(selectedProduct.currentPrice)}
                   </p>
                 </div>
@@ -380,28 +387,28 @@ export default function LandingPage() {
                 onClick={() => setSelectedProduct(null)}
                 className="w-8 h-8 rounded-xl flex items-center justify-center text-[#5B6776] hover:bg-[#F6F9F4] hover:text-[#1F2A37] shrink-0"
               >
-                <CloseIcon className="w-5 h-5" />
+                <CloseIcon className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="rounded-2xl bg-[#F6F9F4] border border-[#DDE5D9] p-4 flex items-center gap-4">
+            <div className="rounded-2xl bg-[#F6F9F4] border border-[#DDE5D9] p-3.5 flex items-center gap-3.5">
               <img
                 src={apkQrUrl}
                 alt="Mã QR tải ReHome APK"
-                className="w-20 h-20 rounded-xl bg-white p-1.5 border border-[#DDE5D9] shrink-0"
+                className="w-16 h-16 rounded-xl bg-white p-1 border border-[#DDE5D9] shrink-0"
               />
-              <p className="text-xs text-[#5B6776] leading-relaxed">
-                Quét mã QR bằng điện thoại hoặc bấm nút bên dưới để tải ứng dụng ReHome Android,
-                thử đồ AI và đặt mua an toàn.
+              <p className="text-[11px] text-[#5B6776] leading-relaxed">
+                Quét mã QR hoặc tải ReHome APK để thử món này bằng Live Try-On, nhờ AI phối nguyên
+                set và chốt đơn an toàn.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2.5">
+            <div className="flex flex-col sm:flex-row gap-2">
               <a
                 href={APK_DOWNLOAD_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="landing-btn-shine flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#006B2C] hover:bg-[#005523] text-white text-sm font-bold transition-colors whitespace-nowrap shrink-0"
+                className="landing-btn-shine flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-[#006B2C] hover:bg-[#005523] text-white text-xs sm:text-sm font-bold transition-colors whitespace-nowrap shrink-0"
               >
                 <DownloadIcon className="w-4 h-4 shrink-0" />
                 <span>Tải APK từ Google Drive</span>
@@ -409,7 +416,7 @@ export default function LandingPage() {
               <button
                 type="button"
                 onClick={() => setSelectedProduct(null)}
-                className="px-4 py-3 rounded-2xl border border-[#DDE5D9] text-sm font-semibold text-[#1F2A37] hover:bg-[#F6F9F4] whitespace-nowrap shrink-0"
+                className="px-4 py-2.5 rounded-2xl border border-[#DDE5D9] text-xs sm:text-sm font-semibold text-[#1F2A37] hover:bg-[#F6F9F4] whitespace-nowrap shrink-0"
               >
                 Đóng
               </button>

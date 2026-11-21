@@ -1,8 +1,33 @@
 import React, { useState } from 'react';
 import charityVisualUrl from '../assets/charity-community.svg';
 import { formatDate } from '../../../utils/formatters.js';
+import { APK_DOWNLOAD_URL } from '../constants/landingConstants.js';
 import { isBrokenSeedAssetUrl } from '../services/landingApi.js';
-import { CheckCircleIcon, MapPinIcon } from './LandingIcons.jsx';
+import {
+  AndroidIcon,
+  CheckCircleIcon,
+  HeartHandshakeIcon,
+  MapPinIcon,
+  ShieldCheckIcon,
+} from './LandingIcons.jsx';
+
+const CHARITY_PILLARS = [
+  {
+    title: '100% tổ chức thẩm định pháp lý',
+    description:
+      'Mọi tổ chức thiện nguyện đều phải hoàn tất xác minh hồ sơ trước khi mở chiến dịch tiếp nhận.',
+  },
+  {
+    title: '2 cách quyên góp cực linh hoạt',
+    description:
+      'Mang đồ trực tiếp tới kho/điểm nhận, hoặc 1 chạm chuyển món ký gửi cuối kỳ thành quà tặng.',
+  },
+  {
+    title: 'Đúng món cần · Rõ điểm nhận',
+    description:
+      'Theo dõi danh sách trang phục chiến dịch đang ưu tiên và các điểm kho tiếp nhận công khai.',
+  },
+];
 
 function CampaignCover({ src, title }) {
   const [failed, setFailed] = useState(false);
@@ -57,7 +82,7 @@ export default function CommunitySection({ campaigns = [], organizations = [], l
   return (
     <section
       id="community"
-      className="relative overflow-hidden py-20 sm:py-24 bg-[#EBF3EA] border-b border-[#DDE5D9]"
+      className="relative overflow-hidden py-20 sm:py-24 bg-[#F7F3EA] border-b border-[#E5DEC9]"
     >
       {/* Họa tiết vòng tròn mảnh trang trí nền */}
       <svg
@@ -70,20 +95,37 @@ export default function CommunitySection({ campaigns = [], organizations = [], l
         <circle cx="180" cy="180" r="120" stroke="currentColor" strokeWidth="1" />
       </svg>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="max-w-2xl space-y-3">
-            <span className="inline-block px-3.5 py-1 rounded-full bg-[#FEF3C7] text-[#92400E] text-xs font-bold uppercase tracking-wider">
-              Cộng đồng thiện nguyện
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#FEF3C7] text-[#92400E] border border-[#FEA619]/30 text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+              <HeartHandshakeIcon className="w-3.5 h-3.5 shrink-0" />
+              <span>Cộng đồng thiện nguyện minh bạch</span>
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#1F2A37]">
-              Chiến dịch đang mở &amp; Tổ chức đã xác minh
+              Trao đi món đồ còn tốt — Gửi trọn hơi ấm đúng nơi
             </h2>
           </div>
           <p className="text-sm sm:text-base text-[#5B6776] max-w-md leading-relaxed">
-            Quyên góp trực tiếp hoặc chuyển đổi đồ ký gửi cuối kỳ cho các tổ chức đã qua thẩm định
-            hồ sơ pháp lý tại ReHome.
+            Không để trang phục nằm im trong góc tủ. Đóng góp trực tiếp hoặc chuyển tiếp đồ ký gửi
+            cuối kỳ tới các tổ chức thiện nguyện đã qua thẩm định pháp lý.
           </p>
+        </div>
+
+        {/* 3 Trụ cột minh bạch thiện nguyện */}
+        <div className="grid md:grid-cols-3 gap-4 reveal-section">
+          {CHARITY_PILLARS.map((pillar) => (
+            <div
+              key={pillar.title}
+              className="rounded-2xl bg-white/95 border border-[#E5DEC9] p-5 shadow-sm space-y-2"
+            >
+              <div className="inline-flex items-center gap-2 text-xs font-extrabold text-[#006B2C]">
+                <ShieldCheckIcon className="w-4 h-4 shrink-0" />
+                <span>{pillar.title}</span>
+              </div>
+              <p className="text-xs text-[#5B6776] leading-relaxed">{pillar.description}</p>
+            </div>
+          ))}
         </div>
 
         {/* Chiến dịch thiện nguyện */}
@@ -98,7 +140,6 @@ export default function CommunitySection({ campaigns = [], organizations = [], l
           </div>
         ) : visibleCampaigns.length > 0 ? (
           isSingleCampaign ? (
-            /* Bố cục Spotlight toàn chiều rộng khi có 1 chiến dịch */
             <article className="community-card group rounded-3xl border border-[#DDE5D9] bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-all grid lg:grid-cols-12">
               <div className="lg:col-span-5 min-w-0 aspect-[16/10] lg:aspect-auto min-h-[260px] bg-[#EBF1E8] overflow-hidden relative">
                 <CampaignCover
@@ -106,7 +147,7 @@ export default function CommunitySection({ campaigns = [], organizations = [], l
                   title={visibleCampaigns[0].title}
                 />
                 <span className="absolute top-4 left-4 px-3 py-1 rounded-full bg-[#062B19]/85 backdrop-blur-sm text-white text-[11px] font-bold whitespace-nowrap">
-                  Chiến dịch tiêu điểm
+                  Chiến dịch đang tiếp nhận
                 </span>
               </div>
 
@@ -165,16 +206,13 @@ export default function CommunitySection({ campaigns = [], organizations = [], l
                     </div>
 
                     <a
-                      href="#install-guide"
+                      href={APK_DOWNLOAD_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="landing-btn-shine group/btn inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#006B2C] hover:bg-[#005523] text-white text-xs font-bold transition-colors whitespace-nowrap shrink-0"
                     >
-                      <span>Quyên góp qua App</span>
-                      <span
-                        aria-hidden="true"
-                        className="transition-transform duration-200 group-hover/btn:translate-x-0.5"
-                      >
-                        →
-                      </span>
+                      <AndroidIcon className="w-4 h-4 shrink-0" />
+                      <span>Chung tay quyên góp qua App</span>
                     </a>
                   </div>
                 </div>
@@ -262,7 +300,7 @@ export default function CommunitySection({ campaigns = [], organizations = [], l
 
         {/* Dải Tổ chức đã xác minh */}
         <div className="space-y-4 reveal-section">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-lg font-bold text-[#1F2A37]">Tổ chức thiện nguyện đồng hành</h3>
             <span className="text-xs font-bold text-[#006B2C] whitespace-nowrap">
               Hồ sơ đã được kiểm duyệt

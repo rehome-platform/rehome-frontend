@@ -93,8 +93,9 @@ export default function MembershipPlansSection({ plans = [], loading = false }) 
             Gói thành viên VIP ReHome
           </h2>
           <p className="text-sm sm:text-base text-[#5B6776] leading-relaxed">
-            Mở rộng lượt thử đồ AI, Live Try-On, tăng hạn mức ký gửi và nhận voucher ưu đãi hàng
-            tháng trực tiếp trong ứng dụng ReHome.
+            Mở rộng lượt <strong className="text-[#1F2A37]">Live Try-On realtime</strong>, tăng
+            hạn mức <strong className="text-[#1F2A37]">AI phối đồ</strong>, đăng ký nhiều đơn ký
+            gửi hơn và nhận voucher ưu đãi hàng tháng trên Android.
           </p>
 
           {hasYearlyOption && (
