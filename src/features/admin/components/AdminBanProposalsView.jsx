@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import adminApi from '../services/adminApi.js';
-import { Badge, Button, Spinner } from '../../../components/common/index.js';
+import { Badge, Button, Spinner, TableActionButton } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import { formatDateTime } from '../../../utils/formatters.js';
 
@@ -346,14 +346,16 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
             />
           </div>
 
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={loadProposals}
-            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#DDE5D9] bg-white hover:bg-[#F6F9F4] text-xs font-bold text-[#5B6776] transition-colors cursor-pointer"
+            className="gap-1.5 whitespace-nowrap"
           >
-            <span className="material-symbols-outlined text-[16px]">refresh</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[16px]">refresh</span>
             <span>Làm mới danh sách</span>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -363,13 +365,14 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
           className="px-4 py-3 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-xs font-semibold text-[#B91C1C] flex items-center justify-between gap-3"
         >
           <span>{loadError}</span>
-          <button
+          <Button
             type="button"
+            variant="danger-outline"
+            size="sm"
             onClick={loadProposals}
-            className="px-3 py-1.5 rounded-lg border border-[#FECACA] bg-white hover:bg-[#FEF2F2] text-xs font-bold text-[#991B1B]"
           >
             Thử lại
-          </button>
+          </Button>
         </div>
       )}
 
@@ -466,15 +469,11 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
                     </td>
 
                     {/* Thao tác */}
-                    <td className="py-3.5 px-6 text-center align-middle whitespace-nowrap">
-                      <button
-                        type="button"
+                    <td className="py-3.5 px-6 text-right align-middle whitespace-nowrap">
+                      <TableActionButton
+                        action="view"
                         onClick={() => handleInspectProposal(item)}
-                        className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 whitespace-nowrap rounded-xl text-xs font-semibold text-[#006B2C] border border-[#006B2C]/30 hover:bg-[#E8F5E9] transition-colors cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-base">visibility</span>
-                        <span>Xem chi tiết</span>
-                      </button>
+                      />
                     </td>
                   </tr>
                 ))}
@@ -622,20 +621,22 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
 
               {selectedProposal.status === 'PENDING' && (
                 <>
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => handleDismissProposal(selectedProposal)}
-                    className="px-4 py-2.5 rounded-xl border border-[#DDE5D9] bg-white text-xs font-bold text-[#5B6776] hover:bg-[#DDE5D9]/50 cursor-pointer"
                   >
                     Bỏ qua đề xuất
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="danger"
+                    size="sm"
                     onClick={() => handleOpenBanModal(selectedProposal)}
-                    className="px-5 py-2.5 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-bold shadow-sm cursor-pointer"
                   >
                     Khóa tài khoản ngay
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
@@ -699,22 +700,25 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
             </div>
 
             <div className="flex items-center justify-end gap-2.5 pt-2">
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 disabled={banSubmitting}
                 onClick={() => setBanModalTarget(null)}
-                className="px-4 py-2 rounded-xl border border-[#DDE5D9] bg-white text-xs font-bold text-[#5B6776] hover:bg-[#F6F9F4] cursor-pointer"
               >
                 Hủy
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="danger"
+                size="sm"
+                loading={banSubmitting}
                 disabled={banSubmitting}
                 onClick={handleConfirmBan}
-                className="px-5 py-2 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-bold shadow-sm cursor-pointer disabled:opacity-50"
               >
                 {banSubmitting ? 'Đang khóa...' : 'Xác nhận Khóa'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

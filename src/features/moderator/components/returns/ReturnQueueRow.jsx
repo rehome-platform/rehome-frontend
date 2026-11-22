@@ -1,5 +1,6 @@
 import React from "react";
 import { needsItemAction } from "../../services/returnApi.js";
+import Button from "../../../../components/common/Button.jsx";
 import TableActionButton from "../../../../components/common/TableActionButton.jsx";
 
 export function ReturnQueueRow({
@@ -13,8 +14,6 @@ export function ReturnQueueRow({
   handleOpenQuickDetail,
 }) {
   const pendingItemAction = needsItemAction(r);
-  const actionBtnBase =
-    'inline-flex items-center justify-center text-xs font-semibold px-3 py-1.5 rounded-xl transition-colors whitespace-nowrap cursor-pointer';
 
   return (
     <tr
@@ -66,74 +65,81 @@ export function ReturnQueueRow({
             onClick={() => (handleOpenQuickDetail ? handleOpenQuickDetail(r) : handleOpenReview(r))}
           />
           {r.status === 'PENDING_APPROVAL' && (
-            <button
-              type="button"
+            <Button
+              size="sm"
+              variant="primary"
+              className="whitespace-nowrap"
               onClick={() => handleOpenReview(r)}
-              className={`${actionBtnBase} bg-primary text-white hover:bg-primary-hover shadow-sm`}
             >
               Duyệt yêu cầu
-            </button>
+            </Button>
           )}
           {r.status === 'RECEIVED_INSPECT' && (
-            <button
-              type="button"
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-[#006B2C] text-[#006B2C] hover:bg-[#E8F5E9] hover:text-[#006B2C] whitespace-nowrap"
               onClick={() => handleOpenInspect(r)}
-              className={`${actionBtnBase} border border-primary text-primary bg-white hover:bg-primary hover:text-white`}
             >
               Kiểm tra hàng
-            </button>
+            </Button>
           )}
           {(r.status === 'RETURNING' || r.status === 'WAITING_BUYER_DISPATCH') && (
             <>
               {r.status === 'RETURNING' && (
-                <button
-                  type="button"
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-[#006B2C] text-[#006B2C] hover:bg-[#E8F5E9] hover:text-[#006B2C] whitespace-nowrap"
                   onClick={() => handleOpenInspect(r)}
-                  className={`${actionBtnBase} border border-primary text-primary bg-white hover:bg-primary hover:text-white`}
                 >
                   Kiểm tra hàng
-                </button>
+                </Button>
               )}
-              <button
-                type="button"
+              <Button
+                size="sm"
+                variant="outline"
+                className="whitespace-nowrap"
                 onClick={() => handleOpenReview(r)}
-                className={`${actionBtnBase} border border-neutral bg-white text-textSecondary hover:bg-background`}
               >
                 Theo dõi
-              </button>
+              </Button>
               {handleMarkLost && (
-                <button
-                  type="button"
+                <Button
+                  size="sm"
+                  variant="danger-outline"
+                  className="whitespace-nowrap"
                   onClick={() => handleMarkLost(r)}
-                  className={`${actionBtnBase} border border-error bg-white text-error hover:bg-error-light`}
                   title="Báo bưu kiện thất lạc bởi đơn vị giao vận"
                 >
                   Báo thất lạc
-                </button>
+                </Button>
               )}
             </>
           )}
           {r.status === 'RESOLVED' && (
             <>
               {pendingItemAction && handleOpenOutcomeModal && (
-                <button
-                  type="button"
+                <Button
+                  size="sm"
+                  variant="primary"
+                  className="whitespace-nowrap"
                   onClick={() => handleOpenOutcomeModal(r)}
-                  className={`${actionBtnBase} bg-primary text-white hover:bg-primary-hover shadow-sm`}
                   title="Chọn phương án xử lý món hàng"
                 >
                   Chọn xử lý món
-                </button>
+                </Button>
               )}
               {(r.degraded || r.degradedCase) && (
-                <button
-                  type="button"
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-[#FEDF89] bg-[#FFFAEB] text-[#B54708] hover:bg-[#FEF0C7] hover:border-[#F79009] hover:text-[#B54708] whitespace-nowrap"
                   onClick={() => (handleOpenDegradedCaseView ? handleOpenDegradedCaseView(r) : handleOpenReview(r))}
-                  className={`${actionBtnBase} border border-[#FEDF89] bg-[#FFFAEB] text-[#B54708] hover:bg-[#FEF0C7]`}
                   title="Xem kết luận hàng xuống cấp"
                 >
                   Biên bản xuống cấp
-                </button>
+                </Button>
               )}
             </>
           )}

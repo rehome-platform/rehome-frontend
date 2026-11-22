@@ -173,8 +173,9 @@ export default function EndOfTermPage() {
           <Link to="/moderator/counter">
             <Button variant="outline">Quầy tiếp nhận</Button>
           </Link>
-          <Button variant="outline" onClick={list.refresh}>
-            Tải lại
+          <Button variant="outline" onClick={list.refresh} className="gap-1.5 whitespace-nowrap">
+            <span aria-hidden="true" className="material-symbols-outlined text-[16px]">refresh</span>
+            <span>Tải lại</span>
           </Button>
         </div>
       }

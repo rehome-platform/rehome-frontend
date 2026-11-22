@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import adminApi from '../services/adminApi';
-import { Button, Spinner, Modal } from '../../../components/common/index.js';
+import { Button, Spinner, Modal, TableActionButton } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
 
@@ -359,18 +359,21 @@ export default function AdminModeratorsView({ onLogAction }) {
               ? 'Không tìm thấy kết quả phù hợp với bộ lọc hiện tại.'
               : 'Tạo tài khoản đầu tiên để bắt đầu phân công xử lý các tác vụ kiểm duyệt.'}
           </p>
-          <button
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
             onClick={() => {
               setSearchKeyword('');
               setStatusFilter('ALL');
               setWarehouseFilter('ALL');
               setIsCreateModalOpen(true);
             }}
-            className="px-4 py-2 bg-[#006B2C] text-white text-xs font-semibold rounded-xl hover:bg-[#005523] transition-colors flex items-center gap-1.5 shadow-sm"
+            className="gap-1.5"
           >
-            <span className="material-symbols-outlined text-sm">add</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-sm">add</span>
             <span>Tạo tài khoản nhân viên</span>
-          </button>
+          </Button>
         </div>
       ) : (
         <div
@@ -451,15 +454,11 @@ export default function AdminModeratorsView({ onLogAction }) {
                       </td>
 
                       {/* Actions */}
-                      <td className="py-3.5 pl-4 pr-8 text-center align-middle whitespace-nowrap">
-                        <button
-                          type="button"
+                      <td className="py-3.5 pl-4 pr-8 text-right align-middle whitespace-nowrap">
+                        <TableActionButton
+                          action="view"
                           onClick={() => setDetailTarget(mod)}
-                          className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 whitespace-nowrap rounded-xl text-xs font-semibold text-[#006B2C] border border-[#006B2C]/30 hover:bg-[#E8F5E9] transition-colors"
-                        >
-                          <span className="material-symbols-outlined text-base">visibility</span>
-                          <span>Xem chi tiết</span>
-                        </button>
+                        />
                       </td>
                     </tr>
                   );
@@ -542,38 +541,39 @@ export default function AdminModeratorsView({ onLogAction }) {
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-[#DDE5D9]">
                 <div className="flex items-center gap-2">
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => {
                       setChangeWarehouseTarget(detailTarget);
                       setSelectedNewWarehouseId(detailTarget.warehouseId || warehouses[0]?.id || "");
                       setDetailTarget(null);
                     }}
-                    className="px-4 py-2 text-xs font-semibold text-[#00685F] hover:bg-[#E0F2F1] rounded-xl border border-[#00685F]/30 flex items-center gap-1.5"
+                    className="gap-1.5 border-[#00685F]/40 text-[#00685F] hover:bg-[#E0F2F1] hover:border-[#00685F] hover:text-[#00685F]"
                   >
-                    <span className="material-symbols-outlined text-base">sync_alt</span>
+                    <span aria-hidden="true" className="material-symbols-outlined text-base">sync_alt</span>
                     <span>Chuyển địa điểm công tác</span>
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    size="sm"
+                    variant={!dLocked ? "danger-outline" : "outline"}
                     onClick={() => handleToggleStatus(detailTarget)}
-                    className={`px-4 py-2 text-xs font-semibold rounded-xl border flex items-center gap-1.5 ${
-                      !dLocked
-                        ? "text-[#DC2626] border-[#DC2626]/30 hover:bg-[#FEE2E2]/50"
-                        : "text-[#006B2C] border-[#006B2C]/30 hover:bg-[#E8F5E9]"
-                    }`}
+                    className={!dLocked ? "gap-1.5" : "gap-1.5 border-[#ABEFC6] text-[#006B2C] hover:bg-[#ECFDF3] hover:border-[#006B2C] hover:text-[#006B2C]"}
                   >
                     <span className="material-symbols-outlined text-base" aria-hidden="true">{!dLocked ? "lock" : "lock_open"}</span>
                     <span>{!dLocked ? "Khóa tài khoản" : "Mở khóa tài khoản"}</span>
-                  </button>
+                  </Button>
                 </div>
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => setDetailTarget(null)}
-                  className="px-4 py-2 text-xs font-semibold border border-[#DDE5D9] bg-white text-[#5B6776] hover:bg-[#F6F9F4] rounded-xl"
                 >
                   Đóng
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -620,25 +620,24 @@ export default function AdminModeratorsView({ onLogAction }) {
               </div>
 
               <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#DDE5D9]">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isSubmitting}
                   onClick={() => setChangeWarehouseTarget(null)}
-                  className="px-4 py-2 text-xs font-semibold text-[#5B6776] hover:bg-[#F6F9F4] rounded-xl border border-[#DDE5D9]"
                 >
                   Hủy
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
+                  variant="primary"
+                  size="sm"
+                  loading={isSubmitting}
                   disabled={isSubmitting}
-                  className="px-4 py-2 text-xs font-semibold bg-[#006B2C] text-white hover:bg-[#005523] rounded-xl flex items-center gap-1.5 shadow-sm disabled:opacity-50"
                 >
-                  {isSubmitting && (
-                    <span className="material-symbols-outlined animate-spin text-sm">
-                      progress_activity
-                    </span>
-                  )}
-                  <span>Xác nhận chuyển địa điểm</span>
-                </button>
+                  Xác nhận chuyển địa điểm
+                </Button>
               </div>
             </form>
           </div>
@@ -802,25 +801,24 @@ export default function AdminModeratorsView({ onLogAction }) {
 
               {/* Modal Actions */}
               <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#DDE5D9]">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isSubmitting}
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-[#5B6776] hover:bg-[#F6F9F4] rounded-xl transition-colors border border-[#DDE5D9]"
                 >
                   Hủy
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
+                  variant="primary"
+                  size="sm"
+                  loading={isSubmitting}
                   disabled={isSubmitting}
-                  className="px-4 py-2 text-xs font-semibold bg-[#006B2C] text-white hover:bg-[#005523] rounded-xl transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50"
                 >
-                  {isSubmitting && (
-                    <span className="material-symbols-outlined animate-spin text-sm">
-                      progress_activity
-                    </span>
-                  )}
-                  <span>Tạo tài khoản</span>
-                </button>
+                  Tạo tài khoản
+                </Button>
               </div>
             </form>
           </div>

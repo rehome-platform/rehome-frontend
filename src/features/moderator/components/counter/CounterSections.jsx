@@ -192,7 +192,7 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
               disabled={!canHandover}
               className={`font-bold ${
                 canHandover
-                  ? 'bg-[#006B2C] text-white hover:bg-[#005221]'
+                  ? 'bg-[#006B2C] text-white hover:bg-[#005523]'
                   : 'bg-[#efefef] text-[#9a9a9a] cursor-not-allowed'
               }`}
               onClick={() => executeHandover(confirmHandover.item, confirmHandover.context)}

@@ -269,14 +269,15 @@ export default function InventoryDetailPage() {
                   )}
                   {canReportDegraded && <Button
                     onClick={() => setDegradedModalOpen(true)}
-                    variant="outline"
-                    className="border-red-600 text-red-600 hover:bg-red-50 font-bold py-2 px-4 shadow-sm"
+                    variant="danger-outline"
+                    className="font-bold py-2 px-4 shadow-sm"
                   >
                     Hàng xuống cấp
                   </Button>}
                   <Button
+                    variant="primary"
                     onClick={() => setPrint(true)}
-                    className="bg-[#006B2C] text-white hover:bg-[#005221] font-bold py-2 px-4 shadow-sm"
+                    className="font-bold py-2 px-4 shadow-sm"
                   >
                     Mở / In lại tem SKU
                   </Button>
@@ -568,7 +569,7 @@ export default function InventoryDetailPage() {
                     loading={isSubmittingDegraded}
                     disabled={isSubmittingDegraded || degradedUploadPending || !degradedNotes.trim() || !degradedPhotos.length}
                     onClick={handleSendDegradedProposal}
-                    className="px-4 py-1.5 text-xs font-bold bg-[#006B2C] hover:bg-[#005221]"
+                    className="px-4 py-1.5 text-xs font-bold"
                   >
                     Gửi đề xuất cho người ký gửi
                   </Button>

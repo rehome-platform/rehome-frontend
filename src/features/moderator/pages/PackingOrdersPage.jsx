@@ -259,8 +259,9 @@ export default function PackingOrdersPage() {
       title="Đóng gói đơn hàng"
       subtitle="Nhận việc theo kho, đối chiếu đủ SKU trước khi tạo vận đơn GHN."
       actions={
-        <Button variant="outline" onClick={queue.refresh}>
-          Tải lại
+        <Button variant="outline" onClick={queue.refresh} className="gap-1.5 whitespace-nowrap">
+          <span aria-hidden="true" className="material-symbols-outlined text-[16px]">refresh</span>
+          <span>Tải lại</span>
         </Button>
       }
     >
