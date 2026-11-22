@@ -1,16 +1,16 @@
 import React, { useMemo, useState } from 'react';
+import heroEditorialUrl from '../assets/hero-editorial.jpg';
 import { formatCurrencyVND } from '../../../utils/formatters.js';
 import {
   APK_DOWNLOAD_URL,
   CITY_COORDS_PRESETS,
   CONSIGN_EARNING_PRESETS,
-  INSPECTION_CHECKLIST,
   INSPECTION_GRADES,
 } from '../constants/landingConstants.js';
 import { updateSpotlightCoords } from '../utils/spotlight.js';
 import {
   AndroidIcon,
-  CheckCircleIcon,
+  ArrowRightIcon,
   ClockIcon,
   ExternalLinkIcon,
   LocateIcon,
@@ -61,7 +61,11 @@ function formatDistanceLabel(km) {
   return `Cách ~${km.toFixed(1)} km`;
 }
 
-export default function WarehousesSection({ warehouses = [], loading = false }) {
+export default function WarehousesSection({
+  warehouses = [],
+  loading = false,
+  onOpenInfoModal,
+}) {
   const [selectedPrice, setSelectedPrice] = useState(CONSIGN_EARNING_PRESETS[1]);
   const [referenceCoords, setReferenceCoords] = useState(null);
   const [activeCityId, setActiveCityId] = useState('');
@@ -158,53 +162,69 @@ export default function WarehousesSection({ warehouses = [], loading = false }) 
               </h2>
             </div>
             <p className="text-sm sm:text-base text-[#5B6776] max-w-md leading-relaxed">
-              Không cần tự chụp ảnh hay trả giá mệt mỏi. Mang đồ tới điểm ký gửi gần nhất — chuyên
-              viên ReHome kiểm định, định giá công khai và bán tự động cho bạn.
+              Mang đồ tới điểm ký gửi gần nhất — chuyên viên kiểm định, định giá công khai và bán
+              hộ từ A–Z.
             </p>
           </div>
 
           <div className="grid lg:grid-cols-12 gap-6 items-stretch">
-            {/* Trái: Kiểm định 6 tiêu chí + Bảng phân hạng độ mới 4 cấp */}
-            <div className="lg:col-span-7 min-w-0 rounded-3xl bg-[#F6F9F4] border border-[#DDE5D9] p-6 sm:p-7 space-y-6">
-              <div className="space-y-2">
-                <h3 className="text-xl font-extrabold text-[#1F2A37]">
-                  Quy trình kiểm định &amp; phân hạng minh bạch tại quầy
-                </h3>
-                <p className="text-xs sm:text-sm text-[#5B6776] leading-relaxed">
-                  Thương lượng giá trực tiếp tại điểm ký gửi — hai bên đồng thuận mới lập biên nhận
-                  điện tử (khách không đồng ý có thể mang về ngay, hoàn toàn không ép giá).
-                </p>
-              </div>
-
-              {/* 4 cấp phân hạng độ mới */}
-              <div className="grid sm:grid-cols-2 gap-3">
-                {INSPECTION_GRADES.map((grade) => (
-                  <div
-                    key={grade.label}
-                    className="consign-card rounded-2xl bg-white border border-[#DDE5D9] p-3.5 space-y-1 shadow-sm"
-                  >
-                    <p className="text-xs font-extrabold text-[#006B2C]">{grade.label}</p>
-                    <p className="text-xs text-[#5B6776] leading-snug">{grade.desc}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* 6 bước kiểm định kho */}
-              <div className="pt-2 border-t border-[#DDE5D9] space-y-3">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#1F2A37]">
-                  6 tiêu chí kiểm định trước khi gắn AI &amp; lên sàn:
-                </p>
-                <div className="grid sm:grid-cols-2 gap-2.5">
-                  {INSPECTION_CHECKLIST.map((item) => (
-                    <div
-                      key={item}
-                      className="flex items-start gap-2 text-xs font-semibold text-[#1F2A37]"
-                    >
-                      <CheckCircleIcon className="w-4 h-4 text-[#006B2C] shrink-0 mt-0.5" />
-                      <span>{item}</span>
-                    </div>
-                  ))}
+            {/* Trái: Card trực quan Kiểm định 6 bước & 4 cấp độ mới + nút mở Modal chi tiết */}
+            <div className="lg:col-span-7 min-w-0 rounded-3xl bg-[#F6F9F4] border border-[#DDE5D9] overflow-hidden flex flex-col justify-between">
+              <div className="relative h-52 sm:h-60 bg-[#062B19] overflow-hidden">
+                <img
+                  src={heroEditorialUrl}
+                  alt="Quy trình kiểm định 6 bước tại quầy ReHome"
+                  loading="lazy"
+                  className="w-full h-full object-cover opacity-85"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#041E12] via-[#041E12]/35 to-transparent" />
+                <div className="absolute top-4 left-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FEA619] text-[#1F2A37] text-[11px] font-extrabold uppercase tracking-wider whitespace-nowrap shadow-sm">
+                  <ShieldCheckIcon className="w-3.5 h-3.5 shrink-0" />
+                  <span>Kiểm định 6 bước tại quầy</span>
                 </div>
+                <div className="absolute bottom-4 inset-x-5 text-white">
+                  <h3 className="text-xl font-extrabold leading-snug">
+                    Kiểm định minh bạch — Dán tem SKU chuẩn sàn
+                  </h3>
+                  <p className="text-xs text-white/80 mt-1">
+                    Không ép giá tại quầy · Khách không đồng ý có thể mang đồ về ngay
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-5 flex-1 flex flex-col justify-between">
+                <div className="space-y-2.5">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#5B6776]">
+                    4 cấp phân hạng độ mới công khai
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {INSPECTION_GRADES.map((grade) => (
+                      <span
+                        key={grade.label}
+                        className="consign-card inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-[#DDE5D9] text-xs font-bold text-[#006B2C] shadow-sm whitespace-nowrap"
+                      >
+                        <ShieldCheckIcon className="w-3.5 h-3.5 shrink-0" />
+                        <span>{grade.label}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {onOpenInfoModal && (
+                  <div className="pt-2 border-t border-[#DDE5D9] flex flex-wrap items-center justify-between gap-3">
+                    <span className="text-xs text-[#5B6776]">
+                      Xem chi tiết quy trình 6 tiêu chí &amp; quy chuẩn phân hạng
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onOpenInfoModal('inspection')}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#006B2C] hover:bg-[#005523] text-white text-xs font-bold shadow-sm transition-colors whitespace-nowrap shrink-0"
+                    >
+                      <span>Xem chi tiết 6 bước kiểm định</span>
+                      <ArrowRightIcon className="w-3.5 h-3.5 shrink-0" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 

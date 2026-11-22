@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import Logo from '../../../components/common/Logo.jsx';
-import { APK_DOWNLOAD_URL, NAV_LINKS } from '../constants/landingConstants.js';
-import { AndroidIcon, CloseIcon, MenuIcon } from './LandingIcons.jsx';
+import apkQrUrl from '../assets/apk-qr.svg';
+import { APK_DOWNLOAD_URL, LANDING_NAV_ITEMS } from '../constants/landingConstants.js';
+import { AndroidIcon, CameraIcon, CloseIcon } from './LandingIcons.jsx';
 
-export default function LandingNavbar() {
+export default function LandingNavbar({ onOpenInfoModal }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -16,105 +17,174 @@ export default function LandingNavbar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  const handleModalNavClick = (modalTab) => {
+    setMobileOpen(false);
+    onOpenInfoModal?.(modalTab);
+  };
+
   return (
-    <header
-      className={`sticky top-0 z-40 border-b backdrop-blur-md transition-all duration-200 ${
-        scrolled
-          ? 'bg-white/95 border-[#DDE5D9]/90 shadow-sm'
-          : 'bg-[#F6F9F4]/85 border-transparent'
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-        <Logo
-          size="sm"
-          to="/landing"
-          subtitle="Thời trang tuần hoàn"
-          className="shrink-0 [&_span]:whitespace-nowrap"
-        />
+    <>
+      <header
+        className={`sticky top-0 z-40 transition-all duration-300 ${
+          mobileOpen
+            ? 'bg-[#F6F9F2]/95 backdrop-blur-lg'
+            : scrolled
+              ? 'bg-[#F6F9F2]/80 backdrop-blur-md'
+              : 'bg-transparent'
+        }`}
+      >
+        <div className="max-w-[1220px] mx-auto px-5 sm:px-8 h-[72px] flex items-center justify-between gap-4">
+          <Logo size="sm" to="/landing" className="shrink-0 [&_span]:whitespace-nowrap" />
 
-        <nav aria-label="Điều hướng trang giới thiệu" className="hidden xl:flex items-center gap-1">
-          {NAV_LINKS.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              className="px-3 py-1.5 rounded-full text-sm font-medium text-[#5B6776] hover:text-[#006B2C] hover:bg-[#E8F5E9]/70 transition-colors whitespace-nowrap"
-            >
-              {item.label}
-            </a>
-          ))}
-        </nav>
+          <nav aria-label="Điều hướng trang giới thiệu" className="hidden md:flex items-center gap-1">
+            {LANDING_NAV_ITEMS.map((item) =>
+              item.type === 'anchor' ? (
+                <a
+                  key={item.id}
+                  href={item.href}
+                  className="px-3.5 py-1.5 rounded-full text-[15px] font-bold text-[#0D2419]/70 hover:text-[#0D2419] transition-colors whitespace-nowrap"
+                >
+                  {item.label}
+                </a>
+              ) : (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onOpenInfoModal?.(item.modalTab)}
+                  className="px-3.5 py-1.5 rounded-full text-[15px] font-bold text-[#0D2419]/70 hover:text-[#0D2419] transition-colors whitespace-nowrap"
+                >
+                  {item.label}
+                </button>
+              )
+            )}
+          </nav>
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          <div className="hidden sm:flex items-center gap-2.5 shrink-0">
-            <a
-              href="#install-guide"
-              className="px-4 py-2 text-sm font-semibold text-[#1F2A37] hover:text-[#006B2C] rounded-full border border-[#DDE5D9] hover:border-[#006B2C]/50 bg-white/90 hover:bg-white transition-colors whitespace-nowrap shrink-0"
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Pill "Tải App" rê chuột tự bung thẻ QR ngay tại chỗ kiểu Locket */}
+            <div className="hidden sm:block relative group">
+              <a
+                href={APK_DOWNLOAD_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="navbar-download-trigger"
+                className="inline-flex items-center justify-center px-5 py-2 rounded-full bg-[#0D2419]/[0.08] hover:bg-[#0D2419]/[0.14] text-[#0D2419] text-sm font-bold transition-colors whitespace-nowrap"
+              >
+                Tải App
+              </a>
+
+              <div
+                data-testid="navbar-qr-popover"
+                className="invisible opacity-0 scale-95 group-hover:visible group-hover:opacity-100 group-hover:scale-100 group-focus-within:visible group-focus-within:opacity-100 group-focus-within:scale-100 origin-top-right transition-all duration-200 absolute right-0 top-full pt-2.5 z-50"
+              >
+                <div className="w-56 rounded-[28px] bg-white p-4 shadow-[0_20px_50px_rgba(13,36,25,0.16)] text-center space-y-2.5">
+                  <a
+                    href={APK_DOWNLOAD_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block relative rounded-2xl overflow-hidden bg-[#F6F9F2] p-2"
+                  >
+                    <img
+                      src={apkQrUrl}
+                      alt="Mã QR tải ứng dụng ReHome APK"
+                      className="w-40 h-40 mx-auto rounded-xl block"
+                    />
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                    >
+                      <span className="w-8 h-8 rounded-lg bg-[#0D2419] text-white flex items-center justify-center shadow-sm border-2 border-white">
+                        <CameraIcon className="w-4 h-4" />
+                      </span>
+                    </span>
+                  </a>
+
+                  <p className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-[#0D2419]">
+                    <CameraIcon className="w-3.5 h-3.5 text-[#006B2C] shrink-0" />
+                    <span>Quét tải ReHome APK</span>
+                  </p>
+
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => onOpenInfoModal?.('install')}
+                      className="text-[11px] font-semibold text-[#0D2419]/70 hover:text-[#006B2C] underline-offset-4 hover:underline"
+                    >
+                      Cách cài APK (4 bước)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setMobileOpen((prev) => !prev)}
+              aria-expanded={mobileOpen}
+              aria-label={mobileOpen ? 'Đóng menu điều hướng' : 'Mở menu điều hướng'}
+              className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-full text-[#0D2419] hover:bg-[#0D2419]/[0.06] transition-colors shrink-0"
             >
-              Hướng dẫn cài APK
-            </a>
-            <a
-              href={APK_DOWNLOAD_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="landing-btn-shine inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-[#006B2C] hover:bg-[#005523] rounded-full shadow-sm transition-all whitespace-nowrap shrink-0"
-            >
-              <AndroidIcon className="w-4 h-4 shrink-0" />
-              <span>Tải APK Android</span>
-            </a>
+              {mobileOpen ? (
+                <CloseIcon className="w-5 h-5" />
+              ) : (
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  className="w-5 h-5"
+                >
+                  <path strokeLinecap="round" d="M5 9.5h14M5 14.5h14" />
+                </svg>
+              )}
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={() => setMobileOpen((prev) => !prev)}
-            aria-expanded={mobileOpen}
-            aria-label={mobileOpen ? 'Đóng menu điều hướng' : 'Mở menu điều hướng'}
-            className="xl:hidden inline-flex items-center justify-center w-10 h-10 rounded-xl border border-[#DDE5D9] bg-white text-[#1F2A37] hover:bg-[#F6F9F4] whitespace-nowrap shrink-0"
-          >
-            {mobileOpen ? <CloseIcon className="w-5 h-5" /> : <MenuIcon className="w-5 h-5" />}
-          </button>
         </div>
-      </div>
-
-      {/* Thanh tiến trình cuộn trang */}
-      <div
-        aria-hidden="true"
-        className="landing-scroll-progress h-[2.5px] w-full origin-left scale-x-0 bg-gradient-to-r from-[#006B2C] via-[#10B981] to-[#FEA619]"
-      />
+      </header>
 
       {mobileOpen && (
-        <div className="xl:hidden border-t border-[#DDE5D9] bg-white px-4 py-4 space-y-3 shadow-card">
-          <nav aria-label="Điều hướng di động" className="grid grid-cols-2 gap-2">
-            {NAV_LINKS.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className="px-3 py-2 rounded-xl text-sm font-medium text-[#1F2A37] hover:bg-[#F6F9F4] hover:text-[#006B2C] whitespace-nowrap"
-              >
-                {item.label}
-              </a>
-            ))}
+        <div
+          data-testid="mobile-nav-overlay"
+          className="md:hidden fixed inset-x-0 top-[72px] bottom-0 z-40 bg-[#F6F9F2]/95 backdrop-blur-lg px-6 py-8 flex flex-col justify-between"
+        >
+          <nav aria-label="Điều hướng di động" className="flex flex-col items-center gap-3 pt-4">
+            {LANDING_NAV_ITEMS.map((item) =>
+              item.type === 'anchor' ? (
+                <a
+                  key={item.id}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="w-full max-w-xs py-3 rounded-2xl text-center text-lg font-bold text-[#0D2419]/80 hover:text-[#006B2C] hover:bg-[#006B2C]/[0.06] transition-colors"
+                >
+                  {item.label}
+                </a>
+              ) : (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleModalNavClick(item.modalTab)}
+                  className="w-full max-w-xs py-3 rounded-2xl text-center text-lg font-bold text-[#0D2419]/80 hover:text-[#006B2C] hover:bg-[#006B2C]/[0.06] transition-colors"
+                >
+                  {item.label}
+                </button>
+              )
+            )}
           </nav>
-          <div className="pt-2 border-t border-[#DDE5D9] flex flex-col sm:flex-row gap-2.5">
+
+          <div className="max-w-xs w-full mx-auto pb-4">
             <a
               href={APK_DOWNLOAD_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="landing-btn-shine inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-[#006B2C] hover:bg-[#005523] rounded-xl whitespace-nowrap shrink-0"
-            >
-              <AndroidIcon className="w-4 h-4 shrink-0" />
-              <span>Tải ReHome APK</span>
-            </a>
-            <a
-              href="#install-guide"
               onClick={() => setMobileOpen(false)}
-              className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-[#1F2A37] border border-[#DDE5D9] rounded-xl hover:bg-[#F6F9F4] whitespace-nowrap shrink-0"
+              className="landing-btn-shine w-full inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-full bg-[#006B2C] hover:bg-[#005523] text-white text-base font-bold shadow-[0_14px_30px_-8px_rgba(0,107,44,0.4)] transition-colors"
             >
-              Hướng dẫn cài APK
+              <AndroidIcon className="w-5 h-5 shrink-0" />
+              <span>Tải ReHome APK</span>
             </a>
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 }

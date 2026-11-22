@@ -107,23 +107,19 @@ export default function CommunitySection({ campaigns = [], organizations = [], l
             </h2>
           </div>
           <p className="text-sm sm:text-base text-[#5B6776] max-w-md leading-relaxed">
-            Không để trang phục nằm im trong góc tủ. Đóng góp trực tiếp hoặc chuyển tiếp đồ ký gửi
-            cuối kỳ tới các tổ chức thiện nguyện đã qua thẩm định pháp lý.
+            Đóng góp trực tiếp hoặc chuyển đồ ký gửi cuối kỳ tới các tổ chức đã xác minh pháp lý.
           </p>
         </div>
 
-        {/* 3 Trụ cột minh bạch thiện nguyện */}
-        <div className="grid md:grid-cols-3 gap-4 reveal-section">
+        {/* 3 Trụ cột minh bạch thiện nguyện dạng dải pill gọn */}
+        <div className="flex flex-wrap items-center gap-3 reveal-section">
           {CHARITY_PILLARS.map((pillar) => (
             <div
               key={pillar.title}
-              className="rounded-2xl bg-white/95 border border-[#E5DEC9] p-5 shadow-sm space-y-2"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/95 border border-[#E5DEC9] shadow-sm text-xs font-bold text-[#006B2C]"
             >
-              <div className="inline-flex items-center gap-2 text-xs font-extrabold text-[#006B2C]">
-                <ShieldCheckIcon className="w-4 h-4 shrink-0" />
-                <span>{pillar.title}</span>
-              </div>
-              <p className="text-xs text-[#5B6776] leading-relaxed">{pillar.description}</p>
+              <ShieldCheckIcon className="w-4 h-4 shrink-0" />
+              <span>{pillar.title}</span>
             </div>
           ))}
         </div>

@@ -257,7 +257,7 @@ describe('LandingPage UI & APK CTA', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders live stats, 2 AI modes, horizontal products, inspection/warehouses, charity, about section, VIP plans, and 4 APK install steps', async () => {
+  it('renders Locket-inspired hero, hover-QR navbar, #drops lookbook, 4 squircle cards, no workflow/comparison tables, and zero portal links', async () => {
     vi.spyOn(landingApi, 'fetchLandingData').mockResolvedValue(MOCK_LANDING_DATA);
 
     const { container } = render(
@@ -269,57 +269,47 @@ describe('LandingPage UI & APK CTA', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: /Ký gửi thời trang tuần hoàn/i,
+        name: /Tủ đồ cũ của người khác/i,
       })
     ).toBeInTheDocument();
 
-    // Live stats
-    const statsBlock = await screen.findByTestId('landing-live-stats');
-    expect(within(statsBlock).getByText('128')).toBeInTheDocument();
-    expect(within(statsBlock).getByText('2')).toBeInTheDocument();
-    expect(within(statsBlock).getByText('5')).toBeInTheDocument();
-    expect(within(statsBlock).getByText('3')).toBeInTheDocument();
+    // Navbar hover-QR trigger & popover
+    const navbarTrigger = screen.getByTestId('navbar-download-trigger');
+    expect(navbarTrigger).toHaveAttribute('href', APK_DOWNLOAD_URL);
+    expect(navbarTrigger).toHaveAttribute('target', '_blank');
+    const navbarPopover = screen.getByTestId('navbar-qr-popover');
+    expect(within(navbarPopover).getByText(/Quét tải ReHome APK/i)).toBeInTheDocument();
 
-    // #ai-studio (2 AI modes + About section)
-    expect(container.querySelector('#ai-studio')).toBeInTheDocument();
-    expect(screen.getAllByText(/LIVE TRY-ON REALTIME/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/TRỢ LÝ AI PHỐI ĐỒ/i).length).toBeGreaterThan(0);
-    expect(container.querySelector('#about')).toBeInTheDocument();
-    expect(screen.getByText(/Một nền tảng — Lợi ích trọn vẹn cho cả 3 phía/i)).toBeInTheDocument();
+    // Hero QR card and mobile/desktop APK CTA links point to Google Drive
+    const heroQrLink = screen.getByTestId('hero-qr-link');
+    expect(heroQrLink).toHaveAttribute('href', APK_DOWNLOAD_URL);
+    expect(heroQrLink).toHaveAttribute('target', '_blank');
 
-    // Products, campaigns, organizations, warehouses
-    expect(screen.getAllByText('Áo khoác denim cổ điển').length).toBeGreaterThan(0);
-    expect(screen.getByText('Nổi bật')).toBeInTheDocument();
-    expect(screen.getAllByText('Tủ đồ ấm áp mùa đông').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Quỹ Hy Vọng Xanh').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Kho ReHome Quận 1').length).toBeGreaterThan(0);
+    const heroMobileCta = screen.getByTestId('hero-apk-cta');
+    expect(heroMobileCta).toHaveAttribute('href', APK_DOWNLOAD_URL);
+    expect(heroMobileCta).toHaveAttribute('target', '_blank');
 
-    // Membership plans with null limit rendered as "Không giới hạn"
-    expect(screen.getByText('Gói Bạc')).toBeInTheDocument();
-    expect(screen.getByText('Gói Vàng')).toBeInTheDocument();
-    expect(screen.getAllByText(/Không giới hạn/i).length).toBeGreaterThan(0);
+    const heroDesktopLink = screen.getByTestId('hero-desktop-apk-link');
+    expect(heroDesktopLink).toHaveAttribute('href', APK_DOWNLOAD_URL);
+    expect(heroDesktopLink).toHaveAttribute('target', '_blank');
 
-    // APK CTA links point to the Google Drive folder URL
-    const heroCta = screen.getByTestId('hero-apk-cta');
-    const installCta = screen.getByTestId('install-apk-cta');
-    expect(heroCta).toHaveAttribute('href', APK_DOWNLOAD_URL);
-    expect(heroCta).toHaveAttribute('target', '_blank');
-    expect(installCta).toHaveAttribute('href', APK_DOWNLOAD_URL);
-    expect(installCta).toHaveAttribute('target', '_blank');
+    // #drops Lookbook strip with live mock products
+    const dropsSection = container.querySelector('#drops');
+    expect(dropsSection).toBeInTheDocument();
+    expect(within(dropsSection).getByText('Áo khoác denim cổ điển')).toBeInTheDocument();
+    expect(within(dropsSection).getByText('Đầm midi lụa xanh lá')).toBeInTheDocument();
 
-    // 4 Android APK install steps
-    expect(
-      screen.getByRole('heading', { level: 4, name: 'Tải tệp APK từ Google Drive' })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { level: 4, name: 'Mở tệp vừa tải về' })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { level: 4, name: 'Cấp quyền cài đặt nguồn ngoài' })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { level: 4, name: 'Nhấn Cài đặt & trải nghiệm' })
-    ).toBeInTheDocument();
+    // #explore: 4 Locket-style squircle cards
+    const exploreSection = container.querySelector('#explore');
+    expect(exploreSection).toBeInTheDocument();
+    expect(within(exploreSection).getByText('Kiểm định 6 bước')).toBeInTheDocument();
+    expect(within(exploreSection).getByText('Ký gửi nhận 90%')).toBeInTheDocument();
+    expect(within(exploreSection).getByText('Cài APK trong 30 giây')).toBeInTheDocument();
+    expect(within(exploreSection).getByText('Thiện nguyện & Bảo mật')).toBeInTheDocument();
+
+    // Removed workflow and comparison blocks should not appear on the main canvas
+    expect(screen.queryByText(/Cách Thức Giao Dịch Tại ReHome/i)).toBeNull();
+    expect(screen.queryByText(/Tại Sao Nên Chọn ReHome\?/i)).toBeNull();
 
     // Landing page is strictly separated from Admin/Moderator portal links
     const allLinks = screen.getAllByRole('link');
@@ -338,41 +328,55 @@ describe('LandingPage UI & APK CTA', () => {
     expect(logoLinks.length).toBeGreaterThan(0);
   });
 
-  it('switches interactive AI outfit combos in #ai-studio and sorts nearby warehouses in #warehouses', async () => {
+  it('switches Hero phone story slides between Live Try-On, Đồ kiểm định, and Nhận 90%', async () => {
     vi.spyOn(landingApi, 'fetchLandingData').mockResolvedValue(MOCK_LANDING_DATA);
 
-    const { container } = render(
+    render(
       <MemoryRouter initialEntries={['/landing']}>
         <LandingPage />
       </MemoryRouter>
     );
 
-    const styleGroup = await screen.findByRole('group', {
-      name: /Chọn phong cách phối đồ AI/i,
-    });
-    fireEvent.click(within(styleGroup).getByRole('button', { name: 'Năng động' }));
+    await screen.findByRole('heading', { level: 1, name: /Tủ đồ cũ của người khác/i });
 
-    const aiSection = container.querySelector('#ai-studio');
-    expect(within(aiSection).getByText('Độ hợp gu: 94%')).toBeInTheDocument();
-    expect(within(aiSection).getByText('Quần jeans Levi’s 501 ống đứng')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Đồ kiểm định' }));
+    expect(screen.getByText('SKU VERIFIED')).toBeInTheDocument();
 
-    // Consignor earnings calculator & nearest warehouse finder
-    const warehousesSection = container.querySelector('#warehouses');
-    fireEvent.click(within(warehousesSection).getByRole('button', { name: /1\.000\.000/ }));
-    expect(within(warehousesSection).getByText(/900\.000/)).toBeInTheDocument();
-
-    fireEvent.click(within(warehousesSection).getByRole('button', { name: 'Hà Nội' }));
-    expect(within(warehousesSection).getByText('Gần bạn nhất')).toBeInTheDocument();
-    const warehouseHeadings = within(warehousesSection).getAllByRole('heading', { level: 4 });
-    expect(warehouseHeadings[0]).toHaveTextContent('Kho ReHome Cầu Giấy');
+    fireEvent.click(screen.getByRole('button', { name: 'Nhận 90%' }));
+    expect(screen.getByText('+450.000₫')).toBeInTheDocument();
   });
 
-  it('filters products by categoryId when clicking a category chip', async () => {
+  it('opens quick QR modal when clicking a Lookbook product and closes via button or Escape', async () => {
     vi.spyOn(landingApi, 'fetchLandingData').mockResolvedValue(MOCK_LANDING_DATA);
-    const productsSpy = vi.spyOn(landingApi, 'fetchPublicProducts').mockResolvedValue({
-      items: [MOCK_LANDING_DATA.products[1]],
-      totalElements: 1,
-      totalPages: 1,
+
+    const { container } = render(
+      <MemoryRouter initialEntries={['/landing']}>
+        <LandingPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByRole('heading', { level: 1, name: /Tủ đồ cũ của người khác/i });
+
+    const dropsSection = container.querySelector('#drops');
+    fireEvent.click(within(dropsSection).getByRole('button', { name: /Áo khoác denim cổ điển/i }));
+    const productDialog = screen.getByRole('dialog');
+    expect(within(productDialog).getByText('Áo khoác denim cổ điển')).toBeInTheDocument();
+    fireEvent.click(within(productDialog).getByRole('button', { name: 'Đóng' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    // Reopen and close with Escape key
+    fireEvent.click(within(dropsSection).getByRole('button', { name: /Đầm midi lụa xanh lá/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('opens tabbed ReHomeInfoModal from navbar, squircle card, and footer links, and copies footer email', async () => {
+    vi.spyOn(landingApi, 'fetchLandingData').mockResolvedValue(MOCK_LANDING_DATA);
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextMock },
+      configurable: true,
     });
 
     const { container } = render(
@@ -381,23 +385,67 @@ describe('LandingPage UI & APK CTA', () => {
       </MemoryRouter>
     );
 
-    const filterGroup = await screen.findByRole('group', {
-      name: /Lọc sản phẩm theo danh mục/i,
-    });
-    const dressBtn = within(filterGroup).getByRole('button', { name: 'Đầm' });
-    fireEvent.click(dressBtn);
+    await screen.findByRole('heading', { level: 1, name: /Tủ đồ cũ của người khác/i });
+
+    // Open from navbar modal link ("Cài APK")
+    const header = container.querySelector('header');
+    fireEvent.click(within(header).getByRole('button', { name: 'Cài APK' }));
+    const installDialog = screen.getByRole('dialog');
+    expect(
+      within(installDialog).getByRole('tab', { name: /Cài đặt APK/i })
+    ).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(within(installDialog).getByRole('button', { name: /Đã Hiểu & Đóng/i }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    // Open from squircle card ("Ký gửi nhận 90%")
+    const exploreSection = container.querySelector('#explore');
+    fireEvent.click(within(exploreSection).getByRole('button', { name: /Ký gửi nhận 90%/i }));
+    const consignDialog = screen.getByRole('dialog');
+    expect(
+      within(consignDialog).getByRole('tab', { name: /Quy chế ký gửi/i })
+    ).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(within(consignDialog).getByRole('button', { name: /Đã Hiểu & Đóng/i }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    // Open from footer link ("Kiểm định 6 bước")
+    const footer = container.querySelector('footer');
+    fireEvent.click(within(footer).getByRole('button', { name: /Kiểm định 6 bước/i }));
+    const inspectDialog = screen.getByRole('dialog');
+    expect(
+      within(inspectDialog).getByRole('tab', { name: /Kiểm định 6 bước/i })
+    ).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(within(inspectDialog).getByRole('button', { name: /Đã Hiểu & Đóng/i }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    // Copy footer email
+    const copyEmailBtn = within(footer).getByRole('button', { name: /support@rehome\.vn/i });
+    fireEvent.click(copyEmailBtn);
 
     await waitFor(() => {
-      expect(productsSpy).toHaveBeenCalledWith({
-        page: 0,
-        size: 6,
-        categoryId: 'cat-2',
-      });
+      expect(writeTextMock).toHaveBeenCalledWith('support@rehome.vn');
+      expect(screen.getByText(/Đã sao chép!/i)).toBeInTheDocument();
+    });
+  });
+
+  it('hides #drops section when products list is empty while keeping hero, 4 squircle cards, and footer', async () => {
+    vi.spyOn(landingApi, 'fetchLandingData').mockResolvedValue({
+      ...MOCK_LANDING_DATA,
+      products: [],
     });
 
-    const marketplace = container.querySelector('#marketplace');
-    expect(within(marketplace).getByText('Đầm midi lụa xanh lá')).toBeInTheDocument();
-    expect(within(marketplace).queryByText('Áo khoác denim cổ điển')).toBeNull();
+    const { container } = render(
+      <MemoryRouter initialEntries={['/landing']}>
+        <LandingPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByRole('heading', { level: 1, name: /Tủ đồ cũ của người khác/i });
+
+    const exploreSection = container.querySelector('#explore');
+    expect(container.querySelector('#drops')).toBeNull();
+    expect(exploreSection).toBeInTheDocument();
+    expect(within(exploreSection).getByText('Kiểm định 6 bước')).toBeInTheDocument();
+    expect(container.querySelector('footer')).toBeInTheDocument();
   });
 
   it('routes /landing to LandingPage and redirects unauthenticated / to LoginPage without cross-links', async () => {
@@ -412,7 +460,7 @@ describe('LandingPage UI & APK CTA', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: /Ký gửi thời trang tuần hoàn/i,
+        name: /Tủ đồ cũ của người khác/i,
       })
     ).toBeInTheDocument();
     landingView.unmount();

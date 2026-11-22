@@ -10,7 +10,7 @@ import {
   ShieldCheckIcon,
 } from './LandingIcons.jsx';
 
-export default function ApkInstallSection() {
+export default function ApkInstallSection({ onOpenInfoModal }) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -208,14 +208,24 @@ export default function ApkInstallSection() {
             </div>
           </div>
 
-          <div className="rounded-2xl bg-[#EBF1E8] border border-[#DDE5D9] p-4 sm:p-5 flex items-start gap-3 reveal-section">
-            <ShieldCheckIcon className="w-5 h-5 text-[#006B2C] shrink-0 mt-0.5" />
-            <div className="text-xs sm:text-sm text-[#1F2A37] leading-relaxed">
-              <strong className="font-bold">Lưu ý nhỏ:</strong> Nếu Google Play Protect hiển thị hộp
-              thoại kiểm tra ứng dụng cài ngoài cửa hàng, hãy chọn{' '}
-              <span className="font-semibold">Vẫn cài đặt (Install anyway)</span> để hoàn tất cài
-              đặt phiên bản ReHome {APP_METADATA.version}.
+          <div className="rounded-2xl bg-[#EBF1E8] border border-[#DDE5D9] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 reveal-section">
+            <div className="flex items-center gap-3 text-xs sm:text-sm text-[#1F2A37]">
+              <ShieldCheckIcon className="w-5 h-5 text-[#006B2C] shrink-0" />
+              <span>
+                <strong className="font-bold">Play Protect:</strong> chọn{' '}
+                <span className="font-semibold">Vẫn cài đặt (Install anyway)</span> cho ReHome v
+                {APP_METADATA.version}.
+              </span>
             </div>
+            {onOpenInfoModal && (
+              <button
+                type="button"
+                onClick={() => onOpenInfoModal('install')}
+                className="px-4 py-2 rounded-xl bg-white hover:bg-[#006B2C] text-[#006B2C] hover:text-white border border-[#DDE5D9] text-xs font-bold transition-colors whitespace-nowrap shrink-0 self-start sm:self-auto"
+              >
+                Xem hướng dẫn chi tiết
+              </button>
+            )}
           </div>
         </div>
       </div>

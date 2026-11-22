@@ -1,124 +1,148 @@
 import React from 'react';
-import heroEditorialUrl from '../assets/hero-editorial.jpg';
-import { ABOUT_PILLARS, APK_DOWNLOAD_URL, ECOSYSTEM_ROLES } from '../constants/landingConstants.js';
-import { AndroidIcon, CheckCircleIcon, ShieldCheckIcon } from './LandingIcons.jsx';
+import { COMPARISON_ROWS, HOW_IT_WORKS_STEPS } from '../constants/landingConstants.js';
+import {
+  AlertTriangleIcon,
+  CheckCircleIcon,
+  ShieldCheckIcon,
+  SparklesIcon,
+  XCircleIcon,
+} from './LandingIcons.jsx';
 
-export default function AboutRehomeSection() {
+function ComparisonCellPill({ cell }) {
+  if (cell.type === 'positive') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-[#006B2C]/25 text-[#041E12] text-xs font-bold shadow-sm whitespace-nowrap">
+        <CheckCircleIcon className="w-4 h-4 text-[#006B2C] shrink-0" />
+        <span>{cell.text}</span>
+      </span>
+    );
+  }
+
+  if (cell.type === 'negative') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FEF2F2] border border-[#FECACA] text-[#B91C1C] text-xs font-semibold whitespace-nowrap">
+        <XCircleIcon className="w-3.5 h-3.5 shrink-0" />
+        <span>{cell.text}</span>
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFFBEB] border border-[#FDE68A] text-[#B45309] text-xs font-semibold whitespace-nowrap">
+      <AlertTriangleIcon className="w-3.5 h-3.5 shrink-0" />
+      <span>{cell.text}</span>
+    </span>
+  );
+}
+
+export default function AboutRehomeSection({ onOpenInfoModal }) {
   return (
     <section
       id="about"
-      className="relative overflow-hidden py-20 sm:py-24 bg-[#F6F9F4] border-b border-[#DDE5D9]"
+      className="relative overflow-hidden py-16 sm:py-20 bg-[#F6F9F4] border-b border-[#DDE5D9]"
     >
-      <div
-        aria-hidden="true"
-        className="landing-editorial-grid absolute inset-0 opacity-45 pointer-events-none"
-      />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+        {/* Khối 1: Cách Thức Giao Dịch Tại ReHome (Khung trắng 4 bước gọn) */}
+        <div className="rounded-3xl bg-white border border-[#DDE5D9] shadow-card p-6 sm:p-10 space-y-8 reveal-section">
+          <div className="text-center max-w-xl mx-auto space-y-2">
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#006B2C]">
+              QUY TRÌNH CHUẨN HÓA
+            </p>
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1F2A37]">
+              Cách Thức Giao Dịch Tại ReHome
+            </h2>
+          </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-        <div className="grid lg:grid-cols-12 gap-8 lg:gap-10 items-center">
-          {/* Cột trái: Hình ảnh Editorial & Tuyên ngôn thương hiệu */}
-          <div className="lg:col-span-5 min-w-0 reveal-section">
-            <div className="relative rounded-[2rem] overflow-hidden border border-white shadow-elevated bg-[#062B19]">
-              <img
-                src={heroEditorialUrl}
-                alt="Câu chuyện thời trang tuần hoàn ReHome"
-                loading="lazy"
-                className="w-full h-72 sm:h-96 object-cover opacity-85"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#041E12] via-[#041E12]/45 to-transparent" />
-              <div className="absolute bottom-0 inset-x-0 p-6 text-white space-y-2.5">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FEA619] text-[#1F2A37] text-[11px] font-extrabold uppercase tracking-wider whitespace-nowrap">
-                  <ShieldCheckIcon className="w-3.5 h-3.5 shrink-0" />
-                  <span>Sứ mệnh ReHome</span>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {HOW_IT_WORKS_STEPS.map((item) => (
+              <article
+                key={item.step}
+                className="step-flow-card rounded-2xl bg-[#F6F9F4] border border-[#DDE5D9]/80 p-5 space-y-2.5"
+              >
+                <span className="w-9 h-9 rounded-full bg-gradient-to-br from-[#006B2C] to-[#10B981] text-white text-sm font-extrabold inline-flex items-center justify-center shadow-sm">
+                  {item.step}
                 </span>
-                <p className="text-lg sm:text-xl font-extrabold leading-snug">
-                  “Mỗi món đồ đẹp xứng đáng nhiều hơn một vòng đời trong tủ quần áo.”
-                </p>
-                <p className="text-xs text-white/80 leading-relaxed">
-                  ReHome được xây dựng tại Việt Nam để kết nối tủ đồ thừa thành món hời chuẩn gu,
-                  nguồn thu nhập minh bạch và những phần quà ấm áp cho cộng đồng.
-                </p>
-              </div>
-            </div>
+                <h3 className="text-sm font-extrabold text-[#1F2A37] leading-snug">
+                  {item.title}
+                </h3>
+                <p className="text-xs text-[#5B6776] leading-relaxed">{item.description}</p>
+              </article>
+            ))}
           </div>
 
-          {/* Cột phải: Câu chuyện & 3 giá trị khác biệt */}
-          <div className="lg:col-span-7 min-w-0 space-y-6">
-            <div className="space-y-3 reveal-section">
-              <span className="inline-block px-3.5 py-1 rounded-full bg-white border border-[#DDE5D9] text-[#006B2C] text-xs font-bold uppercase tracking-wider">
-                Về chúng tôi · Câu chuyện ReHome
-              </span>
-              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#1F2A37] leading-[1.16]">
-                Từ tủ đồ bị lãng quên đến hệ sinh thái{' '}
-                <span className="text-[#006B2C]">Thời trang – AI – Thiện nguyện</span>
-              </h2>
-              <p className="text-sm sm:text-base text-[#5B6776] leading-relaxed">
-                Người Việt bỏ lỡ hàng triệu trang phục còn rất mới mỗi năm vì ngại đăng bán lặt vặt,
-                còn người muốn mua đồ secondhand lại ngại không được mặc thử và sợ hàng kém chất
-                lượng. ReHome sinh ra để giải quyết trọn vẹn cả hai đầu bằng công nghệ AI và mạng
-                lưới điểm ký gửi kiểm định thực tế.
-              </p>
+          {onOpenInfoModal && (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={() => onOpenInfoModal('inspection')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#E8F5E9] hover:bg-[#006B2C] text-[#006B2C] hover:text-white border border-[#006B2C]/20 text-xs font-bold transition-colors whitespace-nowrap"
+              >
+                <ShieldCheckIcon className="w-4 h-4 shrink-0" />
+                <span>Xem chi tiết 6 bước kiểm định</span>
+              </button>
             </div>
-
-            <div className="grid sm:grid-cols-3 gap-4">
-              {ABOUT_PILLARS.map((pillar) => (
-                <article
-                  key={pillar.id}
-                  className="about-card min-w-0 rounded-2xl bg-white border border-[#DDE5D9] p-4 shadow-card hover:shadow-card-hover transition-all flex flex-col justify-between gap-2.5"
-                >
-                  <div className="space-y-2">
-                    <span className="inline-block px-2.5 py-0.5 rounded-full bg-[#E8F5E9] text-[#006B2C] text-[10px] font-bold uppercase tracking-wide whitespace-nowrap">
-                      {pillar.badge}
-                    </span>
-                    <h3 className="text-sm font-bold text-[#1F2A37] leading-snug">
-                      {pillar.title}
-                    </h3>
-                    <p className="text-xs text-[#5B6776] leading-relaxed">{pillar.description}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* Hệ sinh thái 3 vai trò khép kín trong 1 ứng dụng */}
-        <div className="rounded-3xl bg-white border border-[#DDE5D9] p-6 sm:p-8 shadow-card space-y-5 reveal-section">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="text-lg sm:text-xl font-extrabold text-[#1F2A37]">
-                Một nền tảng — Lợi ích trọn vẹn cho cả 3 phía
-              </h3>
-              <p className="text-xs sm:text-sm text-[#5B6776] mt-0.5">
-                Tất cả vận hành liền mạch trên ứng dụng ReHome Android và hệ thống kiểm định tại kho.
-              </p>
-            </div>
-            <a
-              href={APK_DOWNLOAD_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="landing-btn-shine inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#006B2C] hover:bg-[#005523] text-white text-xs sm:text-sm font-bold shadow-sm transition-colors whitespace-nowrap shrink-0"
-            >
-              <AndroidIcon className="w-4 h-4 shrink-0" />
-              <span>Trải nghiệm ReHome trên Android</span>
-            </a>
+        {/* Khối 2: Tại Sao Nên Chọn ReHome? (Bảng so sánh Pill trực quan) */}
+        <div id="compare" className="space-y-6 reveal-section">
+          <div className="text-center max-w-xl mx-auto space-y-1.5">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1F2A37]">
+              Tại Sao Nên Chọn ReHome?
+            </h2>
+            <p className="text-sm text-[#5B6776]">So sánh trải nghiệm thực tế</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-4">
-            {ECOSYSTEM_ROLES.map((item) => (
-              <div
-                key={item.role}
-                className="rounded-2xl bg-[#F6F9F4] border border-[#DDE5D9] p-4 space-y-2"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-extrabold text-[#1F2A37]">{item.role}</span>
-                  <CheckCircleIcon className="w-4 h-4 text-[#006B2C] shrink-0" />
-                </div>
-                <span className="inline-block px-2.5 py-0.5 rounded-full bg-white border border-[#DDE5D9] text-[11px] font-bold text-[#00685F] whitespace-nowrap">
-                  {item.highlight}
-                </span>
-                <p className="text-xs text-[#5B6776] leading-relaxed">{item.summary}</p>
-              </div>
-            ))}
+          <div className="rounded-2xl bg-white border border-[#DDE5D9] shadow-card overflow-hidden">
+            <div
+              aria-hidden="true"
+              className="h-[3px] w-full bg-gradient-to-r from-[#006B2C] via-[#10B981] to-[#FEA619]"
+            />
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#E8F5E9]/75 border-b border-[#DDE5D9] text-xs sm:text-sm font-extrabold text-[#1F2A37]">
+                    <th scope="col" className="py-4 px-5">
+                      Tiêu chí so sánh
+                    </th>
+                    <th scope="col" className="py-4 px-5 text-center bg-[#E8F5E9]">
+                      <span className="inline-flex items-center gap-1.5 text-[#006B2C]">
+                        <SparklesIcon className="w-4 h-4 text-[#FEA619] shrink-0" />
+                        <span>ReHome Verified</span>
+                      </span>
+                    </th>
+                    <th scope="col" className="py-4 px-5 text-center">
+                      Hội nhóm Facebook / Chợ cũ
+                    </th>
+                    <th scope="col" className="py-4 px-5 text-center">
+                      Sàn thanh lý tự do
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#DDE5D9]/80 text-xs sm:text-sm">
+                  {COMPARISON_ROWS.map((row) => (
+                    <tr key={row.criterion} className="hover:bg-[#F6F9F4]/60 transition-colors">
+                      <th
+                        scope="row"
+                        className="py-4 px-5 font-bold text-[#1F2A37] whitespace-nowrap"
+                      >
+                        {row.criterion}
+                      </th>
+                      <td className="py-4 px-4 text-center bg-[#E8F5E9]/35">
+                        <ComparisonCellPill cell={row.rehome} />
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <ComparisonCellPill cell={row.facebook} />
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <ComparisonCellPill cell={row.classifieds} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

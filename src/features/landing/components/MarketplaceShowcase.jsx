@@ -78,8 +78,7 @@ export default function MarketplaceShowcase({
               Sản phẩm đang mở bán trên ReHome
             </h2>
             <p className="text-sm sm:text-base text-[#5B6776] leading-relaxed">
-              Lướt nhanh những món vừa kiểm định tại kho — chạm bất kỳ món nào để quét QR mở app
-              thử qua Camera hoặc nhờ AI phối bộ.
+              Lướt nhanh sản phẩm kiểm định tại kho — chạm để quét QR mở app thử AI.
             </p>
           </div>
 
@@ -313,20 +312,26 @@ export default function MarketplaceShowcase({
             className="landing-dot-grid absolute inset-0 opacity-70 pointer-events-none"
           />
 
-          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div className="space-y-3 max-w-2xl">
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+            <div className="space-y-2.5 max-w-2xl">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FEA619] text-[#1F2A37] text-[11px] font-extrabold uppercase tracking-wider whitespace-nowrap">
                 <TicketPercentIcon className="w-3.5 h-3.5 shrink-0" />
-                <span>Dành riêng cho người mua · Kho Voucher ReHome</span>
+                <span>Kho Voucher ReHome</span>
               </span>
               <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight leading-snug">
-                Mua đồ hiệu đã kiểm định, giảm thêm cực đã với Voucher trên App
+                Mua đồ hiệu đã kiểm định, giảm thêm với Voucher trên App
               </h3>
-              <p className="text-xs sm:text-sm text-white/80 leading-relaxed">
-                Người bán nhận tới 90% doanh thu, còn người mua cũng có đặc quyền riêng: lưu mã
-                giảm giá, ưu đãi đơn đầu tiên và freeship ngay trong mục Kho Voucher của ứng dụng
-                ReHome.
-              </p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {BUYER_VOUCHER_PERKS.map((perk) => (
+                  <span
+                    key={perk.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 border border-[#FEA619]/40 text-xs font-semibold text-white whitespace-nowrap"
+                  >
+                    <TicketPercentIcon className="w-3.5 h-3.5 text-[#FEA619] shrink-0" />
+                    <span>{perk.title}</span>
+                  </span>
+                ))}
+              </div>
             </div>
 
             <a
@@ -338,21 +343,6 @@ export default function MarketplaceShowcase({
               <AndroidIcon className="w-4 h-4 shrink-0" />
               <span>Tải APK để săn Voucher ngay</span>
             </a>
-          </div>
-
-          <div className="relative z-10 grid sm:grid-cols-3 gap-3 mt-6 pt-5 border-t border-white/15">
-            {BUYER_VOUCHER_PERKS.map((perk) => (
-              <div
-                key={perk.id}
-                className="rounded-2xl bg-white/10 border border-dashed border-[#FEA619]/45 p-3.5 space-y-1.5"
-              >
-                <span className="inline-block px-2 py-0.5 rounded-md bg-[#FEA619]/20 text-[#FEA619] text-[10px] font-bold uppercase tracking-wider">
-                  {perk.tag}
-                </span>
-                <p className="text-sm font-bold text-white leading-snug">{perk.title}</p>
-                <p className="text-xs text-white/75 leading-relaxed">{perk.desc}</p>
-              </div>
-            ))}
           </div>
         </div>
       </div>

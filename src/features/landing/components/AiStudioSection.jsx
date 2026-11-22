@@ -7,7 +7,6 @@ import { updateSpotlightCoords } from '../utils/spotlight.js';
 import {
   AndroidIcon,
   CameraIcon,
-  CheckCircleIcon,
   SparklesIcon,
 } from './LandingIcons.jsx';
 
@@ -65,8 +64,7 @@ export default function AiStudioSection({
             </h2>
           </div>
           <p className="text-sm sm:text-base text-white/75 max-w-md leading-relaxed">
-            Ướm thử trực tiếp qua camera thời gian thực hoặc để trợ lý AI tự phối nguyên set chuẩn
-            gu — thấy đẹp mới chốt đơn ngay trên điện thoại.
+            Ướm thử trực tiếp qua camera hoặc để AI tự phối nguyên set chuẩn gu trước khi chốt đơn.
           </p>
         </div>
 
@@ -93,9 +91,8 @@ export default function AiStudioSection({
                 <h3 className="text-2xl font-extrabold leading-snug">
                   Thử đồ trực tiếp qua Camera (Real-time)
                 </h3>
-                <p className="text-sm text-white/75 mt-2 leading-relaxed">
-                  Mở camera là món đồ áp ngay lên dáng người theo chuyển động thật. Xoay góc, kiểm
-                  tra độ rủ và màu sắc trước khi bỏ vào giỏ hàng.
+                <p className="text-sm text-white/75 mt-1.5 leading-relaxed">
+                  Mở camera để món đồ áp ngay lên dáng người theo chuyển động thật trước khi mua.
                 </p>
               </div>
 
@@ -148,24 +145,10 @@ export default function AiStudioSection({
                     })}
                   </div>
                   <p className="text-[11px] text-[#A7F3D0] leading-relaxed">
-                    Minh bạch: Chỉ trừ lượt khi khung hình AI lên hình thành công — hỗ trợ đổi điểm
-                    tích lũy lấy thêm lượt miễn phí.
+                    Chỉ trừ lượt khi lên hình thành công — đổi điểm lấy thêm lượt miễn phí.
                   </p>
                 </div>
               </div>
-
-              <ul className="space-y-2">
-                {[
-                  'Xem ngay phom áo/đầm theo chuyển động thật qua camera điện thoại',
-                  'Kiểm tra độ hợp màu da & dáng người trước khi chốt đơn',
-                  'Chụp lưu khoảnh khắc thử trực tiếp để hỏi ý kiến bạn bè',
-                ].map((line) => (
-                  <li key={line} className="flex items-start gap-2.5 text-xs sm:text-sm text-white/90">
-                    <CheckCircleIcon className="w-4 h-4 text-[#FEA619] shrink-0 mt-0.5" />
-                    <span>{line}</span>
-                  </li>
-                ))}
-              </ul>
             </div>
 
             <div className="pt-2">
@@ -201,9 +184,8 @@ export default function AiStudioSection({
                 <h3 className="text-2xl font-extrabold leading-snug">
                   AI tự gợi ý món ghép &amp; lên ảnh cả bộ
                 </h3>
-                <p className="text-sm text-white/75 mt-2 leading-relaxed">
-                  Chỉ cần chọn 1 chiếc áo bạn thích, AI tự động tìm chiếc quần hoặc chân váy hợp
-                  phong cách nhất trên sàn và mặc lên người mẫu Nữ / Nam cho bạn xem trước.
+                <p className="text-sm text-white/75 mt-1.5 leading-relaxed">
+                  Chọn 1 món bạn thích — AI tự ghép món phù hợp trên sàn theo dáng mẫu Nữ / Nam.
                 </p>
               </div>
 
@@ -299,19 +281,6 @@ export default function AiStudioSection({
                   </div>
                 </div>
               </div>
-
-              <ul className="space-y-2">
-                {[
-                  'Tự điền sẵn món phối hợp nhất từ các sản phẩm đang bán trên sàn',
-                  'Tùy chọn ghép Áo + Quần/Váy hoặc Đầm liền theo dáng Nữ / Nam',
-                  'Chạy nền thông minh — làm xong tự lưu vào Bộ sưu tập & báo thông báo',
-                ].map((line) => (
-                  <li key={line} className="flex items-start gap-2.5 text-xs sm:text-sm text-white/90">
-                    <CheckCircleIcon className="w-4 h-4 text-[#99F6E4] shrink-0 mt-0.5" />
-                    <span>{line}</span>
-                  </li>
-                ))}
-              </ul>
             </div>
 
             <div className="pt-2">
