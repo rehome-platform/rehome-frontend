@@ -1,58 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import Logo from '../../../components/common/Logo.jsx';
 import { formatCurrencyVND } from '../../../utils/formatters.js';
 import aiTryonUrl from '../assets/ai-tryon-visual.jpg';
 import apkQrUrl from '../assets/apk-qr.svg';
 import heroEditorialUrl from '../assets/hero-editorial.jpg';
 import {
   APK_DOWNLOAD_URL,
+  APP_METADATA,
   HERO_COPY,
   HERO_STORY_SLIDES,
 } from '../constants/landingConstants.js';
 import { isBrokenSeedAssetUrl } from '../services/landingApi.js';
 import {
   AndroidIcon,
+  ArrowRightIcon,
   CameraIcon,
-  ChevronDownIcon,
   ShieldCheckIcon,
   SparklesIcon,
 } from './LandingIcons.jsx';
 
-const PHONE_DOCK_TILES = [
-  'bg-[#DCF1DF]',
-  'bg-[#FFE8B6]',
-  'bg-[#D8ECE9]',
-  'bg-[#EAE5F5]',
-  'bg-[#FDE5DA]',
-  'bg-[#DCEBF7]',
-  'bg-[#E6EFE2]',
-  'bg-[#F7EED7]',
-];
-
-function FloatingPhotoCard({ src, caption, className = '' }) {
-  const [failed, setFailed] = useState(false);
-  const resolvedSrc = !src || failed || isBrokenSeedAssetUrl(src) ? heroEditorialUrl : src;
-
-  return (
-    <div
-      className={`rounded-[22px] overflow-hidden border-[3px] border-white shadow-[0_14px_32px_rgba(13,36,25,0.12)] bg-[#E7EFE4] ${className}`}
-    >
-      <img
-        src={resolvedSrc}
-        alt=""
-        onError={() => setFailed(true)}
-        className="w-full h-full object-cover"
-      />
-      {caption && (
-        <span className="absolute bottom-1.5 inset-x-1 rounded-full bg-white/95 backdrop-blur-sm px-1.5 py-0.5 text-[10px] font-bold text-[#0D2419] text-center truncate shadow-sm">
-          {caption}
-        </span>
-      )}
-    </div>
-  );
-}
-
-export default function HeroSection({ products = [], onOpenInfoModal }) {
+export default function HeroSection({ products = [], stats = {}, onOpenInfoModal }) {
   const [activeSlide, setActiveSlide] = useState(0);
   const [paused, setPaused] = useState(false);
   const [verifiedImgFailed, setVerifiedImgFailed] = useState(false);
@@ -77,7 +43,7 @@ export default function HeroSection({ products = [], onOpenInfoModal }) {
 
     const timer = setInterval(() => {
       setActiveSlide((prev) => (prev + 1) % HERO_STORY_SLIDES.length);
-    }, 3800);
+    }, 4500);
 
     return () => clearInterval(timer);
   }, [paused]);
@@ -90,299 +56,293 @@ export default function HeroSection({ products = [], onOpenInfoModal }) {
       ? heroEditorialUrl
       : featuredProduct.thumbnailUrl;
 
+  const hasWarehousesCount = Number(stats?.warehousesTotal) > 0;
+
   return (
-    <section className="relative min-h-[calc(100svh-72px)] flex flex-col items-center justify-center px-5 sm:px-8 pt-1 pb-5 sm:py-3 text-center overflow-hidden">
-      {/* Ảnh vệ tinh & sticker die-cut rải thoáng quanh điện thoại trên desktop */}
-      <div
-        aria-hidden="true"
-        className="hidden lg:block pointer-events-none absolute inset-0 max-w-[1360px] mx-auto"
-      >
-        <span className="landing-sticker absolute left-[13%] xl:left-[17%] top-[9%] -rotate-6 px-3.5 py-1.5 rounded-full bg-white text-[#006B2C] text-xs font-extrabold inline-flex items-center gap-1.5">
-          <SparklesIcon className="w-3.5 h-3.5 text-[#FEA619]" />
-          <span>Thử AI ✨</span>
-        </span>
-        <FloatingPhotoCard
-          src={products[0]?.thumbnailUrl}
-          caption="96% hợp dáng"
-          className="absolute left-[5%] xl:left-[8%] top-[24%] w-28 h-28 -rotate-6"
-        />
-        <span className="landing-sticker absolute left-[17%] xl:left-[21%] top-[53%] rotate-3 px-3.5 py-1.5 rounded-full bg-[#0D2419] text-white text-xs font-extrabold">
-          SKU 6 bước
-        </span>
-        <FloatingPhotoCard
-          src={products[1]?.thumbnailUrl}
-          caption="Như mới 99%"
-          className="absolute left-[9%] xl:left-[12%] top-[63%] w-28 h-28 rotate-6"
-        />
-
-        <span className="landing-sticker absolute right-[15%] xl:right-[19%] top-[9%] rotate-6 px-3.5 py-1.5 rounded-full bg-[#FEA619] text-[#0D2419] text-xs font-extrabold">
-          Nhận 90%
-        </span>
-        <FloatingPhotoCard
-          src={products[2]?.thumbnailUrl}
-          caption="+450k về ví"
-          className="absolute right-[6%] xl:right-[9%] top-[24%] w-28 h-28 rotate-6"
-        />
-        <span className="landing-sticker absolute right-[12%] xl:right-[16%] top-[60%] -rotate-3 px-3.5 py-1.5 rounded-full bg-[#E8F5E9] text-[#006B2C] text-[11px] font-black tracking-wide">
-          WEAR AGAIN
-        </span>
-      </div>
-
-      {/* Sân khấu trung tâm: Điện thoại pastel mờ tan chân + QR nghiêng trên desktop */}
-      <div
-        className="relative flex flex-col items-center z-10"
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
-        onFocusCapture={() => setPaused(true)}
-        onBlurCapture={() => setPaused(false)}
-      >
-        <div className="relative">
-          <div className="hero-phone-float landing-phone-dissolve w-[272px] sm:w-[292px] xl:w-[308px] rounded-[2.6rem] bg-gradient-to-b from-[#E3ECE1] via-[#ECF2EA] to-[#F6F9F2] p-3 border border-white/85 shadow-[0_24px_60px_-24px_rgba(13,36,25,0.2)] sm:-rotate-2">
-            {/* Thanh trạng thái điện thoại tối giản */}
-            <div className="flex items-center justify-between px-4 pt-1 pb-2 text-[11px] font-bold text-[#0D2419]/75">
-              <span>9:41</span>
-              <div className="flex items-center gap-1.5" aria-hidden="true">
-                <span className="inline-flex items-end gap-[2px] h-2.5">
-                  <span className="w-[2.5px] h-1 bg-[#0D2419]/65 rounded-full" />
-                  <span className="w-[2.5px] h-1.5 bg-[#0D2419]/65 rounded-full" />
-                  <span className="w-[2.5px] h-2 bg-[#0D2419]/65 rounded-full" />
-                  <span className="w-[2.5px] h-2.5 bg-[#0D2419]/65 rounded-full" />
-                </span>
-                <span className="w-5 h-2.5 rounded-[4px] border border-[#0D2419]/55 p-[1.5px] flex items-center">
-                  <span className="w-full h-full bg-[#0D2419]/75 rounded-[1.5px]" />
-                </span>
-              </div>
+    <section className="landing-editorial-hero-bg relative overflow-hidden">
+      <div className="max-w-[1240px] mx-auto px-5 sm:px-8 pt-8 sm:pt-12 lg:pt-14 pb-16 sm:pb-20">
+        <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+          {/* Cột trái: Định vị giá trị, CTA rõ cho cả Desktop & Mobile, và chỉ số tin cậy */}
+          <div className="lg:col-span-6 text-left space-y-6">
+            <div className="hero-stagger inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white border border-[#071D12]/10 shadow-sm text-xs font-bold text-[#071D12]">
+              <span className="landing-pulse-ring w-2 h-2 rounded-full bg-[#006B2C] text-[#006B2C]" />
+              <span>{HERO_COPY.eyebrow}</span>
             </div>
 
-            {/* 3 khoảnh khắc tự diễn bên trong màn hình */}
-            {currentStory.id === 'tryon' && (
-              <div
-                key="tryon"
-                className="landing-story-enter h-[220px] sm:h-[214px] xl:h-[236px] rounded-[24px] overflow-hidden relative bg-[#0B1C14] text-left"
+            <h1 className="hero-stagger landing-text-balance text-[2.15rem] sm:text-[2.85rem] xl:text-[3.35rem] font-extrabold tracking-[-0.03em] leading-[1.08] text-[#071D12]">
+              {HERO_COPY.headlineLead}
+              <span className="text-[#006B2C]"> {HERO_COPY.headlineAccent}</span>
+            </h1>
+
+            <p className="hero-stagger text-[15px] sm:text-base text-[#46564C] leading-[1.65] max-w-xl">
+              {HERO_COPY.subtitle}
+            </p>
+
+            {/* Cụm CTA chính hiển thị đồng bộ trên mọi thiết bị */}
+            <div className="hero-stagger flex flex-wrap items-center gap-3 pt-1">
+              <a
+                href={APK_DOWNLOAD_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="hero-apk-cta"
+                className="landing-btn-shine inline-flex items-center justify-center gap-2.5 h-12 px-6 rounded-xl bg-[#006B2C] hover:bg-[#005523] text-white text-sm font-bold shadow-[0_14px_30px_-10px_rgba(0,107,44,0.48)] transition-colors whitespace-nowrap"
               >
-                <img
-                  src={aiTryonUrl}
-                  alt="Mô phỏng thử đồ AI qua camera trên ReHome"
-                  className="w-full h-full object-cover object-top"
-                />
-                <div aria-hidden="true" className="landing-scan-beam" />
-                <div className="absolute top-2.5 left-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-bold text-white">
-                  <CameraIcon className="w-3 h-3 text-[#34D399]" />
-                  <span>{currentStory.badge}</span>
-                </div>
-                <div className="landing-emoji-pop absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-white/95 text-[#006B2C] text-[10px] font-extrabold shadow-sm">
-                  ✨ 96%
-                </div>
-                <div className="absolute bottom-2.5 inset-x-2.5 rounded-2xl bg-black/65 backdrop-blur-md px-3 py-2 text-white">
-                  <p className="text-[11px] font-bold truncate">Áo sơ mi olive dáng suông</p>
-                  <p className="text-[10px] text-white/85">Ướm trực tiếp qua camera</p>
-                </div>
-              </div>
-            )}
+                <AndroidIcon className="w-4 h-4 shrink-0" />
+                <span>Tải ReHome APK</span>
+              </a>
 
-            {currentStory.id === 'verified' && (
-              <div
-                key="verified"
-                className="landing-story-enter h-[220px] sm:h-[214px] xl:h-[236px] rounded-[24px] overflow-hidden relative bg-[#E7EFE4] text-left"
+              <button
+                type="button"
+                onClick={() => onOpenInfoModal?.('inspection')}
+                className="inline-flex items-center justify-center gap-2 h-12 px-5 rounded-xl bg-white hover:bg-[#EBF1E8]/60 border border-[#071D12]/15 hover:border-[#006B2C] text-[#071D12] hover:text-[#006B2C] text-sm font-bold transition-colors whitespace-nowrap"
               >
-                <img
-                  src={verifiedThumbSrc}
-                  alt={featuredProduct.name}
-                  onError={() => setVerifiedImgFailed(true)}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#006B2C]/90 text-white text-[10px] font-bold shadow-sm">
-                  <ShieldCheckIcon className="w-3 h-3 text-[#A7F3D0]" />
-                  <span>{currentStory.badge}</span>
-                </div>
-                <div className="absolute bottom-2.5 inset-x-2.5 rounded-2xl bg-white/95 backdrop-blur-md px-3 py-2 shadow-sm">
-                  <p className="text-[11px] font-bold text-[#0D2419] truncate">
-                    {featuredProduct.name}
-                  </p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[11px] font-extrabold text-[#006B2C] tabular-nums">
-                      {formatCurrencyVND(featuredProduct.currentPrice)}
-                    </span>
-                    <span aria-hidden="true" className="text-[#0D2419]/30">
-                      ·
-                    </span>
-                    <span className="text-[10px] font-bold text-[#0D2419]/70">Như mới 99%</span>
-                  </div>
-                </div>
-              </div>
-            )}
+                <ShieldCheckIcon className="w-4 h-4 text-[#006B2C] shrink-0" />
+                <span>Quy chuẩn kiểm định 6 bước</span>
+              </button>
+            </div>
 
-            {currentStory.id === 'payout' && (
-              <div
-                key="payout"
-                className="landing-story-enter h-[220px] sm:h-[214px] xl:h-[236px] rounded-[24px] bg-gradient-to-br from-[#EEF8F0] via-white to-[#FFF7E2] p-3.5 sm:p-4 flex flex-col justify-between text-left border border-[#006B2C]/10"
+            <div className="hero-stagger flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs font-medium text-[#46564C]">
+              <span>
+                {APP_METADATA.minAndroid} · v{APP_METADATA.version}
+              </span>
+              <span aria-hidden="true">·</span>
+              <a
+                href={APK_DOWNLOAD_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="hero-desktop-apk-link"
+                className="font-semibold text-[#006B2C] hover:text-[#005523] underline-offset-4 hover:underline"
               >
-                <div className="rounded-2xl bg-white p-3.5 shadow-sm border border-[#006B2C]/10 space-y-1.5">
-                  <div className="flex items-center justify-between text-[10px] font-bold text-[#006B2C]">
-                    <span>Ví ReHome · Vừa xong</span>
-                    <span className="px-2 py-0.5 rounded-full bg-[#E8F5E9]">90%</span>
-                  </div>
-                  <p className="text-2xl font-extrabold text-[#0D2419] tabular-nums tracking-tight">
-                    +450.000₫
-                  </p>
-                  <p className="text-[11px] font-semibold text-[#0D2419]/75 leading-snug">
-                    Tiền ký gửi 90% vừa về ví
-                  </p>
-                </div>
+                {APP_METADATA.distributionLabel}
+              </a>
+              <span aria-hidden="true">·</span>
+              <button
+                type="button"
+                onClick={() => onOpenInfoModal?.('install')}
+                className="font-semibold text-[#071D12] hover:text-[#006B2C] underline-offset-4 hover:underline"
+              >
+                Cách cài 30 giây
+              </button>
+            </div>
 
-                <div className="rounded-2xl bg-[#006B2C]/[0.07] px-3 py-2 flex items-center gap-2.5">
-                  <span className="w-7 h-7 rounded-xl bg-[#006B2C] text-white flex items-center justify-center shrink-0">
-                    <SparklesIcon className="w-3.5 h-3.5" />
-                  </span>
-                  <p className="text-[11px] font-semibold text-[#0D2419]/75 leading-snug">
-                    Kho ReHome chụp ảnh, kiểm định &amp; bán hộ A–Z
-                  </p>
-                </div>
+            {/* Dải số liệu chứng thực */}
+            <div className="hero-stagger pt-6 border-t border-[#071D12]/10 grid grid-cols-3 gap-4 sm:gap-6">
+              <div>
+                <p className="text-xl sm:text-2xl font-extrabold text-[#071D12] tabular-nums tracking-tight">
+                  90%
+                </p>
+                <p className="text-xs font-medium text-[#46564C] mt-0.5">Doanh thu về ví</p>
               </div>
-            )}
-
-            {/* Hàng icon ứng dụng pastel mờ dần tạo cảm giác màn hình chính */}
-            <div aria-hidden="true" className="grid grid-cols-4 gap-2 px-2 pt-2.5 pb-1.5">
-              {PHONE_DOCK_TILES.map((bgClass, index) => (
-                <span key={index} className={`h-9 sm:h-8 xl:h-9 rounded-[12px] ${bgClass} opacity-85`} />
-              ))}
+              <div>
+                <p className="text-xl sm:text-2xl font-extrabold text-[#071D12] tabular-nums tracking-tight">
+                  6 bước
+                </p>
+                <p className="text-xs font-medium text-[#46564C] mt-0.5">Kiểm định tem SKU</p>
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-extrabold text-[#071D12] tabular-nums tracking-tight">
+                  {hasWarehousesCount ? `${stats.warehousesTotal} điểm kho` : '3 ngày'}
+                </p>
+                <p className="text-xs font-medium text-[#46564C] mt-0.5">
+                  {hasWarehousesCount ? 'Tiếp nhận trực tiếp' : 'Bảo vệ đổi trả'}
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Thẻ QR trắng nghiêng đè góc dưới phải trên desktop/tablet — wrapper đứng thẳng cho tooltip */}
-          <div className="hidden sm:block absolute -right-[72px] xl:-right-20 -bottom-2 z-20 group">
-            <a
-              href={APK_DOWNLOAD_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="hero-qr-link"
-              title="Quét bằng Android để tải ReHome APK"
-              className="flex flex-col items-center justify-center w-[116px] h-[116px] xl:w-[124px] xl:h-[124px] rounded-[24px] bg-white p-2.5 shadow-[0_18px_46px_rgba(13,36,25,0.18)] rotate-6 group-hover:rotate-2 transition-transform duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#006B2C] focus-visible:ring-offset-2"
-            >
-              <div className="relative w-full h-full">
-                <img
-                  src={apkQrUrl}
-                  alt="Mã QR tải ReHome APK"
-                  className="w-full h-full object-contain rounded-xl block"
-                />
-                <span
-                  aria-hidden="true"
-                  className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          {/* Cột phải: Khung trình diễn ảnh Editorial + Live Try-On + QR tích hợp gọn */}
+          <div
+            className="hero-stage lg:col-span-6"
+            onMouseEnter={() => setPaused(true)}
+            onMouseLeave={() => setPaused(false)}
+            onFocusCapture={() => setPaused(true)}
+            onBlurCapture={() => setPaused(false)}
+          >
+            <div className="rounded-[28px] bg-white border border-[#071D12]/10 p-3 sm:p-3.5 shadow-[0_28px_70px_-28px_rgba(7,29,18,0.22)]">
+              {/* Thanh chuyển 3 trải nghiệm ứng dụng */}
+              <div
+                role="group"
+                aria-label="Chọn trải nghiệm minh họa trên ứng dụng"
+                className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-[#F6F9F4] border border-[#071D12]/[0.06]"
+              >
+                {HERO_STORY_SLIDES.map((slide, idx) => {
+                  const isActive = activeSlide === idx;
+                  return (
+                    <button
+                      key={slide.id}
+                      type="button"
+                      aria-pressed={isActive}
+                      onClick={() => setActiveSlide(idx)}
+                      className={`px-2.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap truncate ${
+                        isActive
+                          ? 'bg-white text-[#071D12] shadow-sm border border-[#071D12]/[0.06]'
+                          : 'text-[#46564C] hover:text-[#071D12]'
+                      }`}
+                    >
+                      {slide.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Khung hình ảnh/trải nghiệm chính */}
+              <div className="mt-2.5 aspect-[4/4.2] sm:aspect-[4/3.65] rounded-[20px] overflow-hidden relative bg-[#071D12]">
+                {currentStory.id === 'tryon' && (
+                  <div key="tryon" className="landing-story-enter w-full h-full relative text-left">
+                    <img
+                      src={aiTryonUrl}
+                      alt="Mô phỏng thử đồ AI qua camera trên ReHome"
+                      className="w-full h-full object-cover object-top"
+                    />
+                    <div aria-hidden="true" className="landing-scan-beam" />
+                    <div className="absolute top-3.5 left-3.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#071D12]/75 backdrop-blur-md text-[11px] font-bold text-white border border-white/15">
+                      <CameraIcon className="w-3.5 h-3.5 text-[#34D399]" />
+                      <span>{currentStory.badge}</span>
+                    </div>
+                    <div className="absolute top-3.5 right-3.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/95 text-[#006B2C] text-[11px] font-extrabold shadow-sm tabular-nums">
+                      <SparklesIcon className="w-3.5 h-3.5 text-[#FEA619]" />
+                      <span>{currentStory.metric}</span>
+                    </div>
+                    <div className="absolute bottom-3.5 inset-x-3.5 rounded-2xl bg-[#071D12]/80 backdrop-blur-md border border-white/15 px-4 py-3 text-white">
+                      <p className="text-xs font-bold truncate">Áo sơ mi linen olive dáng suông</p>
+                      <p className="text-[11px] text-white/80 mt-0.5">{currentStory.caption}</p>
+                    </div>
+                  </div>
+                )}
+
+                {currentStory.id === 'verified' && (
+                  <div
+                    key="verified"
+                    className="landing-story-enter w-full h-full relative text-left bg-[#EBF1E8]"
+                  >
+                    <img
+                      src={verifiedThumbSrc}
+                      alt={featuredProduct.name}
+                      onError={() => setVerifiedImgFailed(true)}
+                      className="w-full h-full object-cover"
+                    />
+                    <div
+                      aria-hidden="true"
+                      className="absolute inset-0 bg-gradient-to-t from-[#071D12]/65 via-transparent to-transparent"
+                    />
+                    <div className="absolute top-3.5 left-3.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#006B2C] text-white text-[11px] font-bold shadow-sm">
+                      <ShieldCheckIcon className="w-3.5 h-3.5 text-[#A7F3D0]" />
+                      <span>{currentStory.badge}</span>
+                    </div>
+                    <div className="absolute bottom-3.5 inset-x-3.5 rounded-2xl bg-white/95 backdrop-blur-md border border-[#071D12]/10 px-4 py-3 shadow-sm">
+                      <p className="text-xs font-bold text-[#071D12] truncate">
+                        {featuredProduct.name}
+                      </p>
+                      <div className="flex items-center justify-between gap-2 mt-1">
+                        <span className="text-sm font-extrabold text-[#006B2C] tabular-nums">
+                          {formatCurrencyVND(featuredProduct.currentPrice)}
+                        </span>
+                        <span className="text-[11px] font-semibold text-[#46564C]">
+                          Như mới 99% · 6/6 tiêu chí
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {currentStory.id === 'payout' && (
+                  <div
+                    key="payout"
+                    className="landing-story-enter w-full h-full bg-[#071D12] text-white p-5 sm:p-6 flex flex-col justify-between text-left relative overflow-hidden"
+                  >
+                    <div
+                      aria-hidden="true"
+                      className="landing-dot-grid absolute inset-0 pointer-events-none"
+                    />
+
+                    <div className="relative z-10 flex items-center justify-between gap-3">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-bold text-[#A7F3D0]">
+                        <span>{currentStory.badge}</span>
+                      </span>
+                      <span className="text-xs font-bold text-[#FEA619] tabular-nums">
+                        Chu kỳ 30 ngày
+                      </span>
+                    </div>
+
+                    <div className="relative z-10 grid grid-cols-12 gap-3.5 items-center my-auto py-3">
+                      <div className="col-span-7 space-y-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-white/65">
+                          Biên nhận ký gửi thành công
+                        </p>
+                        <p className="text-2xl sm:text-3xl font-extrabold text-[#FEA619] tabular-nums tracking-tight">
+                          +{formatCurrencyVND(450000)}
+                        </p>
+                        <p className="text-xs text-white/85 leading-relaxed">
+                          {currentStory.caption}
+                        </p>
+                      </div>
+                      <div className="col-span-5 aspect-[3/4] rounded-2xl overflow-hidden border border-white/15">
+                        <img
+                          src={heroEditorialUrl}
+                          alt="Trang phục ký gửi đã kiểm định tại kho ReHome"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="relative z-10 rounded-2xl bg-white/[0.07] border border-white/10 p-3.5 space-y-1.5 text-xs">
+                      <div className="flex items-center justify-between text-white/75">
+                        <span>Giá bán thống nhất tại quầy</span>
+                        <span className="font-bold text-white tabular-nums">
+                          {formatCurrencyVND(500000)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-white/75">
+                        <span>Phí kiểm định &amp; bán hộ trọn gói (10%)</span>
+                        <span className="font-bold text-white tabular-nums">
+                          -{formatCurrencyVND(50000)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Thanh QR tải nhanh tích hợp gọn gàng dưới khung trình diễn */}
+              <div className="mt-3 px-3.5 py-2.5 rounded-2xl bg-[#F6F9F4] border border-[#071D12]/[0.06] flex items-center justify-between gap-3">
+                <a
+                  href={APK_DOWNLOAD_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-testid="hero-qr-link"
+                  title="Quét bằng Android để tải ReHome APK"
+                  className="flex items-center gap-3 min-w-0 group"
                 >
-                  <span className="w-7 h-7 rounded-lg bg-[#0D2419] text-white flex items-center justify-center border-2 border-white shadow-sm">
-                    <CameraIcon className="w-3.5 h-3.5" />
+                  <span className="w-11 h-11 rounded-xl bg-white p-1 border border-[#071D12]/10 shrink-0 shadow-sm group-hover:border-[#006B2C] transition-colors">
+                    <img
+                      src={apkQrUrl}
+                      alt="Mã QR tải ReHome APK"
+                      className="w-full h-full object-contain block"
+                    />
                   </span>
-                </span>
+                  <div className="min-w-0 text-left">
+                    <p className="text-xs font-bold text-[#071D12] group-hover:text-[#006B2C] transition-colors truncate">
+                      Quét QR tải ReHome APK
+                    </p>
+                    <p className="text-[11px] font-medium text-[#46564C] truncate">
+                      Bản {APP_METADATA.platform} v{APP_METADATA.version} miễn phí
+                    </p>
+                  </div>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => onOpenInfoModal?.('install')}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white hover:bg-[#006B2C] border border-[#071D12]/10 hover:border-[#006B2C] text-xs font-bold text-[#071D12] hover:text-white transition-colors whitespace-nowrap shrink-0"
+                >
+                  <span>Cài đặt</span>
+                  <ArrowRightIcon className="w-3.5 h-3.5 shrink-0" />
+                </button>
               </div>
-            </a>
-
-            <span
-              aria-hidden="true"
-              className="pointer-events-none opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3.5 py-2 rounded-2xl bg-white text-[#0D2419] text-xs font-bold shadow-[0_14px_34px_rgba(13,36,25,0.16)] whitespace-nowrap"
-            >
-              Quét bằng Android để tải ReHome APK
-            </span>
-          </div>
-        </div>
-
-        {/* Bộ chọn 3 khoảnh khắc nhỏ gọn dưới điện thoại */}
-        <div
-          role="group"
-          aria-label="Chọn khoảnh khắc minh họa trên ứng dụng"
-          className="-mt-2 relative z-10 inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-[#0D2419]/[0.05]"
-        >
-          {HERO_STORY_SLIDES.map((slide, idx) => {
-            const isActive = activeSlide === idx;
-            return (
-              <button
-                key={slide.id}
-                type="button"
-                aria-pressed={isActive}
-                onClick={() => setActiveSlide(idx)}
-                className={`px-3 py-1 rounded-full text-[11px] font-bold transition-all whitespace-nowrap ${
-                  isActive
-                    ? 'bg-white text-[#006B2C] shadow-sm'
-                    : 'text-[#0D2419]/65 hover:text-[#0D2419]'
-                }`}
-              >
-                {slide.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Khối chữ tối giản kiểu Locket */}
-      <div className="mt-4 sm:mt-4 max-w-2xl mx-auto space-y-2 relative z-10">
-        <div className="hero-brand inline-flex items-center justify-center gap-3">
-          <Logo size="md" to={null} showText={false} className="xl:scale-110" />
-          <span className="text-4xl sm:text-[42px] xl:text-[50px] font-bold tracking-[-0.03em] text-[#0D2419] leading-none">
-            ReHome
-          </span>
-        </div>
-
-        <h1 className="hero-title landing-text-balance text-lg sm:text-[19px] xl:text-[21px] font-semibold text-[#0D2419]/70 leading-snug">
-          {HERO_COPY.tagline}
-        </h1>
-
-        <div className="hero-actions pt-1.5">
-          {/* Mobile CTA */}
-          <div className="sm:hidden flex flex-col items-center gap-2.5">
-            <a
-              href={APK_DOWNLOAD_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="hero-apk-cta"
-              className="landing-btn-shine inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-full bg-[#006B2C] hover:bg-[#005523] text-white font-bold text-base shadow-[0_14px_30px_-8px_rgba(0,107,44,0.4)] transition-all whitespace-nowrap"
-            >
-              <AndroidIcon className="w-5 h-5 shrink-0" />
-              <span>Tải ReHome APK</span>
-            </a>
-
-            {onOpenInfoModal && (
-              <button
-                type="button"
-                onClick={() => onOpenInfoModal('install')}
-                className="text-xs font-semibold text-[#0D2419]/70 hover:text-[#006B2C] underline-offset-4 hover:underline"
-              >
-                Hướng dẫn cài 4 bước
-              </button>
-            )}
-          </div>
-
-          {/* Desktop quiet secondary links */}
-          <div className="hidden sm:inline-flex items-center justify-center gap-3">
-            <a
-              href={APK_DOWNLOAD_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="hero-desktop-apk-link"
-              className="text-xs font-semibold text-[#0D2419]/70 hover:text-[#006B2C] underline-offset-4 hover:underline"
-            >
-              Tải APK từ Google Drive
-            </a>
-            <span aria-hidden="true" className="text-[#0D2419]/30">
-              ·
-            </span>
-            <button
-              type="button"
-              onClick={() => onOpenInfoModal?.('install')}
-              className="text-xs font-semibold text-[#0D2419]/70 hover:text-[#006B2C] underline-offset-4 hover:underline"
-            >
-              Cách cài APK (30 giây)
-            </button>
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Mũi tên cuộn nhẹ cuối màn hình đầu */}
-      <a
-        href="#drops"
-        aria-label="Cuộn xuống xem đồ mới về"
-        className="mt-2.5 sm:mt-3 inline-flex items-center justify-center w-9 h-9 rounded-full text-[#0D2419]/50 hover:text-[#0D2419] transition-colors relative z-10"
-      >
-        <ChevronDownIcon className="w-6 h-6" />
-      </a>
     </section>
   );
 }

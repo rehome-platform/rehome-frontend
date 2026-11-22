@@ -28,18 +28,23 @@ export default function LandingFooter({ onOpenInfoModal }) {
   };
 
   return (
-    <footer className="bg-transparent text-[#0D2419] pt-16 sm:pt-24 pb-4 overflow-hidden">
-      <div className="max-w-[1220px] mx-auto px-5 sm:px-8">
+    <footer className="bg-[#F6F9F4] text-[#071D12] border-t border-[#071D12]/[0.08] pt-14 sm:pt-16 pb-10">
+      <div className="max-w-[1240px] mx-auto px-5 sm:px-8 space-y-12">
         <div className="grid md:grid-cols-12 gap-10 items-start">
-          {/* Cột trái: Logo + nút copy email + bản quyền */}
+          {/* Cột trái: Logo + email hỗ trợ + mô tả ngắn */}
           <div className="md:col-span-5 space-y-4">
             <Logo size="sm" to="/landing" className="[&_span]:whitespace-nowrap" />
+
+            <p className="text-xs sm:text-sm text-[#46564C] leading-relaxed max-w-sm">
+              Nền tảng thời trang tuần hoàn kết hợp thử đồ AI qua camera, kiểm định 6 bước tại kho
+              và thiện nguyện xác minh pháp lý.
+            </p>
 
             <div>
               <button
                 type="button"
                 onClick={handleCopyEmail}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0D2419]/[0.05] hover:bg-[#0D2419]/[0.09] text-xs font-semibold text-[#0D2419]/75 transition-colors"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-white border border-[#071D12]/10 hover:border-[#006B2C] text-xs font-semibold text-[#071D12] transition-colors"
               >
                 <MailIcon className="w-3.5 h-3.5 text-[#006B2C] shrink-0" />
                 <span>{FOOTER_CONTACT.email}</span>
@@ -49,29 +54,25 @@ export default function LandingFooter({ onOpenInfoModal }) {
                     <span>Đã sao chép!</span>
                   </span>
                 ) : (
-                  <CopyIcon className="w-3.5 h-3.5 text-[#0D2419]/45 shrink-0" />
+                  <CopyIcon className="w-3.5 h-3.5 text-[#46564C] shrink-0" />
                 )}
               </button>
             </div>
-
-            <p className="text-xs font-medium text-[#0D2419]/65">
-              © {new Date().getFullYear()} ReHome · Android v{APP_METADATA.version}
-            </p>
           </div>
 
-          {/* Cột phải: 3 cột link chữ tối giản */}
+          {/* Cột phải: 3 cột liên kết rõ ràng */}
           <div className="md:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-8 text-sm">
             <div className="space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#0D2419]/65">
-                Tải ứng dụng
+              <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#46564C]">
+                Ứng dụng
               </h3>
-              <ul className="space-y-2.5">
+              <ul className="space-y-2.5 text-xs sm:text-sm">
                 <li>
                   <a
                     href={APK_DOWNLOAD_URL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-semibold text-[#0D2419]/75 hover:text-[#006B2C] transition-colors"
+                    className="font-semibold text-[#071D12]/80 hover:text-[#006B2C] transition-colors"
                   >
                     Android APK
                   </a>
@@ -80,7 +81,7 @@ export default function LandingFooter({ onOpenInfoModal }) {
                   <button
                     type="button"
                     onClick={() => onOpenInfoModal?.('install')}
-                    className="font-semibold text-[#0D2419]/75 hover:text-[#006B2C] transition-colors text-left"
+                    className="font-semibold text-[#071D12]/80 hover:text-[#006B2C] transition-colors text-left"
                   >
                     Hướng dẫn cài đặt
                   </button>
@@ -89,15 +90,15 @@ export default function LandingFooter({ onOpenInfoModal }) {
             </div>
 
             <div className="space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#0D2419]/65">
-                Về ReHome
+              <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#46564C]">
+                Minh bạch
               </h3>
-              <ul className="space-y-2.5">
+              <ul className="space-y-2.5 text-xs sm:text-sm">
                 <li>
                   <button
                     type="button"
                     onClick={() => onOpenInfoModal?.('about')}
-                    className="font-semibold text-[#0D2419]/75 hover:text-[#006B2C] transition-colors text-left"
+                    className="font-semibold text-[#071D12]/80 hover:text-[#006B2C] transition-colors text-left"
                   >
                     Giới thiệu
                   </button>
@@ -106,7 +107,7 @@ export default function LandingFooter({ onOpenInfoModal }) {
                   <button
                     type="button"
                     onClick={() => onOpenInfoModal?.('inspection')}
-                    className="font-semibold text-[#0D2419]/75 hover:text-[#006B2C] transition-colors text-left"
+                    className="font-semibold text-[#071D12]/80 hover:text-[#006B2C] transition-colors text-left"
                   >
                     Kiểm định 6 bước
                   </button>
@@ -115,7 +116,7 @@ export default function LandingFooter({ onOpenInfoModal }) {
                   <button
                     type="button"
                     onClick={() => onOpenInfoModal?.('consignment')}
-                    className="font-semibold text-[#0D2419]/75 hover:text-[#006B2C] transition-colors text-left"
+                    className="font-semibold text-[#071D12]/80 hover:text-[#006B2C] transition-colors text-left"
                   >
                     Quy chế ký gửi 90%
                   </button>
@@ -124,7 +125,7 @@ export default function LandingFooter({ onOpenInfoModal }) {
                   <button
                     type="button"
                     onClick={() => onOpenInfoModal?.('policy')}
-                    className="font-semibold text-[#0D2419]/75 hover:text-[#006B2C] transition-colors text-left"
+                    className="font-semibold text-[#071D12]/80 hover:text-[#006B2C] transition-colors text-left"
                   >
                     Chính sách &amp; Bảo mật
                   </button>
@@ -132,35 +133,40 @@ export default function LandingFooter({ onOpenInfoModal }) {
               </ul>
             </div>
 
-            <div className="space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#0D2419]/65">
-                Kết nối
+            <div className="space-y-3 col-span-2 sm:col-span-1">
+              <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#46564C]">
+                Liên hệ
               </h3>
-              <ul className="space-y-2.5">
+              <ul className="space-y-2.5 text-xs sm:text-sm">
                 <li>
                   <a
                     href={`mailto:${FOOTER_CONTACT.email}`}
-                    className="font-semibold text-[#0D2419]/75 hover:text-[#006B2C] transition-colors"
+                    className="font-semibold text-[#071D12]/80 hover:text-[#006B2C] transition-colors"
                   >
                     {FOOTER_CONTACT.email}
                   </a>
                 </li>
-                <li className="text-xs font-medium text-[#0D2419]/65 leading-relaxed">
+                <li className="text-xs font-medium text-[#46564C] tabular-nums">
+                  Hotline: {FOOTER_CONTACT.hotline}
+                </li>
+                <li className="text-xs font-medium text-[#46564C] leading-relaxed">
                   TP.HCM · Hà Nội · Đà Nẵng
                 </li>
               </ul>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Watermark cực lớn cuối trang kiểu Locket */}
-      <p
-        aria-hidden="true"
-        className="landing-footer-watermark mt-14 sm:mt-20 px-4 text-center font-bold uppercase tracking-[-0.03em] leading-none select-none whitespace-nowrap text-[clamp(1.25rem,5.4vw,4.8rem)]"
-      >
-        WEAR AGAIN · LIVE GREEN
-      </p>
+        {/* Thanh chân trang gọn nhẹ thay cho watermark phóng đại */}
+        <div className="pt-6 border-t border-[#071D12]/[0.08] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-[#46564C]">
+          <p className="font-medium tabular-nums">
+            © {new Date().getFullYear()} ReHome · {APP_METADATA.platform} v{APP_METADATA.version}
+          </p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#071D12]/45">
+            WEAR AGAIN · LIVE GREEN
+          </p>
+        </div>
+      </div>
     </footer>
   );
 }

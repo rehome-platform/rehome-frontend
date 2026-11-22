@@ -1,5 +1,5 @@
 /**
- * Hằng số & Nội dung thuyết phục cho Trang Tiếp thị / Trang đích ReHome
+ * Hằng số & Nội dung cho Trang Tiếp thị / Trang đích ReHome
  */
 
 export const APK_DOWNLOAD_URL =
@@ -14,22 +14,20 @@ export const APP_METADATA = {
   distributionLabel: 'Google Drive chính thức',
 };
 
-export const NAV_LINKS = [
-  { href: '#explore', label: 'Khám phá' },
-  { href: '#about', label: 'Cách hoạt động' },
-  { href: '#compare', label: 'So sánh' },
-];
-
 export const LANDING_NAV_ITEMS = [
-  { id: 'drops', type: 'anchor', href: '#drops', label: 'Đồ mới về' },
-  { id: 'inspection', type: 'modal', modalTab: 'inspection', label: 'Kiểm định' },
-  { id: 'consignment', type: 'modal', modalTab: 'consignment', label: 'Ký gửi 90%' },
-  { id: 'install', type: 'modal', modalTab: 'install', label: 'Cài APK' },
-  { id: 'policy', type: 'modal', modalTab: 'policy', label: 'Bảo mật' },
+  { id: 'drops', href: '#drops', label: 'Đồ mới về' },
+  { id: 'experience', href: '#experience', label: 'Thử đồ AI' },
+  { id: 'consignment', href: '#consignment', label: 'Ký gửi 90%' },
+  { id: 'network', href: '#network', label: 'Kho & Cộng đồng' },
+  { id: 'download', href: '#download', label: 'Cài APK' },
 ];
 
 export const HERO_COPY = {
-  tagline: 'Tủ đồ cũ của người khác... vừa khít với bạn qua camera.',
+  eyebrow: 'Thời trang tuần hoàn · Kiểm định tại kho',
+  headlineLead: 'Mặc thử qua AI.',
+  headlineAccent: 'Ký gửi minh bạch, nhận 90%.',
+  subtitle:
+    'Nền tảng thời trang đã qua sử dụng được kiểm định 6 bước tại kho vật lý — thử trực tiếp lên dáng qua camera trước khi mua, hoặc ký gửi trọn gói để nhận 90% giá bán.',
 };
 
 export const HERO_STORY_SLIDES = [
@@ -38,7 +36,7 @@ export const HERO_STORY_SLIDES = [
     label: 'Live Try-On',
     badge: 'LIVE TRY-ON',
     metric: '96% hợp dáng',
-    caption: 'Ướm trực tiếp lên dáng thật',
+    caption: 'Ướm thử trực tiếp qua camera realtime',
   },
   {
     id: 'verified',
@@ -51,47 +49,10 @@ export const HERO_STORY_SLIDES = [
     id: 'payout',
     label: 'Nhận 90%',
     badge: 'VÍ REHOME',
-    metric: '+450.000₫',
+    metric: '+450.000 đ',
     caption: 'Tiền ký gửi 90% vừa về ví',
   },
 ];
-
-export const CURIOSITY_CARDS = [
-  {
-    id: 'verify',
-    title: 'Kiểm định 6 bước',
-    desc: 'Kiểm tra thực tế tại kho và dán tem SKU chuẩn.',
-    modalTab: 'inspection',
-    visual: 'shield',
-  },
-  {
-    id: 'consign',
-    title: 'Ký gửi nhận 90%',
-    desc: 'Gửi đồ tới kho — ReHome chụp ảnh & bán hộ A–Z.',
-    modalTab: 'consignment',
-    visual: 'bag',
-  },
-  {
-    id: 'install',
-    title: 'Cài APK trong 30 giây',
-    desc: 'Tải bản Android từ Google Drive, cài trong 4 chạm.',
-    modalTab: 'install',
-    visual: 'install',
-  },
-  {
-    id: 'charity',
-    title: 'Thiện nguyện & Bảo mật',
-    desc: 'Trao đồ tới tổ chức xác minh, đổi trả trong 3 ngày.',
-    modalTab: 'policy',
-    visual: 'charity',
-  },
-];
-
-export const TRYON_SLOT_LABELS = {
-  TOP: 'Áo • Thử đồ AI',
-  BOTTOM: 'Quần/Váy • Thử đồ AI',
-  DRESS: 'Đầm • Thử đồ AI',
-};
 
 export const AI_OUTFIT_COMBOS = [
   {
@@ -142,28 +103,7 @@ export const INSPECTION_CHECKLIST = [
   'Dán tem SKU riêng & lập biên nhận điện tử',
 ];
 
-export const CONSIGN_EARNING_PRESETS = [250000, 500000, 1000000];
-
-export const BUYER_VOUCHER_PERKS = [
-  {
-    id: 'welcome',
-    tag: 'Đơn đầu tiên',
-    title: 'Voucher chào bạn mới',
-    desc: 'Giảm trực tiếp khi đặt món kiểm định đầu tiên trên App.',
-  },
-  {
-    id: 'freeship',
-    tag: 'Tiết kiệm phí giao',
-    title: 'Mã Freeship 1 chạm',
-    desc: 'Lưu nhanh trong Kho Voucher, áp dụng tự động khi chốt đơn.',
-  },
-  {
-    id: 'vip-stack',
-    tag: 'Đặc quyền VIP',
-    title: 'Ưu đãi định kỳ theo hạng',
-    desc: 'Nhận mã giảm hàng tháng dành riêng cho thành viên ReHome.',
-  },
-];
+export const CONSIGN_EARNING_PRESETS = [250000, 500000, 1000000, 2000000];
 
 export const CITY_COORDS_PRESETS = [
   { id: 'hcm', label: 'TP. Hồ Chí Minh', lat: 10.7769, lng: 106.7009 },
@@ -171,111 +111,26 @@ export const CITY_COORDS_PRESETS = [
   { id: 'dn', label: 'Đà Nẵng', lat: 16.0544, lng: 108.2022 },
 ];
 
-export const TRUST_PILLARS = [
-  {
-    id: 'ai-tryon',
-    icon: 'sparkles',
-    title: '1. Thử Đồ AI & Live Try-On',
-    description:
-      'Ướm thử trực tiếp qua camera realtime hoặc để AI tự phối nguyên set chuẩn dáng Nữ/Nam trước khi chốt đơn.',
-    modalTab: 'about',
-  },
-  {
-    id: 'warehouse-verify',
-    icon: 'shield',
-    title: '2. Kiểm Định 6 Bước Tại Kho',
-    description:
-      'Chuyên viên kiểm tra chất vải, đường may, vệ sinh kho, xếp hạng 4 cấp độ mới và dán tem SKU chống tráo.',
-    modalTab: 'inspection',
-  },
-  {
-    id: 'transparent-wallet',
-    icon: 'lock',
-    title: '3. Ký Gửi 90% & Ví Minh Bạch',
-    description:
-      'Người bán nhận tới 90% giá bán khi giao dịch thành công. Người mua được đổi trả 3 ngày và bảo vệ thanh toán.',
-    modalTab: 'consignment',
-  },
-];
-
 export const HOW_IT_WORKS_STEPS = [
   {
-    step: '1',
-    title: 'Mang Đồ Tới Kho Gần Nhất',
-    description: 'Đem đồ tới điểm kho gợi ý, không cần tự chụp.',
+    step: '01',
+    title: 'Mang đồ tới kho gần nhất',
+    description: 'Đem trang phục tới điểm kho ReHome gợi ý, không cần tự chụp ảnh hay đăng bài.',
   },
   {
-    step: '2',
-    title: 'Kiểm Định & Gắn Slot AI',
-    description: 'Kiểm tra 6 bước, định giá công khai và chụp ảnh chuẩn.',
+    step: '02',
+    title: 'Kiểm định & gắn slot AI',
+    description: 'Chuyên viên kiểm tra 6 bước, thống nhất giá tại quầy và dán tem SKU chuẩn sàn.',
   },
   {
-    step: '3',
-    title: 'Thử Đồ AI & Chốt Đơn',
-    description: 'Thử qua camera hoặc AI phối bộ trước khi thanh toán.',
+    step: '03',
+    title: 'Thử đồ AI & chốt đơn',
+    description: 'Người mua thử qua Live Try-On hoặc AI phối bộ trước khi thanh toán an toàn.',
   },
   {
-    step: '4',
-    title: 'Nhận 90% Hoặc Quyên Góp',
-    description: 'Nhận 90% về Ví hoặc chuyển thiện nguyện 1 chạm.',
-  },
-];
-
-export const COMPARISON_ROWS = [
-  {
-    criterion: 'Thử đồ trước khi mua',
-    rehome: { type: 'positive', text: 'Live Try-On Camera & AI phối bộ' },
-    facebook: { type: 'negative', text: 'Không thể thử trước' },
-    classifieds: { type: 'warning', text: 'Chỉ xem ảnh tĩnh 2D' },
-  },
-  {
-    criterion: 'Kiểm định chất lượng',
-    rehome: { type: 'positive', text: 'Kiểm định 6 bước & dán tem SKU' },
-    facebook: { type: 'negative', text: 'Tự kiểm tra rủi ro lỗi ẩn' },
-    classifieds: { type: 'negative', text: 'Không kiểm định thực tế' },
-  },
-  {
-    criterion: 'Quy trình bán & ký gửi',
-    rehome: { type: 'positive', text: 'Kho lo A–Z, nhận 90% về Ví' },
-    facebook: { type: 'negative', text: 'Tự chụp, trả giá mất thời gian' },
-    classifieds: { type: 'warning', text: 'Tự đăng bán & tự giao hàng' },
-  },
-  {
-    criterion: 'Xử lý đồ tồn & cộng đồng',
-    rehome: { type: 'positive', text: 'Chuyển thiện nguyện 1 chạm' },
-    facebook: { type: 'negative', text: 'Bỏ xó hoặc vứt bỏ lãng phí' },
-    classifieds: { type: 'warning', text: 'Tự tìm đầu mối quyên góp' },
-  },
-];
-
-export const FOOTER_TRUST_ITEMS = [
-  {
-    id: 'verify',
-    icon: 'shield',
-    tone: 'emerald',
-    title: '100% Kiểm Định Kho',
-    subtitle: '6 tiêu chí & phân hạng 4 cấp độ mới',
-  },
-  {
-    id: 'ai',
-    icon: 'sparkles',
-    tone: 'gold',
-    title: '2 Chế Độ Thử Đồ AI',
-    subtitle: 'Live Try-On Camera & AI tự phối set',
-  },
-  {
-    id: 'consign',
-    icon: 'bag',
-    tone: 'teal',
-    title: 'Ký Gửi Nhận 90%',
-    subtitle: 'Kho chụp ảnh, bán hộ & chuyển Ví',
-  },
-  {
-    id: 'charity',
-    icon: 'heart',
-    tone: 'amber',
-    title: 'Thiện Nguyện Minh Bạch',
-    subtitle: '100% tổ chức đối tác đã xác minh',
+    step: '04',
+    title: 'Nhận 90% hoặc quyên góp',
+    description: 'Nhận 90% giá bán về Ví ReHome hoặc chuyển thiện nguyện 1 chạm khi hết chu kỳ.',
   },
 ];
 
@@ -315,7 +170,7 @@ export const INSTALL_STEPS = [
   {
     step: '01',
     title: 'Tải tệp APK từ Google Drive',
-    description: 'Mở link Google Drive trên Android và tải tệp .apk bản mới nhất.',
+    description: 'Mở liên kết Google Drive chính thức trên Android và tải tệp .apk bản mới nhất.',
   },
   {
     step: '02',
