@@ -1,56 +1,9 @@
 import React, { useState } from 'react';
 import { formatCurrencyVND } from '../../../utils/formatters.js';
-import charityVisualUrl from '../assets/charity-community.svg';
 import { APK_DOWNLOAD_URL, CURIOSITY_CARDS } from '../constants/landingConstants.js';
 import { isBrokenSeedAssetUrl } from '../services/landingApi.js';
-import {
-  AndroidIcon,
-  ArrowRightIcon,
-  ShieldCheckIcon,
-  ShoppingBagIcon,
-} from './LandingIcons.jsx';
-
-function CardSticker({ visual }) {
-  if (visual === 'shield') {
-    return (
-      <div className="w-24 h-24 rounded-[28px] bg-gradient-to-br from-[#062B19] to-[#006B2C] text-white border-[4px] border-white shadow-[0_12px_28px_-8px_rgba(13,36,25,0.18)] flex flex-col items-center justify-center gap-1 -rotate-3 group-hover:rotate-0 group-hover:scale-105 transition-transform duration-300">
-        <ShieldCheckIcon className="w-9 h-9 text-[#34D399]" />
-        <span className="text-[9px] font-extrabold uppercase tracking-wider text-white/90">
-          6 bước
-        </span>
-      </div>
-    );
-  }
-
-  if (visual === 'bag') {
-    return (
-      <div className="w-24 h-24 rounded-[28px] bg-gradient-to-br from-[#FEA619] to-[#F59E0B] text-[#0D2419] border-[4px] border-white shadow-[0_12px_28px_-8px_rgba(13,36,25,0.18)] flex flex-col items-center justify-center gap-1 rotate-3 group-hover:rotate-0 group-hover:scale-105 transition-transform duration-300">
-        <ShoppingBagIcon className="w-9 h-9" />
-        <span className="text-[10px] font-black uppercase tracking-tight">90%</span>
-      </div>
-    );
-  }
-
-  if (visual === 'install') {
-    return (
-      <div className="w-24 h-24 rounded-[28px] bg-gradient-to-br from-[#006B2C] to-[#10B981] text-white border-[4px] border-white shadow-[0_12px_28px_-8px_rgba(13,36,25,0.18)] flex flex-col items-center justify-center gap-1 -rotate-2 group-hover:rotate-0 group-hover:scale-105 transition-transform duration-300">
-        <AndroidIcon className="w-9 h-9" />
-        <span className="text-[9px] font-extrabold uppercase tracking-wider">APK · 30s</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="w-24 h-24 rounded-[28px] overflow-hidden bg-[#F7F3EA] border-[4px] border-white shadow-[0_12px_28px_-8px_rgba(13,36,25,0.18)] rotate-2 group-hover:rotate-0 group-hover:scale-105 transition-transform duration-300">
-      <img
-        src={charityVisualUrl}
-        alt="Thiện nguyện và bảo mật ReHome"
-        loading="lazy"
-        className="w-full h-full object-cover"
-      />
-    </div>
-  );
-}
+import { ArrowRightIcon, ShoppingBagIcon } from './LandingIcons.jsx';
+import { CardSticker } from './LandingStickers.jsx';
 
 function ProductThumb({ src, alt }) {
   const [failed, setFailed] = useState(false);
@@ -156,24 +109,31 @@ export default function CuriosityShowcaseSection({
           </div>
         )}
 
-        {/* Khối B: 4 thẻ Squircle mở thẳng tab chi tiết trong ReHomeInfoModal */}
+        {/* Khối B: 4 thẻ Squircle với sticker die-cut mở tab chi tiết trong ReHomeInfoModal */}
         <div id="explore" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 scroll-mt-24">
           {CURIOSITY_CARDS.map((card) => (
             <button
               key={card.id}
               type="button"
               onClick={() => onOpenInfoModal?.(card.modalTab)}
-              className="curiosity-card landing-squircle-card group text-left p-7 sm:p-8 min-h-[268px] flex flex-col justify-start gap-6"
+              className="curiosity-card landing-squircle-card group relative text-left p-6 sm:p-7 min-h-[256px] flex flex-col justify-start gap-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#006B2C] focus-visible:ring-offset-2"
             >
-              <div className="h-28 w-full shrink-0 flex items-center justify-center">
+              <span
+                aria-hidden="true"
+                className="absolute top-5 right-5 w-8 h-8 rounded-full bg-[#0D2419]/[0.04] group-hover:bg-[#006B2C] text-[#0D2419]/45 group-hover:text-white flex items-center justify-center transition-all duration-200"
+              >
+                <ArrowRightIcon className="w-3.5 h-3.5 -rotate-45 group-hover:rotate-0 transition-transform duration-200" />
+              </span>
+
+              <div className="h-[112px] w-full shrink-0 flex items-center justify-center pt-1">
                 <CardSticker visual={card.visual} />
               </div>
 
-              <div>
-                <h3 className="text-[17px] sm:text-[18px] font-bold text-[#0D2419] leading-snug">
+              <div className="space-y-1.5">
+                <h3 className="landing-text-balance text-[16px] xl:text-[17px] font-bold tracking-[-0.015em] text-[#0D2419] leading-snug">
                   {card.title}
                 </h3>
-                <p className="text-[14px] font-medium text-[#0D2419]/70 leading-relaxed mt-1.5">
+                <p className="landing-text-balance text-[13.5px] font-medium text-[#0D2419]/65 leading-[1.55]">
                   {card.desc}
                 </p>
               </div>
