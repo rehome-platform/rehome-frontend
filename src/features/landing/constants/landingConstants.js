@@ -1,5 +1,5 @@
 /**
- * Hằng số & Nội dung thuyết phục cho Trang Tiếp thị / Trang đích ReHome
+ * Hằng số & Nội dung cho Trang Tiếp thị / Trang đích ReHome
  */
 
 export const APK_DOWNLOAD_URL =
@@ -14,20 +14,45 @@ export const APP_METADATA = {
   distributionLabel: 'Google Drive chính thức',
 };
 
-export const NAV_LINKS = [
-  { href: '#ai-studio', label: 'AI Thử đồ' },
-  { href: '#marketplace', label: 'Sản phẩm' },
-  { href: '#warehouses', label: 'Ký gửi' },
-  { href: '#community', label: 'Thiện nguyện' },
-  { href: '#about', label: 'Về ReHome' },
-  { href: '#install-guide', label: 'Tải APK' },
+export const LANDING_NAV_ITEMS = [
+  { id: 'drops', href: '#drops', label: 'Đồ mới về' },
+  { id: 'experience', href: '#experience', label: 'Thử đồ AI' },
+  { id: 'consignment', href: '#consignment', label: 'Ký gửi 90%' },
+  { id: 'network', href: '#network', label: 'Kho & Cộng đồng' },
+  { id: 'download', href: '#download', label: 'Cài APK' },
 ];
 
-export const TRYON_SLOT_LABELS = {
-  TOP: 'Áo • Thử đồ AI',
-  BOTTOM: 'Quần/Váy • Thử đồ AI',
-  DRESS: 'Đầm • Thử đồ AI',
+export const HERO_COPY = {
+  eyebrow: 'Thời trang tuần hoàn · Kiểm định tại kho',
+  headlineLead: 'Mặc thử qua AI.',
+  headlineAccent: 'Ký gửi minh bạch, nhận 90%.',
+  subtitle:
+    'Nền tảng thời trang đã qua sử dụng được kiểm định 6 bước tại kho vật lý — thử trực tiếp lên dáng qua camera trước khi mua, hoặc ký gửi trọn gói để nhận 90% giá bán.',
 };
+
+export const HERO_STORY_SLIDES = [
+  {
+    id: 'tryon',
+    label: 'Live Try-On',
+    badge: 'LIVE TRY-ON',
+    metric: '96% hợp dáng',
+    caption: 'Ướm thử trực tiếp qua camera realtime',
+  },
+  {
+    id: 'verified',
+    label: 'Đồ kiểm định',
+    badge: 'SKU VERIFIED',
+    metric: 'Như mới 99%',
+    caption: 'Kiểm định 6 bước tại kho',
+  },
+  {
+    id: 'payout',
+    label: 'Nhận 90%',
+    badge: 'VÍ REHOME',
+    metric: '+450.000 đ',
+    caption: 'Tiền ký gửi 90% vừa về ví',
+  },
+];
 
 export const AI_OUTFIT_COMBOS = [
   {
@@ -78,28 +103,7 @@ export const INSPECTION_CHECKLIST = [
   'Dán tem SKU riêng & lập biên nhận điện tử',
 ];
 
-export const CONSIGN_EARNING_PRESETS = [250000, 500000, 1000000];
-
-export const BUYER_VOUCHER_PERKS = [
-  {
-    id: 'welcome',
-    tag: 'Đơn đầu tiên',
-    title: 'Voucher chào bạn mới',
-    desc: 'Giảm trực tiếp vào giỏ hàng ngay khi đặt món kiểm định đầu tiên trên ứng dụng.',
-  },
-  {
-    id: 'freeship',
-    tag: 'Tiết kiệm phí giao',
-    title: 'Mã Freeship & giảm theo đơn',
-    desc: 'Lưu nhanh 1 chạm trong Kho Voucher, áp dụng tự động khi thanh toán đơn hàng.',
-  },
-  {
-    id: 'vip-stack',
-    tag: 'Săn deal định kỳ',
-    title: 'Ưu đãi sự kiện & hạng VIP',
-    desc: 'Cập nhật mã giảm theo mùa và quyền lợi voucher riêng dành cho thành viên thân thiết.',
-  },
-];
+export const CONSIGN_EARNING_PRESETS = [250000, 500000, 1000000, 2000000];
 
 export const CITY_COORDS_PRESETS = [
   { id: 'hcm', label: 'TP. Hồ Chí Minh', lat: 10.7769, lng: 106.7009 },
@@ -107,28 +111,41 @@ export const CITY_COORDS_PRESETS = [
   { id: 'dn', label: 'Đà Nẵng', lat: 16.0544, lng: 108.2022 },
 ];
 
-export const ABOUT_PILLARS = [
+export const HOW_IT_WORKS_STEPS = [
   {
-    id: 'ai',
-    badge: 'Công nghệ dẫn lối',
-    title: 'Xóa rào cản “sợ không hợp dáng”',
-    description:
-      'Bộ đôi Live Try-On qua camera và AI phối đồ thông minh giúp bạn nhìn thấy trang phục trên chính mình trước khi rút ví — mua đồ tuần hoàn tự tin như đồ mới.',
+    step: '01',
+    title: 'Mang đồ tới kho gần nhất',
+    description: 'Đem trang phục tới điểm kho ReHome gợi ý, không cần tự chụp ảnh hay đăng bài.',
   },
   {
-    id: 'trust',
-    badge: 'Kiểm định tận tâm',
-    title: 'Người bán nhàn tênh — Người mua an tâm',
-    description:
-      'Thay vì tự chụp ảnh, trả giá mệt mỏi hay lo hàng kém chất lượng, ReHome lo trọn khâu nhận đồ, kiểm định 6 tiêu chí, chụp hình, gắn AI và chuyển tiền về Ví.',
+    step: '02',
+    title: 'Kiểm định & gắn slot AI',
+    description: 'Chuyên viên kiểm tra 6 bước, thống nhất giá tại quầy và dán tem SKU chuẩn sàn.',
   },
   {
-    id: 'impact',
-    badge: 'Tuần hoàn nhân ái',
-    title: 'Quần áo cũ chạm đúng tay người cần',
-    description:
-      'Mỗi chiến dịch thiện nguyện đều đến từ tổ chức đã xác minh pháp lý, cho phép gửi đồ trực tiếp hoặc chuyển đổi món ký gửi cuối kỳ chỉ bằng một chạm.',
+    step: '03',
+    title: 'Thử đồ AI & chốt đơn',
+    description: 'Người mua thử qua Live Try-On hoặc AI phối bộ trước khi thanh toán an toàn.',
   },
+  {
+    step: '04',
+    title: 'Nhận 90% hoặc quyên góp',
+    description: 'Nhận 90% giá bán về Ví ReHome hoặc chuyển thiện nguyện 1 chạm khi hết chu kỳ.',
+  },
+];
+
+export const FOOTER_CONTACT = {
+  hotline: '1900 6868 (8:00 - 21:00)',
+  email: 'support@rehome.vn',
+  address: 'Hệ thống điểm kho tại TP.HCM · Hà Nội · Đà Nẵng',
+};
+
+export const INFO_MODAL_TABS = [
+  { id: 'about', label: 'Giới thiệu ReHome' },
+  { id: 'inspection', label: 'Kiểm định 6 bước' },
+  { id: 'consignment', label: 'Quy chế ký gửi' },
+  { id: 'install', label: 'Cài đặt APK' },
+  { id: 'policy', label: 'Chính sách & Bảo mật' },
 ];
 
 export const ECOSYSTEM_ROLES = [
@@ -149,68 +166,25 @@ export const ECOSYSTEM_ROLES = [
   },
 ];
 
-export const CORE_FEATURES = [
-  {
-    id: 'tryon',
-    badge: 'Công nghệ AI',
-    title: 'Live Try-On Realtime & AI Phối đồ',
-    description:
-      'Ướm thử trực tiếp qua camera với Live Try-On hoặc để AI tự gợi ý món ghép thành nguyên set hoàn chỉnh theo dáng Nữ / Nam.',
-    highlights: ['Live Try-On qua camera', 'AI gợi ý phối nguyên set', 'Chỉ trừ lượt khi lên hình'],
-    accent: 'accent',
-  },
-  {
-    id: 'consign',
-    badge: 'Ký gửi kiếm tiền',
-    title: 'Ký gửi kiểm định tại kho gần bạn',
-    description:
-      'App tự gợi ý điểm ký gửi gần vị trí nhất. Mang đồ tới kiểm định 6 tiêu chí, chốt giá minh bạch và nhận 90% doanh thu kỳ đầu.',
-    highlights: ['Gợi ý kho gần nhất', 'Kiểm định & dán tem SKU', 'Nhận tiền tự động vào Ví'],
-    accent: 'primary',
-  },
-  {
-    id: 'shop',
-    badge: 'Mua sắm an toàn',
-    title: 'Sàn thời trang tuần hoàn tuyển chọn',
-    description:
-      'Mỗi sản phẩm mở bán đều đã vượt qua quy trình kiểm định thực tế tại kho ReHome, thanh toán ví ReHome, MoMo hoặc VNPay an toàn.',
-    highlights: ['100% kiểm định thực tế', 'Giá niêm yết & so sánh giá gốc', 'Hoàn trả minh bạch 3 ngày'],
-    accent: 'primary',
-  },
-  {
-    id: 'charity',
-    badge: 'Lan tỏa cộng đồng',
-    title: 'Quyên góp thiện nguyện minh bạch',
-    description:
-      'Kết nối trực tiếp với các tổ chức thiện nguyện đã được thẩm định pháp lý, đóng góp đồ đúng chiến dịch hoặc chuyển tiếp cuối kỳ ký gửi.',
-    highlights: ['Tổ chức được xác minh hồ sơ', 'Theo dõi chiến dịch theo địa điểm', 'Chuyển đổi đồ chưa bán thành quà tặng'],
-    accent: 'secondary',
-  },
-];
-
 export const INSTALL_STEPS = [
   {
     step: '01',
     title: 'Tải tệp APK từ Google Drive',
-    description:
-      'Mở liên kết Google Drive bằng trình duyệt trên điện thoại Android, chọn tệp .apk phiên bản mới nhất và nhấn Tải xuống.',
+    description: 'Mở liên kết Google Drive chính thức trên Android và tải tệp .apk bản mới nhất.',
   },
   {
     step: '02',
     title: 'Mở tệp vừa tải về',
-    description:
-      'Chạm vào thông báo tải xong hoặc mở ứng dụng Tệp / Quản lý tệp (Files) → mục Tải xuống (Downloads) và chọn tệp ReHome APK.',
+    description: 'Chạm thông báo tải xong hoặc mở mục Tải xuống (Downloads) trong Files.',
   },
   {
     step: '03',
     title: 'Cấp quyền cài đặt nguồn ngoài',
-    description:
-      'Nếu Android hỏi xác nhận bảo mật, chọn Cài đặt (Settings) → bật "Cho phép từ nguồn này" (Allow from this source) cho trình duyệt hoặc Files.',
+    description: 'Bật "Cho phép từ nguồn này" trong Cài đặt khi Android hỏi xác nhận.',
   },
   {
     step: '04',
     title: 'Nhấn Cài đặt & trải nghiệm',
-    description:
-      'Chọn Cài đặt (Install), chờ hệ thống hoàn tất trong vài giây rồi mở ứng dụng ReHome để đăng nhập bằng Email hoặc Google.',
+    description: 'Chọn Install, mở ReHome và đăng nhập nhanh bằng Email hoặc Google.',
   },
 ];
