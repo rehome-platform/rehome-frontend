@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { it, expect, vi, describe, beforeEach } from 'vitest';
 import { Phase2Provider } from '../../src/features/moderator/hooks/warehouseHooks.jsx';
 import PackingOrdersPage, { PackingDetail } from '../../src/features/moderator/pages/PackingOrdersPage.jsx';
-import { resetPackingSessionStore } from '../../src/features/moderator/services/packingMockApi.js';
+import { packingMockApi, resetPackingSessionStore } from '../../src/features/moderator/services/packingMockApi.js';
 
 vi.mock('../../src/features/moderator/config/warehouseContract.js', async (importOriginal) => {
   const actual = await importOriginal();
@@ -31,6 +31,9 @@ async function scanSku(code) {
 
 describe('L-04 Moderator Packing Wireframe Test Suite (DG-01 to DG-04)', () => {
   it('DG-01: Renders 8-column packing queue table with search and action buttons', async () => {
+    await packingMockApi.claimQueue('queue-pk-01', 'MOD-07-003');
+    await packingMockApi.claimQueue('queue-pk-02', 'MOD-07-003');
+
     render(
       <MemoryRouter initialEntries={['/moderator/packing']}>
         <Phase2Provider>
@@ -44,16 +47,22 @@ describe('L-04 Moderator Packing Wireframe Test Suite (DG-01 to DG-04)', () => {
     expect(screen.getByText('Người mua')).toBeInTheDocument();
     expect(screen.getByText('Số món')).toBeInTheDocument();
     expect(screen.getByText('Thời gian đặt')).toBeInTheDocument();
-    expect(screen.getByText('Chờ')).toBeInTheDocument();
+    expect(screen.getByText('Đã chờ')).toBeInTheDocument();
     expect(screen.getByText('Trạng thái')).toBeInTheDocument();
     expect(screen.getByText('Thao tác')).toBeInTheDocument();
 
-    // Kiểm tra render các đơn từ wireframe DG-01-HangDoi
+    // Kiểm tra render các đơn đã nhận bởi moderator từ wireframe DG-01-HangDoi
     await screen.findByText('DH-00239');
     expect(screen.getByText('Vũ Thanh H')).toBeInTheDocument();
 
     expect(screen.getByText('DH-00244')).toBeInTheDocument();
     expect(screen.getByText('Ngô Hải F')).toBeInTheDocument();
+    expect(screen.getAllByText('Bạn đang giữ')).toHaveLength(2);
+
+    // Đơn Chưa ai nhận không hiển thị trong Đóng gói đơn hàng (chỉ nằm bên Hàng đợi công việc)
+    expect(screen.queryByText('DH-00251')).not.toBeInTheDocument();
+    expect(screen.queryByText('Trần Minh K')).not.toBeInTheDocument();
+    expect(screen.queryByText('Chưa ai nhận')).not.toBeInTheDocument();
   });
 
   it('DG-02: Renders picking sheet and buyer note', async () => {
