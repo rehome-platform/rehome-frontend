@@ -70,10 +70,9 @@ export default function StockInForm({ receipt, form, onSuccess }) {
   });
   const [name, setName] = useState(receipt?.productName || form?.productName || form?.name || '');
   const [size, setSize] = useState(receipt?.size || form?.size || '');
-  const lockedCategoryId = receipt?.categoryId || form?.categoryId || '';
+  const initialCategoryId = receipt?.categoryId || form?.categoryId || '';
   const initialBrandId = receipt?.brandId || form?.brandId || '';
-  const isCategoryLocked = Boolean(lockedCategoryId);
-  const [categoryId, setCategory] = useState(lockedCategoryId);
+  const [categoryId, setCategory] = useState(initialCategoryId);
   const [brandId, setBrand] = useState(initialBrandId);
 
   const initialColor = (receipt?.color || form?.color || '').trim();
@@ -91,7 +90,7 @@ export default function StockInForm({ receipt, form, onSuccess }) {
   const [uncertain, setUncertain] = useState(false);
   const onPhotos = useCallback((urls, pending) => { setPhotos(urls); setPhotosPending(pending); }, []);
   const categories = (catalog.data?.categories || []).filter(
-    (item) => !item.hidden || (isCategoryLocked && item.id === lockedCategoryId)
+    (item) => !item.hidden || (Boolean(initialCategoryId) && item.id === initialCategoryId)
   );
   const brands = [...(catalog.data?.brands || []), ...(addedBrand ? [addedBrand] : [])]
     .filter((item, i, all) => !item.hidden && all.findIndex(other => other.id === item.id) === i);
@@ -143,7 +142,7 @@ export default function StockInForm({ receipt, form, onSuccess }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Tên sản phẩm" required value={name} onChange={e => setName(e.target.value)} error={errors.name} />
             <Field label="Size" value={size} onChange={e => setSize(e.target.value)} error={errors.size} />
-            <Field label="Danh mục" error={errors.categoryId}><select required disabled={isCategoryLocked} value={categoryId} onChange={e => setCategory(e.target.value)}>
+            <Field label="Danh mục" error={errors.categoryId}><select required value={categoryId} onChange={e => setCategory(e.target.value)}>
               <option value="">Chọn danh mục</option>{categories.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select></Field>
             <Field label="Thương hiệu" error={errors.brandId}><select required value={brandId} onChange={e => setBrand(e.target.value)}>
