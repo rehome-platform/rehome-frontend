@@ -240,6 +240,50 @@ describe('Organization Verification Data Mapping & Design Tokens', () => {
     expect(screen.queryByText(/Hồ sơ thiếu ảnh CCCD/i)).not.toBeInTheDocument();
   });
 
+  it('VerificationChecklist disables non-applicable tax/enterprise steps while keeping optional authority check interactive', () => {
+    const emptyChecklist = {
+      taxChecked: false,
+      businessChecked: false,
+      docsValid: false,
+      cccdMatched: false,
+      phoneConfirmed: false,
+      authorityChecked: false,
+      reputationChecked: false,
+    };
+
+    const { rerender } = render(
+      <VerificationChecklist
+        checklist={emptyChecklist}
+        setChecklist={vi.fn()}
+        isEnterprise={false}
+        selectedOrg={{ taxCode: 'không có' }}
+      />
+    );
+
+    const noTaxCheckboxes = screen.getAllByRole('checkbox');
+    expect(noTaxCheckboxes).toHaveLength(7);
+    expect(noTaxCheckboxes[0]).toBeDisabled();
+    expect(noTaxCheckboxes[1]).toBeDisabled();
+    expect(noTaxCheckboxes[5]).not.toBeDisabled();
+    expect(screen.getAllByText('không bắt buộc')).toHaveLength(3);
+    expect(screen.getByText('Tổ chức không có mã số thuế — hồ sơ này không bắt buộc')).toBeInTheDocument();
+
+    rerender(
+      <VerificationChecklist
+        checklist={emptyChecklist}
+        setChecklist={vi.fn()}
+        isEnterprise={false}
+        selectedOrg={{ taxCode: '0102030405' }}
+      />
+    );
+
+    const withTaxCheckboxes = screen.getAllByRole('checkbox');
+    expect(withTaxCheckboxes[0]).not.toBeDisabled();
+    expect(withTaxCheckboxes[1]).toBeDisabled();
+    expect(screen.getAllByText('không bắt buộc')).toHaveLength(2);
+    expect(screen.getByText('tracuunnt.gdt.gov.vn · bắt buộc vì tổ chức có MST')).toBeInTheDocument();
+  });
+
   it('calls approveOrg with refId instead of queueItemId', async () => {
     vi.spyOn(orgVerificationService, 'getQueue').mockResolvedValue({
       data: [{ id: 'queue-uuid-e607', refId: 'org-uuid-b291', status: 'PENDING' }],

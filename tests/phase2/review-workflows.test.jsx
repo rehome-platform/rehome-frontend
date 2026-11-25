@@ -163,13 +163,34 @@ describe('organization verification regression', () => {
     expect(orgVerificationService.getLegalChanges).toHaveBeenCalledTimes(3);
   });
 
+  it('allows approval for organizations without tax code while skipping optional and disabled checks', async () => {
+    const { result } = renderHook(useOrgVerification);
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => { await result.current.handleOpenDetail({ ...org, id: 'org-no-tax', taxCode: 'không có' }); });
+    expect(result.current.hasTax).toBe(false);
+    expect(result.current.mandatoryItemsLeft).toBe(4);
+    act(() => result.current.setChecklist({
+      taxChecked: false,
+      businessChecked: false,
+      docsValid: true,
+      cccdMatched: true,
+      phoneConfirmed: true,
+      authorityChecked: false,
+      reputationChecked: true,
+    }));
+    expect(result.current.mandatoryItemsLeft).toBe(0);
+    expect(result.current.isChecklistComplete).toBe(true);
+    await act(async () => { await result.current.handleApproveOrg(); });
+    expect(orgVerificationService.approveOrg).toHaveBeenCalledWith('org-no-tax', expect.any(String));
+  });
+
   it('keeps checklist inputs connected to the controller state', () => {
     function Checklist() {
       const [checklist, setChecklist] = React.useState({
         taxChecked: false, businessChecked: false, docsValid: false, cccdMatched: false,
         phoneConfirmed: false, authorityChecked: false, reputationChecked: false,
       });
-      return <VerificationChecklist checklist={checklist} setChecklist={setChecklist} isEnterprise selectedOrg={{}} />;
+      return <VerificationChecklist checklist={checklist} setChecklist={setChecklist} isEnterprise selectedOrg={{ taxCode: '0102030405' }} />;
     }
     render(<Checklist />);
     const input = screen.getAllByRole('checkbox')[0];
