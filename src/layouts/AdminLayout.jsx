@@ -4,6 +4,10 @@ import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import AdminSidebar from '../features/admin/components/AdminSidebar.jsx';
 import AdminHeader from '../features/admin/components/AdminHeader.jsx';
+import {
+  AdminCacheProvider,
+  notifyAdminCacheInvalidate,
+} from '../features/admin/hooks/useAdminQuery.jsx';
 import '../features/moderator/styles/apiColors.css';
 
 if (typeof gsap?.registerPlugin === 'function' && typeof useGSAP === 'function') {
@@ -49,6 +53,7 @@ export default function AdminLayout({ children, title }) {
   });
 
   const handleLogAction = (logEntry) => {
+    notifyAdminCacheInvalidate(['admin:audit-logs:', 'admin:dashboard:overview:']);
     setDynamicLogs((prev) => {
       const updated = [logEntry, ...prev];
       try {
@@ -147,38 +152,40 @@ export default function AdminLayout({ children, title }) {
   );
 
   return (
-    <div
-      ref={containerRef}
-      className="moderator-api-colors min-h-screen flex bg-background text-text font-sans antialiased"
-    >
-      {/* Sidebar đồng bộ thiết kế Moderator */}
-      <AdminSidebar
-        isMobileOpen={isMobileSidebarOpen}
-        onCloseMobile={() => setIsMobileSidebarOpen(false)}
-        isCollapsed={isSidebarCollapsed}
-        onToggleCollapse={toggleSidebar}
-        sidebarRef={sidebarRef}
-        toggleIconRef={toggleIconRef}
-      />
-
-      {/* Main Container Wrapper */}
+    <AdminCacheProvider>
       <div
-        ref={mainWrapperRef}
-        className={`${isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72'} flex-1 flex flex-col min-w-0`}
+        ref={containerRef}
+        className="moderator-api-colors min-h-screen flex bg-background text-text font-sans antialiased"
       >
-        {/* Header thống nhất cho Admin */}
-        <AdminHeader
-          activeTitle={title}
-          onOpenMobile={() => setIsMobileSidebarOpen(true)}
+        {/* Sidebar đồng bộ thiết kế Moderator */}
+        <AdminSidebar
+          isMobileOpen={isMobileSidebarOpen}
+          onCloseMobile={() => setIsMobileSidebarOpen(false)}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={toggleSidebar}
+          sidebarRef={sidebarRef}
+          toggleIconRef={toggleIconRef}
         />
 
-        {/* Dynamic Main Body Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
-          <div className="w-full max-w-7xl mx-auto space-y-6 animate-fadeIn">
-            {children || <Outlet context={{ dynamicLogs, onLogAction: handleLogAction }} />}
-          </div>
-        </main>
+        {/* Main Container Wrapper */}
+        <div
+          ref={mainWrapperRef}
+          className={`${isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72'} flex-1 flex flex-col min-w-0`}
+        >
+          {/* Header thống nhất cho Admin */}
+          <AdminHeader
+            activeTitle={title}
+            onOpenMobile={() => setIsMobileSidebarOpen(true)}
+          />
+
+          {/* Dynamic Main Body Content */}
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+            <div className="w-full max-w-7xl mx-auto space-y-6 animate-fadeIn">
+              {children || <Outlet context={{ dynamicLogs, onLogAction: handleLogAction }} />}
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
+    </AdminCacheProvider>
   );
 }
