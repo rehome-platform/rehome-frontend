@@ -57,6 +57,7 @@ export default function WarehouseInboxPage() {
   const [pendingImages, setPendingImages] = useState([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [sending, setSending] = useState(false);
+  const [revealedMessageIds, setRevealedMessageIds] = useState({});
 
   const [loading, setLoading] = useState(() => !Array.isArray(initialConvs));
   const [error, setError] = useState(null);
@@ -72,7 +73,12 @@ export default function WarehouseInboxPage() {
     if (selectedConv?.id) {
       cache?.write(INBOX_SELECTED_KEY, selectedConv.id);
     }
+    setRevealedMessageIds({});
   }, [cache, selectedConv?.id]);
+
+  const toggleRevealMessage = (msgKey) => {
+    setRevealedMessageIds((prev) => ({ ...prev, [msgKey]: !prev[msgKey] }));
+  };
 
   // Tải danh sách hội thoại
   const fetchConversations = async ({ force = false } = {}) => {
@@ -431,8 +437,8 @@ export default function WarehouseInboxPage() {
           });
         }
 
-        // Cập nhật xem trước tin nhắn trong danh sách hội thoại
-        const previewText = text || (imagesToSend.length ? '[Hình ảnh]' : '—');
+        // Cập nhật xem trước tin nhắn trong danh sách hội thoại (ưu tiên bản đã che từ BE)
+        const previewText = msgItem.content || (imagesToSend.length ? '[Hình ảnh]' : '—');
         setConversations((prev) => {
           const nextConvs = (prev || []).map((c) => {
             if (String(c.id) === String(targetConvId)) {
@@ -686,7 +692,12 @@ export default function WarehouseInboxPage() {
                       (user?.id && m?.senderId && String(m.senderId) === String(user.id)) ||
                       (selectedConv?.counterpart?.id && m?.senderId && String(m.senderId) !== String(selectedConv.counterpart.id));
 
-                    const msgText = m?.content || m?.text || '';
+                    const msgKey = String(m?.id ?? idx);
+                    const rawContent = m?.content || m?.text || '';
+                    const hasMaskedOriginal =
+                      Boolean(m?.originalContent) && m.originalContent !== rawContent;
+                    const isRevealed = hasMaskedOriginal && Boolean(revealedMessageIds[msgKey]);
+                    const msgText = isRevealed ? m.originalContent : rawContent;
                     const msgImages = Array.isArray(m?.imageUrls) ? m.imageUrls.filter(Boolean) : [];
                     const parsedMsgDate = m?.createdAt ? new Date(m.createdAt) : null;
                     const msgTime =
@@ -707,7 +718,7 @@ export default function WarehouseInboxPage() {
 
                     return (
                       <div
-                        key={m?.id || idx}
+                        key={msgKey}
                         className={`flex flex-col ${isMod ? 'items-end' : 'items-start'}`}
                       >
                         <div
@@ -738,6 +749,27 @@ export default function WarehouseInboxPage() {
                             </div>
                           )}
                         </div>
+                        {hasMaskedOriginal && (
+                          <button
+                            type="button"
+                            onClick={() => toggleRevealMessage(msgKey)}
+                            className="mt-1 px-1 inline-flex items-center gap-1 text-[10px] text-textSecondary hover:text-primary transition-colors"
+                          >
+                            <span aria-hidden="true" className="material-symbols-outlined text-[13px] leading-none">
+                              {isRevealed ? 'visibility_off' : 'visibility'}
+                            </span>
+                            <span>
+                              {isRevealed ? (
+                                'Ẩn lại'
+                              ) : (
+                                <>
+                                  Đã che từ ngữ không phù hợp ·{' '}
+                                  <span className="font-semibold underline text-primary">Xem</span>
+                                </>
+                              )}
+                            </span>
+                          </button>
+                        )}
                         <div className="text-[9px] text-textSecondary mt-1 px-1">
                           {isMod ? `${senderTitle} · ${msgTime}` : msgTime}
                         </div>

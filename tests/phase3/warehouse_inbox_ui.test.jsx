@@ -469,4 +469,69 @@ describe('WarehouseInboxPage Crash Resistance & Design Tokens', () => {
     // msg-50 should be deduplicated (rendered only once)
     expect(screen.getAllByText('Tin nhắn số 50')).toHaveLength(1);
   });
+
+  it('renders masked sensitive words by default with Xem/Ẩn lại toggle and uses masked content in preview', async () => {
+    vi.mocked(warehouseInboxService.getConversations).mockResolvedValueOnce({
+      data: [
+        {
+          id: 'conv-mask',
+          memberName: 'Nguyễn Minh E',
+          status: 'UNANSWERED',
+          lastMessage: 'Tin cũ',
+          counterpart: { id: 'member-mask', displayName: 'Nguyễn Minh E' },
+        },
+      ],
+      total: 1,
+    });
+    vi.mocked(warehouseInboxService.getMessages).mockResolvedValueOnce({
+      data: [
+        {
+          id: 'msg-masked-1',
+          senderId: 'member-mask',
+          content: '** ***, SĐT ***',
+          originalContent: 'Đồ ngu, SĐT ***',
+          imageUrls: [],
+          createdAt: '2026-11-25T10:00:00Z',
+          isMine: false,
+        },
+      ],
+      total: 1,
+    });
+    vi.mocked(warehouseInboxService.sendMessage).mockResolvedValueOnce({
+      id: 'msg-masked-2',
+      senderId: 'mod-1',
+      content: 'Vui lòng không dùng ** ***',
+      originalContent: 'Vui lòng không dùng đồ ngu',
+      imageUrls: [],
+      createdAt: '2026-11-25T10:01:00Z',
+      isMine: true,
+    });
+
+    render(
+      <MemoryRouter>
+        <WarehouseInboxPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('** ***, SĐT ***')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Đồ ngu, SĐT ***')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Đã che từ ngữ không phù hợp/i }));
+    expect(screen.getByText('Đồ ngu, SĐT ***')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ẩn lại' }));
+    expect(screen.getByText('** ***, SĐT ***')).toBeInTheDocument();
+    expect(screen.queryByText('Đồ ngu, SĐT ***')).not.toBeInTheDocument();
+
+    const input = screen.getByPlaceholderText('Nhập câu trả lời…');
+    fireEvent.change(input, { target: { value: 'Vui lòng không dùng đồ ngu' } });
+    fireEvent.submit(input.closest('form'));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Vui lòng không dùng ** ***').length).toBeGreaterThanOrEqual(2);
+    });
+    expect(screen.queryByText('Vui lòng không dùng đồ ngu')).not.toBeInTheDocument();
+  });
 });
