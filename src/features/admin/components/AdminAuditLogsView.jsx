@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import adminApi from '../services/adminApi.js';
 import AdminPeriodFilter from './AdminPeriodFilter.jsx';
 import useAdminPeriod from '../hooks/useAdminPeriod.js';
@@ -11,6 +11,13 @@ import {
   formatAuditStatusLabel,
 } from '../../../constants/auditLogLabels.js';
 import { getRoleLabel, getRoleBadgeStyle } from '../../../constants/roleLabels.js';
+import {
+  SHORT_STALE_TIME_MS,
+  STATIC_STALE_TIME_MS,
+  useAdminCache,
+} from '../hooks/useAdminQuery.jsx';
+
+const FILTER_OPTIONS_CACHE_KEY = 'admin:audit-logs:filter-options';
 
 // Mốc lọc nhanh theo phút gần nhất (độ chính xác phút, nằm ngoài phạm vi ngày của AdminPeriodFilter)
 const QUICK_MINUTES_OPTIONS = [
@@ -28,10 +35,14 @@ const QUICK_MINUTES_OPTIONS = [
  * - Chuyển bộ lọc "Người thực hiện" thành "Đối tượng" (targetType)
  * - Đồng bộ giao diện 100% với phong cách Moderator
  */
+function splitTimeLabel(formatted) {
+  if (!formatted) return { dateStr: '—', timeStr: '' };
+  const parts = String(formatted).split(/,\s*|\s+/).filter(Boolean);
+  return { dateStr: parts[0] || formatted, timeStr: parts.slice(1).join(' ') };
+}
+
 export default function AdminAuditLogsView({ dynamicLogs = [] }) {
-  const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [availableActionTypes, setAvailableActionTypes] = useState([]);
+  const cache = useAdminCache();
 
   // Bộ lọc
   const [actorSearch, setActorSearch] = useState(''); // Filter Người thực hiện (tên/email, khớp ở backend)
@@ -53,14 +64,42 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
   const [quickMinutes, setQuickMinutes] = useState(null);
   const hasDateRange = Boolean(activeRange.apiFrom || activeRange.apiTo);
 
+  const auditCacheKey = `admin:audit-logs:list:${debouncedActorSearch || ''}:${selectedActorRole}:${selectedTargetType}:${selectedActionType}:${activeRange.apiFrom || ''}:${activeRange.apiTo || ''}:${fromTime}:${toTime}:${quickMinutes || ''}`;
+  const initialBackendLogs = cache?.read(auditCacheKey)?.data || null;
+
+  const [backendLogs, setBackendLogs] = useState(() => initialBackendLogs ?? []);
+  const [loading, setLoading] = useState(() => !initialBackendLogs);
+  const [availableActionTypes, setAvailableActionTypes] = useState(
+    () => cache?.read(FILTER_OPTIONS_CACHE_KEY)?.data ?? []
+  );
+
   const [expandedLogId, setExpandedLogId] = useState(null);
+  const seqRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // Format nhãn hành động sang tiếng Việt thân thiện (dùng chung từ điển auditLogLabels)
+  const formatActionLabel = formatAuditActionLabel;
 
   // Tải danh sách filter options từ backend
   useEffect(() => {
     const loadFilterOptions = async () => {
+      const cached = cache?.read(FILTER_OPTIONS_CACHE_KEY) || null;
+      if (cached && cache.isFresh(cached, STATIC_STALE_TIME_MS)) {
+        setAvailableActionTypes(cached.data ?? []);
+        return;
+      }
       try {
         const options = await adminApi.getAuditLogFilterOptions();
+        if (!mountedRef.current) return;
         if (options && options.actionTypes) {
+          cache?.write(FILTER_OPTIONS_CACHE_KEY, options.actionTypes);
           setAvailableActionTypes(options.actionTypes);
         }
       } catch (err) {
@@ -68,21 +107,11 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
       }
     };
     loadFilterOptions();
-  }, []);
-
-  // Format nhãn hành động sang tiếng Việt thân thiện (dùng chung từ điển auditLogLabels)
-  const formatActionLabel = formatAuditActionLabel;
-
-  // Tách chuỗi thời gian đã định dạng sẵn (log phiên hiện tại) thành phần ngày / giờ để hiển thị 2 dòng gọn
-  const splitTimeLabel = (formatted) => {
-    if (!formatted) return { dateStr: '—', timeStr: '' };
-    const parts = String(formatted).split(/,\s*|\s+/).filter(Boolean);
-    return { dateStr: parts[0] || formatted, timeStr: parts.slice(1).join(' ') };
-  };
+  }, [cache]);
 
   // Ghép khoảng ngày (useAdminPeriod) với giờ:phút chọn thêm thành mốc ISO gửi API;
   // "N phút gần nhất" (quickMinutes) ghi đè hoàn toàn khoảng ngày/giờ phía trên khi đang bật.
-  const buildRequestRange = () => {
+  const buildRequestRange = useCallback(() => {
     if (quickMinutes) {
       const now = new Date();
       const from = new Date(now.getTime() - quickMinutes * 60000);
@@ -96,13 +125,32 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
     const from = toIsoLocal(activeRange.apiFrom, fromTime || '00:00', '00');
     const to = toIsoLocal(activeRange.apiTo, toTime || '23:59', '59');
     return { from, to };
-  };
+  }, [quickMinutes, activeRange.apiFrom, activeRange.apiTo, fromTime, toTime]);
 
-  // Nối Backend API lấy real data
-  const fetchAuditLogs = async () => {
-    if (dateError) return;
-    try {
+  // Nối Backend API lấy real data (chỉ lưu log backend vào cache; log phiên được ghép động via useMemo)
+  const fetchAuditLogs = useCallback(async ({ force = false } = {}) => {
+    if (dateError) {
+      setLoading(false);
+      return;
+    }
+
+    const cachedEntry = cache?.read(auditCacheKey) || null;
+    if (!force && cachedEntry && cache.isFresh(cachedEntry, SHORT_STALE_TIME_MS)) {
+      setBackendLogs(cachedEntry.data ?? []);
+      setLoading(false);
+      return;
+    }
+
+    const reqId = ++seqRef.current;
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached) {
+      setBackendLogs(cachedEntry.data);
+      setLoading(false);
+    } else {
       setLoading(true);
+    }
+
+    try {
       const params = {
         page: 0,
         size: 50,
@@ -116,6 +164,7 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
       if (to) params.to = to;
 
       const res = await adminApi.getAuditLogs(params);
+      if (!mountedRef.current || reqId !== seqRef.current) return;
       const rawList = Array.isArray(res) ? res : res?.content || [];
 
       const mapped = rawList.map((l, idx) => {
@@ -156,7 +205,7 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
           timeStr: createdAt ? createdAt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '',
           user: l.actorName || l.actorEmail || (l.actorRole ? getRoleLabel(l.actorRole) : 'Quản trị viên'),
           role: l.actorRole || 'ADMIN',
-          actionType: formatActionLabel(l.actionType),
+          actionType: formatAuditActionLabel(l.actionType),
           rawActionType: l.actionType,
           targetType: l.targetType || 'SYSTEM',
           target: l.targetId
@@ -168,72 +217,59 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
         };
       });
 
-      // Hợp nhất với các dynamic logs phát sinh trong phiên làm việc hiện tại
-      const sessionLogs = dynamicLogs.map((l, i) => {
-        const formattedTime = l.time || new Date().toLocaleString('vi-VN');
-        return {
-          id: `DYN-${i}`,
-          time: formattedTime,
-          ...splitTimeLabel(formattedTime),
-          user: l.user || 'Admin',
-          role: l.role || 'ADMIN',
-          actionType: formatActionLabel(l.action || 'Thao tác Admin'),
-          rawActionType: l.action,
-          targetType: /kho|ký gửi|kí gửi|WAREHOUSE/i.test(l.action || '')
-            ? 'WAREHOUSE'
-            : l.action?.includes('cấu hình')
-            ? 'SYSTEM_CONFIG'
-            : 'ACCOUNT',
-          target: l.action,
-          beforeState: '—',
-          afterState: '—',
-          reason: 'Thực hiện trực tiếp từ phiên quản trị hiện tại.',
-        };
-      });
-
-      const combined = [...sessionLogs, ...mapped];
-      setLogs(combined);
+      cache?.write(auditCacheKey, mapped);
+      setBackendLogs(mapped);
     } catch (err) {
+      if (!mountedRef.current || reqId !== seqRef.current) return;
       console.warn('Lỗi gọi API audit-logs:', err);
-      // Giữ lại các log động trong phiên nếu backend tạm thời lỗi
-      const sessionLogs = dynamicLogs.map((l, i) => {
-        const formattedTime = l.time || new Date().toLocaleString('vi-VN');
-        return {
-          id: `DYN-${i}`,
-          time: formattedTime,
-          ...splitTimeLabel(formattedTime),
-          user: l.user || 'Admin',
-          role: l.role || 'ADMIN',
-          actionType: formatActionLabel(l.action || 'Thao tác Admin'),
-          rawActionType: l.action,
-          targetType: 'SYSTEM',
-          target: l.action,
-          beforeState: '—',
-          afterState: '—',
-          reason: 'Thực hiện trực tiếp từ phiên quản trị hiện tại.',
-        };
-      });
-      setLogs(sessionLogs);
+      if (!hasCached || force) {
+        setBackendLogs([]);
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current && reqId === seqRef.current) {
+        setLoading(false);
+      }
     }
-  };
-
-  useEffect(() => {
-    fetchAuditLogs();
   }, [
+    cache,
+    auditCacheKey,
+    dateError,
     debouncedActorSearch,
     selectedActorRole,
     selectedTargetType,
     selectedActionType,
-    activeRange.apiFrom,
-    activeRange.apiTo,
-    fromTime,
-    toTime,
-    quickMinutes,
-    dynamicLogs.length,
-    dateError,
+    buildRequestRange,
   ]);
+
+  useEffect(() => {
+    fetchAuditLogs();
+  }, [fetchAuditLogs]);
+
+  // Hợp nhất động các log phát sinh trong phiên làm việc hiện tại với log từ backend
+  const logs = useMemo(() => {
+    const sessionLogs = dynamicLogs.map((l, i) => {
+      const formattedTime = l.time || new Date().toLocaleString('vi-VN');
+      return {
+        id: `DYN-${i}`,
+        time: formattedTime,
+        ...splitTimeLabel(formattedTime),
+        user: l.user || 'Admin',
+        role: l.role || 'ADMIN',
+        actionType: formatAuditActionLabel(l.action || 'Thao tác Admin'),
+        rawActionType: l.action,
+        targetType: /kho|ký gửi|kí gửi|WAREHOUSE/i.test(l.action || '')
+          ? 'WAREHOUSE'
+          : l.action?.includes('cấu hình')
+          ? 'SYSTEM_CONFIG'
+          : 'ACCOUNT',
+        target: l.action,
+        beforeState: '—',
+        afterState: '—',
+        reason: 'Thực hiện trực tiếp từ phiên quản trị hiện tại.',
+      };
+    });
+    return [...sessionLogs, ...backendLogs];
+  }, [dynamicLogs, backendLogs]);
 
   // Bộ lọc theo Vai trò / Đối tượng / Loại hành động (thời gian đã lọc ở phía API)
   const filteredLogs = logs.filter((log) => {
@@ -455,7 +491,7 @@ export default function AdminAuditLogsView({ dynamicLogs = [] }) {
               type="button"
               variant="outline"
               size="sm"
-              onClick={fetchAuditLogs}
+              onClick={() => fetchAuditLogs({ force: true })}
               disabled={loading}
               className="gap-1.5 whitespace-nowrap"
               title="Làm mới nhật ký"

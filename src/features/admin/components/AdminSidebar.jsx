@@ -76,6 +76,12 @@ export default function AdminSidebar({
           label: 'Quản lý từ ngữ vi phạm',
           icon: 'block',
         },
+        {
+          id: 'content-reviews',
+          path: '/admin/content-reviews',
+          label: 'Kiểm duyệt nội dung',
+          icon: 'fact_check',
+        },
       ],
     },
     {

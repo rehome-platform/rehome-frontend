@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Badge, Button, Spinner } from '../../../components/common/index.js';
 import { formatCurrencyVND, formatDateTime } from '../../../utils/formatters.js';
@@ -11,6 +11,11 @@ import {
   SUBSCRIPTION_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
 } from './membershipConstants.js';
+import {
+  DEFAULT_STALE_TIME_MS,
+  useAdminCache,
+  useAdminCacheActions,
+} from '../hooks/useAdminQuery.jsx';
 
 const BILLING_CYCLE_LABELS = {
   MONTHLY: 'Hàng tháng',
@@ -28,26 +33,72 @@ const STATUS_VARIANTS = {
 export default function MembershipSubscriptionDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const cache = useAdminCache();
+  const cacheActions = useAdminCacheActions();
 
-  const [detail, setDetail] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const detailCacheKey = id ? `admin:membership:sub-detail:${id}` : null;
+  const initialCached = cache && detailCacheKey ? cache.read(detailCacheKey)?.data : null;
+
+  const [detail, setDetail] = useState(() => initialCached ?? null);
+  const [loading, setLoading] = useState(() => Boolean(id && !initialCached));
   const [error, setError] = useState('');
   const [isGrantOpen, setIsGrantOpen] = useState(false);
   const [isCancelOpen, setIsCancelOpen] = useState(false);
 
-  const fetchDetail = useCallback(async () => {
+  const seqRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const fetchDetail = useCallback(async ({ force = false } = {}) => {
     if (!id) return;
-    setLoading(true);
-    setError('');
+    const cachedEntry = cache && detailCacheKey ? cache.read(detailCacheKey) : null;
+    if (!force && cachedEntry && cache.isFresh(cachedEntry, DEFAULT_STALE_TIME_MS)) {
+      setDetail(cachedEntry.data);
+      setError('');
+      setLoading(false);
+      return;
+    }
+
+    const reqId = ++seqRef.current;
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached) {
+      setDetail(cachedEntry.data);
+      setError('');
+      setLoading(false);
+    } else {
+      setLoading(true);
+      setError('');
+    }
+
     try {
       const res = await membershipAdminApi.getSubscriptionById(id);
+      if (!mountedRef.current || reqId !== seqRef.current) return;
+      if (cache && detailCacheKey) {
+        cache.write(detailCacheKey, res);
+      }
       setDetail(res);
     } catch (err) {
-      setError(err?.response?.data?.message || err?.message || 'Không thể tải chi tiết gói thành viên.');
+      if (!mountedRef.current || reqId !== seqRef.current) return;
+      const status = err?.response?.status ?? err?.status;
+      if (hasCached && [401, 403, 404].includes(status)) {
+        cache?.evict(detailCacheKey);
+        setDetail(null);
+        setError(err?.response?.data?.message || err?.message || 'Không thể tải chi tiết gói thành viên.');
+      } else if (!hasCached || force) {
+        setError(err?.response?.data?.message || err?.message || 'Không thể tải chi tiết gói thành viên.');
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current && reqId === seqRef.current) {
+        setLoading(false);
+      }
     }
-  }, [id]);
+  }, [cache, detailCacheKey, id]);
 
   useEffect(() => {
     fetchDetail();
@@ -303,14 +354,30 @@ export default function MembershipSubscriptionDetailPage() {
       <GrantMembershipModal
         isOpen={isGrantOpen}
         onClose={() => setIsGrantOpen(false)}
-        onSuccess={fetchDetail}
+        onSuccess={() => {
+          cacheActions?.invalidate([
+            'admin:membership:',
+            'admin:dashboard:membership-stats:',
+            'admin:dashboard:summary:',
+            'admin:audit-logs:',
+          ]);
+          fetchDetail({ force: true });
+        }}
         member={memberForGrant}
       />
 
       <CancelMembershipModal
         isOpen={isCancelOpen}
         onClose={() => setIsCancelOpen(false)}
-        onSuccess={fetchDetail}
+        onSuccess={() => {
+          cacheActions?.invalidate([
+            'admin:membership:',
+            'admin:dashboard:membership-stats:',
+            'admin:dashboard:summary:',
+            'admin:audit-logs:',
+          ]);
+          fetchDetail({ force: true });
+        }}
         subscription={detail}
       />
     </div>

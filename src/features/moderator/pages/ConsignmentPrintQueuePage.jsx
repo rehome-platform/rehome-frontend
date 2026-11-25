@@ -10,8 +10,12 @@ import { downloadLabelPdf } from '../services/skuLabelApi.js';
 export default function ConsignmentPrintQueuePage() {
   const [searchParams] = useSearchParams();
   const focusedSku = searchParams.get('sku');
-  const { signal } = usePhase2();
-  const resource = useResource(options => skuLabelService.list({ ...options, sku: focusedSku }), [focusedSku]);
+  const { signal, cache } = usePhase2();
+  const resource = useResource(
+    (options) => skuLabelService.list({ ...options, sku: focusedSku }),
+    [focusedSku],
+    { cacheKey: `print-queue:list:${focusedSku || ''}` },
+  );
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState([]);
   const [pendingMark, setPendingMark] = useState([]);
@@ -58,6 +62,7 @@ export default function ConsignmentPrintQueuePage() {
       }
       await skuLabelService.markPrinted(skus, { signal: controller.signal });
       if (signal.aborted || controller.signal.aborted) return;
+      cache?.invalidate(['print-queue:', 'inventory:', 'history:']);
       setPendingMark([]);
       setSelected(previous => previous.filter(sku => !skus.includes(sku)));
       setFeedback({ error: false, message: `Đã tải PDF ${skus.length} tem và cập nhật hàng đợi.` });

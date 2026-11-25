@@ -2,10 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button, Input, Modal } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import violationWordAdminApi from '../services/violationWordAdminApi.js';
-import { CATEGORY_LABELS, SEVERITY_LABELS } from './ViolationWordsPage.jsx';
+import { ACTION_LABELS, CATEGORY_LABELS, SEVERITY_LABELS } from './ViolationWordsPage.jsx';
 
-// Chỉ hỗ trợ AUTO_REJECT: chặn ngay lúc đăng, không cần luồng duyệt nội dung (AUTO_FLAG/NOTIFY_ADMIN).
-const FIXED_ACTION = 'AUTO_REJECT';
+const DEFAULT_ACTION = 'AUTO_FLAG';
 
 export default function ViolationWordModal({ isOpen, onClose, word = null, onSuccess }) {
   const toast = useToast();
@@ -14,6 +13,7 @@ export default function ViolationWordModal({ isOpen, onClose, word = null, onSuc
   const [wordText, setWordText] = useState('');
   const [category, setCategory] = useState('PROFANITY');
   const [severity, setSeverity] = useState('WARNING');
+  const [action, setAction] = useState(DEFAULT_ACTION);
   const [active, setActive] = useState(true);
   const [note, setNote] = useState('');
 
@@ -28,12 +28,14 @@ export default function ViolationWordModal({ isOpen, onClose, word = null, onSuc
       setWordText(word.word || '');
       setCategory(word.category || 'PROFANITY');
       setSeverity(word.severity || 'WARNING');
+      setAction(word.action || DEFAULT_ACTION);
       setActive(word.isActive !== undefined ? Boolean(word.isActive) : true);
       setNote(word.note || '');
     } else {
       setWordText('');
       setCategory('PROFANITY');
       setSeverity('WARNING');
+      setAction(DEFAULT_ACTION);
       setActive(true);
       setNote('');
     }
@@ -67,7 +69,7 @@ export default function ViolationWordModal({ isOpen, onClose, word = null, onSuc
       word: wordText.trim(),
       category,
       severity,
-      action: FIXED_ACTION,
+      action,
       isActive: active,
       note: note.trim(),
     };
@@ -157,11 +159,30 @@ export default function ViolationWordModal({ isOpen, onClose, word = null, onSuc
           </div>
         </div>
 
-        <div className="p-3 rounded-xl bg-[#F6F9F4] border border-[#006B2C]/20 text-xs text-[#1F2A37] flex items-center gap-2">
-          <span className="material-symbols-outlined text-base text-[#006B2C]">block</span>
+        <div>
+          <label htmlFor="vw-action-select" className="block text-xs font-semibold text-[#1F2A37] mb-1.5">
+            Hành động hệ thống <span className="text-[#D92D20]">*</span>
+          </label>
+          <select
+            id="vw-action-select"
+            value={action}
+            onChange={(e) => setAction(e.target.value)}
+            className="w-full px-3.5 py-2.5 text-sm bg-white border border-[#DDE5D9] rounded-xl focus:outline-none focus:ring-2 focus:border-[#006B2C] focus:ring-[#006B2C]/15 text-[#1F2A37]"
+          >
+            {Object.entries(ACTION_LABELS).map(([val, label]) => (
+              <option key={val} value={val}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="p-3 rounded-xl bg-[#F6F9F4] border border-[#006B2C]/20 text-xs text-[#1F2A37] flex items-start gap-2">
+          <span className="material-symbols-outlined text-base text-[#006B2C] mt-0.5">shield</span>
           <span>
-            Hành động hệ thống: <strong>Tự động từ chối</strong> — nội dung chứa từ khóa này sẽ bị chặn
-            ngay lúc gửi, không được đăng/hiển thị.
+            <strong>Bài viết / Bình luận</strong> chứa từ khóa vi phạm sẽ bị{' '}
+            <strong>ẩn và chuyển sang chờ Admin xử lý</strong>; trong <strong>Chat</strong> hệ thống
+            tự động che <strong>***</strong> để giữ luồng trò chuyện mượt mà.
           </span>
         </div>
 

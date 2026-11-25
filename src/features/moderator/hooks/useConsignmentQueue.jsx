@@ -34,6 +34,10 @@ export function useConsignmentQueue() {
   const resource = useResource(
     (options) => queueService.list({ type: queryType, claim: claimParam, page }, options),
     [queryType, claimParam, page],
+    {
+      cacheKey: `queue:list:${queryType || 'ALL'}:${claimParam}:${page}`,
+      invalidatePrefixes: ['queue:', 'consignments:', 'inventory:', 'returns:', 'verifications:', 'violation-reports:'],
+    },
   );
 
   // Tự động bắt lỗi mutation (409 xung đột nhận việc, 403 không có quyền nhả việc)
@@ -87,6 +91,7 @@ export function useConsignmentQueue() {
         const isWithdrawal = item.type === 'WITHDRAWAL' || item.type === 'ITEM_WITHDRAWAL';
         const isViolationReport = item.type === 'VIOLATION_REPORT';
         const isReturn = item.type === 'RETURN';
+        const isPacking = item.type === 'PACKING';
         const msg = release
           ? `Đã nhả việc "${item.typeLabel}" (${item.formId || item.orderId || item.queueId}) về hàng đợi thành công.`
           : isWithdrawal
@@ -95,6 +100,8 @@ export function useConsignmentQueue() {
               : `Đã nhận việc "${item.typeLabel}" (${item.formId || item.orderId || item.refId || item.queueId}) thành công! Bạn có thể mở Quầy tiếp nhận để bàn giao cho khách khi khách đến quầy.`
             : isReturn
               ? `Đã nhận việc "${item.typeLabel}" (${item.returnId || item.refId || item.queueId}) thành công! Bạn có thể mở trang "Trả hàng" để duyệt và xử lý yêu cầu.`
+            : isPacking
+              ? `Đã nhận việc "${item.typeLabel}" (${item.orderNo || item.orderId || item.refId || item.queueId}) thành công! Bạn có thể chuyển sang trang "Đóng gói đơn hàng" để đóng gói và tạo vận đơn.`
             : isViolationReport
               ? `Đã nhận việc "${item.typeLabel}" (${item.formId || item.orderId || item.refId || item.queueId}) thành công! Bạn có thể chuyển sang trang "Báo cáo vi phạm" để kiểm duyệt và xử lý.`
               : `Đã nhận việc "${item.typeLabel}" (${item.formId || item.orderId || item.queueId}) thành công! Bạn có thể chuyển sang tab "Kiểm định & nhập kho" để mở duyệt.`;

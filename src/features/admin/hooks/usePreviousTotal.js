@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { DASHBOARD_STALE_TIME_MS, useAdminCache } from './useAdminQuery.jsx';
 
 /**
  * Tải tổng của kỳ liền trước để so sánh tăng trưởng % (xem ComparisonBadge và getPreviousPeriodRange).
@@ -10,8 +11,12 @@ import { useEffect, useRef, useState } from 'react';
  *
  * Bỏ qua kết quả đến muộn của một khoảng đã cũ, giống cách các hook tải dữ liệu khác trong trang xử lý.
  */
-export default function usePreviousTotal(fetchTotal, range, extraDeps = []) {
-  const [previousTotal, setPreviousTotal] = useState(null);
+export default function usePreviousTotal(fetchTotal, range, extraDeps = [], cacheKey = null) {
+  const cache = useAdminCache();
+  const [previousTotal, setPreviousTotal] = useState(() => {
+    const cached = cache && cacheKey ? cache.read(cacheKey) : null;
+    return cached ? cached.data : null;
+  });
   const [loadingPrevious, setLoadingPrevious] = useState(false);
   const reqSeqRef = useRef(0);
 
@@ -21,23 +26,44 @@ export default function usePreviousTotal(fetchTotal, range, extraDeps = []) {
       setLoadingPrevious(false);
       return;
     }
+
+    const cached = cache && cacheKey ? cache.read(cacheKey) : null;
+    if (cached && cache.isFresh(cached, DASHBOARD_STALE_TIME_MS)) {
+      setPreviousTotal(cached.data);
+      setLoadingPrevious(false);
+      return;
+    }
+
+    if (cached) {
+      setPreviousTotal(cached.data);
+      setLoadingPrevious(false);
+    } else {
+      setLoadingPrevious(true);
+    }
+
     const reqId = ++reqSeqRef.current;
-    setLoadingPrevious(true);
     fetchTotal(range)
       .then((value) => {
-        if (reqId === reqSeqRef.current) setPreviousTotal(Number(value) || 0);
+        if (reqId !== reqSeqRef.current) return;
+        const num = Number(value) || 0;
+        if (cache && cacheKey) {
+          cache.write(cacheKey, num);
+        }
+        setPreviousTotal(num);
       })
       .catch((err) => {
         if (reqId === reqSeqRef.current) {
           console.error('Lỗi tải số liệu kỳ trước để so sánh:', err);
-          setPreviousTotal(null);
+          if (!cached) {
+            setPreviousTotal(null);
+          }
         }
       })
       .finally(() => {
         if (reqId === reqSeqRef.current) setLoadingPrevious(false);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [range?.apiFrom, range?.apiTo, ...extraDeps]);
+  }, [cache, cacheKey, range?.apiFrom, range?.apiTo, ...extraDeps]);
 
   return { previousTotal, loadingPrevious };
 }

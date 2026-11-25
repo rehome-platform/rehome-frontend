@@ -1,21 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button, Badge, Modal, Input, Spinner, TableActionButton } from '../../../components/common/index.js';
 import adminApi from '../services/adminApi.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import OpeningHoursPicker from './OpeningHoursPicker.jsx';
+import {
+  DASHBOARD_STALE_TIME_MS,
+  STATIC_STALE_TIME_MS,
+  useAdminCache,
+  useAdminCacheActions,
+} from '../hooks/useAdminQuery.jsx';
 
 /**
  * View Quản lý Điểm Kí Gửi ReHome (Admin)
  * Chế độ Strict Real Data: 100% dữ liệu thực từ Backend API GET /api/admin/warehouses
  * Thực thi nghiêm ngặt: Hết hàng kí gửi (inventoryCount === 0) mới được ẩn kho (F-155)
  */
+const PROVINCES_CACHE_KEY = 'admin:geo:provinces';
+
 export default function AdminWarehousesView({ onLogAction }) {
   const toast = useToast();
-  const [warehouses, setWarehouses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [apiError, setApiError] = useState(null);
+  const cache = useAdminCache();
+  const cacheActions = useAdminCacheActions();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+
+  const warehouseCacheKey = `admin:warehouses:list:${statusFilter}`;
+  const initialCachedWarehouses = cache?.read(warehouseCacheKey)?.data || null;
+
+  const [warehouses, setWarehouses] = useState(() => initialCachedWarehouses ?? []);
+  const [loading, setLoading] = useState(() => !initialCachedWarehouses);
+  const [apiError, setApiError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingWarehouse, setEditingWarehouse] = useState(null);
   const [stockBlockModal, setStockBlockModal] = useState(null);
@@ -23,11 +37,21 @@ export default function AdminWarehousesView({ onLogAction }) {
   const [togglingId, setTogglingId] = useState(null);
 
   // Danh mục hành chính 2 cấp GHN
-  const [provinces, setProvinces] = useState([]);
+  const [provinces, setProvinces] = useState(() => cache?.read(PROVINCES_CACHE_KEY)?.data ?? []);
   const [wards, setWards] = useState([]);
   const [loadingProvinces, setLoadingProvinces] = useState(false);
   const [loadingWards, setLoadingWards] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
+
+  const reqSeqRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // Form State chuẩn hóa theo hợp đồng Backend
   const [formData, setFormData] = useState({
@@ -44,17 +68,23 @@ export default function AdminWarehousesView({ onLogAction }) {
 
   // Tải danh mục Tỉnh / Thành phố từ Backend GHN
   const loadProvinces = async () => {
+    const cached = cache?.read(PROVINCES_CACHE_KEY) || null;
+    if (cached && cache.isFresh(cached, STATIC_STALE_TIME_MS)) {
+      setProvinces(cached.data || []);
+      return cached.data || [];
+    }
     try {
       setLoadingProvinces(true);
       const res = await adminApi.getProvinces();
       const list = Array.isArray(res) ? res : res?.result || [];
-      setProvinces(list);
+      cache?.write(PROVINCES_CACHE_KEY, list);
+      if (mountedRef.current) setProvinces(list);
       return list;
     } catch (err) {
       console.error('Lỗi tải danh mục tỉnh thành:', err);
       return [];
     } finally {
-      setLoadingProvinces(false);
+      if (mountedRef.current) setLoadingProvinces(false);
     }
   };
 
@@ -68,70 +98,94 @@ export default function AdminWarehousesView({ onLogAction }) {
       setLoadingWards(true);
       const res = await adminApi.getWards(provinceId);
       const list = Array.isArray(res) ? res : res?.result || [];
-      setWards(list);
+      if (mountedRef.current) setWards(list);
       return list;
     } catch (err) {
       console.error('Lỗi tải danh mục phường xã:', err);
-      setWards([]);
+      if (mountedRef.current) setWards([]);
       return [];
     } finally {
-      setLoadingWards(false);
+      if (mountedRef.current) setLoadingWards(false);
     }
   };
 
   // Tải danh sách điểm kí gửi từ Backend API
-  const fetchWarehouses = async (nextStatus = statusFilter) => {
+  const fetchWarehouses = useCallback(async (nextStatus = statusFilter, { force = false } = {}) => {
     const activeStatus = typeof nextStatus === 'string' ? nextStatus : statusFilter;
-    try {
+    const key = `admin:warehouses:list:${activeStatus}`;
+    const cachedEntry = cache?.read(key) || null;
+
+    if (!force && cachedEntry && cache.isFresh(cachedEntry, DASHBOARD_STALE_TIME_MS)) {
+      setWarehouses(cachedEntry.data ?? []);
+      setApiError(null);
+      setLoading(false);
+      return;
+    }
+
+    const reqId = ++reqSeqRef.current;
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached) {
+      setWarehouses(cachedEntry.data);
+      setApiError(null);
+      setLoading(false);
+    } else {
       setLoading(true);
       setApiError(null);
-      const res = await adminApi.getWarehouses(activeStatus === 'ALL' ? undefined : activeStatus);
-      const rawList = Array.isArray(res) ? res : res?.content || res?.result || [];
-      if (rawList && rawList.length > 0) {
-        const mapped = rawList.map((w, idx) => {
-          const lat = w.latitude;
-          const lng = w.longitude;
-          const coordsStr =
-            lat != null && lng != null
-              ? `${lat}, ${lng}`
-              : w.coordinates || 'Chưa cập nhật';
+    }
 
-          return {
-            id: w.warehouseId || w.id || `WH-0${idx + 1}`,
-            code: w.code,
-            name: w.name,
-            address: w.address,
-            latitude: lat,
-            longitude: lng,
-            coordinates: coordsStr,
-            openingHours: w.openingHours || '08:00 - 20:00 (Thứ 2 - Chủ nhật)',
-            wardName: w.wardName,
-            provinceName: w.provinceName,
-            provinceId: w.provinceId,
-            wardCode: w.wardCode,
-            isNewAddress: w.isNewAddress,
-            moderatorCount: w.moderatorCount ?? 0,
-            inventoryCount: w.inventoryCount ?? 0,
-            activeOrders: w.activeOrders ?? 0,
-            status: w.status || 'ACTIVE',
-          };
-        });
-        setWarehouses(mapped);
-      } else {
+    try {
+      const res = await adminApi.getWarehouses(activeStatus === 'ALL' ? undefined : activeStatus);
+      if (!mountedRef.current || reqId !== reqSeqRef.current) return;
+      const rawList = Array.isArray(res) ? res : res?.content || res?.result || [];
+      const mapped = rawList.length > 0
+        ? rawList.map((w, idx) => {
+            const lat = w.latitude;
+            const lng = w.longitude;
+            const coordsStr =
+              lat != null && lng != null
+                ? `${lat}, ${lng}`
+                : w.coordinates || 'Chưa cập nhật';
+
+            return {
+              id: w.warehouseId || w.id || `WH-0${idx + 1}`,
+              code: w.code,
+              name: w.name,
+              address: w.address,
+              latitude: lat,
+              longitude: lng,
+              coordinates: coordsStr,
+              openingHours: w.openingHours || '08:00 - 20:00 (Thứ 2 - Chủ nhật)',
+              wardName: w.wardName,
+              provinceName: w.provinceName,
+              provinceId: w.provinceId,
+              wardCode: w.wardCode,
+              isNewAddress: w.isNewAddress,
+              moderatorCount: w.moderatorCount ?? 0,
+              inventoryCount: w.inventoryCount ?? 0,
+              activeOrders: w.activeOrders ?? 0,
+              status: w.status || 'ACTIVE',
+            };
+          })
+        : [];
+      cache?.write(key, mapped);
+      setWarehouses(mapped);
+    } catch (err) {
+      if (!mountedRef.current || reqId !== reqSeqRef.current) return;
+      console.error('Lỗi kết nối API kho:', err);
+      if (!hasCached || force) {
+        setApiError('Không thể kết nối máy chủ điểm kí gửi. Vui lòng kiểm tra lại dịch vụ backend.');
         setWarehouses([]);
       }
-    } catch (err) {
-      console.error('Lỗi kết nối API kho:', err);
-      setApiError('Không thể kết nối máy chủ điểm kí gửi. Vui lòng kiểm tra lại dịch vụ backend.');
-      setWarehouses([]);
     } finally {
-      setLoading(false);
+      if (mountedRef.current && reqId === reqSeqRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [cache, statusFilter]);
 
   useEffect(() => {
     fetchWarehouses(statusFilter);
-  }, [statusFilter]);
+  }, [fetchWarehouses, statusFilter]);
 
   const filteredWarehouses = warehouses.filter(
     (w) =>
@@ -334,7 +388,8 @@ export default function AdminWarehousesView({ onLogAction }) {
       setIsSubmitting(true);
       if (editingWarehouse) {
         await adminApi.updateWarehouse(editingWarehouse.id, payload);
-        await fetchWarehouses();
+        cacheActions?.invalidate(['admin:warehouses:', 'admin:dashboard:warehouse:', 'admin:audit-logs:', 'admin:moderators:']);
+        await fetchWarehouses(statusFilter, { force: true });
         toast.success(`Cập nhật thông tin điểm kí gửi "${formData.name}" thành công!`);
         if (onLogAction) {
           onLogAction({
@@ -347,7 +402,8 @@ export default function AdminWarehousesView({ onLogAction }) {
         setIsModalOpen(false);
       } else {
         await adminApi.createWarehouse(payload);
-        await fetchWarehouses();
+        cacheActions?.invalidate(['admin:warehouses:', 'admin:dashboard:warehouse:', 'admin:audit-logs:', 'admin:moderators:']);
+        await fetchWarehouses(statusFilter, { force: true });
         toast.success(`Tạo mới điểm kí gửi "${formData.name}" thành công!`);
         if (onLogAction) {
           onLogAction({
@@ -382,7 +438,8 @@ export default function AdminWarehousesView({ onLogAction }) {
       try {
         setTogglingId(w.id);
         await adminApi.hideWarehouse(w.id);
-        await fetchWarehouses();
+        cacheActions?.invalidate(['admin:warehouses:', 'admin:dashboard:warehouse:', 'admin:audit-logs:', 'admin:moderators:']);
+        await fetchWarehouses(statusFilter, { force: true });
         toast.success(`Đã ẩn điểm kí gửi "${w.name}".`);
         if (onLogAction) {
           onLogAction({
@@ -408,7 +465,8 @@ export default function AdminWarehousesView({ onLogAction }) {
       try {
         setTogglingId(w.id);
         await adminApi.unhideWarehouse(w.id);
-        await fetchWarehouses();
+        cacheActions?.invalidate(['admin:warehouses:', 'admin:dashboard:warehouse:', 'admin:audit-logs:', 'admin:moderators:']);
+        await fetchWarehouses(statusFilter, { force: true });
         toast.success(`Đã mở hoạt động lại điểm kí gửi "${w.name}".`);
         if (onLogAction) {
           onLogAction({
@@ -439,7 +497,7 @@ export default function AdminWarehousesView({ onLogAction }) {
             variant="outline"
             size="md"
             disabled={loading}
-            onClick={() => fetchWarehouses()}
+            onClick={() => fetchWarehouses(statusFilter, { force: true })}
             className="gap-1.5 whitespace-nowrap"
           >
             <span aria-hidden="true" className={`material-symbols-outlined text-base ${loading ? 'animate-spin' : ''}`}>
@@ -499,7 +557,7 @@ export default function AdminWarehousesView({ onLogAction }) {
           <Button
             variant="primary"
             size="sm"
-            onClick={() => fetchWarehouses()}
+            onClick={() => fetchWarehouses(statusFilter, { force: true })}
           >
             Thử kết nối lại
           </Button>

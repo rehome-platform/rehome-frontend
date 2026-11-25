@@ -89,16 +89,30 @@ function Stat({ label, value, tone, icon, to }) {
 }
 
 export default function WarehouseHomePage() {
-  const { scope, warehouse } = usePhase2();
+  const { scope, warehouse, cache } = usePhase2();
   const [feedback, setFeedback] = useState(null);
   const [claimTarget, setClaimTarget] = useState(null);
   const [detailTarget, setDetailTarget] = useState(null);
 
-  const review = useResource((o) => queueService.list({ type: 'FORM_REVIEW' }, o), []);
-  const inspection = useResource((o) => queueService.list({ type: 'INSPECTION' }, o), []);
-  const packing = useResource((o) => queueService.list({ type: 'PACKING' }, o), []);
-  const withdrawal = useResource((o) => queueService.list({ type: 'WITHDRAWAL' }, o), []);
-  const onSale = useResource((o) => inventoryService.list({ status: 'ON_SALE' }, o), []);
+  const review = useResource((o) => queueService.list({ type: 'FORM_REVIEW' }, o), [], {
+    cacheKey: 'queue:home:FORM_REVIEW',
+    invalidatePrefixes: ['queue:', 'consignments:', 'history:'],
+  });
+  const inspection = useResource((o) => queueService.list({ type: 'INSPECTION' }, o), [], {
+    cacheKey: 'queue:home:INSPECTION',
+    invalidatePrefixes: ['queue:', 'consignments:', 'history:'],
+  });
+  const packing = useResource((o) => queueService.list({ type: 'PACKING' }, o), [], {
+    cacheKey: 'queue:home:PACKING',
+    invalidatePrefixes: ['queue:', 'history:'],
+  });
+  const withdrawal = useResource((o) => queueService.list({ type: 'WITHDRAWAL' }, o), [], {
+    cacheKey: 'queue:home:WITHDRAWAL',
+    invalidatePrefixes: ['queue:', 'inventory:', 'history:'],
+  });
+  const onSale = useResource((o) => inventoryService.list({ status: 'ON_SALE' }, o), [], {
+    cacheKey: 'inventory:home:ON_SALE',
+  });
   const queues = [review, inspection, packing, withdrawal];
   const stocks = [onSale];
 
@@ -137,6 +151,7 @@ export default function WarehouseHomePage() {
     task.source.mutate((o) => queueService.claim(task.queueId, o), {
       onSuccess: () => {
         setClaimTarget(null);
+        cache?.invalidate(['queue:', 'consignments:', 'inventory:']);
         setFeedback({
           type: 'success',
           message: `Đã nhận việc "${task.kindLabel}" (${task.formId || task.orderId || task.queueId}) thành công.`,

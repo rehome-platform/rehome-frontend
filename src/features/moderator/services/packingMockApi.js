@@ -218,8 +218,10 @@ export const packingMockApi = {
   listQueue: async (params = {}) => {
     await delay();
     let result = [...queueStore];
-    if (params.claim === 'mine' && params.userId) {
-      result = result.filter((item) => item.claimedBy === params.userId);
+    if (params.mine || params.claim === 'mine') {
+      result = params.userId
+        ? result.filter((item) => item.claimedBy === params.userId)
+        : [];
     } else if (params.claim === 'unclaimed') {
       result = result.filter((item) => !item.claimedBy);
     }

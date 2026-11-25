@@ -12,6 +12,11 @@ import {
   SUBSCRIPTION_STATUS_LABELS,
 } from './membershipConstants.js';
 import TierBadge from './TierBadge.jsx';
+import {
+  DEFAULT_STALE_TIME_MS,
+  useAdminCache,
+  useAdminCacheActions,
+} from '../hooks/useAdminQuery.jsx';
 
 // Tài khoản demo/seed nội bộ, không phải thành viên thật -> ẩn khỏi danh sách hiển thị cho Admin
 const HIDDEN_MEMBER_EMAILS = ['member8@rehome.com'];
@@ -35,6 +40,8 @@ const PAGE_SIZE = 20;
 export default function MembershipSubscriptionsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const cache = useAdminCache();
+  const cacheActions = useAdminCacheActions();
 
   const tier = searchParams.get('tier') || '';
   const status = searchParams.get('status') || '';
@@ -43,21 +50,32 @@ export default function MembershipSubscriptionsPage() {
   const rawPage = Number(searchParams.get('page') || 0);
   const page = Number.isFinite(rawPage) && rawPage >= 0 ? rawPage : 0;
 
+  const subsCacheKey = `admin:membership:subs:${tier}:${status}:${q}:${expiringInDays}:${page}`;
+  const initialCached = cache?.read(subsCacheKey)?.data || null;
+
   const [searchInput, setSearchInput] = useState(q);
   const {
     debouncedQuery: debouncedQ,
     isTooShort: isSearchTooShort,
     hint: searchHint,
   } = useDebouncedSearch(searchInput);
-  const [items, setItems] = useState([]);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState(() => initialCached?.items ?? []);
+  const [totalPages, setTotalPages] = useState(() => initialCached?.totalPages ?? 0);
+  const [totalElements, setTotalElements] = useState(() => initialCached?.totalElements ?? 0);
+  const [loading, setLoading] = useState(() => !initialCached);
   const [error, setError] = useState('');
   const [isGrantOpen, setIsGrantOpen] = useState(false);
   const [cancellingSubscription, setCancellingSubscription] = useState(null);
 
   const seqRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     setSearchInput(q);
@@ -70,10 +88,32 @@ export default function MembershipSubscriptionsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedQ]);
 
-  const fetchSubscriptions = useCallback(async () => {
+  const fetchSubscriptions = useCallback(async ({ force = false } = {}) => {
+    const cachedEntry = cache?.read(subsCacheKey) || null;
+    if (!force && cachedEntry && cache.isFresh(cachedEntry, DEFAULT_STALE_TIME_MS)) {
+      const payload = cachedEntry.data;
+      setItems(payload.items ?? []);
+      setTotalPages(payload.totalPages ?? 0);
+      setTotalElements(payload.totalElements ?? 0);
+      setError('');
+      setLoading(false);
+      return;
+    }
+
     const seq = ++seqRef.current;
-    setLoading(true);
-    setError('');
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached) {
+      const payload = cachedEntry.data;
+      setItems(payload.items ?? []);
+      setTotalPages(payload.totalPages ?? 0);
+      setTotalElements(payload.totalElements ?? 0);
+      setError('');
+      setLoading(false);
+    } else {
+      setLoading(true);
+      setError('');
+    }
+
     try {
       const res = await membershipAdminApi.getSubscriptions({
         tier: tier || undefined,
@@ -83,7 +123,7 @@ export default function MembershipSubscriptionsPage() {
         page,
         size: PAGE_SIZE,
       });
-      if (seq !== seqRef.current) return;
+      if (!mountedRef.current || seq !== seqRef.current) return;
 
       const rawList = Array.isArray(res) ? res : res?.content || [];
       // Ẩn tài khoản demo/seed nội bộ khỏi danh sách hiển thị cho Admin
@@ -97,18 +137,26 @@ export default function MembershipSubscriptionsPage() {
           !HIDDEN_MEMBER_EMAILS.includes(item.memberEmail) &&
           !HIDDEN_MEMBER_CODES.includes(item.memberCode)
       );
-      setItems(list);
-      setTotalPages(res?.totalPages ?? (list.length > 0 ? 1 : 0));
-      setTotalElements(Math.max(0, (res?.totalElements ?? rawList.length) - hiddenCount));
+      const nextPayload = {
+        items: list,
+        totalPages: res?.totalPages ?? (list.length > 0 ? 1 : 0),
+        totalElements: Math.max(0, (res?.totalElements ?? rawList.length) - hiddenCount),
+      };
+      cache?.write(subsCacheKey, nextPayload);
+      setItems(nextPayload.items);
+      setTotalPages(nextPayload.totalPages);
+      setTotalElements(nextPayload.totalElements);
     } catch (err) {
-      if (seq !== seqRef.current) return;
-      setError(err?.response?.data?.message || err?.message || 'Không thể tải danh sách thành viên.');
+      if (!mountedRef.current || seq !== seqRef.current) return;
+      if (!hasCached || force) {
+        setError(err?.response?.data?.message || err?.message || 'Không thể tải danh sách thành viên.');
+      }
     } finally {
-      if (seq === seqRef.current) {
+      if (mountedRef.current && seq === seqRef.current) {
         setLoading(false);
       }
     }
-  }, [tier, status, q, expiringInDays, page]);
+  }, [cache, subsCacheKey, tier, status, q, expiringInDays, page]);
 
   useEffect(() => {
     fetchSubscriptions();
@@ -372,13 +420,29 @@ export default function MembershipSubscriptionsPage() {
       <GrantMembershipModal
         isOpen={isGrantOpen}
         onClose={() => setIsGrantOpen(false)}
-        onSuccess={fetchSubscriptions}
+        onSuccess={() => {
+          cacheActions?.invalidate([
+            'admin:membership:',
+            'admin:dashboard:membership-stats:',
+            'admin:dashboard:summary:',
+            'admin:audit-logs:',
+          ]);
+          fetchSubscriptions({ force: true });
+        }}
       />
 
       <CancelMembershipModal
         isOpen={Boolean(cancellingSubscription)}
         onClose={() => setCancellingSubscription(null)}
-        onSuccess={fetchSubscriptions}
+        onSuccess={() => {
+          cacheActions?.invalidate([
+            'admin:membership:',
+            'admin:dashboard:membership-stats:',
+            'admin:dashboard:summary:',
+            'admin:audit-logs:',
+          ]);
+          fetchSubscriptions({ force: true });
+        }}
         subscription={cancellingSubscription}
       />
     </div>

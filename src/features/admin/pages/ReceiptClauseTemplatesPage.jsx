@@ -3,6 +3,13 @@ import { Button, Input, Modal, TableActionButton } from '../../../components/com
 import { useToast } from '../../../context/ToastContext.jsx';
 import receiptClauseAdminApi from '../services/receiptClauseAdminApi.js';
 import ReceiptPreviewPanel from './ReceiptPreviewPanel.jsx';
+import {
+  STATIC_STALE_TIME_MS,
+  useAdminCache,
+  useAdminCacheActions,
+} from '../hooks/useAdminQuery.jsx';
+
+const RECEIPT_CLAUSES_CACHE_KEY = 'admin:receipt-clauses:list';
 
 const EMPTY_DRAFT = { title: '', bodyTemplate: '', active: true };
 // Mỗi placeholder được thay bằng số liệu thật của chính biên nhận đó lúc tạo — không phải số
@@ -16,9 +23,12 @@ const PLACEHOLDER_HINTS = [
 
 export default function ReceiptClauseTemplatesPage() {
   const toast = useToast();
+  const cache = useAdminCache();
+  const cacheActions = useAdminCacheActions();
+  const initialCached = cache?.read(RECEIPT_CLAUSES_CACHE_KEY)?.data || null;
 
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState(() => initialCached ?? []);
+  const [loading, setLoading] = useState(() => !initialCached);
   const [error, setError] = useState('');
 
   // editingId: null (không sửa gì) | 'new' (đang thêm) | id của điều đang sửa
@@ -32,21 +42,56 @@ export default function ReceiptClauseTemplatesPage() {
   const [deleting, setDeleting] = useState(false);
   const deletingRef = useRef(false);
 
-  const fetchClauses = useCallback(async () => {
-    setLoading(true);
-    setError('');
+  const seqRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const fetchClauses = useCallback(async ({ force = false } = {}) => {
+    const cachedEntry = cache?.read(RECEIPT_CLAUSES_CACHE_KEY) || null;
+    if (!force && cachedEntry && cache.isFresh(cachedEntry, STATIC_STALE_TIME_MS)) {
+      setItems(cachedEntry.data ?? []);
+      setError('');
+      setLoading(false);
+      return;
+    }
+
+    const reqId = ++seqRef.current;
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached) {
+      setItems(cachedEntry.data);
+      setError('');
+      setLoading(false);
+    } else {
+      setLoading(true);
+      setError('');
+    }
+
     try {
       const data = await receiptClauseAdminApi.list();
-      setItems(Array.isArray(data) ? data : []);
+      if (!mountedRef.current || reqId !== seqRef.current) return;
+      const list = Array.isArray(data) ? data : [];
+      cache?.write(RECEIPT_CLAUSES_CACHE_KEY, list);
+      setItems(list);
     } catch (err) {
-      setItems([]);
-      setError(
-        err?.response?.data?.message || err?.message || 'Không thể tải danh sách điều khoản.',
-      );
+      if (!mountedRef.current || reqId !== seqRef.current) return;
+      if (!hasCached || force) {
+        setItems([]);
+        setError(
+          err?.response?.data?.message || err?.message || 'Không thể tải danh sách điều khoản.',
+        );
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current && reqId === seqRef.current) {
+        setLoading(false);
+      }
     }
-  }, []);
+  }, [cache]);
 
   useEffect(() => {
     fetchClauses();
@@ -111,7 +156,8 @@ export default function ReceiptClauseTemplatesPage() {
         toast.success(`Đã cập nhật "${payload.title}". Biên nhận đã tạo trước đó không bị ảnh hưởng.`);
       }
       cancelEdit();
-      await fetchClauses();
+      cacheActions?.invalidate(['admin:receipt-clauses:', 'admin:audit-logs:']);
+      await fetchClauses({ force: true });
     } catch (err) {
       const msg =
         err?.response?.data?.message || err?.message || 'Không thể lưu điều khoản. Vui lòng thử lại.';
@@ -126,7 +172,8 @@ export default function ReceiptClauseTemplatesPage() {
     try {
       await receiptClauseAdminApi.toggle(clause.id);
       toast.success(`Đã ${clause.active ? 'tắt' : 'bật'} "${clause.title}".`);
-      fetchClauses();
+      cacheActions?.invalidate(['admin:receipt-clauses:', 'admin:audit-logs:']);
+      fetchClauses({ force: true });
     } catch (err) {
       toast.error(
         err?.response?.data?.message || err?.message || 'Không thể đổi trạng thái điều khoản.',
@@ -143,7 +190,8 @@ export default function ReceiptClauseTemplatesPage() {
       toast.success(`Đã xóa "${deleteTarget.title}".`);
       if (editingId === deleteTarget.id) cancelEdit();
       setDeleteTarget(null);
-      fetchClauses();
+      cacheActions?.invalidate(['admin:receipt-clauses:', 'admin:audit-logs:']);
+      fetchClauses({ force: true });
     } catch (err) {
       toast.error(err?.response?.data?.message || err?.message || 'Không thể xóa điều khoản.');
     } finally {
@@ -160,7 +208,7 @@ export default function ReceiptClauseTemplatesPage() {
           className="p-4 rounded-xl bg-[#FFF5F5] border border-[#D92D20]/30 text-sm text-[#D92D20] flex items-center justify-between gap-3"
         >
           <span>{error}</span>
-          <Button type="button" variant="secondary" size="sm" onClick={fetchClauses}>
+          <Button type="button" variant="secondary" size="sm" onClick={() => fetchClauses({ force: true })}>
             Thử lại
           </Button>
         </div>

@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import adminApi from '../services/adminApi.js';
 import AdminDonutChart from './AdminDonutChart.jsx';
 import { Spinner } from '../../../components/common/index.js';
+import { DASHBOARD_STALE_TIME_MS, useAdminCache } from '../hooks/useAdminQuery.jsx';
+
+const WAREHOUSE_OVERVIEW_CACHE_KEY = 'admin:dashboard:warehouse:summary';
 
 // Mọi trạng thái sản phẩm còn nằm trong kho (cùng định nghĩa "tồn kho" của dashboard BE), chia 2 nhóm.
 // Nhóm "Đang kinh doanh" dùng tông xanh, nhóm "Cần xử lý" dùng tông ấm để nhìn biểu đồ là thấy ngay hàng nào đang kẹt.
@@ -95,38 +98,76 @@ function TermColumns({ terms }) {
  * tác vụ quá hạn, điểm đánh giá dịch vụ kho. Toàn bộ là số liệu hiện tại (không theo bộ lọc thời gian).
  */
 export default function AdminWarehouseOverview() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [dashboard, setDashboard] = useState(null);
-  const [warehouseCount, setWarehouseCount] = useState(0);
-  const reqSeqRef = useRef(0);
+  const cache = useAdminCache();
+  const initialCached = cache?.read(WAREHOUSE_OVERVIEW_CACHE_KEY)?.data || null;
 
-  const load = useCallback(async () => {
+  const [loading, setLoading] = useState(() => !initialCached);
+  const [error, setError] = useState(null);
+  const [dashboard, setDashboard] = useState(() => initialCached?.dashboard ?? null);
+  const [warehouseCount, setWarehouseCount] = useState(() => initialCached?.warehouseCount ?? 0);
+  const reqSeqRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const load = useCallback(async ({ force = false } = {}) => {
+    const cachedEntry = cache?.read(WAREHOUSE_OVERVIEW_CACHE_KEY) || null;
+    if (!force && cachedEntry && cache.isFresh(cachedEntry, DASHBOARD_STALE_TIME_MS)) {
+      setDashboard(cachedEntry.data?.dashboard ?? null);
+      setWarehouseCount(cachedEntry.data?.warehouseCount ?? 0);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     const reqId = ++reqSeqRef.current;
-    try {
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached) {
+      setDashboard(cachedEntry.data.dashboard ?? null);
+      setWarehouseCount(cachedEntry.data.warehouseCount ?? 0);
+      setError(null);
+      setLoading(false);
+    } else {
       setLoading(true);
       setError(null);
+    }
+
+    try {
       const [dashRes, whRes] = await Promise.allSettled([adminApi.getDashboard(), adminApi.getWarehouses()]);
-      if (reqId !== reqSeqRef.current) return;
+      if (!mountedRef.current || reqId !== reqSeqRef.current) return;
       if (dashRes.status !== 'fulfilled' || !dashRes.value) {
         throw dashRes.reason || new Error('Dashboard rỗng');
       }
-      setDashboard(dashRes.value);
+      const nextDashboard = dashRes.value;
+      let nextWarehouseCount = hasCached ? cachedEntry.data?.warehouseCount ?? 0 : 0;
       if (whRes.status === 'fulfilled') {
         const list = Array.isArray(whRes.value) ? whRes.value : whRes.value?.content || [];
-        setWarehouseCount(list.length);
+        nextWarehouseCount = list.length;
       }
+      setDashboard(nextDashboard);
+      setWarehouseCount(nextWarehouseCount);
+      cache?.write(WAREHOUSE_OVERVIEW_CACHE_KEY, {
+        dashboard: nextDashboard,
+        warehouseCount: nextWarehouseCount,
+      });
     } catch (err) {
-      if (reqId === reqSeqRef.current) {
+      if (mountedRef.current && reqId === reqSeqRef.current) {
         console.error('Lỗi tải dữ liệu kho hàng:', err);
-        setError('Không thể tải số liệu hàng ký gửi.');
+        if (!hasCached || force) {
+          setError('Không thể tải số liệu hàng ký gửi.');
+        }
       }
     } finally {
-      if (reqId === reqSeqRef.current) {
+      if (mountedRef.current && reqId === reqSeqRef.current) {
         setLoading(false);
       }
     }
-  }, []);
+  }, [cache]);
 
   useEffect(() => {
     load();
@@ -221,7 +262,7 @@ export default function AdminWarehouseOverview() {
         <p className="text-xs font-semibold text-[#B91C1C]">{error}</p>
         <button
           type="button"
-          onClick={load}
+          onClick={() => load({ force: true })}
           className="px-3 py-1.5 rounded-lg bg-[#006B2C] text-white text-xs font-semibold"
         >
           Thử lại

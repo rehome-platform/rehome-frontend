@@ -37,7 +37,7 @@ export function WarehouseHistoryTabs({ type, children }) {
   const history = search.get('view') === 'history';
   const page = Math.max(0, Number(search.get('historyPage')) || 0);
   const resource = useResource(options => warehouseHistoryService.list(type, { page, size: 20 }, options),
-    [type, page], { enabled: history });
+    [type, page], { enabled: history, cacheKey: `history:${type}:${page}` });
   const rows = resource.data?.content ?? listItems(resource.data);
   const update = (key, value) => setSearch(previous => {
     const next = new URLSearchParams(previous);

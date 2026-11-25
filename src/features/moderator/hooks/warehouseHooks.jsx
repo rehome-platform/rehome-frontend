@@ -10,6 +10,26 @@ import React, {
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { isFixtureMode } from '../config/warehouseContract.js';
 import { normalizeError, warehouseOf } from '../models/warehouseModel.js';
+import {
+  DEFAULT_STALE_TIME_MS,
+  SHORT_STALE_TIME_MS,
+  STATIC_STALE_TIME_MS,
+  createSessionQueryCache,
+} from '../../../utils/sessionQueryCache.js';
+
+export { DEFAULT_STALE_TIME_MS, SHORT_STALE_TIME_MS, STATIC_STALE_TIME_MS };
+
+export function notifyWarehouseChanged(prefixes = null) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('warehouse:changed', { detail: { prefixes } }));
+}
+
+function matchesPrefix(key, prefixes) {
+  if (!key) return false;
+  if (prefixes == null || prefixes === '*') return true;
+  const list = (Array.isArray(prefixes) ? prefixes : [prefixes]).filter(Boolean);
+  return list.some((prefix) => key === prefix || key.startsWith(prefix));
+}
 
 const Session = createContext(null);
 export function Phase2Provider({ children }) {
@@ -25,7 +45,7 @@ export function Phase2Provider({ children }) {
 }
 function ScopedSession({ user, warehouse, children }) {
   const controller = useMemo(() => new AbortController(), []);
-  const cache = useMemo(() => new Map(), []);
+  const cache = useMemo(() => createSessionQueryCache(), []);
   const mounted = useRef(false);
   const [identity, setIdentity] = useState(null);
   useEffect(() => {
@@ -35,8 +55,12 @@ function ScopedSession({ user, warehouse, children }) {
       cache.clear();
       setIdentity(null);
     };
+    const onWarehouseChanged = (event) => {
+      cache.invalidate(event?.detail?.prefixes ?? null);
+    };
     window.addEventListener('auth:expired', abort);
     window.addEventListener('auth:logout', abort);
+    window.addEventListener('warehouse:changed', onWarehouseChanged);
     return () => {
       mounted.current = false;
       queueMicrotask(() => {
@@ -44,8 +68,9 @@ function ScopedSession({ user, warehouse, children }) {
       });
       window.removeEventListener('auth:expired', abort);
       window.removeEventListener('auth:logout', abort);
+      window.removeEventListener('warehouse:changed', onWarehouseChanged);
     };
-  }, [controller]);
+  }, [controller, cache]);
   const scope = useMemo(
     () => ({
       userId: user?.accountId || user?.id,
@@ -66,23 +91,42 @@ function ScopedSession({ user, warehouse, children }) {
         name: warehouse.name || (isFixtureMode ? 'Điểm kí gửi A · dữ liệu thử' : 'Chưa có thông tin điểm kí gửi'),
       },
     }),
-    [scope, user, identity, controller, warehouse.id, warehouse.name],
+    [scope, user, identity, controller, cache, warehouse.id, warehouse.name],
   );
   return <Session.Provider value={value}>{children}</Session.Provider>;
 }
 export function usePhase2() {
   return useContext(Session);
 }
+export function useModeratorCache() {
+  return useContext(Session)?.cache || null;
+}
 
 export function useResource(
   loader,
   dependencies = [],
-  { enabled = true, poll = false, done = () => false, refreshInterval = 0, cacheKey = null } = {},
+  {
+    enabled = true,
+    poll = false,
+    done = () => false,
+    refreshInterval = 0,
+    cacheKey = null,
+    staleTime = DEFAULT_STALE_TIME_MS,
+    invalidatePrefixes = null,
+  } = {},
 ) {
   const session = usePhase2();
+  const sessionCache = session?.cache || null;
+  const sessionScope = session?.scope;
+  const sessionSignal = session?.signal;
   const [state, setState] = useState(() => {
-    const cached = cacheKey && session?.cache?.has(cacheKey) ? session.cache.get(cacheKey) : null;
-    return { data: cached, loading: false, error: null };
+    const cached = enabled && cacheKey ? sessionCache?.read(cacheKey) : null;
+    return {
+      data: cached ? cached.data : null,
+      loading: false,
+      isFetching: false,
+      error: null,
+    };
   });
   const [version, setVersion] = useState(0);
   const forceReloadRef = useRef(false);
@@ -111,54 +155,84 @@ export function useResource(
     (updater) => {
       setState((previous) => {
         const nextData = typeof updater === 'function' ? updater(previous.data) : updater;
-        if (cacheKey && session?.cache) {
-          session.cache.set(cacheKey, nextData);
+        if (cacheKey && sessionCache) {
+          sessionCache.write(cacheKey, nextData);
         }
         return { ...previous, data: nextData };
       });
     },
-    [cacheKey, session],
+    [cacheKey, sessionCache],
   );
   const refresh = useCallback(() => {
     forceReloadRef.current = true;
-    if (cacheKey && session?.cache) {
-      session.cache.delete(cacheKey);
+    if (cacheKey && sessionCache) {
+      sessionCache.invalidate(cacheKey);
     }
-    setState({ data: null, loading: true, error: null });
+    setState({ data: null, loading: true, isFetching: true, error: null });
     setVersion((value) => value + 1);
-  }, [cacheKey, session]);
+  }, [cacheKey, sessionCache]);
   const silentRefresh = useCallback(async () => {
-    if (!enabled || session.signal.aborted) return;
-    if (cacheKey && session?.cache) {
-      session.cache.delete(cacheKey);
+    if (!enabled || sessionSignal?.aborted) return;
+    if (cacheKey && sessionCache) {
+      sessionCache.invalidate(cacheKey);
     }
     const current = epoch.current;
+    setState((previous) => ({ ...previous, isFetching: true }));
     try {
-      const data = await loaderRef.current({ signal: session.signal, scope: session.scope });
-      if (session.signal.aborted || current !== epoch.current) return;
-      if (cacheKey && session?.cache) {
-        session.cache.set(cacheKey, data);
+      const data = await loaderRef.current({ signal: sessionSignal, scope: sessionScope });
+      if (sessionSignal?.aborted || current !== epoch.current) return;
+      if (cacheKey && sessionCache) {
+        sessionCache.write(cacheKey, data);
       }
-      setState({ data, loading: false, error: null });
+      setState({ data, loading: false, isFetching: false, error: null });
     } catch {
       // Silent background sync keeps existing UI data intact on transient failure
+      if (!sessionSignal?.aborted && current === epoch.current) {
+        setState((previous) => ({ ...previous, isFetching: false }));
+      }
     }
-  }, [cacheKey, enabled, session]);
+  }, [cacheKey, enabled, sessionCache, sessionScope, sessionSignal]);
   useEffect(() => {
-    window.addEventListener('warehouse:changed', refresh);
-    return () => window.removeEventListener('warehouse:changed', refresh);
-  }, [refresh]);
+    const onWarehouseChanged = (event) => {
+      const prefixes = event?.detail?.prefixes;
+      if (prefixes != null && prefixes !== '*') {
+        if (!cacheKey || !matchesPrefix(cacheKey, prefixes)) {
+          return;
+        }
+      }
+      refresh();
+    };
+    window.addEventListener('warehouse:changed', onWarehouseChanged);
+    return () => window.removeEventListener('warehouse:changed', onWarehouseChanged);
+  }, [cacheKey, refresh]);
   useEffect(() => {
-    if (!enabled || session.signal.aborted) {
-      setState({ data: null, loading: false, error: null });
+    if (!enabled || sessionSignal?.aborted) {
+      setState({ data: null, loading: false, isFetching: false, error: null });
       return;
     }
     const isForced = forceReloadRef.current;
     forceReloadRef.current = false;
-    if (!isForced && !poll && !refreshInterval && cacheKey && session?.cache?.has(cacheKey)) {
-      setState({ data: session.cache.get(cacheKey), loading: false, error: null });
-      return;
+    const cachedEntry = cacheKey && sessionCache ? sessionCache.read(cacheKey) : null;
+    const clearOnSessionAbort = () => {
+      setState({ data: null, loading: false, isFetching: false, error: null });
+    };
+
+    // Case A: Fresh cache hit — render immediately without hitting the network.
+    if (
+      !isForced &&
+      !poll &&
+      !refreshInterval &&
+      cachedEntry &&
+      sessionCache.isFresh(cachedEntry, staleTime)
+    ) {
+      setState({ data: cachedEntry.data, loading: false, isFetching: false, error: null });
+      sessionSignal?.addEventListener('abort', clearOnSessionAbort);
+      return () => {
+        sessionSignal?.removeEventListener('abort', clearOnSessionAbort);
+      };
     }
+
+    const isBackground = !isForced && cachedEntry != null;
     const controller = new AbortController();
     let timer,
       failures = 0,
@@ -167,15 +241,21 @@ export function useResource(
       inFlight = false;
     const current = ++epoch.current;
     const started = Date.now();
-    const abort = () => {
+    const onSessionAbort = () => {
       controller.abort();
       clearTimeout(timer);
-      setState({ data: null, loading: false, error: null });
+      clearOnSessionAbort();
     };
-    session.signal.addEventListener('abort', abort);
+    sessionSignal?.addEventListener('abort', onSessionAbort);
     setPollExpired(false);
-    setState({ data: null, loading: true, error: null });
-    const load = async () => {
+    if (isBackground) {
+      // Case B: Stale cache hit (stale-while-revalidate) — show cached data immediately, refetch silently.
+      setState({ data: cachedEntry.data, loading: false, isFetching: true, error: null });
+    } else {
+      // Case C: Cache miss or forced refresh.
+      setState({ data: null, loading: true, isFetching: true, error: null });
+    }
+    const load = async (background = false) => {
       clearTimeout(timer);
       if (controller.signal.aborted || inFlight) return;
       if ((poll || refreshInterval) && document.visibilityState === 'hidden') return;
@@ -185,15 +265,15 @@ export function useResource(
       }
       inFlight = true;
       try {
-        const data = await loaderRef.current({ signal: controller.signal, scope: session.scope });
+        const data = await loaderRef.current({ signal: controller.signal, scope: sessionScope });
         if (controller.signal.aborted || current !== epoch.current) return;
         failures = 0;
         complete = doneRef.current(data);
         terminal = false;
-        if (cacheKey && session?.cache) {
-          session.cache.set(cacheKey, data);
+        if (cacheKey && sessionCache) {
+          sessionCache.write(cacheKey, data);
         }
-        setState({ data, loading: false, error: null });
+        setState({ data, loading: false, isFetching: false, error: null });
       } catch (error) {
         if (controller.signal.aborted || current !== epoch.current) return;
         failures++;
@@ -201,11 +281,26 @@ export function useResource(
         terminal =
           [401, 403, 404].includes(normalized.status) ||
           ['CONTRACT_BLOCKED', 'OPERATION_UNSUPPORTED'].includes(normalized.code);
-        setState((previous) => ({
-          data: [401, 403, 404].includes(normalized.status) ? null : previous.data,
-          loading: false,
-          error: normalized,
-        }));
+        if ([401, 403, 404].includes(normalized.status)) {
+          if (cacheKey && sessionCache) {
+            sessionCache.evict(cacheKey);
+          }
+          setState({ data: null, loading: false, isFetching: false, error: normalized });
+        } else if (background) {
+          // Keep existing cached data visible on transient background refetch error.
+          setState((previous) => ({
+            ...previous,
+            loading: false,
+            isFetching: false,
+          }));
+        } else {
+          setState((previous) => ({
+            data: previous.data,
+            loading: false,
+            isFetching: false,
+            error: normalized,
+          }));
+        }
       } finally {
         inFlight = false;
       }
@@ -220,7 +315,7 @@ export function useResource(
           setPollExpired(true);
           return;
         }
-        timer = setTimeout(load, refreshInterval && (!poll || complete)
+        timer = setTimeout(() => load(isBackground), refreshInterval && (!poll || complete)
           ? refreshInterval : Math.min(30000, 5000 * 2 ** failures));
       }
     };
@@ -233,39 +328,54 @@ export function useResource(
         (refreshInterval > 0 || (poll && !complete))
       ) {
         if (poll && !refreshInterval && Date.now() - started >= 600000) setPollExpired(true);
-        else load();
+        else load(isBackground);
       }
     };
     if (hasAutoRefresh && document.visibilityState === 'hidden') {
-      setState({ data: null, loading: false, error: null });
-    } else load();
+      if (isBackground) {
+        setState({ data: cachedEntry.data, loading: false, isFetching: false, error: null });
+      } else {
+        setState({ data: null, loading: false, isFetching: false, error: null });
+      }
+    } else {
+      load(isBackground);
+    }
     if (hasAutoRefresh) {
       document.addEventListener('visibilitychange', visibility);
     }
     return () => {
-      abort();
-      session.signal.removeEventListener('abort', abort);
+      controller.abort();
+      clearTimeout(timer);
+      sessionSignal?.removeEventListener('abort', onSessionAbort);
       if (hasAutoRefresh) {
         document.removeEventListener('visibilitychange', visibility);
       }
     };
     // Callers supply stable resource identifiers, never the inline loader.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session.scope, session.signal, enabled, poll, refreshInterval, version, ...dependencies]);
+  }, [sessionScope, sessionSignal, sessionCache, enabled, poll, refreshInterval, cacheKey, staleTime, version, ...dependencies]);
 
-  const mutate = async (action, { onSuccess, onUncertain, onError, skipRefresh = false } = {}) => {
-    if (mutationLock.current || session.signal.aborted) return false;
+  const mutate = async (
+    action,
+    { onSuccess, onUncertain, onError, skipRefresh = false, invalidatePrefixes: callPrefixes = null } = {},
+  ) => {
+    if (mutationLock.current || sessionSignal?.aborted) return false;
     const controller = new AbortController();
     mutations.current.add(controller);
     const abort = () => controller.abort();
-    session.signal.addEventListener('abort', abort);
+    sessionSignal?.addEventListener('abort', abort);
     mutationLock.current = true;
     setBusy(true);
     setState((previous) => ({ ...previous, error: null }));
     setActionError(null);
     try {
-      const result = await action({ scope: session.scope, signal: controller.signal });
+      const result = await action({ scope: sessionScope, signal: controller.signal });
       if (controller.signal.aborted) return false;
+      if (sessionCache) {
+        if (cacheKey) sessionCache.invalidate(cacheKey);
+        if (invalidatePrefixes) sessionCache.invalidate(invalidatePrefixes);
+        if (callPrefixes) sessionCache.invalidate(callPrefixes);
+      }
       await onSuccess?.(result);
       if (!skipRefresh) {
         refresh();
@@ -274,8 +384,12 @@ export function useResource(
     } catch (error) {
       if (controller.signal.aborted) return false;
       const normalized = normalizeError(error);
-      if ([401, 403, 404].includes(normalized.status))
-        setState({ data: null, loading: false, error: null });
+      if ([401, 403, 404].includes(normalized.status)) {
+        if (cacheKey && sessionCache) {
+          sessionCache.evict(cacheKey);
+        }
+        setState({ data: null, loading: false, isFetching: false, error: null });
+      }
       if (normalized.status === 409) refresh();
       if (
         (!normalized.status || normalized.status >= 500) &&
@@ -289,8 +403,8 @@ export function useResource(
     } finally {
       mutationLock.current = false;
       mutations.current.delete(controller);
-      session.signal.removeEventListener('abort', abort);
-      if (!session.signal.aborted) setBusy(false);
+      sessionSignal?.removeEventListener('abort', abort);
+      if (!sessionSignal?.aborted) setBusy(false);
     }
   };
   const [actionError, setActionError] = useState(null);

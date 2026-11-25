@@ -33,7 +33,8 @@ beforeEach(() => {
     http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.QUEUES}`, async ({ request }) => {
       const url = new URL(request.url);
       const type = url.searchParams.get('type');
-      const items = await packingMockApi.listQueue({ type });
+      const mine = url.searchParams.get('mine') === 'true';
+      const items = await packingMockApi.listQueue({ type, mine, userId: mine ? 'mod-a' : undefined });
       return HttpResponse.json({ result: items, isSuccess: true, statusCode: 200 });
     }),
 
@@ -117,7 +118,7 @@ describe('L-04 Phase 4: Mock API Integration Suite (APIs 68-72)', () => {
     expect(screen.getByText('Vũ Thanh H')).toBeInTheDocument();
     expect(screen.getByText('Trần Minh K')).toBeInTheDocument();
     expect(screen.queryByText('DH-00244')).not.toBeInTheDocument();
-    fireEvent.click(within(ngoCell.closest('tr')).getByRole('button', { name: 'Chi tiết' }));
+    fireEvent.click(within(ngoCell.closest('tr')).getByRole('button', { name: 'Xem chi tiết' }));
     expect(within(screen.getByRole('dialog')).getByText('DH-00244')).toBeInTheDocument();
     fireEvent.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: 'Đóng' })[0]);
     expect(screen.getAllByText('Đóng gói đơn hàng').length).toBeGreaterThan(0);
@@ -244,5 +245,118 @@ describe('L-04 Phase 4: Mock API Integration Suite (APIs 68-72)', () => {
       context: 'END_OF_TERM_TAKE_BACK',
     });
     expect(handoverRes).toBeDefined();
+  });
+
+  it('PackingOrdersPage (tab Công việc) queries mine=true and shows only orders claimed by current moderator', async () => {
+    await packingMockApi.claimQueue('queue-pk-01', 'mod-a');
+    await packingMockApi.claimQueue('queue-pk-02', 'mod-other');
+    const listSpy = vi.spyOn(queueService, 'list');
+
+    render(
+      <MemoryRouter initialEntries={['/moderator/packing']}>
+        <Phase2Provider>
+          <PackingOrdersPage />
+        </Phase2Provider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(listSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'PACKING', mine: true }),
+        expect.anything()
+      );
+    });
+
+    await screen.findByText('DH-00244');
+    expect(screen.getByText('Bạn đang giữ')).toBeInTheDocument();
+    expect(screen.queryByText('DH-00239')).not.toBeInTheDocument();
+    expect(screen.queryByText('DH-00251')).not.toBeInTheDocument();
+    expect(screen.queryByText('Chưa ai nhận')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Nhận việc' })).not.toBeInTheDocument();
+    listSpy.mockRestore();
+  });
+
+  it('PackingOrdersPage client filter excludes unclaimed and other moderators orders even when API omits mine filtering', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.QUEUES}`, () =>
+        HttpResponse.json({
+          result: [
+            {
+              id: 'q-mine',
+              queueId: 'q-mine',
+              refId: 'ord-20',
+              orderId: 'ord-20',
+              orderNo: 'OD-2026-000020',
+              type: 'PACKING',
+              buyerName: 'Nguyễn Văn An',
+              itemCount: 1,
+              claimedBy: 'mod-a',
+              status: 'PAID',
+            },
+            {
+              id: 'q-free',
+              queueId: 'q-free',
+              refId: 'ord-18',
+              orderId: 'ord-18',
+              orderNo: 'OD-2026-000018',
+              type: 'PACKING',
+              buyerName: 'Nguyễn Văn An',
+              itemCount: 1,
+              claimedBy: null,
+              status: 'PAID',
+            },
+            {
+              id: 'q-other',
+              queueId: 'q-other',
+              refId: 'ord-19',
+              orderId: 'ord-19',
+              orderNo: 'OD-2026-000019',
+              type: 'PACKING',
+              buyerName: 'Trần Thị B',
+              itemCount: 1,
+              claimedBy: 'mod-other',
+              status: 'PAID',
+            },
+          ],
+          isSuccess: true,
+          statusCode: 200,
+        })
+      )
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/moderator/packing']}>
+        <Phase2Provider>
+          <PackingOrdersPage />
+        </Phase2Provider>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('OD-2026-000020');
+    expect(screen.getByText('Bạn đang giữ')).toBeInTheDocument();
+    expect(screen.queryByText('OD-2026-000018')).not.toBeInTheDocument();
+    expect(screen.queryByText('OD-2026-000019')).not.toBeInTheDocument();
+    expect(screen.queryByText('Chưa ai nhận')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Nhận việc' })).not.toBeInTheDocument();
+  });
+
+  it('Releasing an order from PackingOrdersPage removes it from tab Công việc and shows empty state link', async () => {
+    await packingMockApi.claimQueue('queue-pk-01', 'mod-a');
+
+    render(
+      <MemoryRouter initialEntries={['/moderator/packing']}>
+        <Phase2Provider>
+          <PackingOrdersPage />
+        </Phase2Provider>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('DH-00244');
+    fireEvent.click(screen.getByRole('button', { name: 'Nhả' }));
+
+    await screen.findByText('Bạn chưa nhận đơn đóng gói nào.');
+    expect(screen.queryByText('DH-00244')).not.toBeInTheDocument();
+    const queueLink = screen.getByRole('link', { name: 'Đi tới Hàng đợi công việc để nhận đơn' });
+    expect(queueLink.getAttribute('href')).toBe('/moderator/queue?type=PACKING');
   });
 });

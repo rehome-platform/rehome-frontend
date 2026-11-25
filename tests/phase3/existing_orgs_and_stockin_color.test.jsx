@@ -299,7 +299,7 @@ describe('StockInForm - Try-on cleanup & Category/Brand locking', () => {
     expect(screen.queryByText(/chưa tách nền/i)).not.toBeInTheDocument();
   });
 
-  it('locks category and brand selects when pre-populated from approved form/receipt', async () => {
+  it('pre-fills category and brand selects from approved form/receipt while keeping both editable', async () => {
     render(
       <StockInForm
         receipt={{ id: 'rcpt-lock-1', confirmedAt: '2026-11-05T10:00:00Z' }}
@@ -313,9 +313,9 @@ describe('StockInForm - Try-on cleanup & Category/Brand locking', () => {
 
     expect(categorySelect).toHaveValue('cat-top');
     expect(brandSelect).toHaveValue('brand-1');
-    expect(categorySelect).toBeDisabled();
-    expect(brandSelect).toBeDisabled();
-    expect(screen.getByRole('button', { name: /\+ Thêm nhanh thương hiệu/i })).toBeDisabled();
+    expect(categorySelect).toBeEnabled();
+    expect(brandSelect).toBeEnabled();
+    expect(screen.getByRole('button', { name: /\+ Thêm nhanh thương hiệu/i })).toBeEnabled();
   });
 
   it('keeps category and brand selects enabled when form/receipt has no categoryId or brandId', async () => {

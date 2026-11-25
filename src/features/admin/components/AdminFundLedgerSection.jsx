@@ -3,6 +3,7 @@ import { Button, Modal, Spinner, TableActionButton } from '../../../components/c
 import { formatCurrencyVND, formatDateTime } from '../../../utils/formatters.js';
 import adminApi from '../services/adminApi.js';
 import { validateDateRange } from '../utils/adminDateUtils.js';
+import { DEFAULT_STALE_TIME_MS, useAdminCache } from '../hooks/useAdminQuery.jsx';
 
 // Khớp đúng enum WalletTransactionType phía backend (rehome-backend/.../entity/enums/WalletTransactionType.java).
 // Trước đây danh sách này có 2 giá trị không tồn tại ở backend (MEMBERSHIP_PAYMENT, VOUCHER_COST) và thiếu
@@ -40,34 +41,62 @@ function formatSignedAmount(amount) {
  * Giao dịch quỹ nền tảng (GET /api/admin/fund/ledger). Nhận { from, to } đồng bộ từ bộ lọc của trang.
  */
 export default function AdminFundLedgerSection({ from, to }) {
+  const cache = useAdminCache();
   const [detailEntry, setDetailEntry] = useState(null);
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [page, setPage] = useState(0);
-  const [ledgerPage, setLedgerPage] = useState({
+
+  const ledgerCacheKey = `admin:fund-ledger:${from || ''}:${to || ''}:${typeFilter}:${page}`;
+  const initialCached = cache?.read(ledgerCacheKey)?.data || null;
+
+  const [ledgerPage, setLedgerPage] = useState(() => initialCached || {
     content: [],
     page: 0,
     size: PAGE_SIZE,
     totalElements: 0,
     totalPages: 0,
   });
-  const [ledgerLoading, setLedgerLoading] = useState(true);
+  const [ledgerLoading, setLedgerLoading] = useState(() => !initialCached);
   const [ledgerError, setLedgerError] = useState(null);
 
   const ledgerSeqRef = useRef(0);
+  const mountedRef = useRef(true);
+  const prevRangeRef = useRef({ from, to });
 
   useEffect(() => {
-    setPage(0);
-  }, [from, to]);
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
-  const loadLedger = useCallback(async (targetPage = page, targetType = typeFilter) => {
+  const loadLedger = useCallback(async (targetPage = page, targetType = typeFilter, { force = false } = {}) => {
     if (validateDateRange(from, to)) {
       setLedgerLoading(false);
       return;
     }
+
+    const key = `admin:fund-ledger:${from || ''}:${to || ''}:${targetType}:${targetPage}`;
+    const cachedEntry = cache?.read(key) || null;
+    if (!force && cachedEntry && cache.isFresh(cachedEntry, DEFAULT_STALE_TIME_MS)) {
+      setLedgerPage(cachedEntry.data);
+      setLedgerError(null);
+      setLedgerLoading(false);
+      return;
+    }
+
     const reqId = ++ledgerSeqRef.current;
-    try {
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached) {
+      setLedgerPage(cachedEntry.data);
+      setLedgerError(null);
+      setLedgerLoading(false);
+    } else {
       setLedgerLoading(true);
       setLedgerError(null);
+    }
+
+    try {
       const data = await adminApi.getFundLedger({
         from,
         to,
@@ -75,30 +104,42 @@ export default function AdminFundLedgerSection({ from, to }) {
         page: targetPage,
         size: PAGE_SIZE,
       });
-      if (reqId === ledgerSeqRef.current && data) {
-        setLedgerPage({
+      if (!mountedRef.current || reqId !== ledgerSeqRef.current) return;
+      if (data) {
+        const nextPage = {
           content: Array.isArray(data.content) ? data.content : [],
           page: data.page ?? targetPage,
           size: data.size ?? PAGE_SIZE,
           totalElements: data.totalElements ?? 0,
           totalPages: data.totalPages ?? 0,
-        });
+        };
+        cache?.write(key, nextPage);
+        setLedgerPage(nextPage);
       }
     } catch (err) {
-      if (reqId === ledgerSeqRef.current) {
+      if (mountedRef.current && reqId === ledgerSeqRef.current) {
         console.error('Lỗi tải danh sách giao dịch:', err);
-        setLedgerError('Không thể tải danh sách giao dịch.');
+        if (!hasCached || force) {
+          setLedgerError('Không thể tải danh sách giao dịch.');
+        }
       }
     } finally {
-      if (reqId === ledgerSeqRef.current) {
+      if (mountedRef.current && reqId === ledgerSeqRef.current) {
         setLedgerLoading(false);
       }
     }
-  }, [from, to, page, typeFilter]);
+  }, [cache, from, to, page, typeFilter]);
 
   useEffect(() => {
+    if (prevRangeRef.current.from !== from || prevRangeRef.current.to !== to) {
+      prevRangeRef.current = { from, to };
+      if (page !== 0) {
+        setPage(0);
+        return;
+      }
+    }
     loadLedger(page, typeFilter);
-  }, [loadLedger, page, typeFilter]);
+  }, [loadLedger, from, to, page, typeFilter]);
 
   const handleTypeChange = (event) => {
     setTypeFilter(event.target.value);
@@ -155,7 +196,7 @@ export default function AdminFundLedgerSection({ from, to }) {
             type="button"
             variant="primary"
             size="sm"
-            onClick={() => loadLedger(currentPage, typeFilter)}
+            onClick={() => loadLedger(currentPage, typeFilter, { force: true })}
           >
             Thử lại
           </Button>

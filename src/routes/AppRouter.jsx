@@ -41,6 +41,7 @@ const AdminBanProposalsPage = lazy(() => import('../features/admin/pages/AdminBa
 const AdminWarehousesPage = lazy(() => import('../features/admin/pages/AdminWarehousesPage.jsx'));
 const ConfigPage = lazy(() => import('../features/admin/pages/ConfigPage.jsx'));
 const AdminAuditLogsPage = lazy(() => import('../features/admin/pages/AdminAuditLogsPage.jsx'));
+const AdminContentReviewsPage = lazy(() => import('../features/admin/pages/AdminContentReviewsPage.jsx'));
 const ViolationWordsPage = lazy(() => import('../features/admin/pages/ViolationWordsPage.jsx'));
 const ReceiptClauseTemplatesPage = lazy(() => import('../features/admin/pages/ReceiptClauseTemplatesPage.jsx'));
 const MembershipPlansPage = lazy(() => import('../features/admin/membership/MembershipPlansPage.jsx'));
@@ -254,6 +255,7 @@ export default function AppRouter() {
         <Route path="warehouses" element={<AdminWarehousesPage />} />
         <Route path="configs" element={<ConfigPage />} />
         <Route path="audit-logs" element={<AdminAuditLogsPage />} />
+        <Route path="content-reviews" element={<AdminContentReviewsPage />} />
         <Route path="violation-words" element={<ViolationWordsPage />} />
         <Route path="membership-plans" element={<MembershipPlansPage />} />
         <Route path="membership-subscriptions" element={<MembershipSubscriptionsPage />} />
