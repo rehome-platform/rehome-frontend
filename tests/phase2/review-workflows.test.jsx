@@ -9,13 +9,18 @@ import { returnService } from '../../src/features/moderator/services/returnApi.j
 import { orgVerificationService } from '../../src/features/moderator/services/orgVerificationApi.js';
 import { inventoryService } from '../../src/features/moderator/services/inventoryApi.js';
 
-vi.mock('../../src/features/moderator/services/returnApi.js', () => ({
-  returnService: {
-    list: vi.fn(), approveReturnAndCreateWaybill: vi.fn(), rejectReturn: vi.fn(),
-    resolveInvalid: vi.fn(), resolveValid: vi.fn(), inspect: vi.fn().mockResolvedValue({}),
-    detail: vi.fn(),
-  },
-}));
+vi.mock('../../src/features/moderator/services/returnApi.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    returnService: {
+      list: vi.fn(), approveReturnAndCreateWaybill: vi.fn(), rejectReturn: vi.fn(),
+      resolveInvalid: vi.fn(), resolveValid: vi.fn(), applyItemAction: vi.fn(),
+      inspect: vi.fn().mockResolvedValue({}),
+      detail: vi.fn(),
+    },
+  };
+});
 
 vi.mock('../../src/features/moderator/services/inventoryApi.js', () => ({
   inventoryService: {
@@ -93,7 +98,7 @@ describe('return workflow regression', () => {
     expect(result.current.checklist.noNewDamage).toBe(false);
   });
 
-  it.each(['RELIST', 'RETURN_SELLER'])('waits for the %s decision before resolving a valid return', async outcome => {
+  it.each(['RELIST', 'RETURN_SELLER'])('refunds valid return on save and waits for the %s decision before applying item action', async outcome => {
     const { result } = renderHook(useReturnProcessing, { wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter> });
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(async () => {
@@ -104,9 +109,10 @@ describe('return workflow regression', () => {
     });
     await act(async () => { await result.current.handleSaveInspection(); });
     expect(result.current.isOutcomeModalOpen).toBe(true);
-    expect(returnService.resolveValid).not.toHaveBeenCalled();
+    expect(returnService.resolveValid).toHaveBeenCalledExactlyOnceWith('r1');
+    expect(returnService.applyItemAction).not.toHaveBeenCalled();
     await act(async () => { await result.current.handleConfirmOutcome(outcome); });
-    expect(returnService.resolveValid).toHaveBeenCalledExactlyOnceWith('r1', outcome);
+    expect(returnService.applyItemAction).toHaveBeenCalledExactlyOnceWith('r1', outcome, {});
     expect(result.current.isOutcomeModalOpen).toBe(false);
   });
 

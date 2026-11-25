@@ -98,7 +98,7 @@ describe('Organization Verification Data Mapping & Design Tokens', () => {
     // Tax code is hidden from queue table row (FE-09) and shown inside Chi tiết modal
     expect(screen.queryByText('0102030405')).not.toBeInTheDocument();
     const firstRow = screen.getByText('Quỹ Hy Vọng Tương Lai').closest('tr');
-    fireEvent.click(within(firstRow).getByRole('button', { name: 'Chi tiết' }));
+    fireEvent.click(within(firstRow).getByRole('button', { name: 'Xem chi tiết' }));
     expect(within(screen.getByRole('dialog')).getByText('0102030405')).toBeInTheDocument();
     fireEvent.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: 'Đóng' })[0]);
 
@@ -475,7 +475,7 @@ describe('Organization Verification Data Mapping & Design Tokens', () => {
     expect(screen.getByText('Từ chối')).toBeInTheDocument();
 
     // Thông tin chi tiết (như ngày gửi, MST...) hiển thị khi mở modal chi tiết theo yêu cầu mới
-    fireEvent.click(screen.getByText('Xem chi tiết →'));
+    fireEvent.click(screen.getByRole('button', { name: 'Xem chi tiết' }));
     expect(screen.getByText(/04\/11\/2026/)).toBeInTheDocument();
   });
 
