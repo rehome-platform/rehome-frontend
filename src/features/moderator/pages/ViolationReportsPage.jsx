@@ -8,6 +8,7 @@ import { violationReportService } from '../services/violationReportApi.js';
 import { useModerationShortcuts } from '../hooks/useModerationShortcuts.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import { formatDateTime, formatDate } from '../../../utils/formatters.js';
+import { DEFAULT_STALE_TIME_MS, useModeratorCache } from '../hooks/warehouseHooks.jsx';
 
 const STATUS_OPTIONS = [
   { value: 'PENDING', label: 'Chờ xử lý' },
@@ -100,12 +101,19 @@ function getActionOptions(targetType) {
 export default function ViolationReportsPage() {
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
+  const cache = useModeratorCache();
 
   // Danh sách báo cáo đã gom nhóm (VP-01)
-  const [reports, setReports] = useState([]);
-  const [snapshotsById, setSnapshotsById] = useState({});
+  const initialCachedReports = cache?.read('violation-reports:list:PENDING:ALL')?.data;
+  const initialCachedSnapshots = cache?.read('violation-reports:snapshots')?.data;
+  const [reports, setReports] = useState(() =>
+    Array.isArray(initialCachedReports) ? initialCachedReports : []
+  );
+  const [snapshotsById, setSnapshotsById] = useState(() =>
+    initialCachedSnapshots && typeof initialCachedSnapshots === 'object' ? initialCachedSnapshots : {}
+  );
   const detailsCacheRef = useRef({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !Array.isArray(initialCachedReports));
   const [error, setError] = useState(null);
 
   // Bộ lọc
@@ -128,16 +136,32 @@ export default function ViolationReportsPage() {
 
   // Tải danh sách báo cáo từ API thật GET /violation-reports (có cache theo tab/filter)
   const fetchReports = useCallback(async ({ force = false } = {}) => {
-    const cacheKey = `${statusFilter}:${typeFilter}`;
-    if (!force && Array.isArray(listCacheRef.current[cacheKey])) {
-      setReports(listCacheRef.current[cacheKey]);
+    const localKey = `${statusFilter}:${typeFilter}`;
+    const sessionKey = `violation-reports:list:${localKey}`;
+    const sessionEntry = cache?.read(sessionKey);
+
+    let silent = false;
+    if (!force && sessionEntry && Array.isArray(sessionEntry.data)) {
+      listCacheRef.current[localKey] = sessionEntry.data;
+      setReports(sessionEntry.data);
+      setLoading(false);
+      setError(null);
+      if (cache.isFresh(sessionEntry, DEFAULT_STALE_TIME_MS)) {
+        return;
+      }
+      silent = true;
+    } else if (!force && !cache && Array.isArray(listCacheRef.current[localKey])) {
+      setReports(listCacheRef.current[localKey]);
       setLoading(false);
       setError(null);
       return;
     }
+
     try {
-      setLoading(true);
-      setError(null);
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+      }
       const res = await violationReportService.list({
         status: statusFilter,
         type: typeFilter,
@@ -151,7 +175,8 @@ export default function ViolationReportsPage() {
         if (Number.isFinite(tA)) return -1;
         return 0;
       });
-      listCacheRef.current[cacheKey] = list;
+      listCacheRef.current[localKey] = list;
+      cache?.write(sessionKey, list);
       setReports(list);
 
       // Làm giàu thông tin hiển thị (tên tổ chức & nội dung tóm tắt) cho các dòng trong hàng đợi VP-01
@@ -162,6 +187,7 @@ export default function ViolationReportsPage() {
             const detail = await violationReportService.getDetail(item.id);
             if (detail) {
               detailsCacheRef.current[item.id] = detail;
+              cache?.write(`violation-reports:detail:${item.id}`, detail);
             }
             return detail?.targetSnapshot ? { id: item.id, snapshot: detail.targetSnapshot } : null;
           })
@@ -173,17 +199,23 @@ export default function ViolationReportsPage() {
             }
           });
           if (Object.keys(nextMap).length > 0) {
-            setSnapshotsById((prev) => ({ ...prev, ...nextMap }));
+            setSnapshotsById((prev) => {
+              const merged = { ...prev, ...nextMap };
+              cache?.write('violation-reports:snapshots', merged);
+              return merged;
+            });
           }
         });
       }
     } catch (err) {
       console.error('Lỗi tải danh sách báo cáo vi phạm:', err);
-      setError('Không thể tải danh sách báo cáo vi phạm từ máy chủ.');
+      if (!silent) {
+        setError('Không thể tải danh sách báo cáo vi phạm từ máy chủ.');
+      }
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, typeFilter]);
+  }, [cache, statusFilter, typeFilter]);
 
   useEffect(() => {
     fetchReports();
@@ -195,9 +227,14 @@ export default function ViolationReportsPage() {
     try {
       setDetailLoading(true);
       const fetched = await violationReportService.getDetail(reportId);
-      const detail = fetched || detailsCacheRef.current[reportId] || null;
+      const detail =
+        fetched ||
+        detailsCacheRef.current[reportId] ||
+        cache?.read(`violation-reports:detail:${reportId}`)?.data ||
+        null;
       if (fetched) {
         detailsCacheRef.current[reportId] = fetched;
+        cache?.write(`violation-reports:detail:${reportId}`, fetched);
       }
       setSelectedReport(detail);
 
@@ -212,7 +249,7 @@ export default function ViolationReportsPage() {
     } finally {
       setDetailLoading(false);
     }
-  }, [toast]);
+  }, [cache, toast]);
 
   // Bắt tham số ?id= trên URL
   useEffect(() => {
@@ -270,11 +307,14 @@ export default function ViolationReportsPage() {
       // Optimistic UI: cập nhật trực tiếp trạng thái dòng trên bảng và xóa cache các tab khác
       const nextStatus = isDismiss ? 'DISMISSED' : 'RESOLVED';
       listCacheRef.current = {};
+      cache?.invalidate(['violation-reports:', 'queue:', 'donations:']);
+      cache?.evict(`violation-reports:detail:${selectedReport.id}`);
       setReports((prev) => {
         const updated = prev
           .map((item) => (String(item.id) === String(selectedReport.id) ? { ...item, status: nextStatus } : item))
           .filter((item) => (statusFilter === 'PENDING' ? String(item.id) !== String(selectedReport.id) : true));
         listCacheRef.current[`${statusFilter}:${typeFilter}`] = updated;
+        cache?.write(`violation-reports:list:${statusFilter}:${typeFilter}`, updated);
         return updated;
       });
       setSelectedReport((prev) => (prev ? { ...prev, status: nextStatus } : prev));

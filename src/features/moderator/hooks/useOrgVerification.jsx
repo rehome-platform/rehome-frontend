@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { orgVerificationService } from "../services/orgVerificationApi.js";
 import { useToast } from "../../../context/ToastContext.jsx";
+import { DEFAULT_STALE_TIME_MS, useModeratorCache } from "./warehouseHooks.jsx";
+
+const ORG_QUEUE_CACHE_KEY = 'verifications:queue';
+const ORG_EXISTING_CACHE_KEY = 'verifications:existing';
 
 function calculateWaitDays(createdAt) {
   if (!createdAt) return '—';
@@ -32,10 +36,14 @@ export function useOrgVerification() {
   const [activeMainTab, setActiveMainTab] = useState('NEW_ORGS'); // 'NEW_ORGS' | 'LEGAL_CHANGES'
   const [activeQueueTab, setActiveQueueTab] = useState('PENDING'); // 'PENDING' | 'WAITING_DOCS' | 'APPROVED' | 'REJECTED'
 
-  const [orgsQueue, setOrgsQueue] = useState([]);
-  const [legalChanges, setLegalChanges] = useState([]);
-  const [existingOrgs, setExistingOrgs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const cache = useModeratorCache();
+  const cachedQueue = cache?.read(ORG_QUEUE_CACHE_KEY)?.data;
+  const cachedExisting = cache?.read(ORG_EXISTING_CACHE_KEY)?.data;
+
+  const [orgsQueue, setOrgsQueue] = useState(() => cachedQueue?.orgsQueue || []);
+  const [legalChanges, setLegalChanges] = useState(() => cachedQueue?.legalChanges || []);
+  const [existingOrgs, setExistingOrgs] = useState(() => cachedExisting || []);
+  const [loading, setLoading] = useState(() => !cachedQueue);
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [error, setError] = useState(null);
 
@@ -63,23 +71,48 @@ export function useOrgVerification() {
   const [viewingDoc, setViewingDoc] = useState(null); // TC-03 viewer
   const handledDeepLinkRef = useRef(null);
 
-  const fetchExistingOrgs = async (params = {}) => {
+  const fetchExistingOrgs = async (params = {}, { force = false } = {}) => {
+    const isDefaultQuery = !params || Object.keys(params).length === 0;
+    const cachedEntry = isDefaultQuery ? cache?.read(ORG_EXISTING_CACHE_KEY) : null;
+    if (isDefaultQuery && !force && cachedEntry && Array.isArray(cachedEntry.data)) {
+      setExistingOrgs(cachedEntry.data);
+      setLoadingExisting(false);
+      if (cache.isFresh(cachedEntry, DEFAULT_STALE_TIME_MS)) {
+        return cachedEntry.data;
+      }
+    }
+    const silent = Boolean(isDefaultQuery && !force && Array.isArray(cachedEntry?.data));
     try {
-      setLoadingExisting(true);
+      if (!silent) setLoadingExisting(true);
       const res = await orgVerificationService.getExistingOrganizations(params);
-      setExistingOrgs(res?.data || []);
-      return res?.data || [];
+      const list = res?.data || [];
+      setExistingOrgs(list);
+      if (isDefaultQuery) {
+        cache?.write(ORG_EXISTING_CACHE_KEY, list);
+      }
+      return list;
     } catch (err) {
       console.warn('Không thể tải tổ chức hiện hữu từ backend:', err);
-      return [];
+      return silent ? cachedEntry.data : [];
     } finally {
-      setLoadingExisting(false);
+      if (!silent) setLoadingExisting(false);
     }
   };
 
-  const loadData = async () => {
+  const loadData = async ({ force = false } = {}) => {
+    const cachedEntry = cache?.read(ORG_QUEUE_CACHE_KEY);
+    if (!force && cachedEntry?.data) {
+      setOrgsQueue(cachedEntry.data.orgsQueue || []);
+      setLegalChanges(cachedEntry.data.legalChanges || []);
+      setLoading(false);
+      setError(null);
+      if (cache.isFresh(cachedEntry, DEFAULT_STALE_TIME_MS)) {
+        return;
+      }
+    }
+    const silent = Boolean(!force && cachedEntry?.data);
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError(null);
       const [orgsRes, changesRes] = await Promise.all([
         orgVerificationService.getQueue(),
@@ -165,8 +198,14 @@ export function useOrgVerification() {
       });
 
       setLegalChanges(enrichedLegalChanges);
+      cache?.write(ORG_QUEUE_CACHE_KEY, {
+        orgsQueue: sortedOrgs,
+        legalChanges: enrichedLegalChanges,
+      });
     } catch (err) {
-      setError('Không thể tải dữ liệu hồ sơ tổ chức.');
+      if (!silent) {
+        setError('Không thể tải dữ liệu hồ sơ tổ chức.');
+      }
     } finally {
       setLoading(false);
     }
@@ -252,6 +291,15 @@ export function useOrgVerification() {
 
   const isChecklistComplete = mandatoryItemsLeft === 0;
 
+  const syncQueueCache = (nextOrgs, nextChanges) => {
+    if (!cache) return;
+    const prev = cache.read(ORG_QUEUE_CACHE_KEY)?.data || {};
+    cache.write(ORG_QUEUE_CACHE_KEY, {
+      orgsQueue: nextOrgs ?? prev.orgsQueue ?? [],
+      legalChanges: nextChanges ?? prev.legalChanges ?? [],
+    });
+  };
+
   const handleApproveOrg = async () => {
     if (!selectedOrg || !isChecklistComplete || approvingOrg) return;
     const orgId = selectedOrg.refId || selectedOrg.targetId || selectedOrg.organizationId || selectedOrg.id;
@@ -259,16 +307,19 @@ export function useOrgVerification() {
     try {
       await orgVerificationService.approveOrg(orgId, auditNote);
       // Optimistic UI: cập nhật trực tiếp trạng thái dòng trong state, không reload toàn bộ bảng
-      setOrgsQueue((prev) =>
-        prev.map((item) => {
+      setOrgsQueue((prev) => {
+        const next = prev.map((item) => {
           const itemId = item.refId || item.targetId || item.organizationId || item.id;
           return String(itemId) === String(orgId) ? { ...item, status: 'APPROVED' } : item;
-        }),
-      );
+        });
+        syncQueueCache(next, null);
+        return next;
+      });
+      cache?.invalidate(['queue:', 'donations:']);
       notify('success', `Đã xác thực tổ chức ${selectedOrg.name} thành công! Tổ chức đã được cấp quyền tạo chiến dịch tiếp nhận quyên góp.`);
       setViewMode('LIST');
       setSelectedOrg(null);
-      fetchExistingOrgs();
+      fetchExistingOrgs({}, { force: true });
     } catch (err) {
       console.error('Lỗi khi xác thực tổ chức:', err);
       const serverMsg = err?.message || err?.response?.data?.message;
@@ -289,14 +340,17 @@ export function useOrgVerification() {
     setRejectingOrg(true);
     try {
       await orgVerificationService.rejectOrg(orgId, trimmedReason);
-      setOrgsQueue((prev) =>
-        prev.map((item) => {
+      setOrgsQueue((prev) => {
+        const next = prev.map((item) => {
           const itemId = item.refId || item.targetId || item.organizationId || item.id;
           return String(itemId) === String(orgId)
             ? { ...item, status: 'REJECTED', rejectReason: trimmedReason }
             : item;
-        }),
-      );
+        });
+        syncQueueCache(next, null);
+        return next;
+      });
+      cache?.invalidate(['queue:', 'donations:']);
       setIsRejectModalOpen(false);
       setRejectReason('');
       setViewMode('LIST');
@@ -314,14 +368,17 @@ export function useOrgVerification() {
   const handleApproveLegalChange = async (changeId) => {
     try {
       await orgVerificationService.approveLegalChange(changeId);
-      setLegalChanges((prev) =>
-        prev.map((item) => {
+      setLegalChanges((prev) => {
+        const next = prev.map((item) => {
           const itemReqId = item.requestId || item.refId || item.id;
           return String(itemReqId) === String(changeId) || String(item.id) === String(changeId)
             ? { ...item, status: 'APPROVED' }
             : item;
-        }),
-      );
+        });
+        syncQueueCache(null, next);
+        return next;
+      });
+      cache?.invalidate(['queue:', 'donations:']);
       notify('success', 'Đã duyệt yêu cầu đổi thông tin pháp lý thành công! Ghi nhận vào Audit Log hệ thống.');
       setViewMode('LIST');
       setSelectedChange(null);
@@ -337,14 +394,17 @@ export function useOrgVerification() {
   const handleRejectLegalChange = async (changeId, reason = 'Thông tin pháp lý không hợp lệ') => {
     try {
       await orgVerificationService.rejectLegalChange(changeId, reason);
-      setLegalChanges((prev) =>
-        prev.map((item) => {
+      setLegalChanges((prev) => {
+        const next = prev.map((item) => {
           const itemReqId = item.requestId || item.refId || item.id;
           return String(itemReqId) === String(changeId) || String(item.id) === String(changeId)
             ? { ...item, status: 'REJECTED', rejectReason: reason }
             : item;
-        }),
-      );
+        });
+        syncQueueCache(null, next);
+        return next;
+      });
+      cache?.invalidate(['queue:', 'donations:']);
       notify('success', 'Đã từ chối yêu cầu đổi thông tin pháp lý.');
       setViewMode('LIST');
       setSelectedChange(null);
@@ -357,7 +417,7 @@ export function useOrgVerification() {
     }
   };
 
-  const handleRefresh = () => Promise.all([loadData(), fetchExistingOrgs()]);
+  const handleRefresh = () => Promise.all([loadData({ force: true }), fetchExistingOrgs({}, { force: true })]);
 
   return {
     viewMode,
