@@ -12,19 +12,26 @@ export const queueService = {
     const fallback = async () => {
       if (params?.type === 'PACKING') {
         const { packingMockApi } = await import('./packingMockApi.js');
-        return packingMockApi.listQueue(params);
+        return packingMockApi.listQueue({
+          ...params,
+          ...(params?.mine === true ? { claim: 'mine', userId: options?.scope?.userId } : {}),
+        });
       }
       return fixtureFallback('queueList', { params, ...options });
     };
 
     const typeQuery = params?.type && params.type !== 'ALL' ? params.type : undefined;
+    const queryParams = {};
+    if (typeQuery) queryParams.type = typeQuery;
+    if (params?.mine === true) queryParams.mine = true;
+
     let result;
     try {
       result = await callBackend(
         {
           method: 'get',
           url: API_ENDPOINTS.MODERATOR.QUEUES,
-          params: typeQuery ? { type: typeQuery } : undefined,
+          params: Object.keys(queryParams).length ? queryParams : undefined,
         },
         { fallback: isFixtureMode ? fallback : undefined, signal: options?.signal }
       );
