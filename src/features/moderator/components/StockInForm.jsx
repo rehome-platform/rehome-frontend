@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import { catalogService, consignmentService, inventoryService } from '../services/warehouseApi.js';
-import { useResource } from '../hooks/warehouseHooks.jsx';
+import { STATIC_STALE_TIME_MS, useResource } from '../hooks/warehouseHooks.jsx';
 import { canStockIn, extractReceiptId } from '../models/warehouseModel.js';
 import { Card, Field, ResourceState, money } from './WarehouseUi.jsx';
 import PhotoUpload from './PhotoUpload.jsx';
@@ -31,7 +31,10 @@ export default function StockInForm({ receipt, form, onSuccess }) {
   const navigate = useNavigate();
   const receiptId = extractReceiptId(receipt);
   const formId = form?.formId || form?.id || receipt?.formId;
-  const catalog = useResource(options => catalogService.list(options), []);
+  const catalog = useResource(options => catalogService.list(options), [], {
+    cacheKey: 'catalog:list',
+    staleTime: STATIC_STALE_TIME_MS,
+  });
   const verification = useResource(async options => {
     const [currentReceipt, currentForm] = await Promise.all([
       consignmentService.receipt(receiptId, options),
@@ -61,7 +64,10 @@ export default function StockInForm({ receipt, form, onSuccess }) {
     );
     return { productSku, productId, alreadyStockedIn };
   }, [receiptId, formId]);
-  const operation = useResource(async () => null, [], { enabled: false });
+  const operation = useResource(async () => null, [], {
+    enabled: false,
+    invalidatePrefixes: ['consignments:', 'queue:', 'inventory:', 'print-queue:', 'history:'],
+  });
   const [name, setName] = useState(receipt?.productName || form?.productName || form?.name || '');
   const [size, setSize] = useState(receipt?.size || form?.size || '');
   const lockedCategoryId = receipt?.categoryId || form?.categoryId || '';

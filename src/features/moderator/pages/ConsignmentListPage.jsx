@@ -38,7 +38,10 @@ export default function ConsignmentListPage() {
 
   const resource = useResource(
     (options) => consignmentService.listForms({ status: currentStatus, page }, options),
-    [currentStatus, page]
+    [currentStatus, page],
+    {
+      cacheKey: `consignments:list:${currentStatus}:${page}`,
+    },
   );
 
   const rawItems = listItems(resource.data);

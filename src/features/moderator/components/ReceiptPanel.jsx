@@ -28,6 +28,7 @@ export default function ReceiptPanel({ receiptId, form, allowStockIn = false, on
           value?.status === 'VOIDED' ||
           value?.voidedAt,
         ),
+      invalidatePrefixes: ['consignments:', 'queue:', 'inventory:', 'history:'],
     },
   );
   const data = receipt.data ? { ...receipt.data, productSku: receipt.data.productSku || receipt.data.sku || null } : null;

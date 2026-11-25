@@ -33,7 +33,9 @@ function Negotiation({ sku }) {
     const proposal = proposalForProduct(readProposals(options), { ...product, id: product.id || sku }, request);
     if (proposal && product.status !== 'WAREHOUSE') forgetProposal(product.id || sku, options);
     return { product, request, proposal };
-  }, [sku]);
+  }, [sku], {
+    invalidatePrefixes: ['inventory:', 'end-of-term:', 'queue:', 'history:'],
+  });
   const product = resource.data?.product;
   const request = resource.data?.request;
   const proposal = resource.data?.proposal;

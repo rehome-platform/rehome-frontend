@@ -10,7 +10,7 @@ import { useParams, useLocation } from "react-router-dom";
 
 import { consignmentService } from "../services/warehouseApi.js";
 import { phase2Contract, isFixtureMode } from "../config/warehouseContract.js";
-import { usePhase2, useResource } from "./warehouseHooks.jsx";
+import { STATIC_STALE_TIME_MS, usePhase2, useResource } from "./warehouseHooks.jsx";
 import { ownsClaim, normalizeConsignmentForm } from "../models/warehouseModel.js";
 import { normalizeConditionLevel, formatConditionLabel } from "../models/consignmentModel.js";
 import { CONDITION_PRESETS } from "../components/consignment/ConsignmentInspectionForm.jsx";
@@ -22,8 +22,10 @@ import {
 export function useConsignmentDetail() {
   const { formId } = useParams();
   const location = useLocation();
-  const { identity, scope, user } = usePhase2();
-  const resource = useResource((options) => consignmentService.read(formId, options), [formId]);
+  const { identity, scope, user, cache } = usePhase2();
+  const resource = useResource((options) => consignmentService.read(formId, options), [formId], {
+    invalidatePrefixes: ['consignments:', 'queue:', 'inventory:', 'print-queue:', 'history:'],
+  });
 
   const passedForm = location.state?.form
     ? normalizeConsignmentForm(location.state.form, scope.userId)
@@ -118,6 +120,7 @@ export function useConsignmentDetail() {
           }
         : prev,
     );
+    cache?.invalidate(['consignments:', 'queue:', 'history:']);
     resource.refresh?.();
   };
   React.useEffect(() => {
@@ -130,6 +133,7 @@ export function useConsignmentDetail() {
         ? (await import('../fixtures/warehouseFixtures.js')).fixtureOptions
         : phase2Contract.options,
     [],
+    { cacheKey: 'enums:warehouse', staleTime: STATIC_STALE_TIME_MS },
   );
   const options = optionsResource.data || phase2Contract.options;
   const cachedSystemConfig = React.useMemo(() => readEffectiveConsignmentConfig(), [form]);

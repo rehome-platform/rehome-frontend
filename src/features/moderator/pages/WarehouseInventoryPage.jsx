@@ -12,7 +12,7 @@ import { inventoryService } from '../services/warehouseApi.js';
 import { returnService, pendingReturnFromInventory } from '../services/returnApi.js';
 import { enrichListRows } from '../services/listDetailEnrichment.js';
 import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
-import { useResource } from '../hooks/warehouseHooks.jsx';
+import { STATIC_STALE_TIME_MS, useModeratorCache, useResource } from '../hooks/warehouseHooks.jsx';
 import { listItems } from '../models/warehouseModel.js';
 import { Page, Status, Pager, ResourceState, money } from '../components/WarehouseUi.jsx';
 import { ReturnOutcomeDialog } from '../components/returns/ReturnSections.jsx';
@@ -55,6 +55,7 @@ export default function WarehouseInventoryPage() {
   const [relistSubmitting, setRelistSubmitting] = useState(false);
   const relistLock = useRef(false);
   const toast = useToast();
+  const cache = useModeratorCache();
 
   const page = Math.max(0, Number(search.get('page')) || 0);
   const sku = search.get('sku') || '';
@@ -127,6 +128,7 @@ export default function WarehouseInventoryPage() {
       return inventoryService.list({ page, sku, status }, { ...options, enrichDetails: true });
     },
     [page, sku, status],
+    { cacheKey: `inventory:list:${status || 'ALL'}:${sku.trim()}:${page}` },
   );
 
   const enums = useResource(
@@ -135,6 +137,7 @@ export default function WarehouseInventoryPage() {
         ? (await import('../fixtures/warehouseFixtures.js')).fixtureOptions
         : phase2Contract.options,
     [],
+    { cacheKey: 'enums:warehouse', staleTime: STATIC_STALE_TIME_MS },
   );
 
   const rawItems = listItems(resource.data);
@@ -163,6 +166,7 @@ export default function WarehouseInventoryPage() {
       await returnService.applyItemAction(relistTarget.id, outcome);
       toast.success(`Đã đăng bán lại sản phẩm ${relistTarget.sku || relistTarget.itemName || ''} lên sàn.`);
       setRelistTarget(null);
+      cache?.invalidate(['inventory:', 'returns:', 'queue:', 'history:']);
       resource.refresh();
     } catch (err) {
       toast.error(err?.message || 'Không thể đăng bán lại sản phẩm. Vui lòng thử lại.');

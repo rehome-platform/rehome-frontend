@@ -34,6 +34,10 @@ export function useConsignmentQueue() {
   const resource = useResource(
     (options) => queueService.list({ type: queryType, claim: claimParam, page }, options),
     [queryType, claimParam, page],
+    {
+      cacheKey: `queue:list:${queryType || 'ALL'}:${claimParam}:${page}`,
+      invalidatePrefixes: ['queue:', 'consignments:', 'inventory:', 'returns:', 'verifications:', 'violation-reports:'],
+    },
   );
 
   // Tự động bắt lỗi mutation (409 xung đột nhận việc, 403 không có quyền nhả việc)

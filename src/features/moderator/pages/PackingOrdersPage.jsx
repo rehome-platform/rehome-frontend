@@ -190,7 +190,10 @@ export default function PackingOrdersPage() {
   const orderId = search.get('orderId');
   const [keyword, setKeyword] = useState('');
 
-  const queue = useResource((options) => queueService.list({ type: 'PACKING', page }, options), [page]);
+  const queue = useResource((options) => queueService.list({ type: 'PACKING', page }, options), [page], {
+    cacheKey: `queue:packing:${page}`,
+    invalidatePrefixes: ['queue:', 'inventory:', 'history:'],
+  });
 
   const [claimError, setClaimError] = useState('');
 

@@ -140,7 +140,9 @@ export default function EndOfTermPage() {
   const sku = search.get('sku');
   const [keyword, setKeyword] = useState('');
 
-  const list = useResource((options) => endTermService.list({ page }, options), [page]);
+  const list = useResource((options) => endTermService.list({ page }, options), [page], {
+    cacheKey: `end-of-term:list:${page}`,
+  });
   const rawItems = listItems(list.data);
   const normalizedItems = useMemo(
     () => rawItems.map(normalizeUnclaimedItem).filter(Boolean),

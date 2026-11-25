@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { counterService } from "../services/warehouseApi.js";
-import { usePhase2, useResource } from "./warehouseHooks.jsx";
+import { notifyWarehouseChanged, usePhase2, useResource } from "./warehouseHooks.jsx";
 import { listItems, lookupParams, normalizeMemberTasks, Phase2Error } from "../models/warehouseModel.js";
 import { useRecentServed } from './useRecentServed.jsx';
 
@@ -158,6 +158,7 @@ export function useCounter() {
       });
       rememberServed(selected, `Bàn giao hàng · ${new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })}`);
       setConfirmHandover(null);
+      notifyWarehouseChanged(['queue:', 'inventory:', 'end-of-term:', 'returns:', 'history:']);
       tasks.refresh();
     } catch (err) {
       setHandoverFeedback({
