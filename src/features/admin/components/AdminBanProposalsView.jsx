@@ -3,6 +3,13 @@ import adminApi from '../services/adminApi.js';
 import { Badge, Button, Spinner, TableActionButton } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import { formatDateTime } from '../../../utils/formatters.js';
+import {
+  DEFAULT_STALE_TIME_MS,
+  useAdminCache,
+  useAdminCacheActions,
+} from '../hooks/useAdminQuery.jsx';
+
+const BAN_PROPOSALS_CACHE_KEY = 'admin:ban-proposals:list';
 
 const TARGET_TYPE_LABEL = {
   ORGANIZATION_ACCOUNT: 'Tài khoản Tổ chức',
@@ -30,13 +37,16 @@ const VIOLATION_ACTION_LABEL = {
  */
 export default function AdminBanProposalsView({ onPendingCountChange }) {
   const toast = useToast();
+  const cache = useAdminCache();
+  const cacheActions = useAdminCacheActions();
   const toastRef = useRef(toast);
   toastRef.current = toast;
   const onPendingCountChangeRef = useRef(onPendingCountChange);
   onPendingCountChangeRef.current = onPendingCountChange;
 
-  const [proposals, setProposals] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const initialCached = cache?.read(BAN_PROPOSALS_CACHE_KEY)?.data || null;
+  const [proposals, setProposals] = useState(() => initialCached ?? []);
+  const [loading, setLoading] = useState(() => !initialCached);
   const [statusFilter, setStatusFilter] = useState('PENDING'); // PENDING | BANNED | DISMISSED | ALL
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -54,16 +64,55 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
   const [banPreviewLoading, setBanPreviewLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
 
-  const loadProposals = useCallback(async () => {
-    try {
+  const reqSeqRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const loadProposals = useCallback(async ({ force = false } = {}) => {
+    const cachedEntry = cache?.read(BAN_PROPOSALS_CACHE_KEY) || null;
+    if (!force && cachedEntry && cache.isFresh(cachedEntry, DEFAULT_STALE_TIME_MS)) {
+      const cachedList = cachedEntry.data ?? [];
+      setProposals(cachedList);
+      setLoadError('');
+      setLoading(false);
+      if (typeof onPendingCountChangeRef.current === 'function') {
+        onPendingCountChangeRef.current(cachedList.filter((p) => p.status === 'PENDING').length);
+      }
+      return;
+    }
+
+    const reqId = ++reqSeqRef.current;
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached) {
+      const cachedList = cachedEntry.data;
+      setProposals(cachedList);
+      setLoadError('');
+      setLoading(false);
+      if (typeof onPendingCountChangeRef.current === 'function') {
+        onPendingCountChangeRef.current(cachedList.filter((p) => p.status === 'PENDING').length);
+      }
+    } else {
       setLoading(true);
       setLoadError('');
+    }
+
+    try {
       const [auditRes, accountsRes] = await Promise.allSettled([
         adminApi.getBanProposals({ page: 0, size: 50 }),
         adminApi.getAccounts({ page: 0, size: 100 }),
       ]);
+      if (!mountedRef.current || reqId !== reqSeqRef.current) return;
 
       if (auditRes.status === 'rejected') {
+        if (hasCached && !force) {
+          return;
+        }
         const err = auditRes.reason;
         setLoadError(
           err?.response?.data?.message || err?.message || 'Không thể tải danh sách đề xuất khóa tài khoản.'
@@ -134,6 +183,10 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
         };
       });
 
+      if (auditRes.status === 'fulfilled') {
+        cache?.write(BAN_PROPOSALS_CACHE_KEY, mapped);
+        setLoadError('');
+      }
       setProposals(mapped);
 
       const pendingCount = mapped.filter((p) => p.status === 'PENDING').length;
@@ -141,12 +194,17 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
         onPendingCountChangeRef.current(pendingCount);
       }
     } catch (err) {
+      if (!mountedRef.current || reqId !== reqSeqRef.current) return;
       console.error('Lỗi tải danh sách đề xuất khóa:', err);
-      toastRef.current?.error?.('Không thể tải danh sách đề xuất khóa tài khoản.');
+      if (!hasCached || force) {
+        toastRef.current?.error?.('Không thể tải danh sách đề xuất khóa tài khoản.');
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current && reqId === reqSeqRef.current) {
+        setLoading(false);
+      }
     }
-  }, []);
+  }, [cache]);
 
   useEffect(() => {
     loadProposals();
@@ -245,7 +303,8 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
       if (selectedProposal?.id === banModalTarget.id) {
         setSelectedProposal((prev) => (prev ? { ...prev, status: 'BANNED' } : null));
       }
-      await loadProposals();
+      cacheActions?.invalidate(['admin:ban-proposals:', 'admin:accounts:', 'admin:audit-logs:', 'admin:dashboard:']);
+      await loadProposals({ force: true });
     } catch (err) {
       console.error('Lỗi khi khóa tài khoản từ đề xuất:', err);
       toast.error(
@@ -266,7 +325,8 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
     if (selectedProposal?.id === proposal.id) {
       setSelectedProposal((prev) => (prev ? { ...prev, status: 'DISMISSED' } : null));
     }
-    loadProposals();
+    cacheActions?.invalidate(['admin:ban-proposals:']);
+    loadProposals({ force: true });
   };
 
   // Đếm số lượng theo từng trạng thái
@@ -350,7 +410,7 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
             type="button"
             variant="outline"
             size="sm"
-            onClick={loadProposals}
+            onClick={() => loadProposals({ force: true })}
             className="gap-1.5 whitespace-nowrap"
           >
             <span aria-hidden="true" className="material-symbols-outlined text-[16px]">refresh</span>
@@ -369,7 +429,7 @@ export default function AdminBanProposalsView({ onPendingCountChange }) {
             type="button"
             variant="danger-outline"
             size="sm"
-            onClick={loadProposals}
+            onClick={() => loadProposals({ force: true })}
           >
             Thử lại
           </Button>

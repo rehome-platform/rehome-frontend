@@ -1,8 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import adminApi from '../services/adminApi';
 import { Button, Spinner, Modal, TableActionButton } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
+import {
+  DEFAULT_STALE_TIME_MS,
+  STATIC_STALE_TIME_MS,
+  useAdminCache,
+  useAdminCacheActions,
+} from '../hooks/useAdminQuery.jsx';
 
 /**
  * View Quản lý Nhân sự ReHome
@@ -12,12 +18,12 @@ import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
  * - PATCH /api/admin/moderators/{id}/warehouse: Đổi kho công tác
  * - PATCH /api/admin/accounts/{id}/ban & unban: Khóa/Mở khóa tài khoản Moderator
  */
+const WAREHOUSE_OPTIONS_CACHE_KEY = 'admin:warehouses:options';
+
 export default function AdminModeratorsView({ onLogAction }) {
   const toast = useToast();
-  const [moderators, setModerators] = useState([]);
-  const [warehouses, setWarehouses] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const cache = useAdminCache();
+  const cacheActions = useAdminCacheActions();
 
   const [searchKeyword, setSearchKeyword] = useState('');
   const {
@@ -27,6 +33,15 @@ export default function AdminModeratorsView({ onLogAction }) {
   } = useDebouncedSearch(searchKeyword);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [warehouseFilter, setWarehouseFilter] = useState('ALL');
+
+  const initialWarehouses = cache?.read(WAREHOUSE_OPTIONS_CACHE_KEY)?.data || null;
+  const modCacheKey = `admin:moderators:list:${debouncedSearch || ''}:${statusFilter}:${warehouseFilter}`;
+  const initialMods = cache?.read(modCacheKey)?.data || null;
+
+  const [moderators, setModerators] = useState(() => initialMods ?? []);
+  const [warehouses, setWarehouses] = useState(() => initialWarehouses ?? []);
+  const [isLoading, setIsLoading] = useState(() => !initialMods);
+  const [error, setError] = useState(null);
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -40,56 +55,102 @@ export default function AdminModeratorsView({ onLogAction }) {
   const [togglingStatus, setTogglingStatus] = useState(false);
 
   // Create Form State
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     fullName: '',
     email: '',
     phone: '',
-    warehouseId: '',
-  });
+    warehouseId: initialWarehouses?.[0]?.id || '',
+  }));
   const [formErrors, setFormErrors] = useState({});
 
-  // Fetch initial warehouses
+  const modSeqRef = useRef(0);
+  const mountedRef = useRef(true);
+
   useEffect(() => {
-    loadWarehouses();
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
-  // Fetch moderators when filters change (debounce 400ms & tối thiểu 2 ký tự qua useDebouncedSearch)
-  useEffect(() => {
-    loadModerators();
-  }, [debouncedSearch, statusFilter, warehouseFilter]);
+  const loadWarehouses = useCallback(async () => {
+    const cached = cache?.read(WAREHOUSE_OPTIONS_CACHE_KEY) || null;
+    if (cached && cache.isFresh(cached, STATIC_STALE_TIME_MS)) {
+      const list = cached.data || [];
+      setWarehouses(list);
+      if (list.length > 0) {
+        setFormData((prev) => (prev.warehouseId ? prev : { ...prev, warehouseId: list[0].id }));
+      }
+      return;
+    }
 
-  const loadWarehouses = async () => {
     try {
       const data = await adminApi.getWarehouses();
+      if (!mountedRef.current) return;
       const list = Array.isArray(data) ? data : data?.content || data?.result || [];
+      cache?.write(WAREHOUSE_OPTIONS_CACHE_KEY, list);
       setWarehouses(list);
-      if (list.length > 0 && !formData.warehouseId) {
-        setFormData((prev) => ({ ...prev, warehouseId: list[0].id }));
+      if (list.length > 0) {
+        setFormData((prev) => (prev.warehouseId ? prev : { ...prev, warehouseId: list[0].id }));
       }
     } catch (err) {
       console.error('Lỗi tải danh sách kho:', err);
     }
-  };
+  }, [cache]);
 
-  const loadModerators = async () => {
-    try {
+  const loadModerators = useCallback(async ({ force = false } = {}) => {
+    const cachedEntry = cache?.read(modCacheKey) || null;
+    if (!force && cachedEntry && cache.isFresh(cachedEntry, DEFAULT_STALE_TIME_MS)) {
+      setModerators(cachedEntry.data ?? []);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
+    const reqId = ++modSeqRef.current;
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached) {
+      setModerators(cachedEntry.data);
+      setError(null);
+      setIsLoading(false);
+    } else {
       setIsLoading(true);
       setError(null);
+    }
+
+    try {
       const params = {
         search: debouncedSearch || undefined,
         status: statusFilter !== 'ALL' ? statusFilter : undefined,
         warehouseId: warehouseFilter !== 'ALL' ? warehouseFilter : undefined,
       };
       const res = await adminApi.getModerators(params);
+      if (!mountedRef.current || reqId !== modSeqRef.current) return;
       const list = Array.isArray(res) ? res : res?.content || res?.result?.content || res?.result || [];
+      cache?.write(modCacheKey, list);
       setModerators(list);
     } catch (err) {
+      if (!mountedRef.current || reqId !== modSeqRef.current) return;
       console.error('Lỗi tải danh sách Moderator:', err);
-      setError('Không thể tải danh sách Moderator. Vui lòng thử lại sau.');
+      if (!hasCached || force) {
+        setError('Không thể tải danh sách Moderator. Vui lòng thử lại sau.');
+      }
     } finally {
-      setIsLoading(false);
+      if (mountedRef.current && reqId === modSeqRef.current) {
+        setIsLoading(false);
+      }
     }
-  };
+  }, [cache, modCacheKey, debouncedSearch, statusFilter, warehouseFilter]);
+
+  // Fetch initial warehouses
+  useEffect(() => {
+    loadWarehouses();
+  }, [loadWarehouses]);
+
+  // Fetch moderators when filters change (debounce 400ms & tối thiểu 2 ký tự qua useDebouncedSearch)
+  useEffect(() => {
+    loadModerators();
+  }, [loadModerators]);
 
   const showNotification = (msg) => {
     setActionSuccessMsg(msg);
@@ -151,7 +212,8 @@ export default function AdminModeratorsView({ onLogAction }) {
         });
       }
 
-      await loadModerators();
+      cacheActions?.invalidate(['admin:moderators:', 'admin:warehouses:', 'admin:accounts:', 'admin:audit-logs:', 'admin:dashboard:']);
+      await loadModerators({ force: true });
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Không thể tạo tài khoản Moderator';
       setFormErrors({ general: msg });
@@ -201,7 +263,8 @@ export default function AdminModeratorsView({ onLogAction }) {
       setToggleStatusTarget(null);
       setToggleStatusReason('');
       setDetailTarget(null);
-      await loadModerators();
+      cacheActions?.invalidate(['admin:moderators:', 'admin:warehouses:', 'admin:accounts:', 'admin:audit-logs:', 'admin:dashboard:']);
+      await loadModerators({ force: true });
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || `Lỗi khi ${actionLabel} tài khoản`);
     } finally {
@@ -232,7 +295,8 @@ export default function AdminModeratorsView({ onLogAction }) {
         });
       }
 
-      await loadModerators();
+      cacheActions?.invalidate(['admin:moderators:', 'admin:warehouses:', 'admin:accounts:', 'admin:audit-logs:', 'admin:dashboard:']);
+      await loadModerators({ force: true });
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || 'Không thể chuyển địa điểm công tác cho Moderator');
     } finally {
@@ -338,7 +402,7 @@ export default function AdminModeratorsView({ onLogAction }) {
             type="button"
             variant="secondary"
             size="sm"
-            onClick={loadModerators}
+            onClick={() => loadModerators({ force: true })}
             className="mt-4"
           >
             Thử lại
