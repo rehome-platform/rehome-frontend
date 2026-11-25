@@ -7,6 +7,7 @@ import { useToast } from "../../../../context/ToastContext.jsx";
 import baseApi from "../../../../services/baseApi.js";
 import { API_BASE_URL } from "../../../../configs/api.config.js";
 import { TABLE_COLUMN_LABELS } from "../../../../constants/tableColumns.js";
+import { hasValidTaxCode } from "../../hooks/useOrgVerification.jsx";
 
 gsap.registerPlugin(useGSAP);
 
@@ -209,44 +210,59 @@ export function VerificationRejectDialog({ isRejectModalOpen, setIsRejectModalOp
   );
 }
 
-export function VerificationChecklist({ checklist, setChecklist, isEnterprise, selectedOrg }) {
-  const docs = selectedOrg?.documents || [];
-  const rep = selectedOrg?.representative;
-  const isRepObject = rep && typeof rep === 'object';
-  const hasCccdInDocs = docs.some((d) => (d.title || d.docType || '').toLowerCase().includes('cccd'));
-  const missingCccd = !hasCccdInDocs && (!isRepObject || !rep.cccdFrontUrl || !rep.cccdBackUrl);
+export function VerificationChecklist({ checklist, setChecklist, isEnterprise, hasTax, selectedOrg }) {
+  const resolvedHasTax = typeof hasTax === 'boolean' ? hasTax : hasValidTaxCode(selectedOrg?.taxCode);
 
   return (
     <div className="border border-neutral rounded-xl divide-y divide-neutral bg-surface text-xs">
       {/* Bước 1: Tra MST */}
-      <label className="p-3 flex items-start gap-3 cursor-pointer hover:bg-background transition-colors">
+      <label
+        className={`p-3 flex items-start gap-3 transition-colors ${
+          !resolvedHasTax ? 'opacity-60 bg-background/50 cursor-not-allowed' : 'cursor-pointer hover:bg-background'
+        }`}
+      >
         <input
           type="checkbox"
-          checked={checklist.taxChecked}
-          onChange={(e) => setChecklist({ ...checklist, taxChecked: e.target.checked })}
-          className="mt-0.5 rounded border-neutral text-primary focus:ring-primary"
+          disabled={!resolvedHasTax}
+          checked={resolvedHasTax ? Boolean(checklist.taxChecked) : false}
+          onChange={(e) => {
+            if (!resolvedHasTax) return;
+            setChecklist({ ...checklist, taxChecked: e.target.checked });
+          }}
+          className="mt-0.5 rounded border-neutral text-primary focus:ring-primary disabled:cursor-not-allowed"
         />
         <div>
           <span className="font-semibold text-text">
             Tra mã số thuế trên cổng thuế, đối chiếu tên, địa chỉ, tình trạng hoạt động
           </span>
           <span className="block text-[10px] text-textSecondary mt-0.5">
-            tracuunnt.gdt.gov.vn · bắt buộc vì tổ chức có MST
+            {resolvedHasTax
+              ? 'tracuunnt.gdt.gov.vn · bắt buộc vì tổ chức có MST'
+              : 'Tổ chức không có mã số thuế — hồ sơ này không bắt buộc'}
           </span>
         </div>
+        {!resolvedHasTax && (
+          <span className="text-[10px] px-2 py-0.5 border border-neutral text-textSecondary rounded-full ml-auto bg-neutral-light shrink-0">
+            không bắt buộc
+          </span>
+        )}
       </label>
 
       {/* Bước 2: Cổng ĐKKD (cho DNXH) */}
       <label
         className={`p-3 flex items-start gap-3 transition-colors ${
-          !isEnterprise ? 'opacity-60 bg-background/50' : 'cursor-pointer hover:bg-background'
+          !isEnterprise ? 'opacity-60 bg-background/50 cursor-not-allowed' : 'cursor-pointer hover:bg-background'
         }`}
       >
         <input
           type="checkbox"
-          checked={checklist.businessChecked}
-          onChange={(e) => setChecklist({ ...checklist, businessChecked: e.target.checked })}
-          className="mt-0.5 rounded border-neutral text-primary focus:ring-primary"
+          disabled={!isEnterprise}
+          checked={isEnterprise ? Boolean(checklist.businessChecked) : false}
+          onChange={(e) => {
+            if (!isEnterprise) return;
+            setChecklist({ ...checklist, businessChecked: e.target.checked });
+          }}
+          className="mt-0.5 rounded border-neutral text-primary focus:ring-primary disabled:cursor-not-allowed"
         />
         <div>
           <span className="font-semibold text-text">
@@ -259,7 +275,7 @@ export function VerificationChecklist({ checklist, setChecklist, isEnterprise, s
           </span>
         </div>
         {!isEnterprise && (
-          <span className="text-[10px] px-2 py-0.5 border border-neutral text-textSecondary rounded-full ml-auto bg-neutral-light">
+          <span className="text-[10px] px-2 py-0.5 border border-neutral text-textSecondary rounded-full ml-auto bg-neutral-light shrink-0">
             không bắt buộc
           </span>
         )}
@@ -269,7 +285,7 @@ export function VerificationChecklist({ checklist, setChecklist, isEnterprise, s
       <label className="p-3 flex items-start gap-3 cursor-pointer hover:bg-background transition-colors">
         <input
           type="checkbox"
-          checked={checklist.docsValid}
+          checked={Boolean(checklist.docsValid)}
           onChange={(e) => setChecklist({ ...checklist, docsValid: e.target.checked })}
           className="mt-0.5 rounded border-neutral text-primary focus:ring-primary"
         />
@@ -284,7 +300,7 @@ export function VerificationChecklist({ checklist, setChecklist, isEnterprise, s
       <label className="p-3 flex items-start gap-3 cursor-pointer hover:bg-background transition-colors">
         <input
           type="checkbox"
-          checked={checklist.cccdMatched}
+          checked={Boolean(checklist.cccdMatched)}
           onChange={(e) => setChecklist({ ...checklist, cccdMatched: e.target.checked })}
           className="mt-0.5 rounded border-neutral text-primary focus:ring-primary"
         />
@@ -299,7 +315,7 @@ export function VerificationChecklist({ checklist, setChecklist, isEnterprise, s
       <label className="p-3 flex items-start gap-3 cursor-pointer hover:bg-background transition-colors">
         <input
           type="checkbox"
-          checked={checklist.phoneConfirmed}
+          checked={Boolean(checklist.phoneConfirmed)}
           onChange={(e) => setChecklist({ ...checklist, phoneConfirmed: e.target.checked })}
           className="mt-0.5 rounded border-neutral text-primary focus:ring-primary"
         />
@@ -311,10 +327,10 @@ export function VerificationChecklist({ checklist, setChecklist, isEnterprise, s
       </label>
 
       {/* Bước 6: Cơ quan cấp phép */}
-      <label className="p-3 flex items-start gap-3 opacity-60 bg-background/50">
+      <label className="p-3 flex items-start gap-3 opacity-75 bg-background/50 cursor-pointer hover:bg-background transition-colors">
         <input
           type="checkbox"
-          checked={checklist.authorityChecked}
+          checked={Boolean(checklist.authorityChecked)}
           onChange={(e) => setChecklist({ ...checklist, authorityChecked: e.target.checked })}
           className="mt-0.5 rounded border-neutral text-primary focus:ring-primary"
         />
@@ -326,7 +342,7 @@ export function VerificationChecklist({ checklist, setChecklist, isEnterprise, s
             Chỉ làm khi nghi ngờ — không bắt buộc
           </span>
         </div>
-        <span className="text-[10px] px-2 py-0.5 border border-neutral text-textSecondary rounded-full ml-auto bg-neutral-light">
+        <span className="text-[10px] px-2 py-0.5 border border-neutral text-textSecondary rounded-full ml-auto bg-neutral-light shrink-0">
           không bắt buộc
         </span>
       </label>
@@ -335,7 +351,7 @@ export function VerificationChecklist({ checklist, setChecklist, isEnterprise, s
       <label className="p-3 flex items-start gap-3 cursor-pointer hover:bg-background transition-colors">
         <input
           type="checkbox"
-          checked={checklist.reputationChecked}
+          checked={Boolean(checklist.reputationChecked)}
           onChange={(e) => setChecklist({ ...checklist, reputationChecked: e.target.checked })}
           className="mt-0.5 rounded border-neutral text-primary focus:ring-primary"
         />

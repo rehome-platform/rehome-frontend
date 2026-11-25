@@ -6,6 +6,12 @@ import { DEFAULT_STALE_TIME_MS, useModeratorCache } from "./warehouseHooks.jsx";
 const ORG_QUEUE_CACHE_KEY = 'verifications:queue';
 const ORG_EXISTING_CACHE_KEY = 'verifications:existing';
 
+export function hasValidTaxCode(taxCode) {
+  if (taxCode == null) return false;
+  const normalized = String(taxCode).trim().toLowerCase();
+  return Boolean(normalized) && normalized !== 'không có' && normalized !== '—' && normalized !== '-';
+}
+
 function calculateWaitDays(createdAt) {
   if (!createdAt) return '—';
   const created = new Date(createdAt);
@@ -277,9 +283,11 @@ export function useOrgVerification() {
   const [approvingOrg, setApprovingOrg] = useState(false);
 
   // Required checks logic
-  const hasTax = Boolean(selectedOrg?.taxCode && selectedOrg.taxCode !== 'không có');
+  const hasTax = hasValidTaxCode(selectedOrg?.taxCode);
   const rawOrgType = String(selectedOrg?.orgType || selectedOrg?.type || '');
-  const isEnterprise = rawOrgType.toUpperCase().includes('ENTERPRISE') || rawOrgType.includes('Doanh nghiệp');
+  const isEnterprise =
+    rawOrgType.toUpperCase().includes('ENTERPRISE') ||
+    rawOrgType.toLowerCase().includes('doanh nghiệp');
   const mandatoryItemsLeft = [
     hasTax && !checklist.taxChecked,
     isEnterprise && !checklist.businessChecked,
@@ -443,6 +451,7 @@ export function useOrgVerification() {
     checklist,
     setChecklist,
     isEnterprise,
+    hasTax,
     auditNote,
     setAuditNote,
     isChecklistComplete,
@@ -457,7 +466,7 @@ export function useOrgVerification() {
     sections: {
       VerificationQueueTabs: { setActiveQueueTab, activeQueueTab, orgsQueue },
       VerificationQueueTable: { loading, orgsQueue, handleOpenDetail, activeQueueTab },
-      VerificationChecklist: { checklist, setChecklist, isEnterprise, selectedOrg },
+      VerificationChecklist: { checklist, setChecklist, isEnterprise, hasTax, selectedOrg },
       VerificationRejectDialog: { isRejectModalOpen, setIsRejectModalOpen, rejectReason, setRejectReason, handleConfirmReject, rejectingOrg },
     },
   };
