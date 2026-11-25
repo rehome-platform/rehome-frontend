@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Badge, Button, Modal, Table, TableActionButton } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
@@ -30,7 +31,7 @@ const SEVERITY_VARIANTS = {
 };
 
 const ACTION_LABELS = {
-  AUTO_FLAG: 'Tự động gắn cờ',
+  AUTO_FLAG: 'Ẩn & chờ duyệt',
   AUTO_REJECT: 'Tự động từ chối',
   NOTIFY_ADMIN: 'Thông báo quản trị viên',
 };
@@ -281,6 +282,20 @@ export default function ViolationWordsPage() {
             <span className="material-symbols-outlined text-base">add</span>
             <span>Thêm từ khóa</span>
           </Button>
+        </div>
+
+        <div className="p-3 rounded-xl bg-[#F6F9F4] border border-[#006B2C]/20 text-xs text-[#1F2A37] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <span>
+            <strong>2 luồng xử lý:</strong> Bài viết &amp; Bình luận chứa từ vi phạm sẽ bị{' '}
+            <strong>ẩn và chuyển chờ Admin xử lý</strong>; riêng tin nhắn <strong>Chat</strong> được{' '}
+            <strong>che ***</strong> để giữ luồng trò chuyện mượt mà.
+          </span>
+          <Link
+            to="/admin/content-reviews"
+            className="text-[#006B2C] font-semibold hover:underline shrink-0"
+          >
+            Kiểm duyệt nội dung →
+          </Link>
         </div>
 
         {/* Filters */}
