@@ -12,6 +12,7 @@ export const AUDIT_TARGET_TYPE_LABELS = {
   ORGANIZATION_ACCOUNT: 'Hồ sơ tổ chức',
   ORGANIZATION_LEGAL_CHANGE: 'Hồ sơ pháp lý tổ chức',
   POST: 'Bài viết',
+  COMMENT: 'Bình luận',
   CAMPAIGN: 'Chiến dịch',
   WAREHOUSE: 'Địa điểm ký gửi',
   ORGANIZATION: 'Tổ chức',
@@ -117,6 +118,7 @@ export const AUDIT_ACTION_LABELS = {
   CONTENT_REVIEW_REJECTED: 'Từ chối nội dung cộng đồng',
   CONTENT_AUTO_FLAG: 'Tự động gắn cờ nội dung vi phạm',
   CONTENT_NOTIFY_ADMIN: 'Thông báo quản trị viên về nội dung nghi vi phạm',
+  CONTENT_CHAT_MASKED: 'Tự động che từ nhạy cảm trong tin nhắn',
   REMOVE_POST: 'Gỡ bài viết vi phạm',
 
   // Điều khoản biên nhận, Từ ngữ vi phạm, Cấu hình, Gói thành viên & Voucher
