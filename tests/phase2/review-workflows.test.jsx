@@ -155,7 +155,8 @@ describe('organization verification regression', () => {
     expect(result.current.isChecklistComplete).toBe(true);
   });
 
-  it('requires a reason for rejection and refreshes legal changes after approval', async () => {
+  it('requires a reason for rejection and updates org and legal change statuses optimistically after approval', async () => {
+    orgVerificationService.getLegalChanges.mockResolvedValueOnce({ data: [{ id: 'change1', status: 'PENDING' }] });
     const { result } = renderHook(useOrgVerification);
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(async () => { await result.current.handleOpenDetail(org); });
@@ -164,9 +165,11 @@ describe('organization verification regression', () => {
     act(() => result.current.setRejectReason('Thiếu giấy phép'));
     await act(async () => { await result.current.handleConfirmReject(); });
     expect(orgVerificationService.rejectOrg).toHaveBeenCalledExactlyOnceWith('org1', 'Thiếu giấy phép');
+    expect(result.current.orgsQueue[0].status).toBe('REJECTED');
     await act(async () => { await result.current.handleApproveLegalChange('change1'); });
     expect(orgVerificationService.approveLegalChange).toHaveBeenCalledExactlyOnceWith('change1');
-    expect(orgVerificationService.getLegalChanges).toHaveBeenCalledTimes(3);
+    expect(result.current.legalChanges[0].status).toBe('APPROVED');
+    expect(orgVerificationService.getLegalChanges).toHaveBeenCalledTimes(1);
   });
 
   it('allows approval for organizations without tax code while skipping optional and disabled checks', async () => {

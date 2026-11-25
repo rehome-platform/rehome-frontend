@@ -105,7 +105,7 @@ describe('Organization Verification Data Mapping & Design Tokens', () => {
     // Action button
     const actionButtons = screen.getAllByRole('button', { name: /Xác minh/i });
     expect(actionButtons).toHaveLength(2);
-    expect(actionButtons[0].className).toContain('bg-primary');
+    expect(actionButtons[0].className).toContain('bg-[#006B2C]');
     expect(actionButtons[0].className).toContain('rounded-xl');
   });
 
