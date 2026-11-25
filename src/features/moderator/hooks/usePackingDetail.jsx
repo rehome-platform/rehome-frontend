@@ -10,12 +10,23 @@ import { operationReady } from "../config/packingContract.js";
 export function usePackingDetail({ orderId, onChanged }) {
   const { scope, signal } = usePhase2();
   const alive = useRef(true);
+  const resolvedOrderIdRef = useRef(orderId);
+  const lastPropOrderIdRef = useRef(orderId);
+  if (lastPropOrderIdRef.current !== orderId) {
+    lastPropOrderIdRef.current = orderId;
+    resolvedOrderIdRef.current = orderId;
+  }
 
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const readEpoch = useRef(0);
   const resource = useResource(async options => {
     const epoch = readEpoch.current;
-    return { ...await packingService.read(orderId, options), readEpoch: epoch };
+    const data = await packingService.read(resolvedOrderIdRef.current || orderId, options);
+    const canonicalId = data?.id || data?.orderId;
+    if (canonicalId) {
+      resolvedOrderIdRef.current = canonicalId;
+    }
+    return { ...data, readEpoch: epoch };
   }, [orderId], {
     poll: true,
     done: (data) => Boolean(data?.ghnTrackingCode) || data?.shipmentOutcome === 'NOT_CREATED',
@@ -51,6 +62,7 @@ export function usePackingDetail({ orderId, onChanged }) {
   }, []);
 
   const order = resource.data;
+  const resolvedOrderId = order?.id || order?.orderId || resolvedOrderIdRef.current || orderId;
   const changed = () => { onChanged(); window.dispatchEvent(new Event('warehouse:changed')); };
 
   useEffect(() => {
@@ -67,7 +79,7 @@ export function usePackingDetail({ orderId, onChanged }) {
   const persistPackingPhotos = async (nextUrls) => {
     setPackingPhotosSaving(true);
     try {
-      const saved = await packingService.updatePhotos(orderId, nextUrls, { signal, scope });
+      const saved = await packingService.updatePhotos(resolvedOrderId, nextUrls, { signal, scope });
       const resolvedUrls = Array.isArray(saved) ? saved : nextUrls;
       if (alive.current && !signal.aborted) {
         setPackingPhotos(resolvedUrls);
@@ -159,7 +171,7 @@ export function usePackingDetail({ orderId, onChanged }) {
     const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
     try {
-      await resource.mutate(options => packingService.scan(orderId, code, options), {
+      await resource.mutate(options => packingService.scan(resolvedOrderId, code, options), {
         skipRefresh: true,
         onSuccess: result => {
           if (result.matched) {
@@ -233,7 +245,7 @@ export function usePackingDetail({ orderId, onChanged }) {
     readEpoch.current++;
     setUncertain(true);
     try {
-      await resource.mutate(options => packingService.shipment(orderId, options), {
+      await resource.mutate(options => packingService.shipment(resolvedOrderId, options), {
         onSuccess: () => {
           changed();
           setPrintModalOpen(true); // Tự động mở tùy chọn in phiếu sau khi tạo vận đơn GHN thành công
@@ -252,7 +264,7 @@ export function usePackingDetail({ orderId, onChanged }) {
     setHandoverLoading(true);
     try {
       let ok = false;
-      await resource.mutate(options => packingService.handoverOrder(orderId, options), {
+      await resource.mutate(options => packingService.handoverOrder(resolvedOrderId, options), {
         onSuccess: () => {
           ok = true;
           setMessage('Đã xác nhận bàn giao kiện hàng cho GHN.');
