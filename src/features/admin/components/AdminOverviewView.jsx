@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import adminApi from '../services/adminApi';
 import AdminAccountGrowthChart from './AdminAccountGrowthChart.jsx';
 import AdminDonutChart from './AdminDonutChart.jsx';
 import { getRoleLabel, getRoleBadgeStyle } from '../../../constants/roleLabels.js';
 import { formatAuditActionLabel, formatAuditTargetTypeLabel } from '../../../constants/auditLogLabels.js';
 import { DASHBOARD_TONES, DASHBOARD_CARD_CLASS } from '../../../constants/dashboardTheme.js';
+import { DASHBOARD_STALE_TIME_MS, useAdminCache } from '../hooks/useAdminQuery.jsx';
+
+const OVERVIEW_CACHE_KEY = 'admin:dashboard:overview:summary';
 
 /**
  * View Tổng quan Dashboard Quản trị ReHome
@@ -15,39 +18,75 @@ import { DASHBOARD_TONES, DASHBOARD_CARD_CLASS } from '../../../constants/dashbo
  * - Bảng "Hoạt động gần đây" kết nối trực tiếp với Nhật ký kiểm soát (Audit Log - API 149)
  */
 export default function AdminOverviewView({ onNavigateToAudit }) {
-  const [isLoading, setIsLoading] = useState(true);
+  const cache = useAdminCache();
+  const initialCached = cache?.read(OVERVIEW_CACHE_KEY)?.data || null;
+
+  const [isLoading, setIsLoading] = useState(() => !initialCached);
 
   // Thống kê thực tế
-  const [stats, setStats] = useState({
-    memberCount: 0,
-    orgCount: 0,
-    moderatorCount: 0,
-    totalAccounts: 0,
-  });
+  const [stats, setStats] = useState(
+    () =>
+      initialCached?.stats || {
+        memberCount: 0,
+        orgCount: 0,
+        moderatorCount: 0,
+        totalAccounts: 0,
+      }
+  );
 
-  const [recentActivities, setRecentActivities] = useState([]);
+  const [recentActivities, setRecentActivities] = useState(
+    () => initialCached?.recentActivities ?? []
+  );
   const [loadError, setLoadError] = useState('');
 
+  const reqSeqRef = useRef(0);
+  const mountedRef = useRef(true);
+
   useEffect(() => {
-    loadOverviewData();
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
-  const loadOverviewData = async () => {
-    try {
+  const loadOverviewData = useCallback(async ({ force = false } = {}) => {
+    const cachedEntry = cache?.read(OVERVIEW_CACHE_KEY) || null;
+    if (!force && cachedEntry && cache.isFresh(cachedEntry, DASHBOARD_STALE_TIME_MS)) {
+      if (cachedEntry.data?.stats) setStats(cachedEntry.data.stats);
+      setRecentActivities(cachedEntry.data?.recentActivities ?? []);
+      setLoadError('');
+      setIsLoading(false);
+      return;
+    }
+
+    const reqId = ++reqSeqRef.current;
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached) {
+      if (cachedEntry.data.stats) setStats(cachedEntry.data.stats);
+      setRecentActivities(cachedEntry.data.recentActivities ?? []);
+      setLoadError('');
+      setIsLoading(false);
+    } else {
       setIsLoading(true);
       setLoadError('');
+    }
 
+    try {
       const [membersRes, orgsRes, modsRes, auditRes] = await Promise.allSettled([
         adminApi.getAccounts({ role: 'MEMBER', size: 1 }),
         adminApi.getAccounts({ role: 'ORGANIZATION', size: 1 }),
         adminApi.getModerators({ size: 1 }),
         adminApi.getAuditLogs({ size: 6 }),
       ]);
+      if (!mountedRef.current || reqId !== reqSeqRef.current) return;
 
       const failedCount = [membersRes, orgsRes, modsRes, auditRes].filter(
         (r) => r.status === 'rejected'
       ).length;
       if (failedCount > 0) {
+        if (hasCached && !force) {
+          return;
+        }
         setLoadError('Không thể tải đầy đủ dữ liệu tổng quan từ máy chủ. Vui lòng thử lại.');
       }
 
@@ -56,24 +95,38 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
       const moderatorCount = modsRes.status === 'fulfilled' ? (modsRes.value?.totalElements ?? (Array.isArray(modsRes.value) ? modsRes.value.length : 0)) : 0;
 
       const totalAccounts = memberCount + orgCount + moderatorCount;
-
-      setStats({
+      const nextStats = {
         memberCount,
         orgCount,
         moderatorCount,
         totalAccounts,
-      });
+      };
+      setStats(nextStats);
 
+      let nextActivities = [];
       if (auditRes.status === 'fulfilled' && auditRes.value) {
-        const logs = Array.isArray(auditRes.value) ? auditRes.value : auditRes.value?.content || [];
-        setRecentActivities(logs);
+        nextActivities = Array.isArray(auditRes.value) ? auditRes.value : auditRes.value?.content || [];
+        setRecentActivities(nextActivities);
+      }
+
+      if (failedCount === 0) {
+        cache?.write(OVERVIEW_CACHE_KEY, {
+          stats: nextStats,
+          recentActivities: nextActivities,
+        });
       }
     } catch (err) {
       console.error('Lỗi khi nạp dữ liệu Tổng quan:', err);
     } finally {
-      setIsLoading(false);
+      if (mountedRef.current && reqId === reqSeqRef.current) {
+        setIsLoading(false);
+      }
     }
-  };
+  }, [cache]);
+
+  useEffect(() => {
+    loadOverviewData();
+  }, [loadOverviewData]);
 
   const statCards = [
     {
@@ -119,7 +172,7 @@ export default function AdminOverviewView({ onNavigateToAudit }) {
           <span>{loadError}</span>
           <button
             type="button"
-            onClick={loadOverviewData}
+            onClick={() => loadOverviewData({ force: true })}
             className="px-3 py-1.5 rounded-lg border border-[#FECACA] bg-white hover:bg-[#FEF2F2] text-xs font-bold text-[#991B1B]"
           >
             Thử lại

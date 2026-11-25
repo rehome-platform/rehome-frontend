@@ -5,6 +5,7 @@ import ComparisonBadge from './ComparisonBadge.jsx';
 import useAdminPeriod from '../hooks/useAdminPeriod.js';
 import usePreviousTotal from '../hooks/usePreviousTotal.js';
 import { Spinner } from '../../../components/common/index.js';
+import { DASHBOARD_STALE_TIME_MS, useAdminCache } from '../hooks/useAdminQuery.jsx';
 import { pickTrendGranularity } from '../utils/adminDateUtils.js';
 
 const ROLE_OPTIONS = [
@@ -22,6 +23,7 @@ const ROLE_OPTIONS = [
  * Độ chi tiết (ngày, tuần, tháng) tự chọn theo độ dài khoảng.
  */
 export default function AdminAccountGrowthChart({ footerNote }) {
+  const cache = useAdminCache();
   const filter = useAdminPeriod('LAST30');
   const { activeRange, dateError, previousRange, previousPeriodLabel } = filter;
   const from = activeRange.apiFrom;
@@ -29,67 +31,110 @@ export default function AdminAccountGrowthChart({ footerNote }) {
   const granularity = pickTrendGranularity(from, to);
   const [role, setRole] = useState('ALL');
 
+  const growthCacheKey = `admin:dashboard:account-growth:${granularity}:${role}:${from || ''}:${to || ''}`;
+  const prevGrowthKey = previousRange
+    ? `admin:dashboard:prev-account-growth:${role}:${previousRange.apiFrom || ''}:${previousRange.apiTo || ''}`
+    : null;
+
   const fetchPreviousTotal = useCallback(
     (range) => adminApi.getAccountGrowthTotal({ from: range.apiFrom, to: range.apiTo, role: role === 'ALL' ? undefined : role }),
     [role]
   );
-  const { previousTotal, loadingPrevious } = usePreviousTotal(fetchPreviousTotal, previousRange, [role]);
+  const { previousTotal, loadingPrevious } = usePreviousTotal(
+    fetchPreviousTotal,
+    previousRange,
+    [role],
+    prevGrowthKey
+  );
 
-  const [growthData, setGrowthData] = useState({
-    granularity: 'day',
-    from,
-    to,
-    total: 0,
-    points: [],
-  });
-  const [loading, setLoading] = useState(true);
+  const initialCached = cache?.read(growthCacheKey)?.data || null;
+  const [growthData, setGrowthData] = useState(
+    () =>
+      initialCached || {
+        granularity: 'day',
+        from,
+        to,
+        total: 0,
+        points: [],
+      }
+  );
+  const [loading, setLoading] = useState(() => !initialCached);
   const [error, setError] = useState(null);
   const [hoveredIdx, setHoveredIdx] = useState(null);
 
   const reqSeqRef = useRef(0);
+  const mountedRef = useRef(true);
 
-  const fetchGrowth = useCallback(async () => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const fetchGrowth = useCallback(async ({ force = false } = {}) => {
     if (dateError) {
       setLoading(false);
       return;
     }
 
+    const cachedEntry = cache?.read(growthCacheKey) || null;
+    if (!force && cachedEntry && cache.isFresh(cachedEntry, DASHBOARD_STALE_TIME_MS)) {
+      setGrowthData(cachedEntry.data);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     const reqId = ++reqSeqRef.current;
-    try {
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached) {
+      setGrowthData(cachedEntry.data);
+      setError(null);
+      setLoading(false);
+    } else {
       setLoading(true);
       setError(null);
+    }
+
+    try {
       const data = await adminApi.getAccountGrowth({
         from,
         to,
         granularity,
         role: role === 'ALL' ? undefined : role,
       });
-      if (reqId === reqSeqRef.current && data) {
-        setGrowthData({
+      if (!mountedRef.current || reqId !== reqSeqRef.current) return;
+      if (data) {
+        const nextGrowth = {
           granularity: data.granularity || granularity,
           from: data.from || from,
           to: data.to || to,
           total: data.total ?? 0,
           points: Array.isArray(data.points) ? data.points : [],
-        });
+        };
+        cache?.write(growthCacheKey, nextGrowth);
+        setGrowthData(nextGrowth);
         setHoveredIdx(null);
       }
     } catch (err) {
-      if (reqId === reqSeqRef.current) {
+      if (mountedRef.current && reqId === reqSeqRef.current) {
         console.error('Lỗi tải dữ liệu tăng trưởng tài khoản:', err);
-        const code = err?.response?.data?.code;
-        if (code === 'INVALID_DATE_RANGE') {
-          setError('Khoảng thời gian vượt quá 366 kỳ dữ liệu. Vui lòng thu hẹp khoảng thời gian.');
-        } else {
-          setError('Không thể tải biểu đồ tăng trưởng tài khoản.');
+        if (!hasCached || force) {
+          const code = err?.response?.data?.code;
+          if (code === 'INVALID_DATE_RANGE') {
+            setError('Khoảng thời gian vượt quá 366 kỳ dữ liệu. Vui lòng thu hẹp khoảng thời gian.');
+          } else {
+            setError('Không thể tải biểu đồ tăng trưởng tài khoản.');
+          }
         }
       }
     } finally {
-      if (reqId === reqSeqRef.current) {
+      if (mountedRef.current && reqId === reqSeqRef.current) {
         setLoading(false);
       }
     }
-  }, [from, to, granularity, role, dateError]);
+  }, [cache, growthCacheKey, from, to, granularity, role, dateError]);
 
   useEffect(() => {
     fetchGrowth();
@@ -186,7 +231,7 @@ export default function AdminAccountGrowthChart({ footerNote }) {
           <p className="text-xs font-semibold text-[#B91C1C]">{error}</p>
           <button
             type="button"
-            onClick={fetchGrowth}
+            onClick={() => fetchGrowth({ force: true })}
             className="px-3 py-1.5 rounded-lg bg-[#006B2C] text-white text-xs font-semibold"
           >
             Thử lại
