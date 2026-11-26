@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Button from '../../../../components/common/Button.jsx';
-import Modal from '../../../../components/common/Modal.jsx';
+import ImageLightbox from '../../../../components/common/ImageLightbox.jsx';
 
 export function ReturnImageLightbox({
   isOpen,
@@ -9,107 +9,59 @@ export function ReturnImageLightbox({
   initialIndex = 0,
   categoryLabel = '',
 }) {
-  const safeImages = Array.isArray(images) ? images.filter(Boolean) : [];
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  useEffect(() => {
-    if (isOpen) {
-      const clamped = Math.max(0, Math.min(Number(initialIndex) || 0, Math.max(0, safeImages.length - 1)));
-      setActiveIndex(clamped);
-    }
-  }, [isOpen, initialIndex, safeImages.length]);
-
-  useEffect(() => {
-    if (!isOpen || safeImages.length <= 1) return undefined;
-    const handleKey = (e) => {
-      if (e.key === 'ArrowLeft') {
-        setActiveIndex((prev) => (prev - 1 + safeImages.length) % safeImages.length);
-      } else if (e.key === 'ArrowRight') {
-        setActiveIndex((prev) => (prev + 1) % safeImages.length);
-      }
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [isOpen, safeImages.length]);
-
-  if (!isOpen || safeImages.length === 0) return null;
-  const currentUrl = safeImages[activeIndex] || safeImages[0];
-  const modalTitle = categoryLabel ? `Xem ảnh · ${categoryLabel}` : 'Xem ảnh chi tiết';
-
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={modalTitle} size="xl">
-      <div className="space-y-4 font-sans">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          {categoryLabel ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F6F9F4] text-[#006B2C] border border-[#C6E1CE] font-semibold">
-              {categoryLabel}
-            </span>
-          ) : (
-            <span />
-          )}
-          <span className="text-textSecondary font-semibold">
-            {`Ảnh ${activeIndex + 1} / ${safeImages.length}`}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-center rounded-2xl border border-neutral bg-[#F8FAF8] p-3 min-h-[280px]">
-          <img
-            src={currentUrl}
-            alt={categoryLabel ? `${categoryLabel} ${activeIndex + 1}` : `Ảnh ${activeIndex + 1}`}
-            className="max-h-[70vh] max-w-full object-contain rounded-xl"
-          />
-        </div>
-
-        <div className="flex items-center justify-between gap-3 pt-1">
-          <div className="flex items-center gap-2">
-            {safeImages.length > 1 && (
-              <>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    setActiveIndex((prev) => (prev - 1 + safeImages.length) % safeImages.length)
-                  }
-                >
-                  Trước
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setActiveIndex((prev) => (prev + 1) % safeImages.length)}
-                >
-                  Sau
-                </Button>
-              </>
-            )}
-          </div>
-          <Button type="button" size="sm" variant="outline" onClick={onClose}>
-            Đóng
-          </Button>
-        </div>
-      </div>
-    </Modal>
+    <ImageLightbox
+      isOpen={isOpen}
+      onClose={onClose}
+      images={images}
+      initialIndex={initialIndex}
+      categoryLabel={categoryLabel}
+    />
   );
 }
 
 export function ReturnPhotoGallery({ photos = [], label, emptyText }) {
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+  const safePhotos = Array.isArray(photos) ? photos.filter(Boolean) : [];
   return (
-    <div className="flex flex-wrap gap-2">
-      {photos.length ? (
-        photos.map((src, index) => (
-          <img
-            key={`${src}-${index}`}
-            src={src}
-            alt={`${label} ${index + 1}`}
-            className="w-28 h-32 object-cover rounded-xl border border-neutral bg-background"
-          />
-        ))
-      ) : (
-        <p className="text-xs text-textSecondary">{emptyText}</p>
+    <>
+      <div className="flex flex-wrap gap-2">
+        {safePhotos.length ? (
+          safePhotos.map((src, index) => (
+            <button
+              key={`${src}-${index}`}
+              type="button"
+              onClick={() => setLightboxIndex(index)}
+              title={`Phóng to ${label || 'ảnh'} ${index + 1}`}
+              className="group relative w-28 h-32 rounded-xl overflow-hidden border border-neutral bg-background cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-[#006B2C]/40"
+            >
+              <img
+                src={src}
+                alt={`${label} ${index + 1}`}
+                className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+              />
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/65 text-white text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                Phóng to
+              </span>
+            </button>
+          ))
+        ) : (
+          <p className="text-xs text-textSecondary">{emptyText}</p>
+        )}
+      </div>
+      {lightboxIndex !== null && (
+        <ImageLightbox
+          isOpen={lightboxIndex !== null}
+          onClose={() => setLightboxIndex(null)}
+          images={safePhotos}
+          initialIndex={lightboxIndex ?? 0}
+          categoryLabel={label || ''}
+        />
       )}
-    </div>
+    </>
   );
 }
 

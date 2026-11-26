@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Modal, Button, Tooltip, TableActionButton } from '../../../../components/common/index.js';
+import { Modal, Button, Tooltip, TableActionButton, ZoomableImage } from '../../../../components/common/index.js';
 import Spinner from '../../../../components/common/Spinner.jsx';
 import { orgVerificationService } from '../../services/orgVerificationApi.js';
 import { TABLE_COLUMN_LABELS } from '../../../../constants/tableColumns.js';
@@ -189,10 +189,13 @@ export function ExistingOrganizationsSection({
                       <td className="py-3 px-3.5">
                         <div className="flex items-center gap-2.5">
                           {org.logoUrl ? (
-                            <img
+                            <ZoomableImage
                               src={org.logoUrl}
                               alt={orgName}
-                              className="w-9 h-9 rounded-xl object-cover border border-neutral shrink-0"
+                              className="w-9 h-9 rounded-xl overflow-hidden border border-neutral shrink-0 block"
+                              imgClassName="w-full h-full object-cover"
+                              categoryLabel={orgName}
+                              showHoverBadge={false}
                             />
                           ) : (
                             <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary font-bold text-xs flex items-center justify-center shrink-0 border border-primary/20">
@@ -308,10 +311,13 @@ export function ExistingOrganizationsSection({
             {/* Header tóm tắt */}
             <div className="flex items-start gap-4 p-4 rounded-2xl bg-surface border border-neutral">
               {selectedOrg.logoUrl ? (
-                <img
+                <ZoomableImage
                   src={selectedOrg.logoUrl}
                   alt={selectedOrg.displayName}
-                  className="w-14 h-14 rounded-2xl object-cover border border-neutral shrink-0"
+                  className="w-14 h-14 rounded-2xl overflow-hidden border border-neutral shrink-0 block"
+                  imgClassName="w-full h-full object-cover"
+                  categoryLabel={selectedOrg.displayName || 'Logo tổ chức'}
+                  showHoverBadge={false}
                 />
               ) : (
                 <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary font-bold text-lg flex items-center justify-center shrink-0 border border-primary/20">

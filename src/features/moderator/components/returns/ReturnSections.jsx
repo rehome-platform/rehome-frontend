@@ -3,7 +3,7 @@ import { DEGRADED_DECISION_POLICY } from '../../models/degradedCaseModel.js';
 import { ReturnQueueRow } from './ReturnQueueRow.jsx';
 import { needsItemAction } from '../../services/returnApi.js';
 import React from "react";
-import { Button, Modal } from "../../../../components/common/index.js";
+import { Button, Modal, ImageLightbox, ZoomableImage } from "../../../../components/common/index.js";
 import { formatCurrencyVND } from "../../../../utils/formatters.js";
 import { formatDeadlineWithCountdown } from "../WarehouseUi.jsx";
 import { ReturnEvidence, ReturnPhotoComparison } from './ReturnEvidence.jsx';
@@ -71,6 +71,16 @@ export function ReturnOutcomeDialog({
     selectedItem?.productImage ||
     selectedItem?.photos?.[0] ||
     null;
+  const itemPhotos = React.useMemo(() => {
+    const candidates = [
+      ...(Array.isArray(selectedItem?.stockInPhotos) ? selectedItem.stockInPhotos : []),
+      selectedItem?.productImage,
+      ...(Array.isArray(selectedItem?.photos) ? selectedItem.photos : []),
+    ]
+      .map((p) => (typeof p === 'string' ? p : p?.url || p?.imageUrl))
+      .filter(Boolean);
+    return Array.from(new Set(candidates));
+  }, [selectedItem]);
 
   const alreadyProcessed = Boolean(selectedItem?.rawStatus === 'VALID' && !needsItemAction(selectedItem));
 
@@ -152,10 +162,14 @@ export function ReturnOutcomeDialog({
             <div className="border border-neutral rounded-xl overflow-hidden bg-surface shadow-sm">
               <div className="p-3 flex items-center gap-3 border-b border-neutral">
                 {itemPhoto ? (
-                  <img
+                  <ZoomableImage
                     src={itemPhoto}
                     alt={itemName}
-                    className="w-12 h-14 object-cover rounded-lg border border-neutral shrink-0"
+                    className="w-12 h-14 rounded-lg border border-neutral overflow-hidden shrink-0"
+                    imgClassName="w-full h-full object-cover"
+                    images={itemPhotos}
+                    categoryLabel={itemName}
+                    showHoverBadge={false}
                   />
                 ) : (
                   <div className="w-12 h-14 rounded-lg border border-dashed border-neutral bg-background flex items-center justify-center text-[9px] text-textSecondary shrink-0">
@@ -267,6 +281,7 @@ export function DegradedCaseModal({
   evidenceError = '',
 }) {
   const fileInputRef = React.useRef(null);
+  const [lightboxState, setLightboxState] = React.useState(null);
   if (!selectedItem) return null;
   const fullCompensation = selectedItem.compensationAmount;
   const halfCompensation = selectedItem.halfCompensationAmount ?? (
@@ -341,12 +356,25 @@ export function DegradedCaseModal({
               {stockPhotos.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
                   {stockPhotos.slice(0, 3).map((url, i) => (
-                    <img
+                    <button
                       key={i}
-                      src={url}
-                      alt="Ảnh xuất kho"
-                      className="w-16 h-16 object-cover rounded-lg border border-neutral"
-                    />
+                      type="button"
+                      onClick={() =>
+                        setLightboxState({
+                          images: stockPhotos,
+                          index: i,
+                          categoryLabel: 'Ảnh lúc xuất kho / ban đầu',
+                        })
+                      }
+                      className="w-16 h-16 rounded-lg overflow-hidden border border-neutral cursor-zoom-in group hover:ring-2 hover:ring-[#006B2C]/40"
+                      title={`Phóng to ảnh xuất kho ${i + 1}`}
+                    >
+                      <img
+                        src={url}
+                        alt="Ảnh xuất kho"
+                        className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                      />
+                    </button>
                   ))}
                 </div>
               ) : (
@@ -361,14 +389,30 @@ export function DegradedCaseModal({
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {allDamagedPhotos.map((url, i) => (
-                  <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-red-300">
-                    <img src={url} alt={`Ảnh hư hỏng ${i + 1}`} className="w-full h-full object-cover" />
+                  <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-red-300 group">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setLightboxState({
+                          images: allDamagedPhotos,
+                          index: i,
+                          categoryLabel: 'Ảnh hiện trạng hư hỏng',
+                        })
+                      }
+                      className="w-full h-full block cursor-zoom-in"
+                      title={`Phóng to ảnh hư hỏng ${i + 1}`}
+                    >
+                      <img src={url} alt={`Ảnh hư hỏng ${i + 1}`} className="w-full h-full object-cover" />
+                    </button>
                     <button
                       type="button"
                       aria-label={`Xóa ảnh hiện trạng ${i + 1}`}
                       title="Xóa ảnh"
                       disabled={degradedSubmitting || evidenceUploading}
-                      onClick={() => removePhoto(i)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removePhoto(i);
+                      }}
                       className="absolute top-0.5 right-0.5 bg-black/75 hover:bg-[#D92D20] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold transition-colors"
                     >
                       ×
@@ -474,6 +518,15 @@ export function DegradedCaseModal({
           </Button>
         </div>
       </div>
+      {lightboxState && (
+        <ImageLightbox
+          isOpen={Boolean(lightboxState)}
+          onClose={() => setLightboxState(null)}
+          images={lightboxState?.images || []}
+          initialIndex={lightboxState?.index ?? 0}
+          categoryLabel={lightboxState?.categoryLabel || ''}
+        />
+      )}
     </Modal>
   );
 }
@@ -862,6 +915,13 @@ export function ReturnInspectionProduct({
 
 export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybill, setIsRejectModalOpen, handleOpenOutcomeModal, approvingReturn = false }) {
   const thumbUrl = selectedItem?.packingPhotoUrls?.[0] || selectedItem?.stockInPhotos?.[0] || null;
+  const decisionPhotos = selectedItem?.packingPhotoUrls?.length
+    ? selectedItem.packingPhotoUrls
+    : selectedItem?.stockInPhotos?.length
+      ? selectedItem.stockInPhotos
+      : thumbUrl
+        ? [thumbUrl]
+        : [];
   const buyerLine = [selectedItem?.buyerName, selectedItem?.buyerPhone].filter(Boolean).join(' · ') || '—';
   return (
     <div className="lg:col-span-5 space-y-4 font-sans">
@@ -876,10 +936,14 @@ export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybi
       <div className="border border-neutral rounded-2xl overflow-hidden bg-surface shadow-sm">
         <div className="p-3.5 flex items-center gap-3 border-b border-neutral">
           {thumbUrl ? (
-            <img
+            <ZoomableImage
               src={thumbUrl}
               alt={selectedItem?.itemName || 'Sản phẩm'}
-              className="w-12 h-14 object-cover rounded-xl border border-neutral shrink-0"
+              className="w-12 h-14 rounded-xl border border-neutral overflow-hidden shrink-0"
+              imgClassName="w-full h-full object-cover"
+              images={decisionPhotos}
+              categoryLabel={selectedItem?.itemName || 'Sản phẩm'}
+              showHoverBadge={false}
             />
           ) : (
             <div className="w-12 h-14 rounded-xl border border-dashed border-neutral bg-background flex items-center justify-center text-[10px] text-textSecondary shrink-0">
