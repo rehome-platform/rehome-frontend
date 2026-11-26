@@ -7,6 +7,7 @@ import { Field, ResourceState } from './WarehouseUi.jsx';
 import {
   SUPPORTED_TRYON_SLOTS,
   TRYON_SLOT_CONFIG,
+  inferTryOnSlotFromName,
   validateCatalogInput,
 } from '../models/warehouseModel.js';
 
@@ -17,6 +18,7 @@ export default function CatalogEditor({ kind, item, slots = [], onClose, onSaved
 
   const [name, setName] = useState(item?.name || '');
   const [slot, setSlot] = useState(item?.slot || item?.tryonSlot || 'TOP');
+  const [slotTouched, setSlotTouched] = useState(Boolean(item));
   const [clientError, setClientError] = useState('');
   const mutation = useResource(async () => null, [], { enabled: false });
 
@@ -99,7 +101,12 @@ export default function CatalogEditor({ kind, item, slots = [], onClose, onSaved
             value={name}
             required
             onChange={(event) => {
-              setName(event.target.value);
+              const nextName = event.target.value;
+              setName(nextName);
+              if (isCategory && !item && !slotTouched) {
+                const inferred = inferTryOnSlotFromName(nextName);
+                if (inferred) setSlot(inferred);
+              }
               if (clientError) setClientError('');
               if (mutation.error) mutation.clearActionError?.();
             }}
@@ -117,6 +124,7 @@ export default function CatalogEditor({ kind, item, slots = [], onClose, onSaved
                 value={slot}
                 onChange={(event) => {
                   setSlot(event.target.value);
+                  setSlotTouched(true);
                   if (clientError) setClientError('');
                 }}
               >
