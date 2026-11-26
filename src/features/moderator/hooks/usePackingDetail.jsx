@@ -4,7 +4,7 @@ import { usePhase2, useResource } from "./warehouseHooks.jsx";
 
 import { packingService } from "../services/packingApi.js";
 import { inventoryService } from "../services/inventoryApi.js";
-import { canPack, canShip, canEditPackingPhotos, canHandoverToGhn } from "../models/packingModel.js";
+import { canPack, canShip, canEditPackingPhotos, canHandoverToGhn, hasPackingPhotos } from "../models/packingModel.js";
 import { operationReady } from "../config/packingContract.js";
 
 export function usePackingDetail({ orderId, onChanged }) {
@@ -83,6 +83,7 @@ export function usePackingDetail({ orderId, onChanged }) {
       const resolvedUrls = Array.isArray(saved) ? saved : nextUrls;
       if (alive.current && !signal.aborted) {
         setPackingPhotos(resolvedUrls);
+        resource.setData(prev => (prev ? { ...prev, packingPhotoUrls: resolvedUrls } : prev));
         setPackingPhotosError('');
       }
       return resolvedUrls;
@@ -240,7 +241,11 @@ export function usePackingDetail({ orderId, onChanged }) {
 
   const create = async () => {
     if (actionBlocked('shipment', { lock, uncertain, resource })) return;
-    if (!canShip(order, scope, now)) return;
+    if (!hasPackingPhotos(order, packingPhotos)) {
+      setPackingPhotosError('Vui lòng tải ít nhất 1 ảnh đóng gói trước khi tạo vận đơn GHN.');
+      return;
+    }
+    if (!canShip(order, scope, now, packingPhotos)) return;
     lock.current = true;
     readEpoch.current++;
     setUncertain(true);
@@ -347,7 +352,9 @@ export function usePackingDetail({ orderId, onChanged }) {
         setCamera,
         message,
         create,
-
+        packingPhotos,
+        packingPhotosBusy: packingPhotosUploading || packingPhotosSaving,
+        canEditPhotos,
       },
     },
   };

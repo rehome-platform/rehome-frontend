@@ -42,14 +42,24 @@ function scanCountsMatch(order, count) {
   return order.scannedCount === count && order.totalCount === count;
 }
 
-export function canShip(order, scope, now = Date.now()) {
+export function hasPackingPhotos(order, packingPhotos) {
+  const urls = Array.isArray(packingPhotos)
+    ? packingPhotos
+    : Array.isArray(order?.packingPhotoUrls)
+      ? order.packingPhotoUrls
+      : [];
+  return urls.some((url) => (typeof url === 'string' ? url.trim().length > 0 : Boolean(url)));
+}
+
+export function canShip(order, scope, now = Date.now(), packingPhotos) {
   if (!order) return false;
   const isPackableStatus = ['PAID', 'PACKING'].includes(order.status ?? 'PAID');
   return (
     isPackableStatus &&
     ownsActiveClaim(order, scope, now) &&
     Boolean(order.allowedActions?.includes('CREATE_SHIPMENT')) &&
-    hasCompleteScan(order)
+    hasCompleteScan(order) &&
+    hasPackingPhotos(order, packingPhotos)
   );
 }
 
