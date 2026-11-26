@@ -1,7 +1,8 @@
 import { ConsignmentInspectionForm } from './ConsignmentInspectionForm.jsx';
-import React from "react";
+import React, { useState } from "react";
 
 import Button from "../../../../components/common/Button.jsx";
+import ImageLightbox from "../../../../components/common/ImageLightbox.jsx";
 import { consignmentService, queueService } from "../../services/warehouseApi.js";
 
 import { Field, money, date } from "../WarehouseUi.jsx";
@@ -378,6 +379,20 @@ export function ConsignmentSummary({ form }) {
 }
 
 export function ConsignmentPhotoViewer({ photos, activePhotoIdx, photoUrl, setActivePhotoIdx }) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const angleLabels = ['Mặt trước', 'Mặt sau', 'Nhãn mác', 'Tem thương hiệu'];
+  const lightboxItems = (Array.isArray(photos) ? photos : [])
+    .map((p, idx) => {
+      const src = typeof p === 'string' ? p : p?.url || p?.imageUrl;
+      if (!src) return null;
+      return {
+        src,
+        alt: `Ảnh sản phẩm ký gửi ${idx + 1}`,
+        caption: angleLabels[idx] || `Ảnh ${idx + 1}`,
+      };
+    })
+    .filter(Boolean);
+
   return (
     <div className="rounded-2xl border border-[#8a8a8a] bg-white p-5 space-y-4 shadow-sm">
       <div className="flex justify-between items-center">
@@ -393,9 +408,22 @@ export function ConsignmentPhotoViewer({ photos, activePhotoIdx, photoUrl, setAc
       <div className="aspect-[4/3] rounded-xl border border-[#c4c4c4] bg-[#f9faf9] flex items-center justify-center overflow-hidden relative">
         {photoUrl ? (
           <>
-            <img src={photoUrl} alt="Ảnh sản phẩm ký gửi" className="w-full h-full object-contain" />
-            <span className="absolute bottom-3 bg-white/90 border border-[#c4c4c4] px-3 py-1 text-[11px] font-semibold text-[#4a4a4a] rounded shadow-sm">
-              {activePhotoIdx === 0 ? 'Mặt trước' : activePhotoIdx === 1 ? 'Mặt sau' : activePhotoIdx === 2 ? 'Nhãn mác' : 'Tem thương hiệu'}
+            <button
+              type="button"
+              onClick={() => setLightboxOpen(true)}
+              className="w-full h-full flex items-center justify-center cursor-zoom-in group relative focus:outline-none focus-visible:ring-2 focus-visible:ring-[#006B2C]/40"
+              title="Bấm để phóng to ảnh"
+            >
+              <img src={photoUrl} alt="Ảnh sản phẩm ký gửi" className="w-full h-full object-contain" />
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute top-3 right-3 px-2 py-1 rounded-md bg-black/65 text-white text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                Phóng to
+              </span>
+            </button>
+            <span className="pointer-events-none absolute bottom-3 bg-white/90 border border-[#c4c4c4] px-3 py-1 text-[11px] font-semibold text-[#4a4a4a] rounded shadow-sm">
+              {angleLabels[activePhotoIdx] || `Ảnh ${activePhotoIdx + 1}`}
             </span>
           </>
         ) : (
@@ -424,6 +452,16 @@ export function ConsignmentPhotoViewer({ photos, activePhotoIdx, photoUrl, setAc
       <p className="text-[11px] text-[#7a7a7a]">
         Thứ tự ảnh: mặt trước · mặt sau · nhãn mác · tem thương hiệu
       </p>
+
+      {lightboxOpen && lightboxItems.length > 0 && (
+        <ImageLightbox
+          isOpen={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+          images={lightboxItems}
+          initialIndex={activePhotoIdx}
+          categoryLabel="Ảnh sản phẩm ký gửi"
+        />
+      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { Page, ResourceState, Pager, Status, money, date } from '../components/W
 import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
 import TableActionButton from '../../../components/common/TableActionButton.jsx';
+import ImageLightbox from '../../../components/common/ImageLightbox.jsx';
 import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
 import { consignmentService } from '../services/warehouseApi.js';
 import { listItems, formatConditionLabel } from '../models/warehouseModel.js';
@@ -48,6 +49,7 @@ export default function ConsignmentListPage() {
   const sortedItems = useMemo(() => sortQueueItemsNewestFirst(rawItems), [rawItems]);
   const totalPages = resource.data?.totalPages || 1;
   const [detailForm, setDetailForm] = useState(null);
+  const [lightboxState, setLightboxState] = useState(null);
 
   const [lastConsignment, setLastConsignment] = useState(null);
   React.useEffect(() => {
@@ -192,14 +194,34 @@ export default function ConsignmentListPage() {
                 <tbody className="divide-y divide-neutral">
                   {sortedItems.map((form) => {
                     const formId = form.formId || form.id || form.refId;
-                    const firstPhoto = form.photos?.[0]?.url || form.photos?.[0] || form.coverPhoto;
+                    const formPhotos = Array.isArray(form.photos)
+                      ? form.photos.map((p) => (typeof p === 'string' ? p : p?.url || p?.imageUrl)).filter(Boolean)
+                      : form.coverPhoto
+                        ? [form.coverPhoto]
+                        : [];
+                    const firstPhoto = formPhotos[0] || null;
+                    const formTitle = form.name || form.productName || 'Ảnh sản phẩm ký gửi';
 
                     return (
                       <tr key={formId} className="hover:bg-[#F6F9F4] transition-colors">
                         <td className="py-3 px-3.5">
                           <div className="w-[52px] h-[52px] rounded-xl border border-neutral bg-[#F6F9F4] overflow-hidden flex items-center justify-center shrink-0">
                             {firstPhoto ? (
-                              <img src={firstPhoto} alt="" className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setLightboxState({
+                                    images: formPhotos,
+                                    index: 0,
+                                    title: formTitle,
+                                  });
+                                }}
+                                className="w-full h-full block cursor-zoom-in"
+                                title="Phóng to ảnh"
+                              >
+                                <img src={firstPhoto} alt="" className="w-full h-full object-cover" />
+                              </button>
                             ) : (
                               <span className="text-[10px] text-textSecondary">RH</span>
                             )}
@@ -270,12 +292,25 @@ export default function ConsignmentListPage() {
               {detailPhotos.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {detailPhotos.map((src, idx) => (
-                    <img
+                    <button
                       key={idx}
-                      src={src}
-                      alt={detailForm.name || detailForm.productName || `Ảnh ${idx + 1}`}
-                      className="w-20 h-20 rounded-xl object-cover border border-neutral"
-                    />
+                      type="button"
+                      onClick={() =>
+                        setLightboxState({
+                          images: detailPhotos,
+                          index: idx,
+                          title: detailForm.name || detailForm.productName || 'Ảnh sản phẩm ký gửi',
+                        })
+                      }
+                      className="w-20 h-20 rounded-xl overflow-hidden border border-neutral cursor-zoom-in group hover:ring-2 hover:ring-[#006B2C]/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#006B2C]/40"
+                      title={`Phóng to ảnh ${idx + 1}`}
+                    >
+                      <img
+                        src={src}
+                        alt={detailForm.name || detailForm.productName || `Ảnh ${idx + 1}`}
+                        className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                      />
+                    </button>
                   ))}
                 </div>
               )}
@@ -364,6 +399,16 @@ export default function ConsignmentListPage() {
           );
         })()}
       </Modal>
+
+      {lightboxState && (
+        <ImageLightbox
+          isOpen={Boolean(lightboxState)}
+          onClose={() => setLightboxState(null)}
+          images={lightboxState?.images || []}
+          initialIndex={lightboxState?.index ?? 0}
+          title={lightboxState?.title || 'Ảnh sản phẩm ký gửi'}
+        />
+      )}
     </Page>
   );
 }

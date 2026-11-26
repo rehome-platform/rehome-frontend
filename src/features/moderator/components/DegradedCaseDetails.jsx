@@ -74,8 +74,8 @@ export default function DegradedCaseDetails({ caseId, productId, returnId, resol
       {item && <div className="space-y-4">
         <DegradedCaseSummary item={item} onNavigateToCounter={onNavigateToCounter} />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {stockPhotos.length > 0 && <section><h3 className="font-semibold mb-2">Ảnh lúc xuất kho</h3><Photos photos={stockPhotos} /></section>}
-          <section><h3 className="font-semibold mb-2">Ảnh hiện trạng hư hỏng</h3>{item.photos?.length ? <Photos photos={item.photos} /> : <p>Chưa có ảnh hư hỏng được lưu.</p>}</section>
+          {stockPhotos.length > 0 && <section><h3 className="font-semibold mb-2">Ảnh lúc xuất kho</h3><Photos photos={stockPhotos} title="Ảnh lúc xuất kho" /></section>}
+          <section><h3 className="font-semibold mb-2">Ảnh hiện trạng hư hỏng</h3>{item.photos?.length ? <Photos photos={item.photos} title="Ảnh hiện trạng hư hỏng" /> : <p>Chưa có ảnh hư hỏng được lưu.</p>}</section>
         </div>
         <section className="space-y-2"><h3 className="font-semibold">Mô tả hư hỏng của Moderator</h3><p className="whitespace-pre-wrap">{item.moderatorNote || 'Chưa có ghi chú'}</p></section>
         {item.reason && <p>Lý do trả hàng: {item.reason}</p>}
