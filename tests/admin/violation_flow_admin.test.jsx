@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import AdminAuditLogsView from '../../src/features/admin/components/AdminAuditLogsView.jsx';
 import AdminBanProposalsPage from '../../src/features/admin/pages/AdminBanProposalsPage.jsx';
@@ -23,6 +23,7 @@ vi.mock('../../src/features/admin/services/adminApi.js', () => ({
     banAccount: vi.fn(),
     unbanAccount: vi.fn(),
     getBanProposals: vi.fn(),
+    getBanPreview: vi.fn().mockResolvedValue(null),
     getOrganizationViolationAuditLogs: vi.fn(),
     getViolationReportDetail: vi.fn(),
     getDismissedProposals: vi.fn(() => []),
@@ -35,6 +36,7 @@ vi.mock('../../src/features/admin/services/adminApi.js', () => ({
     banAccount: vi.fn(),
     unbanAccount: vi.fn(),
     getBanProposals: vi.fn(),
+    getBanPreview: vi.fn().mockResolvedValue(null),
     getOrganizationViolationAuditLogs: vi.fn(),
     getViolationReportDetail: vi.fn(),
     getDismissedProposals: vi.fn(() => []),
@@ -250,16 +252,18 @@ describe('Admin Violation Report Flow (Audit Logs & Moderator PROPOSE_BAN)', () 
       expect(screen.getByText('Hội Thiện Nguyện Xanh')).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/6 báo cáo vi phạm/i)).toBeInTheDocument();
+    const proposalRow = screen.getByText('Hội Thiện Nguyện Xanh').closest('tr');
+    expect(within(proposalRow).getByText('6')).toBeInTheDocument();
     expect(
       screen.getByText(/Tổ chức sử dụng giấy tờ pháp lý giả mạo và quyên góp trái phép/i)
     ).toBeInTheDocument();
 
-    // Open History & Detail Drawer
-    fireEvent.click(screen.getByRole('button', { name: /Lịch sử & Chi tiết/i }));
+    // Open History & Detail Drawer via TableActionButton ("Xem chi tiết")
+    fireEvent.click(within(proposalRow).getByRole('button', { name: /Xem chi tiết/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/Hồ sơ đề xuất khóa tài khoản/i)).toBeInTheDocument();
+      expect(screen.getByText(/6 báo cáo/i)).toBeInTheDocument();
       expect(screen.getByText(/Chiến dịch thiếu chứng từ minh bạch đợt 1/i)).toBeInTheDocument();
     });
 

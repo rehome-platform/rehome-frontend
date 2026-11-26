@@ -9,13 +9,18 @@ import { returnService } from '../../src/features/moderator/services/returnApi.j
 import { orgVerificationService } from '../../src/features/moderator/services/orgVerificationApi.js';
 import { inventoryService } from '../../src/features/moderator/services/inventoryApi.js';
 
-vi.mock('../../src/features/moderator/services/returnApi.js', () => ({
-  returnService: {
-    list: vi.fn(), approveReturnAndCreateWaybill: vi.fn(), rejectReturn: vi.fn(),
-    resolveInvalid: vi.fn(), resolveValid: vi.fn(), inspect: vi.fn().mockResolvedValue({}),
-    detail: vi.fn(),
-  },
-}));
+vi.mock('../../src/features/moderator/services/returnApi.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    returnService: {
+      list: vi.fn(), approveReturnAndCreateWaybill: vi.fn(), rejectReturn: vi.fn(),
+      resolveInvalid: vi.fn(), resolveValid: vi.fn(), applyItemAction: vi.fn(),
+      inspect: vi.fn().mockResolvedValue({}),
+      detail: vi.fn(),
+    },
+  };
+});
 
 vi.mock('../../src/features/moderator/services/inventoryApi.js', () => ({
   inventoryService: {
@@ -93,7 +98,7 @@ describe('return workflow regression', () => {
     expect(result.current.checklist.noNewDamage).toBe(false);
   });
 
-  it.each(['RELIST', 'RETURN_SELLER'])('waits for the %s decision before resolving a valid return', async outcome => {
+  it.each(['RELIST', 'RETURN_SELLER'])('refunds valid return on save and waits for the %s decision before applying item action', async outcome => {
     const { result } = renderHook(useReturnProcessing, { wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter> });
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(async () => {
@@ -104,9 +109,10 @@ describe('return workflow regression', () => {
     });
     await act(async () => { await result.current.handleSaveInspection(); });
     expect(result.current.isOutcomeModalOpen).toBe(true);
-    expect(returnService.resolveValid).not.toHaveBeenCalled();
+    expect(returnService.resolveValid).toHaveBeenCalledExactlyOnceWith('r1');
+    expect(returnService.applyItemAction).not.toHaveBeenCalled();
     await act(async () => { await result.current.handleConfirmOutcome(outcome); });
-    expect(returnService.resolveValid).toHaveBeenCalledExactlyOnceWith('r1', outcome);
+    expect(returnService.applyItemAction).toHaveBeenCalledExactlyOnceWith('r1', outcome, {});
     expect(result.current.isOutcomeModalOpen).toBe(false);
   });
 
@@ -149,7 +155,8 @@ describe('organization verification regression', () => {
     expect(result.current.isChecklistComplete).toBe(true);
   });
 
-  it('requires a reason for rejection and refreshes legal changes after approval', async () => {
+  it('requires a reason for rejection and updates org and legal change statuses optimistically after approval', async () => {
+    orgVerificationService.getLegalChanges.mockResolvedValueOnce({ data: [{ id: 'change1', status: 'PENDING' }] });
     const { result } = renderHook(useOrgVerification);
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(async () => { await result.current.handleOpenDetail(org); });
@@ -158,9 +165,32 @@ describe('organization verification regression', () => {
     act(() => result.current.setRejectReason('Thiếu giấy phép'));
     await act(async () => { await result.current.handleConfirmReject(); });
     expect(orgVerificationService.rejectOrg).toHaveBeenCalledExactlyOnceWith('org1', 'Thiếu giấy phép');
+    expect(result.current.orgsQueue[0].status).toBe('REJECTED');
     await act(async () => { await result.current.handleApproveLegalChange('change1'); });
     expect(orgVerificationService.approveLegalChange).toHaveBeenCalledExactlyOnceWith('change1');
-    expect(orgVerificationService.getLegalChanges).toHaveBeenCalledTimes(3);
+    expect(result.current.legalChanges[0].status).toBe('APPROVED');
+    expect(orgVerificationService.getLegalChanges).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows approval for organizations without tax code while skipping optional and disabled checks', async () => {
+    const { result } = renderHook(useOrgVerification);
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => { await result.current.handleOpenDetail({ ...org, id: 'org-no-tax', taxCode: 'không có' }); });
+    expect(result.current.hasTax).toBe(false);
+    expect(result.current.mandatoryItemsLeft).toBe(4);
+    act(() => result.current.setChecklist({
+      taxChecked: false,
+      businessChecked: false,
+      docsValid: true,
+      cccdMatched: true,
+      phoneConfirmed: true,
+      authorityChecked: false,
+      reputationChecked: true,
+    }));
+    expect(result.current.mandatoryItemsLeft).toBe(0);
+    expect(result.current.isChecklistComplete).toBe(true);
+    await act(async () => { await result.current.handleApproveOrg(); });
+    expect(orgVerificationService.approveOrg).toHaveBeenCalledWith('org-no-tax', expect.any(String));
   });
 
   it('keeps checklist inputs connected to the controller state', () => {
@@ -169,7 +199,7 @@ describe('organization verification regression', () => {
         taxChecked: false, businessChecked: false, docsValid: false, cccdMatched: false,
         phoneConfirmed: false, authorityChecked: false, reputationChecked: false,
       });
-      return <VerificationChecklist checklist={checklist} setChecklist={setChecklist} isEnterprise selectedOrg={{}} />;
+      return <VerificationChecklist checklist={checklist} setChecklist={setChecklist} isEnterprise selectedOrg={{ taxCode: '0102030405' }} />;
     }
     render(<Checklist />);
     const input = screen.getAllByRole('checkbox')[0];

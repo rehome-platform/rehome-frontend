@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { useToast } from '../../../context/ToastContext.jsx';
@@ -6,6 +6,11 @@ import { Modal, Button } from '../../../components/common/index.js';
 import AdminAccountsView from '../components/AdminAccountsView.jsx';
 import adminApi from '../services/adminApi.js';
 import useAdminPeriod from '../hooks/useAdminPeriod.js';
+import {
+  DEFAULT_STALE_TIME_MS,
+  useAdminCache,
+  useAdminCacheActions,
+} from '../hooks/useAdminQuery.jsx';
 
 const DISMISSED_PROPOSALS_STORAGE_KEY = 'rehome_admin_dismissed_ban_proposals';
 const PAGE_SIZE = 50;
@@ -34,65 +39,113 @@ export default function AdminAccountsPage() {
   const { onLogAction } = useOutletContext() || {};
   const { user } = useAuth();
   const toast = useToast();
-  const [remoteAccounts, setRemoteAccounts] = useState([]);
-  const [banProposals, setBanProposals] = useState([]);
-  const [dismissedIds, setDismissedIds] = useState(() => getDismissedProposalIds());
-  const [processingProposalId, setProcessingProposalId] = useState(null);
-  const [confirmProposal, setConfirmProposal] = useState(null);
-  const [proposalBanReason, setProposalBanReason] = useState('');
+  const cache = useAdminCache();
+  const cacheActions = useAdminCacheActions();
 
   // Phân trang thật theo API 135 (BE trả totalElements/totalPages đúng tổng số tài khoản, không phải
   // số viết cứng từ bản thiết kế mẫu); đổi trang thì tải lại đúng trang đó từ server.
   const [page, setPage] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [accountsLoading, setAccountsLoading] = useState(true);
 
   // Lọc theo ngày tạo tài khoản; mặc định "Toàn thời gian" để không ẩn tài khoản cũ khi mới vào trang.
   const dateFilter = useAdminPeriod('ALL');
   const { activeRange: dateRange, dateError } = dateFilter;
 
-  // Đổi khoảng ngày thì quay về trang đầu, giống các trang có phân trang + bộ lọc thời gian khác
-  useEffect(() => {
-    setPage(0);
-  }, [dateRange.apiFrom, dateRange.apiTo]);
+  const accountsCacheKey = `admin:accounts:${page}:${dateRange.apiFrom || ''}:${dateRange.apiTo || ''}`;
+  const initialCached = cache?.read(accountsCacheKey)?.data || null;
 
-  const fetchAccountsAndProposals = useCallback(async () => {
+  const [remoteAccounts, setRemoteAccounts] = useState(() => initialCached?.mappedAccounts ?? []);
+  const [banProposals, setBanProposals] = useState(() => initialCached?.banProposals ?? []);
+  const [dismissedIds, setDismissedIds] = useState(() => getDismissedProposalIds());
+  const [processingProposalId, setProcessingProposalId] = useState(null);
+  const [confirmProposal, setConfirmProposal] = useState(null);
+  const [proposalBanReason, setProposalBanReason] = useState('');
+
+  const [totalElements, setTotalElements] = useState(() => initialCached?.totalElements ?? 0);
+  const [totalPages, setTotalPages] = useState(() => initialCached?.totalPages ?? 1);
+  const [accountsLoading, setAccountsLoading] = useState(() => !initialCached);
+
+  const reqSeqRef = useRef(0);
+  const mountedRef = useRef(true);
+  const prevRangeRef = useRef({ from: dateRange.apiFrom, to: dateRange.apiTo });
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const fetchAccountsAndProposals = useCallback(async ({ force = false } = {}) => {
     if (dateError) {
       setAccountsLoading(false);
       return;
+    }
+
+    const cachedEntry = cache?.read(accountsCacheKey) || null;
+    if (!force && cachedEntry && cache.isFresh(cachedEntry, DEFAULT_STALE_TIME_MS)) {
+      const payload = cachedEntry.data;
+      setRemoteAccounts(payload.mappedAccounts ?? []);
+      setTotalElements(payload.totalElements ?? 0);
+      setTotalPages(payload.totalPages ?? 1);
+      setBanProposals(payload.banProposals ?? []);
+      setAccountsLoading(false);
+      return;
+    }
+
+    const reqId = ++reqSeqRef.current;
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached) {
+      const payload = cachedEntry.data;
+      setRemoteAccounts(payload.mappedAccounts ?? []);
+      setTotalElements(payload.totalElements ?? 0);
+      setTotalPages(payload.totalPages ?? 1);
+      setBanProposals(payload.banProposals ?? []);
+      setAccountsLoading(false);
+    } else {
+      setAccountsLoading(true);
     }
 
     let rawAccounts = [];
     let rawLogs = [];
     let pageTotalElements = 0;
     let pageTotalPages = 1;
+    let accountsFetchSucceeded = false;
 
     try {
-      setAccountsLoading(true);
       const res = await adminApi.getAccounts({
         page,
         size: PAGE_SIZE,
         from: dateRange.apiFrom,
         to: dateRange.apiTo,
       });
+      if (!mountedRef.current || reqId !== reqSeqRef.current) return;
       rawAccounts = Array.isArray(res) ? res : res?.content || res?.result?.content || [];
       pageTotalElements = res?.totalElements ?? rawAccounts.length;
       pageTotalPages = res?.totalPages ?? 1;
+      accountsFetchSucceeded = true;
     } catch (err) {
       console.warn('Lỗi gọi API accounts:', err);
     } finally {
-      setAccountsLoading(false);
+      if (mountedRef.current && reqId === reqSeqRef.current) {
+        setAccountsLoading(false);
+      }
+    }
+
+    if (!accountsFetchSucceeded && hasCached && !force) {
+      return;
     }
 
     try {
       if (typeof adminApi.getAuditLogs === 'function') {
         const logRes = await adminApi.getAuditLogs({ page: 0, size: 100 });
+        if (!mountedRef.current || reqId !== reqSeqRef.current) return;
         rawLogs = Array.isArray(logRes) ? logRes : logRes?.content || logRes?.result?.content || [];
       }
     } catch (err) {
       console.warn('Lỗi gọi API audit-logs cho đề xuất khóa:', err);
     }
+
+    if (!mountedRef.current || reqId !== reqSeqRef.current) return;
 
     // Gom lịch sử vi phạm theo targetId / accountId từ AuditLog
     const violationHistoryByTarget = {};
@@ -174,10 +227,6 @@ export default function AdminAccountsPage() {
       };
     });
 
-    setRemoteAccounts(mappedAccounts);
-    setTotalElements(pageTotalElements);
-    setTotalPages(pageTotalPages);
-
     // Lọc danh sách các đề xuất khóa từ Moderator (VIOLATION_RESOLVE_PROPOSE_BAN)
     const proposals = rawLogs
       .filter((log) => log.actionType === 'VIOLATION_RESOLVE_PROPOSE_BAN')
@@ -204,18 +253,41 @@ export default function AdminAccountsPage() {
         };
       });
 
+    setRemoteAccounts(mappedAccounts);
+    setTotalElements(pageTotalElements);
+    setTotalPages(pageTotalPages);
     setBanProposals(proposals);
-  }, [page, dateRange.apiFrom, dateRange.apiTo, dateError]);
+
+    if (accountsFetchSucceeded && cache) {
+      cache.write(accountsCacheKey, {
+        mappedAccounts,
+        totalElements: pageTotalElements,
+        totalPages: pageTotalPages,
+        banProposals: proposals,
+      });
+    }
+  }, [cache, accountsCacheKey, page, dateRange.apiFrom, dateRange.apiTo, dateError]);
 
   useEffect(() => {
+    if (
+      prevRangeRef.current.from !== dateRange.apiFrom ||
+      prevRangeRef.current.to !== dateRange.apiTo
+    ) {
+      prevRangeRef.current = { from: dateRange.apiFrom, to: dateRange.apiTo };
+      if (page !== 0) {
+        setPage(0);
+        return;
+      }
+    }
     fetchAccountsAndProposals();
-  }, [fetchAccountsAndProposals]);
+  }, [dateRange.apiFrom, dateRange.apiTo, page, fetchAccountsAndProposals]);
 
   const handleBanAccount = async (accountId, reason) => {
     try {
       await adminApi.banAccount(accountId, reason);
       toast.success('Đã khóa tài khoản thành công.');
-      await fetchAccountsAndProposals();
+      cacheActions?.invalidate(['admin:accounts:', 'admin:ban-proposals:', 'admin:audit-logs:', 'admin:dashboard:']);
+      await fetchAccountsAndProposals({ force: true });
     } catch (err) {
       console.warn('Lỗi khi khóa tài khoản:', err);
       const msg = err.response?.data?.message || err.message || 'Không thể khóa tài khoản.';
@@ -228,7 +300,8 @@ export default function AdminAccountsPage() {
     try {
       await adminApi.unbanAccount(accountId);
       toast.success('Đã mở khóa tài khoản thành công.');
-      await fetchAccountsAndProposals();
+      cacheActions?.invalidate(['admin:accounts:', 'admin:ban-proposals:', 'admin:audit-logs:', 'admin:dashboard:']);
+      await fetchAccountsAndProposals({ force: true });
     } catch (err) {
       console.warn('Lỗi khi mở khóa tài khoản:', err);
       const msg = err.response?.data?.message || err.message || 'Không thể mở khóa tài khoản.';
@@ -268,7 +341,8 @@ export default function AdminAccountsPage() {
           action: `Khóa tài khoản Tổ chức "${proposal.targetName}" theo đề xuất khóa tài khoản`,
         });
       }
-      await fetchAccountsAndProposals();
+      cacheActions?.invalidate(['admin:accounts:', 'admin:ban-proposals:', 'admin:audit-logs:', 'admin:dashboard:']);
+      await fetchAccountsAndProposals({ force: true });
     } catch (err) {
       console.warn('Lỗi khi khóa tài khoản theo đề xuất:', err);
       const msg = err.response?.data?.message || err.message || 'Không thể khóa tài khoản theo đề xuất.';
@@ -344,25 +418,31 @@ export default function AdminAccountsPage() {
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     disabled={processingProposalId === proposal.id}
                     onClick={() => handleDismissProposal(proposal.id)}
-                    className="px-3.5 py-2 rounded-xl border border-[#DDE5D9] bg-white hover:bg-[#F6F9F4] text-xs font-semibold text-[#5B6776] transition-colors disabled:opacity-50"
                   >
                     Bỏ qua đề xuất
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="danger"
+                    size="sm"
+                    loading={processingProposalId === proposal.id}
                     disabled={processingProposalId === proposal.id}
                     onClick={() => openConfirmProposalModal(proposal)}
-                    className="px-4 py-2 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                    className="gap-1.5"
                   >
-                    <span className="material-symbols-outlined text-sm" aria-hidden="true">lock</span>
+                    {processingProposalId !== proposal.id && (
+                      <span className="material-symbols-outlined text-sm" aria-hidden="true">lock</span>
+                    )}
                     <span>
                       {processingProposalId === proposal.id ? 'Đang khóa...' : 'Khóa theo đề xuất'}
                     </span>
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}

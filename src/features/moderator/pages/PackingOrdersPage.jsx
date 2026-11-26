@@ -190,7 +190,10 @@ export default function PackingOrdersPage() {
   const orderId = search.get('orderId');
   const [keyword, setKeyword] = useState('');
 
-  const queue = useResource((options) => queueService.list({ type: 'PACKING', page }, options), [page]);
+  const queue = useResource((options) => queueService.list({ type: 'PACKING', mine: true, page }, options), [page], {
+    cacheKey: `queue:packing:mine:${page}`,
+    invalidatePrefixes: ['queue:', 'inventory:', 'history:'],
+  });
 
   const [claimError, setClaimError] = useState('');
 
@@ -201,13 +204,10 @@ export default function PackingOrdersPage() {
     item.claimedBy === 'CURRENT_USER' ||
     Boolean(item.claimedByName && item.claimedByName.includes('Bạn đang giữ'));
 
-  // Dữ liệu hàng đợi đóng gói 100% nạp từ API service (API 68), lọc phạm vi Moderator & sắp xếp mới nhất lên đầu
+  // Tab Công việc chỉ hiển thị đơn đã được chính Moderator hiện tại nhận ("Bạn đang giữ").
+  // Đơn "Chưa ai nhận" nằm bên Hàng đợi công việc để Moderator bấm Nhận việc.
   const items = useMemo(() => {
-    let source = apiItems.filter((item) => {
-      const mine = isAssignedToMe(item);
-      if (item.claimedBy && !mine) return false;
-      return true;
-    });
+    let source = apiItems.filter((item) => isAssignedToMe(item));
     if (keyword.trim()) {
       const q = keyword.toLowerCase().trim();
       source = source.filter(
@@ -246,7 +246,10 @@ export default function PackingOrdersPage() {
   const handleRelease = async (queueId) => {
     setClaimError('');
     await queue.mutate((options) => queueService.release(queueId, options), {
-      onSuccess: () => setSearch({ page: String(page) }),
+      onSuccess: () => {
+        window.dispatchEvent(new Event('warehouse:changed'));
+        setSearch({ page: String(page) });
+      },
       onError: (err) => {
         setClaimError(err?.message || 'Không thể nhả việc. Vui lòng thử lại.');
         queue.refresh();
@@ -257,11 +260,19 @@ export default function PackingOrdersPage() {
   return (
     <Page
       title="Đóng gói đơn hàng"
-      subtitle="Nhận việc theo kho, đối chiếu đủ SKU trước khi tạo vận đơn GHN."
+      subtitle="Các đơn hàng bạn đã nhận đóng gói — đối chiếu đủ SKU trước khi tạo vận đơn GHN."
       actions={
-        <Button variant="outline" onClick={queue.refresh}>
-          Tải lại
-        </Button>
+        <div className="flex gap-2">
+          <Link to="/moderator/queue?type=PACKING">
+            <Button variant="outline" className="whitespace-nowrap">
+              Hàng đợi công việc
+            </Button>
+          </Link>
+          <Button variant="outline" onClick={queue.refresh} className="gap-1.5 whitespace-nowrap">
+            <span aria-hidden="true" className="material-symbols-outlined text-[16px]">refresh</span>
+            <span>Tải lại</span>
+          </Button>
+        </div>
       }
     >
 
@@ -292,7 +303,7 @@ export default function PackingOrdersPage() {
                 )}
               </div>
               <div className="text-xs text-textSecondary">
-                Đang có <strong>{items.length}</strong> đơn trong hàng đợi
+                Bạn đang giữ <strong>{items.length}</strong> đơn đóng gói
               </div>
             </div>
 
@@ -314,7 +325,7 @@ export default function PackingOrdersPage() {
 
             <ResourceState resource={queue} />
 
-            {/* BẢNG HÀNG ĐỢI ĐÓNG GÓI 7 CỘT */}
+            {/* BẢNG ĐƠN ĐÓNG GÓI ĐANG GIỮ */}
             <div className="rounded-2xl border border-neutral bg-surface overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[800px] text-left text-xs">
@@ -332,23 +343,31 @@ export default function PackingOrdersPage() {
                   <tbody className="divide-y divide-neutral">
                     {items.length === 0 ? (
                       <tr>
-                        <td colSpan="7" className="py-12 text-center text-xs text-textSecondary">
-                          Chưa có dữ liệu phù hợp.
+                        <td colSpan="7" className="py-12 text-center text-xs text-textSecondary space-y-2">
+                          <p>
+                            {keyword.trim()
+                              ? 'Không tìm thấy đơn đóng gói phù hợp với từ khóa.'
+                              : 'Bạn chưa nhận đơn đóng gói nào.'}
+                          </p>
+                          {!keyword.trim() && (
+                            <Link
+                              to="/moderator/queue?type=PACKING"
+                              className="inline-block text-primary font-semibold underline"
+                            >
+                              Đi tới Hàng đợi công việc để nhận đơn
+                            </Link>
+                          )}
                         </td>
                       </tr>
                     ) : (
                       items.map((item) => {
-                        const isMine =
-                          item.claimedBy === scope.userId ||
-                          item.claimedBy === 'CURRENT_USER' ||
-                          (item.claimedByName && item.claimedByName.includes('Bạn đang giữ'));
                         const targetOrderId = item.orderId || item.refId || item.orderNo;
                         return (
                           <PackingQueueItem
                             key={item.queueId || targetOrderId}
                             item={item}
                             targetOrderId={targetOrderId}
-                            isMine={Boolean(isMine)}
+                            isMine={isAssignedToMe(item)}
                             setSearch={setSearch}
                             page={page}
                             queue={queue}

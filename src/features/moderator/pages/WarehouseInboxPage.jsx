@@ -7,6 +7,11 @@ import { useAuth } from '../../../context/AuthContext.jsx';
 import { warehouseInboxService } from '../services/warehouseInboxApi.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import { useConversationTopic } from '../../../hooks/useWebSocket.js';
+import { SHORT_STALE_TIME_MS, useModeratorCache } from '../hooks/warehouseHooks.jsx';
+
+const INBOX_CONVS_KEY = 'inbox:conversations';
+const INBOX_SELECTED_KEY = 'inbox:selectedConvId';
+const inboxMessagesKey = (convId) => `inbox:messages:${convId}`;
 
 /**
  * Trang Hộp Thư Điểm Kí Gửi ReHome
@@ -18,18 +23,33 @@ export default function WarehouseInboxPage() {
   const toast = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const cache = useModeratorCache();
 
-  const [conversations, setConversations] = useState([]);
+  const initialConvs = cache?.read(INBOX_CONVS_KEY)?.data;
+  const initialSelectedId = cache?.read(INBOX_SELECTED_KEY)?.data;
+  const initialSelectedConv =
+    Array.isArray(initialConvs) && initialConvs.length > 0
+      ? initialConvs.find((c) => String(c.id) === String(initialSelectedId)) || initialConvs[0]
+      : null;
+  const initialMsgsEntry = initialSelectedConv?.id
+    ? cache?.read(inboxMessagesKey(initialSelectedConv.id))?.data
+    : null;
+
+  const [conversations, setConversations] = useState(() =>
+    Array.isArray(initialConvs) ? initialConvs : []
+  );
   const [activeTab, setActiveTab] = useState('ALL'); // Mặc định mở tab 'Tất cả' ('ALL' | 'DONE' | 'UNANSWERED')
-  const [selectedConv, setSelectedConv] = useState(null);
+  const [selectedConv, setSelectedConv] = useState(() => initialSelectedConv);
   const [showMemberInfo, setShowMemberInfo] = useState(true);
 
   // Tin nhắn của hội thoại đang chọn
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() =>
+    Array.isArray(initialMsgsEntry?.messages) ? initialMsgsEntry.messages : []
+  );
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [messagesError, setMessagesError] = useState(null);
-  const [messagesPage, setMessagesPage] = useState(0);
-  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [messagesPage, setMessagesPage] = useState(() => initialMsgsEntry?.page ?? 0);
+  const [hasMoreMessages, setHasMoreMessages] = useState(() => Boolean(initialMsgsEntry?.hasMore));
   const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
 
   // Form gửi tin nhắn & ảnh
@@ -37,8 +57,9 @@ export default function WarehouseInboxPage() {
   const [pendingImages, setPendingImages] = useState([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [sending, setSending] = useState(false);
+  const [revealedMessageIds, setRevealedMessageIds] = useState({});
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !Array.isArray(initialConvs));
   const [error, setError] = useState(null);
 
   const fileInputRef = useRef(null);
@@ -48,18 +69,56 @@ export default function WarehouseInboxPage() {
 
   activeConvIdRef.current = selectedConv?.id ?? null;
 
+  useEffect(() => {
+    if (selectedConv?.id) {
+      cache?.write(INBOX_SELECTED_KEY, selectedConv.id);
+    }
+    setRevealedMessageIds({});
+  }, [cache, selectedConv?.id]);
+
+  const toggleRevealMessage = (msgKey) => {
+    setRevealedMessageIds((prev) => ({ ...prev, [msgKey]: !prev[msgKey] }));
+  };
+
   // Tải danh sách hội thoại
-  const fetchConversations = async () => {
-    try {
-      setLoading(true);
+  const fetchConversations = async ({ force = false } = {}) => {
+    const cached = cache?.read(INBOX_CONVS_KEY);
+    if (!force && cached && Array.isArray(cached.data)) {
+      setConversations(cached.data);
+      setLoading(false);
       setError(null);
+      setSelectedConv((prev) => {
+        if (!prev && cached.data.length > 0) {
+          const cachedId = cache?.read(INBOX_SELECTED_KEY)?.data;
+          return cached.data.find((c) => String(c.id) === String(cachedId)) || cached.data[0];
+        }
+        if (prev) {
+          const found = cached.data.find((c) => String(c.id) === String(prev.id));
+          return found || prev;
+        }
+        return null;
+      });
+      if (cache.isFresh(cached, SHORT_STALE_TIME_MS)) {
+        return;
+      }
+    }
+    const silent = Boolean(!force && Array.isArray(cached?.data));
+    try {
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+      }
       const res = await warehouseInboxService.getConversations();
       const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
       setConversations(list);
+      cache?.write(INBOX_CONVS_KEY, list);
 
       // Giữ hội thoại đang chọn hoặc nếu chưa chọn thì chọn hội thoại đầu tiên
       setSelectedConv((prev) => {
-        if (!prev && list.length > 0) return list[0];
+        if (!prev && list.length > 0) {
+          const cachedId = cache?.read(INBOX_SELECTED_KEY)?.data;
+          return list.find((c) => String(c.id) === String(cachedId)) || list[0];
+        }
         if (prev) {
           const found = list.find((c) => String(c.id) === String(prev.id));
           return found || prev;
@@ -68,8 +127,10 @@ export default function WarehouseInboxPage() {
       });
     } catch (err) {
       console.error('Failed to load conversations:', err);
-      setError('Không thể kết nối đến máy chủ hộp thư (Lỗi 500 hoặc mất kết nối). Vui lòng thử lại sau.');
-      setConversations([]);
+      if (!silent) {
+        setError('Không thể kết nối đến máy chủ hộp thư (Lỗi 500 hoặc mất kết nối). Vui lòng thử lại sau.');
+        setConversations([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -80,13 +141,26 @@ export default function WarehouseInboxPage() {
   }, []);
 
   // Tải danh sách tin nhắn của hội thoại được chọn (API 112)
-  const fetchMessages = useCallback(async (convId, initialMessages = [], { page = 0, append = false } = {}) => {
+  const fetchMessages = useCallback(async (convId, initialMessages = [], { page = 0, append = false, force = false } = {}) => {
     if (!convId) return;
     const seq = ++fetchSeqRef.current;
+    const key = inboxMessagesKey(convId);
+    const cachedMsgEntry = page === 0 && !append ? cache?.read(key) : null;
+    if (!force && cachedMsgEntry?.data) {
+      setMessages(cachedMsgEntry.data.messages || []);
+      setMessagesPage(cachedMsgEntry.data.page ?? 0);
+      setHasMoreMessages(Boolean(cachedMsgEntry.data.hasMore));
+      setMessagesLoading(false);
+      setMessagesError(null);
+      if (cache.isFresh(cachedMsgEntry, SHORT_STALE_TIME_MS)) {
+        return;
+      }
+    }
+    const silent = Boolean(!force && !append && page === 0 && cachedMsgEntry?.data);
     try {
       if (append) {
         setLoadingMoreMessages(true);
-      } else {
+      } else if (!silent) {
         setMessagesLoading(true);
         setMessagesError(null);
         setMessagesPage(0);
@@ -127,35 +201,37 @@ export default function WarehouseInboxPage() {
         setMessages((prev) => {
           const merged = mergeAndDedupe(prev);
           const total = typeof res?.total === 'number' ? res.total : null;
-          setHasMoreMessages(
+          const nextHasMore =
             res?.hasMore !== undefined
               ? Boolean(res.hasMore)
               : total !== null
                 ? merged.length < total && fetchedList.length > 0
-                : fetchedList.length >= 50
-          );
+                : fetchedList.length >= 50;
+          setHasMoreMessages(nextHasMore);
+          cache?.write(key, { messages: merged, hasMore: nextHasMore, page });
           return merged;
         });
         setMessagesPage(page);
       } else {
         const uniqueMessages = mergeAndDedupe(initialMessages);
-        setMessages(uniqueMessages);
-        setMessagesPage(page);
         const total = typeof res?.total === 'number' ? res.total : null;
-        setHasMoreMessages(
+        const nextHasMore =
           res?.hasMore !== undefined
             ? Boolean(res.hasMore)
             : total !== null
               ? uniqueMessages.length < total && fetchedList.length > 0
-              : fetchedList.length >= 50
-        );
+              : fetchedList.length >= 50;
+        setMessages(uniqueMessages);
+        setMessagesPage(page);
+        setHasMoreMessages(nextHasMore);
+        cache?.write(key, { messages: uniqueMessages, hasMore: nextHasMore, page });
       }
     } catch (err) {
       if (seq !== fetchSeqRef.current || String(activeConvIdRef.current) !== String(convId)) {
         return;
       }
       console.error('Failed to fetch messages for conversation:', convId, err);
-      if (!append) {
+      if (!append && !silent) {
         setMessagesError('Không thể tải lịch sử tin nhắn. Vui lòng thử lại.');
         if (initialMessages && initialMessages.length > 0) {
           setMessages(initialMessages);
@@ -167,7 +243,7 @@ export default function WarehouseInboxPage() {
         setLoadingMoreMessages(false);
       }
     }
-  }, []);
+  }, [cache]);
 
   useEffect(() => {
     setInputText('');
@@ -202,14 +278,31 @@ export default function WarehouseInboxPage() {
           if (prev.some((m) => String(m.id) === String(payload.id))) {
             return prev;
           }
-          return [...prev, payload];
+          const next = [...prev, payload];
+          if (targetConvId) {
+            const cachedMsg = cache?.read(inboxMessagesKey(targetConvId))?.data;
+            cache?.write(inboxMessagesKey(targetConvId), {
+              messages: next,
+              hasMore: cachedMsg?.hasMore ?? false,
+              page: cachedMsg?.page ?? 0,
+            });
+          }
+          return next;
         });
+      } else if (targetConvId) {
+        const cachedMsg = cache?.read(inboxMessagesKey(targetConvId))?.data;
+        if (cachedMsg?.messages && !cachedMsg.messages.some((m) => String(m.id) === String(payload.id))) {
+          cache.write(inboxMessagesKey(targetConvId), {
+            ...cachedMsg,
+            messages: [...cachedMsg.messages, payload],
+          });
+        }
       }
 
       // Cập nhật tin nhắn cuối cùng trên danh sách hội thoại
       const previewText = payload.content || (payload.imageUrls?.length ? '[Hình ảnh]' : '—');
-      setConversations((prev) =>
-        (prev || []).map((c) => {
+      setConversations((prev) => {
+        const nextConvs = (prev || []).map((c) => {
           if (String(c.id) === String(targetConvId)) {
             return {
               ...c,
@@ -221,10 +314,12 @@ export default function WarehouseInboxPage() {
             };
           }
           return c;
-        })
-      );
+        });
+        cache?.write(INBOX_CONVS_KEY, nextConvs);
+        return nextConvs;
+      });
     },
-    [selectedConv?.id]
+    [cache, selectedConv?.id]
   );
 
   useConversationTopic(selectedConv?.id, handleWebSocketMessage);
@@ -331,14 +426,21 @@ export default function WarehouseInboxPage() {
             if (prev.some((m) => String(m.id) === String(msgItem.id))) {
               return prev;
             }
-            return [...prev, msgItem];
+            const next = [...prev, msgItem];
+            const cachedMsg = cache?.read(inboxMessagesKey(targetConvId))?.data;
+            cache?.write(inboxMessagesKey(targetConvId), {
+              messages: next,
+              hasMore: cachedMsg?.hasMore ?? false,
+              page: cachedMsg?.page ?? 0,
+            });
+            return next;
           });
         }
 
-        // Cập nhật xem trước tin nhắn trong danh sách hội thoại
-        const previewText = text || (imagesToSend.length ? '[Hình ảnh]' : '—');
-        setConversations((prev) =>
-          (prev || []).map((c) => {
+        // Cập nhật xem trước tin nhắn trong danh sách hội thoại (ưu tiên bản đã che từ BE)
+        const previewText = msgItem.content || (imagesToSend.length ? '[Hình ảnh]' : '—');
+        setConversations((prev) => {
+          const nextConvs = (prev || []).map((c) => {
             if (String(c.id) === String(targetConvId)) {
               return {
                 ...c,
@@ -351,8 +453,10 @@ export default function WarehouseInboxPage() {
               };
             }
             return c;
-          })
-        );
+          });
+          cache?.write(INBOX_CONVS_KEY, nextConvs);
+          return nextConvs;
+        });
       }
     } catch (err) {
       console.error('Failed to send message:', err);
@@ -444,7 +548,7 @@ export default function WarehouseInboxPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={fetchConversations}
+                    onClick={() => fetchConversations({ force: true })}
                     className="border-error text-error hover:bg-error-light hover:text-error"
                   >
                     Tải lại
@@ -566,7 +670,7 @@ export default function WarehouseInboxPage() {
                     <div>{messagesError}</div>
                     <button
                       type="button"
-                      onClick={() => fetchMessages(selectedConv.id, selectedConv.messages || [])}
+                      onClick={() => fetchMessages(selectedConv.id, selectedConv.messages || [], { force: true })}
                       className="px-3 py-1 text-xs border border-error rounded-xl hover:bg-error-light cursor-pointer"
                     >
                       Tải lại tin nhắn
@@ -588,7 +692,12 @@ export default function WarehouseInboxPage() {
                       (user?.id && m?.senderId && String(m.senderId) === String(user.id)) ||
                       (selectedConv?.counterpart?.id && m?.senderId && String(m.senderId) !== String(selectedConv.counterpart.id));
 
-                    const msgText = m?.content || m?.text || '';
+                    const msgKey = String(m?.id ?? idx);
+                    const rawContent = m?.content || m?.text || '';
+                    const hasMaskedOriginal =
+                      Boolean(m?.originalContent) && m.originalContent !== rawContent;
+                    const isRevealed = hasMaskedOriginal && Boolean(revealedMessageIds[msgKey]);
+                    const msgText = isRevealed ? m.originalContent : rawContent;
                     const msgImages = Array.isArray(m?.imageUrls) ? m.imageUrls.filter(Boolean) : [];
                     const parsedMsgDate = m?.createdAt ? new Date(m.createdAt) : null;
                     const msgTime =
@@ -609,7 +718,7 @@ export default function WarehouseInboxPage() {
 
                     return (
                       <div
-                        key={m?.id || idx}
+                        key={msgKey}
                         className={`flex flex-col ${isMod ? 'items-end' : 'items-start'}`}
                       >
                         <div
@@ -640,6 +749,27 @@ export default function WarehouseInboxPage() {
                             </div>
                           )}
                         </div>
+                        {hasMaskedOriginal && (
+                          <button
+                            type="button"
+                            onClick={() => toggleRevealMessage(msgKey)}
+                            className="mt-1 px-1 inline-flex items-center gap-1 text-[10px] text-textSecondary hover:text-primary transition-colors"
+                          >
+                            <span aria-hidden="true" className="material-symbols-outlined text-[13px] leading-none">
+                              {isRevealed ? 'visibility_off' : 'visibility'}
+                            </span>
+                            <span>
+                              {isRevealed ? (
+                                'Ẩn lại'
+                              ) : (
+                                <>
+                                  Đã che từ ngữ không phù hợp ·{' '}
+                                  <span className="font-semibold underline text-primary">Xem</span>
+                                </>
+                              )}
+                            </span>
+                          </button>
+                        )}
                         <div className="text-[9px] text-textSecondary mt-1 px-1">
                           {isMod ? `${senderTitle} · ${msgTime}` : msgTime}
                         </div>

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 
 import { endTermService } from "../services/warehouseApi.js";
 import { phase2Contract, isFixtureMode } from "../config/warehouseContract.js";
-import { usePhase2, useResource } from "./warehouseHooks.jsx";
+import { STATIC_STALE_TIME_MS, usePhase2, useResource } from "./warehouseHooks.jsx";
 import { validatePartnerName, canTransferUnclaimed, normalizeUnclaimedItem } from "../models/warehouseModel.js";
 
 import { packingService } from "../services/packingApi.js";
@@ -24,6 +24,7 @@ export function useEndTermDetail({ sku, onClose, onChanged }) {
         ? (await import('../fixtures/warehouseFixtures.js')).fixtureOptions
         : phase2Contract.options,
     [],
+    { cacheKey: 'enums:warehouse', staleTime: STATIC_STALE_TIME_MS },
   );
 
   const [price, setPrice] = useState('');

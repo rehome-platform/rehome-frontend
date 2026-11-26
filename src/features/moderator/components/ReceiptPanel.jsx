@@ -28,6 +28,7 @@ export default function ReceiptPanel({ receiptId, form, allowStockIn = false, on
           value?.status === 'VOIDED' ||
           value?.voidedAt,
         ),
+      invalidatePrefixes: ['consignments:', 'queue:', 'inventory:', 'history:'],
     },
   );
   const data = receipt.data ? { ...receipt.data, productSku: receipt.data.productSku || receipt.data.sku || null } : null;
@@ -560,7 +561,7 @@ export default function ReceiptPanel({ receiptId, form, allowStockIn = false, on
             <Button type="button" variant="outline" disabled={voiding} onClick={() => setVoidOpen(false)}>
               Đóng
             </Button>
-            <Button type="submit" variant="primary" loading={voiding} className="bg-red-600 hover:bg-red-700 text-white font-bold">
+            <Button type="submit" variant="danger" loading={voiding} className="font-bold">
               Xác nhận huỷ biên nhận
             </Button>
           </div>

@@ -1,9 +1,72 @@
 import baseApi from '../../../services/baseApi.js';
+import { API_ENDPOINTS } from '../../../configs/api.config.js';
 import { normalizeError, Phase2Error, unwrap } from '../models/warehouseModel.js';
 import { phase4Contract, operationReady } from '../config/packingContract.js';
 import { isFixtureMode } from '../config/warehouseContract.js';
 import { handoverPayload } from '../models/packingModel.js';
 import { packingMockApi } from './packingMockApi.js';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function resolveOrderUuidByOrderNo(orderNo, { signal } = {}) {
+  const target = String(orderNo || '').trim().toLowerCase();
+  if (!target) return null;
+
+  try {
+    const queueRaw = unwrap(
+      await baseApi.request({
+        method: 'get',
+        url: API_ENDPOINTS.MODERATOR.QUEUES,
+        params: { type: 'PACKING' },
+        signal,
+        noReplay: false,
+      })
+    );
+    const queueRows = Array.isArray(queueRaw)
+      ? queueRaw
+      : (queueRaw?.items || queueRaw?.content || []);
+    const queueMatch = queueRows.find(
+      (item) => String(item?.orderNo || '').trim().toLowerCase() === target
+    );
+    const queueCandidate = String(queueMatch?.refId || queueMatch?.orderId || '').trim();
+    if (UUID_RE.test(queueCandidate)) {
+      return queueCandidate;
+    }
+  } catch (queueErr) {
+    if (signal?.aborted || queueErr?.code === 'ERR_CANCELED') throw queueErr;
+  }
+
+  const maxPages = 5;
+  for (let page = 0; page < maxPages; page++) {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    const soldRaw = unwrap(
+      await baseApi.request({
+        method: 'get',
+        url: API_ENDPOINTS.MODERATOR.WAREHOUSE_SOLD_ORDERS,
+        params: { page, size: 50 },
+        signal,
+        noReplay: false,
+      })
+    );
+    const ordersPage = soldRaw?.orders || soldRaw;
+    const rows = Array.isArray(ordersPage)
+      ? ordersPage
+      : (ordersPage?.content || ordersPage?.items || []);
+    const match = rows.find(
+      (item) => String(item?.orderNo || '').trim().toLowerCase() === target
+    );
+    const candidate = String(match?.id || match?.orderId || '').trim();
+    if (UUID_RE.test(candidate)) {
+      return candidate;
+    }
+    const totalPages = ordersPage?.totalPages;
+    if (!rows.length || (Number.isFinite(totalPages) && page + 1 >= totalPages)) {
+      break;
+    }
+  }
+
+  return null;
+}
 
 function normalizeOrderResult(result, orderId, scope) {
   if (!result) return result;
@@ -90,6 +153,43 @@ export async function request(operation, { orderId, data, signal, scope } = {}) 
     return result;
   } catch (error) {
     if (signal?.aborted || error.code === 'ERR_CANCELED') throw error;
+    const rawId = String(orderId || '').trim();
+    const httpStatus = error?.response?.status;
+    const shouldResolveByCode =
+      operation === 'read' &&
+      rawId &&
+      !UUID_RE.test(rawId) &&
+      (httpStatus === 400 || httpStatus === 404);
+    if (shouldResolveByCode) {
+      let resolvedId = null;
+      try {
+        resolvedId = await resolveOrderUuidByOrderNo(rawId, { signal });
+      } catch (resolveError) {
+        if (signal?.aborted || resolveError?.code === 'ERR_CANCELED' || resolveError?.name === 'AbortError') {
+          throw resolveError;
+        }
+        throw normalizeError(error);
+      }
+      if (resolvedId && resolvedId !== rawId) {
+        try {
+          let detailResult = unwrap(
+            await baseApi.request({
+              method: config.method,
+              url: config.path.replace(':orderId', encodeURIComponent(resolvedId)),
+              data,
+              signal,
+              noReplay: config.method !== 'get',
+            })
+          );
+          detailResult = normalizeOrderResult(detailResult, resolvedId, scope);
+          validateOrder(detailResult, resolvedId, scope);
+          return detailResult;
+        } catch (retryError) {
+          if (signal?.aborted || retryError?.code === 'ERR_CANCELED') throw retryError;
+          throw normalizeError(retryError);
+        }
+      }
+    }
     throw normalizeError(error);
   }
 }

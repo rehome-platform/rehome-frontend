@@ -6,6 +6,7 @@ import { WarehouseHistoryTabs } from '../../src/features/moderator/components/Wa
 import { warehouseHistoryService } from '../../src/features/moderator/services/warehouseHistoryApi.js';
 import { consignmentService } from '../../src/features/moderator/services/consignmentApi.js';
 import { inventoryService } from '../../src/features/moderator/services/inventoryApi.js';
+import { packingService } from '../../src/features/moderator/services/packingApi.js';
 import baseApi from '../../src/services/baseApi.js';
 import { Phase2Provider } from '../../src/features/moderator/hooks/warehouseHooks.jsx';
 vi.mock('../../src/context/AuthContext.jsx', () => ({ useAuth: () => ({
@@ -134,4 +135,122 @@ it('resolves UUID productId in inventoryService.read when direct SKU lookup retu
     expect.objectContaining({ url: expect.stringContaining('RH-SKU-077') }),
   );
   reqSpy.mockRestore();
+});
+
+it('links ORDER history row to UUID when targetType and targetId are present', async () => {
+  const realUuid = '550e8400-e29b-41d4-a716-446655440019';
+  const listSpy = vi.spyOn(warehouseHistoryService, 'list').mockResolvedValueOnce({
+    content: [
+      {
+        id: 'evt-order-19',
+        action: 'SCAN_SKU',
+        target: 'ORDER OD-2026-000019',
+        targetType: 'ORDER',
+        targetId: realUuid,
+        actor: 'Phạm Thị Thu Hà',
+        timestamp: '2026-11-25T06:00:00Z',
+        result: 'SUCCESS',
+      },
+    ],
+    totalPages: 1,
+  });
+
+  try {
+    mount('/moderator/packing?view=history');
+    const link = await screen.findByRole('link', { name: 'Đơn hàng OD-2026-000019' });
+    expect(link).toHaveAttribute('href', `/moderator/packing?orderId=${realUuid}`);
+  } finally {
+    listSpy.mockRestore();
+  }
+});
+
+it('resolves non-UUID orderNo via PACKING queue when GET /orders/{id} returns 400', async () => {
+  const realUuid = '550e8400-e29b-41d4-a716-446655440019';
+  const scope = { userId: 'mod', warehouseId: 'warehouse-a' };
+  const reqSpy = vi.spyOn(baseApi, 'request').mockImplementation(async (cfg) => {
+    if (cfg.url === '/orders/OD-2026-000019') {
+      const err = new Error('Bad Request');
+      err.response = { status: 400, data: { message: "Giá trị của 'id' không hợp lệ." } };
+      throw err;
+    }
+    if (cfg.url === '/queues') {
+      return {
+        data: {
+          result: [{ id: 'q-19', type: 'PACKING', refId: realUuid, orderNo: 'OD-2026-000019' }],
+        },
+      };
+    }
+    if (cfg.url === `/orders/${realUuid}`) {
+      return {
+        data: {
+          result: {
+            id: realUuid,
+            orderNo: 'OD-2026-000019',
+            warehouseId: 'warehouse-a',
+            status: 'PAID',
+            items: [],
+          },
+        },
+      };
+    }
+    throw new Error(`Unexpected request: ${cfg.url}`);
+  });
+
+  try {
+    const detail = await packingService.read('OD-2026-000019', { scope });
+    expect(detail.id).toBe(realUuid);
+    expect(detail.orderId).toBe(realUuid);
+    expect(detail.orderNo).toBe('OD-2026-000019');
+  } finally {
+    reqSpy.mockRestore();
+  }
+});
+
+it('falls back to /orders/warehouse/sold when non-UUID orderNo is no longer in PACKING queue', async () => {
+  const realUuid = '550e8400-e29b-41d4-a716-446655440020';
+  const scope = { userId: 'mod', warehouseId: 'warehouse-a' };
+  const reqSpy = vi.spyOn(baseApi, 'request').mockImplementation(async (cfg) => {
+    if (cfg.url === '/orders/OD-2026-000020') {
+      const err = new Error('Bad Request');
+      err.response = { status: 400, data: { message: "Giá trị của 'id' không hợp lệ." } };
+      throw err;
+    }
+    if (cfg.url === '/queues') {
+      return { data: { result: [] } };
+    }
+    if (cfg.url === '/orders/warehouse/sold') {
+      return {
+        data: {
+          result: {
+            orders: {
+              content: [{ id: realUuid, orderNo: 'OD-2026-000020' }],
+              totalPages: 1,
+            },
+          },
+        },
+      };
+    }
+    if (cfg.url === `/orders/${realUuid}`) {
+      return {
+        data: {
+          result: {
+            id: realUuid,
+            orderNo: 'OD-2026-000020',
+            warehouseId: 'warehouse-a',
+            status: 'PACKED',
+            items: [],
+          },
+        },
+      };
+    }
+    throw new Error(`Unexpected request: ${cfg.url}`);
+  });
+
+  try {
+    const detail = await packingService.read('OD-2026-000020', { scope });
+    expect(detail.id).toBe(realUuid);
+    expect(detail.orderNo).toBe('OD-2026-000020');
+  } finally {
+    reqSpy.mockRestore();
+  }
 });

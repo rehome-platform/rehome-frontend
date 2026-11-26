@@ -6,7 +6,7 @@ import Spinner from '../../../components/common/Spinner.jsx';
 import { useToast } from '../../../context/ToastContext.jsx';
 import PhotoUpload from '../components/PhotoUpload.jsx';
 import { CAMPAIGN_STATUS_LABELS, donationService, isCampaignActive } from '../services/donationApi.js';
-import { useResource } from '../hooks/warehouseHooks.jsx';
+import { STATIC_STALE_TIME_MS, useModeratorCache, useResource } from '../hooks/warehouseHooks.jsx';
 import { normalizeError } from '../models/warehouseModel.js';
 import { Page, Card, ResourceState, date } from '../components/WarehouseUi.jsx';
 
@@ -42,6 +42,7 @@ function formatHeldDuration(heldAt) {
 
 export default function DonationsPage() {
   const toast = useToast();
+  const cache = useModeratorCache();
   const [searchParams, setSearchParams] = useSearchParams();
   const focusedDonationId = searchParams.get('donationId') || '';
   const initialCampaignFilter = searchParams.get('campaignId') || '';
@@ -99,6 +100,7 @@ export default function DonationsPage() {
 
   const warehouses = useResource((options) => donationService.myWarehouses(options), [], {
     cacheKey: 'donations:myWarehouses',
+    staleTime: STATIC_STALE_TIME_MS,
   });
   const warehouse = Array.isArray(warehouses.data) ? warehouses.data[0] : null;
   const warehouseId = warehouse?.id || null;
@@ -328,6 +330,7 @@ export default function DonationsPage() {
       setNote('');
       setDonationPhotos([]);
       setRecordModalOpen(false);
+      cache?.invalidate(['donations:', 'queue:']);
       if (created) {
         donationsResource.setData((prev) => (Array.isArray(prev) ? [created, ...prev] : [created]));
       } else {
@@ -369,6 +372,7 @@ export default function DonationsPage() {
       setConfirmRecipient(false);
       setConfirmItems(false);
       setHandoverConfirmOpen(false);
+      cache?.invalidate(['donations:', 'queue:']);
       donationsResource.refresh();
       if (focusedDonationId) {
         const next = new URLSearchParams(searchParams);
@@ -420,6 +424,7 @@ export default function DonationsPage() {
       toast.success('Đã bỏ ẩn chiến dịch. Các lượt quyên góp đang tạm giữ đã tự động chuyển về "Chờ lấy".');
       setUnhideTarget(null);
       setUnhideReason('');
+      cache?.invalidate(['donations:', 'queue:']);
       campaignsResource.refresh();
       donationsResource.refresh();
       onHoldDonationsResource.refresh();
@@ -454,6 +459,7 @@ export default function DonationsPage() {
       setSelectedOnHoldIds([]);
       setReassignModalOpen(false);
       setReassignCampaignId('');
+      cache?.invalidate(['donations:', 'queue:']);
       onHoldDonationsResource.refresh();
       donationsResource.refresh();
     } catch (err) {

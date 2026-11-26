@@ -1,5 +1,30 @@
 import React from 'react';
 
+const BASE_BUTTON_STYLES =
+  'inline-flex items-center justify-center font-semibold rounded-xl transition-[background-color,border-color,color,box-shadow,opacity,transform] duration-150 enabled:motion-safe:active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed select-none';
+
+const BUTTON_VARIANTS = {
+  primary: 'bg-[#006B2C] text-white hover:bg-[#005523] hover:text-white focus:ring-[#006B2C]/30 shadow-sm hover:shadow',
+  secondary: 'border border-[#DDE5D9] bg-[#EBF1E8] text-[#1F2A37] hover:bg-[#DDE5D9] hover:text-[#1F2A37] focus:ring-[#006B2C]/20',
+  outline: 'border border-[#DDE5D9] bg-white text-[#1F2A37] hover:bg-[#F6F9F4] hover:border-[#006B2C] hover:text-[#1F2A37] focus:ring-[#006B2C]/20',
+  warning: 'bg-[#FEA619] text-[#1F2A37] hover:bg-[#E59412] hover:text-[#1F2A37] focus:ring-[#FEA619]/40 shadow-sm font-bold',
+  accent: 'bg-[#00685F] text-white hover:bg-[#005049] hover:text-white focus:ring-[#00685F]/30 shadow-sm',
+  danger: 'bg-[#D92D20] text-white hover:bg-[#B42318] hover:text-white focus:ring-[#D92D20]/30 shadow-sm',
+  'danger-outline': 'border border-[#D92D20] bg-white text-[#D92D20] hover:bg-[#FEF3F2] hover:border-[#B42318] hover:text-[#B42318] focus:ring-[#D92D20]/25',
+  'danger-ghost': 'text-[#D92D20] hover:bg-[#FEF3F2] hover:text-[#B42318] focus:ring-[#D92D20]/25',
+  ghost: 'text-[#1F2A37] hover:bg-[#F6F9F4] hover:text-[#006B2C] focus:ring-[#006B2C]/20',
+};
+
+const BUTTON_SIZES = {
+  sm: 'px-3 py-1.5 text-xs rounded-xl',
+  md: 'px-4 py-2.5 text-sm rounded-xl',
+  lg: 'px-6 py-3 text-base rounded-xl',
+};
+
+export function getButtonClasses({ variant = 'primary', size = 'md', className = '' } = {}) {
+  return `${BASE_BUTTON_STYLES} ${BUTTON_VARIANTS[variant] || BUTTON_VARIANTS.primary} ${BUTTON_SIZES[size] || BUTTON_SIZES.md} ${className}`.trim();
+}
+
 const Button = React.forwardRef(function Button(
   {
     children,
@@ -19,33 +44,12 @@ const Button = React.forwardRef(function Button(
 ) {
   const isDisabled = disabled || loading;
 
-  const baseStyles =
-    'inline-flex items-center justify-center font-semibold rounded-xl transition-[background-color,border-color,color,box-shadow,opacity,transform] duration-150 enabled:motion-safe:active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed select-none';
-
-  const variants = {
-    primary: 'bg-[#006B2C] text-white hover:bg-[#005523] hover:text-white focus:ring-[#006B2C]/30 shadow-sm hover:shadow',
-    secondary: 'border border-[#DDE5D9] bg-[#EBF1E8] text-[#1F2A37] hover:bg-[#DDE5D9] hover:text-[#1F2A37] focus:ring-[#006B2C]/20',
-    outline: 'border border-[#DDE5D9] bg-white text-[#1F2A37] hover:bg-[#F6F9F4] hover:border-[#006B2C] hover:text-[#1F2A37] focus:ring-[#006B2C]/20',
-    warning: 'bg-[#FEA619] text-[#1F2A37] hover:bg-[#E59412] hover:text-[#1F2A37] focus:ring-[#FEA619]/40 shadow-sm font-bold',
-    accent: 'bg-[#00685F] text-white hover:bg-[#005049] hover:text-white focus:ring-[#00685F]/30 shadow-sm',
-    danger: 'bg-[#D92D20] text-white hover:bg-[#B42318] hover:text-white focus:ring-[#D92D20]/30 shadow-sm',
-    'danger-outline': 'border border-[#D92D20] bg-white text-[#D92D20] hover:bg-[#FEF3F2] hover:border-[#B42318] hover:text-[#B42318] focus:ring-[#D92D20]/25',
-    'danger-ghost': 'text-[#D92D20] hover:bg-[#FEF3F2] hover:text-[#B42318] focus:ring-[#D92D20]/25',
-    ghost: 'text-[#1F2A37] hover:bg-[#F6F9F4] hover:text-[#006B2C] focus:ring-[#006B2C]/20',
-  };
-
-  const sizes = {
-    sm: 'px-3 py-1.5 text-xs rounded-xl',
-    md: 'px-4 py-2.5 text-sm rounded-xl',
-    lg: 'px-6 py-3 text-base rounded-xl',
-  };
-
   return (
     <button
       ref={forwardedRef}
       type={type}
       disabled={isDisabled}
-      className={`${baseStyles} ${variants[variant] || variants.primary} ${sizes[size] || sizes.md} ${className}`}
+      className={getButtonClasses({ variant, size, className })}
       onClick={onClick}
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}

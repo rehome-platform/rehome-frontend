@@ -119,6 +119,7 @@ export const API_ENDPOINTS = {
 
     // Đóng gói & GHN
     // Packing work is listed through QUEUES with params: { type: 'PACKING' }.
+    WAREHOUSE_SOLD_ORDERS: "/orders/warehouse/sold",
     SCAN_PACKING_PRODUCT: (orderId) => `/orders/${moderatorId(orderId)}/pack/scan`,
     UPDATE_PACKING_PHOTOS: (orderId) => `/orders/${moderatorId(orderId)}/pack/photos`,
     CREATE_GHN_SHIPMENT: (orderId) => `/orders/${moderatorId(orderId)}/shipment`,
@@ -225,5 +226,18 @@ export const API_ENDPOINTS = {
   ADDRESS_UNITS: {
     PROVINCES: "/address-units/provinces",
     WARDS: "/address-units/wards",
+  },
+
+  // 8. API công khai (permitAll - không yêu cầu JWT) dùng cho Trang Tiếp thị / Trang đích
+  PUBLIC: {
+    HEALTH: "/health",
+    PRODUCTS: "/products",
+    WAREHOUSES: "/warehouses",
+    CAMPAIGNS: "/campaigns",
+    ORGANIZATIONS: "/api/organizations",
+    MEMBERSHIP_PLANS: "/memberships/plans",
+    CATEGORIES: "/categories",
+    BRANDS: "/brands",
+    POSTS: "/posts",
   },
 };

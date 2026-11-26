@@ -5,11 +5,14 @@ import { formatDeadlineWithCountdown } from "../components/WarehouseUi.jsx";
 import { returnService, needsItemAction } from "../services/returnApi.js";
 import { inventoryService } from "../services/inventoryApi.js";
 import { useToast } from "../../../context/ToastContext.jsx";
+import { DEFAULT_STALE_TIME_MS, useModeratorCache } from "./warehouseHooks.jsx";
 
 const isPendingDisposition = needsItemAction;
+const RETURNS_CACHE_KEY = 'returns:workspace:list';
 
 export function useReturnProcessing() {
   const toast = useToast();
+  const cache = useModeratorCache();
   const notify = (type, msg) => {
     if (type === 'success') toast.success(msg);
     else if (type === 'error') toast.error(msg);
@@ -22,9 +25,12 @@ export function useReturnProcessing() {
   };
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [returnRequests, setReturnRequests] = useState([]);
+  const initialCachedReturns = cache?.read(RETURNS_CACHE_KEY)?.data;
+  const [returnRequests, setReturnRequests] = useState(() =>
+    Array.isArray(initialCachedReturns) ? initialCachedReturns : []
+  );
   const [activeTab, setActiveTab] = useState('PENDING_APPROVAL');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !Array.isArray(initialCachedReturns));
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -127,20 +133,42 @@ export function useReturnProcessing() {
   };
   const evidenceProps = { evidenceImageUrls, evidenceUploading, evidenceError, uploadEvidence, retryEvidence, removeEvidence };
 
-  const fetchReturns = async () => {
+  const fetchReturns = async ({ force = false, background = false } = {}) => {
+    const cachedEntry = cache?.read(RETURNS_CACHE_KEY);
+    let isBackground = background;
+    if (!force && cachedEntry && Array.isArray(cachedEntry.data)) {
+      setReturnRequests(cachedEntry.data);
+      setLoading(false);
+      setError(null);
+      if (cache.isFresh(cachedEntry, DEFAULT_STALE_TIME_MS)) {
+        return;
+      }
+      isBackground = true;
+    }
     try {
-      setLoading(true);
+      if (!isBackground) {
+        setLoading(true);
+      }
       setError(null);
       const res =
         typeof returnService.listForWorkspace === 'function'
           ? await returnService.listForWorkspace()
           : await returnService.list();
-      setReturnRequests(res.data || []);
+      const list = res.data || [];
+      setReturnRequests(list);
+      cache?.write(RETURNS_CACHE_KEY, list);
     } catch (err) {
-      setError('Không thể tải danh sách yêu cầu trả hàng.');
+      if (!isBackground) {
+        setError('Không thể tải danh sách yêu cầu trả hàng.');
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const refreshAfterMutation = async () => {
+    cache?.invalidate(['returns:', 'queue:', 'inventory:', 'history:']);
+    await fetchReturns({ force: true, background: true });
   };
 
   useEffect(() => {
@@ -295,7 +323,7 @@ export function useReturnProcessing() {
     setApprovingReturn(true);
     try {
       const approved = await returnService.approveReturnAndCreateWaybill(selectedItem.id);
-      await fetchReturns();
+      await refreshAfterMutation();
       const handoverNotice = approved?.handoverDeadline
         ? ` Hạn người mua bàn giao cho GHN: ${formatDeadlineWithCountdown(approved.handoverDeadline)}.`
         : '';
@@ -329,7 +357,7 @@ export function useReturnProcessing() {
     setRejectingReturn(true);
     try {
       await returnService.rejectReturn(selectedItem.id, rejectReason);
-      await fetchReturns();
+      await refreshAfterMutation();
       setIsRejectModalOpen(false);
       setRejectReason('');
       setViewMode('QUEUE');
@@ -361,7 +389,7 @@ export function useReturnProcessing() {
           conditionNote: invalidReason,
         });
         const resolved = await returnService.resolveInvalid(selectedItem.id, invalidReason);
-        await fetchReturns();
+        await refreshAfterMutation();
         const pickupNotice = resolved?.pickupDeadline
           ? `Hạn người mua chọn phương thức hoặc đến kho nhận lại: ${formatDeadlineWithCountdown(resolved.pickupDeadline)}.`
           : 'Hàng được lưu kho theo thời hạn cấu hình để người mua tự đến nhận lại hoặc thanh toán phí ship.';
@@ -395,7 +423,7 @@ export function useReturnProcessing() {
                 }
               : prev
           );
-          await fetchReturns();
+          await refreshAfterMutation();
           notify(
             'success',
             `Đã kết luận hợp lệ và hoàn ${formatCurrencyVND(refundedAmount)} cho người mua! Vui lòng chọn phương án xử lý món hàng.`
@@ -444,7 +472,7 @@ export function useReturnProcessing() {
           : Object.keys(extra || {}).length > 0
             ? await returnService.resolveValid(selectedItem.id, outcome, extra)
             : await returnService.resolveValid(selectedItem.id, outcome);
-      await fetchReturns();
+      await refreshAfterMutation();
       setIsOutcomeModalOpen(false);
       setViewMode('QUEUE');
       setSelectedItem(null);
@@ -492,7 +520,7 @@ export function useReturnProcessing() {
     resolvingRef.current = true;
     try {
       await returnService.counterfeitConclusion(selectedItem.id, verdictPayload);
-      await fetchReturns();
+      await refreshAfterMutation();
       setIsCounterfeitModalOpen(false);
       setViewMode('QUEUE');
       setSelectedItem(null);
@@ -566,7 +594,7 @@ export function useReturnProcessing() {
         resolutionNote: 'Hàng xuống cấp, chuyển sang quy trình bồi thường',
       });
       showResolved(resolved);
-      await fetchReturns();
+      await refreshAfterMutation();
       notify('success', 'Đã chốt trả hàng và mở ca bồi thường. Member có 30 ngày chọn phương án, được nhắc mỗi 7 ngày.');
     } catch (error) {
       // A lost response can follow a committed refund. Re-read before allowing any retry.
@@ -575,7 +603,7 @@ export function useReturnProcessing() {
           const detail = await returnService.detail(source.id);
           if (detail.degraded && (detail.rawStatus === 'VALID' || detail.status === 'RESOLVED')) {
             showResolved(detail);
-            await fetchReturns();
+            await refreshAfterMutation();
             return;
           }
         } catch { /* Surface the original failure; never auto-repeat the mutation. */ }
@@ -601,7 +629,7 @@ export function useReturnProcessing() {
     setMarkLostSubmitting(true);
     try {
       await returnService.markLost(target.id, 'Thất lạc trong quá trình vận chuyển bởi bưu tá GHN');
-      await fetchReturns();
+      await refreshAfterMutation();
       setMarkLostTarget(null);
       if (viewMode !== 'QUEUE') {
         setViewMode('QUEUE');
@@ -624,7 +652,7 @@ export function useReturnProcessing() {
       notify('success', 'Đã chuyển ca kiểm tra cho Moderator khác trong ca trực.');
       setViewMode('QUEUE');
       setSelectedItem(null);
-      await fetchReturns();
+      await refreshAfterMutation();
     } catch (err) {
       notify('error', err?.message || 'Không thể chuyển ca kiểm tra. Vui lòng thử lại.');
     } finally {

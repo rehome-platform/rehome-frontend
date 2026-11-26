@@ -1,9 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Badge, Button, Modal, Table } from '../../../components/common/index.js';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Badge, Button, Modal, Table, TableActionButton } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import { membershipAdminApi } from '../services/membershipAdminApi.js';
 import { VOUCHER_TYPE_LABELS } from './membershipConstants.js';
 import VoucherTemplateModal from './VoucherTemplateModal.jsx';
+import {
+  STATIC_STALE_TIME_MS,
+  useAdminCache,
+  useAdminCacheActions,
+} from '../hooks/useAdminQuery.jsx';
+
+const VOUCHERS_CACHE_KEY = 'admin:vouchers:list';
 
 function formatVndCompact(value) {
   const num = Number(value || 0);
@@ -24,8 +31,12 @@ function formatDiscountDisplay(row) {
 
 export default function VoucherTemplatesPage() {
   const toast = useToast();
-  const [templates, setTemplates] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const cache = useAdminCache();
+  const cacheActions = useAdminCacheActions();
+  const initialCached = cache?.read(VOUCHERS_CACHE_KEY)?.data || null;
+
+  const [templates, setTemplates] = useState(() => initialCached ?? []);
+  const [loading, setLoading] = useState(() => !initialCached);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [togglingId, setTogglingId] = useState(null);
@@ -34,22 +45,57 @@ export default function VoucherTemplatesPage() {
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [detailTemplate, setDetailTemplate] = useState(null);
 
-  const loadTemplates = useCallback(async () => {
-    setLoading(true);
-    setError('');
+  const seqRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const loadTemplates = useCallback(async ({ force = false } = {}) => {
+    const cachedEntry = cache?.read(VOUCHERS_CACHE_KEY) || null;
+    if (!force && cachedEntry && cache.isFresh(cachedEntry, STATIC_STALE_TIME_MS)) {
+      setTemplates(cachedEntry.data ?? []);
+      setError('');
+      setLoading(false);
+      return;
+    }
+
+    const reqId = ++seqRef.current;
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached) {
+      setTemplates(cachedEntry.data);
+      setError('');
+      setLoading(false);
+    } else {
+      setLoading(true);
+      setError('');
+    }
+
     try {
       const data = await membershipAdminApi.getVoucherTemplates();
-      setTemplates(Array.isArray(data) ? data : []);
+      if (!mountedRef.current || reqId !== seqRef.current) return;
+      const list = Array.isArray(data) ? data : [];
+      cache?.write(VOUCHERS_CACHE_KEY, list);
+      setTemplates(list);
     } catch (err) {
-      setError(
-        err?.response?.data?.message ||
-          err?.message ||
-          'Không thể tải danh sách mẫu voucher.'
-      );
+      if (!mountedRef.current || reqId !== seqRef.current) return;
+      if (!hasCached || force) {
+        setError(
+          err?.response?.data?.message ||
+            err?.message ||
+            'Không thể tải danh sách mẫu voucher.'
+        );
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current && reqId === seqRef.current) {
+        setLoading(false);
+      }
     }
-  }, []);
+  }, [cache]);
 
   useEffect(() => {
     loadTemplates();
@@ -84,7 +130,8 @@ export default function VoucherTemplatesPage() {
         await membershipAdminApi.activateVoucherTemplate(template.id);
         toast.success(`Đã phát mã trở lại cho "${template.name}".`);
       }
-      await loadTemplates();
+      cacheActions?.invalidate(['admin:vouchers:', 'admin:audit-logs:']);
+      await loadTemplates({ force: true });
     } catch (err) {
       const msg =
         err?.response?.data?.message || err?.message || 'Không thể đổi trạng thái mẫu voucher.';
@@ -140,14 +187,8 @@ export default function VoucherTemplatesPage() {
       header: 'Thao tác',
       render: (row) => (
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => setDetailTemplate(row)} className="gap-1">
-            <span className="material-symbols-outlined text-sm">visibility</span>
-            <span>Xem chi tiết</span>
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => handleOpenEdit(row)} className="gap-1">
-            <span className="material-symbols-outlined text-sm">edit</span>
-            <span>Sửa</span>
-          </Button>
+          <TableActionButton action="view" onClick={() => setDetailTemplate(row)} />
+          <TableActionButton action="edit" onClick={() => handleOpenEdit(row)} />
         </div>
       ),
     },
@@ -204,7 +245,10 @@ export default function VoucherTemplatesPage() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         template={editingTemplate}
-        onSuccess={loadTemplates}
+        onSuccess={() => {
+          cacheActions?.invalidate(['admin:vouchers:', 'admin:audit-logs:']);
+          loadTemplates({ force: true });
+        }}
       />
 
       <Modal

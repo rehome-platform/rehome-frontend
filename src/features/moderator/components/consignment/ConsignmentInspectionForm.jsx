@@ -206,18 +206,19 @@ export function ConsignmentInspectionForm({ price, term, conditionNote, declared
       <div className="flex flex-wrap gap-2">
         <Button
           type="submit"
+          variant="primary"
           disabled={!allChecked || !conditionNote.trim() || !validMoney(price)}
           loading={resource.busy}
-          className="flex-1 py-3 font-bold text-xs bg-[#006B2C] text-white hover:bg-[#005221]"
+          className="flex-1 py-3 font-bold text-xs"
         >
           Đạt kiểm định — Tạo biên nhận ký gửi
         </Button>
         {onOpenReturn && (
           <Button
             type="button"
-            variant="outline"
+            variant="danger-outline"
             onClick={onOpenReturn}
-            className="py-3 px-4 font-bold text-xs border-[#BA1A1A] text-[#BA1A1A] hover:bg-red-50"
+            className="py-3 px-4 font-bold text-xs"
           >
             Trả đồ tại chỗ
           </Button>

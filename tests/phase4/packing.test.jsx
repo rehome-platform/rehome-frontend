@@ -201,3 +201,43 @@ it('does not show handover button when order is not PACKED', async () => {
   await screen.findByText('GHN-PACKING-03');
   expect(screen.queryByRole('button', { name: 'Xác nhận bàn giao GHN' })).not.toBeInTheDocument();
 });
+
+it('uses canonical resolved order.id UUID for packing mutations when mounted with non-UUID orderNo', async () => {
+  const realUuid = '550e8400-e29b-41d4-a716-446655440019';
+  const order = {
+    ...orderFixture(),
+    id: realUuid,
+    orderId: realUuid,
+    orderNo: 'OD-2026-000019',
+  };
+  const readSpy = vi.spyOn(packingService, 'read').mockImplementation(async () => structuredClone(order));
+  const scanSpy = vi.spyOn(packingService, 'scan').mockImplementation(async () => {
+    order.scannedProductIds = ['sku-a', 'SKU-B'];
+    order.scannedCount = 2;
+    return { matched: true, scannedCount: 2, totalCount: 2, scannedProductId: 'sku-a' };
+  });
+  const shipmentSpy = vi.spyOn(packingService, 'shipment').mockResolvedValue({
+    id: realUuid,
+    status: 'PACKED',
+    ghnTrackingCode: 'GHN-19',
+  });
+
+  mount('OD-2026-000019');
+  await screen.findByText('Đã quét 0/2 SKU');
+  expect(readSpy).toHaveBeenCalledWith('OD-2026-000019', expect.any(Object));
+
+  fireEvent.change(screen.getByLabelText('SKU'), { target: { value: 'sku-a' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Đối chiếu' }));
+
+  await waitFor(() => expect(scanSpy).toHaveBeenCalledWith(realUuid, 'sku-a', expect.any(Object)));
+  await screen.findByText('Đã quét 2/2 SKU');
+
+  const shipBtn = screen.getByRole('button', { name: 'Tạo vận đơn GHN' });
+  await waitFor(() => expect(shipBtn).toBeEnabled());
+  fireEvent.click(shipBtn);
+
+  await waitFor(() => expect(shipmentSpy).toHaveBeenCalledWith(realUuid, expect.any(Object)));
+  readSpy.mockRestore();
+  scanSpy.mockRestore();
+  shipmentSpy.mockRestore();
+});

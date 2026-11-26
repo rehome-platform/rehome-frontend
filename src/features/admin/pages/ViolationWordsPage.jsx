@@ -1,9 +1,15 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Badge, Button, Modal, Table, TableActionButton } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
 import violationWordAdminApi from '../services/violationWordAdminApi.js';
 import ViolationWordModal from './ViolationWordModal.jsx';
+import {
+  STATIC_STALE_TIME_MS,
+  useAdminCache,
+  useAdminCacheActions,
+} from '../hooks/useAdminQuery.jsx';
 
 const PAGE_SIZE = 20;
 
@@ -25,7 +31,7 @@ const SEVERITY_VARIANTS = {
 };
 
 const ACTION_LABELS = {
-  AUTO_FLAG: 'Tự động gắn cờ',
+  AUTO_FLAG: 'Ẩn & chờ duyệt',
   AUTO_REJECT: 'Tự động từ chối',
   NOTIFY_ADMIN: 'Thông báo quản trị viên',
 };
@@ -34,6 +40,8 @@ export { CATEGORY_LABELS, SEVERITY_LABELS, ACTION_LABELS };
 
 export default function ViolationWordsPage() {
   const toast = useToast();
+  const cache = useAdminCache();
+  const cacheActions = useAdminCacheActions();
 
   const [keyword, setKeyword] = useState('');
   const {
@@ -46,10 +54,13 @@ export default function ViolationWordsPage() {
   const [isActive, setIsActive] = useState('');
   const [page, setPage] = useState(0);
 
-  const [items, setItems] = useState([]);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const vwCacheKey = `admin:violation-words:list:${debouncedKeyword || ''}:${category}:${severity}:${isActive}:${page}`;
+  const initialCached = cache?.read(vwCacheKey)?.data || null;
+
+  const [items, setItems] = useState(() => initialCached?.items ?? []);
+  const [totalPages, setTotalPages] = useState(() => initialCached?.totalPages ?? 0);
+  const [totalElements, setTotalElements] = useState(() => initialCached?.totalElements ?? 0);
+  const [loading, setLoading] = useState(() => !initialCached);
   const [error, setError] = useState('');
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -59,11 +70,42 @@ export default function ViolationWordsPage() {
   const deletingRef = useRef(false);
 
   const seqRef = useRef(0);
+  const mountedRef = useRef(true);
+  const prevDebouncedKeywordRef = useRef(debouncedKeyword);
 
-  const fetchWords = useCallback(async () => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const fetchWords = useCallback(async ({ force = false } = {}) => {
+    const cachedEntry = cache?.read(vwCacheKey) || null;
+    if (!force && cachedEntry && cache.isFresh(cachedEntry, STATIC_STALE_TIME_MS)) {
+      const payload = cachedEntry.data;
+      setItems(payload.items ?? []);
+      setTotalPages(payload.totalPages ?? 0);
+      setTotalElements(payload.totalElements ?? 0);
+      setError('');
+      setLoading(false);
+      return;
+    }
+
     const reqId = ++seqRef.current;
-    setLoading(true);
-    setError('');
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached) {
+      const payload = cachedEntry.data;
+      setItems(payload.items ?? []);
+      setTotalPages(payload.totalPages ?? 0);
+      setTotalElements(payload.totalElements ?? 0);
+      setError('');
+      setLoading(false);
+    } else {
+      setLoading(true);
+      setError('');
+    }
+
     try {
       const data = await violationWordAdminApi.search({
         keyword: debouncedKeyword,
@@ -73,30 +115,41 @@ export default function ViolationWordsPage() {
         page,
         size: PAGE_SIZE,
       });
-      if (reqId !== seqRef.current) return;
-      setItems(Array.isArray(data?.content) ? data.content : []);
-      setTotalPages(data?.totalPages ?? 0);
-      setTotalElements(data?.totalElements ?? 0);
+      if (!mountedRef.current || reqId !== seqRef.current) return;
+      const nextPayload = {
+        items: Array.isArray(data?.content) ? data.content : [],
+        totalPages: data?.totalPages ?? 0,
+        totalElements: data?.totalElements ?? 0,
+      };
+      cache?.write(vwCacheKey, nextPayload);
+      setItems(nextPayload.items);
+      setTotalPages(nextPayload.totalPages);
+      setTotalElements(nextPayload.totalElements);
     } catch (err) {
-      if (reqId !== seqRef.current) return;
-      setItems([]);
-      setTotalPages(0);
-      setTotalElements(0);
-      setError(
-        err?.response?.data?.message || err?.message || 'Không thể tải danh sách từ khóa vi phạm.'
-      );
+      if (!mountedRef.current || reqId !== seqRef.current) return;
+      if (!hasCached || force) {
+        setItems([]);
+        setTotalPages(0);
+        setTotalElements(0);
+        setError(
+          err?.response?.data?.message || err?.message || 'Không thể tải danh sách từ khóa vi phạm.'
+        );
+      }
     } finally {
-      if (reqId === seqRef.current) setLoading(false);
+      if (mountedRef.current && reqId === seqRef.current) setLoading(false);
     }
-  }, [debouncedKeyword, category, severity, isActive, page]);
+  }, [cache, vwCacheKey, debouncedKeyword, category, severity, isActive, page]);
 
   useEffect(() => {
-    setPage(0);
-  }, [debouncedKeyword]);
-
-  useEffect(() => {
+    if (prevDebouncedKeywordRef.current !== debouncedKeyword) {
+      prevDebouncedKeywordRef.current = debouncedKeyword;
+      if (page !== 0) {
+        setPage(0);
+        return;
+      }
+    }
     fetchWords();
-  }, [fetchWords]);
+  }, [debouncedKeyword, page, fetchWords]);
 
   const handleFilterChange = (setter) => (e) => {
     setter(e.target.value);
@@ -125,7 +178,8 @@ export default function ViolationWordsPage() {
     try {
       await violationWordAdminApi.toggle(word.id);
       toast.success(`Đã ${word.isActive ? 'tắt' : 'bật'} từ khóa "${word.word}".`);
-      fetchWords();
+      cacheActions?.invalidate(['admin:violation-words:', 'admin:audit-logs:']);
+      fetchWords({ force: true });
     } catch (err) {
       toast.error(
         err?.response?.data?.message || err?.message || 'Không thể đổi trạng thái từ khóa.'
@@ -141,7 +195,8 @@ export default function ViolationWordsPage() {
       await violationWordAdminApi.remove(deleteTarget.id);
       toast.success(`Đã xóa từ khóa "${deleteTarget.word}".`);
       setDeleteTarget(null);
-      fetchWords();
+      cacheActions?.invalidate(['admin:violation-words:', 'admin:audit-logs:']);
+      fetchWords({ force: true });
     } catch (err) {
       toast.error(
         err?.response?.data?.message || err?.message || 'Không thể xóa từ khóa.'
@@ -227,6 +282,20 @@ export default function ViolationWordsPage() {
             <span className="material-symbols-outlined text-base">add</span>
             <span>Thêm từ khóa</span>
           </Button>
+        </div>
+
+        <div className="p-3 rounded-xl bg-[#F6F9F4] border border-[#006B2C]/20 text-xs text-[#1F2A37] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <span>
+            <strong>2 luồng xử lý:</strong> Bài viết &amp; Bình luận chứa từ vi phạm sẽ bị{' '}
+            <strong>ẩn và chuyển chờ Admin xử lý</strong>; riêng tin nhắn <strong>Chat</strong> được{' '}
+            <strong>che ***</strong> để giữ luồng trò chuyện mượt mà.
+          </span>
+          <Link
+            to="/admin/content-reviews"
+            className="text-[#006B2C] font-semibold hover:underline shrink-0"
+          >
+            Kiểm duyệt nội dung →
+          </Link>
         </div>
 
         {/* Filters */}
@@ -316,7 +385,7 @@ export default function ViolationWordsPage() {
           className="p-4 rounded-xl bg-[#FFF5F5] border border-[#D92D20]/30 text-sm text-[#D92D20] flex items-center justify-between gap-3"
         >
           <span>{error}</span>
-          <Button type="button" variant="secondary" size="sm" onClick={fetchWords}>
+          <Button type="button" variant="secondary" size="sm" onClick={() => fetchWords({ force: true })}>
             Thử lại
           </Button>
         </div>
@@ -362,7 +431,10 @@ export default function ViolationWordsPage() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         word={editingWord}
-        onSuccess={fetchWords}
+        onSuccess={() => {
+          cacheActions?.invalidate(['admin:violation-words:', 'admin:audit-logs:']);
+          fetchWords({ force: true });
+        }}
       />
 
       <Modal

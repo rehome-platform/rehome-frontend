@@ -26,6 +26,7 @@ export default function AdminHeader({ activeTitle, onOpenMobile }) {
     if (path.startsWith('/admin/warehouses')) return 'Quản lý điểm kí gửi ReHome';
     if (path.startsWith('/admin/configs')) return 'Cấu hình tham số hệ thống';
     if (path.startsWith('/admin/audit-logs')) return 'Nhật ký hệ thống';
+    if (path.startsWith('/admin/content-reviews')) return 'Kiểm duyệt nội dung';
     if (path.startsWith('/admin/violation-words')) return 'Quản lý từ ngữ vi phạm';
     if (path.startsWith('/admin/membership-plans')) return 'Cấu hình gói thành viên';
     if (/^\/admin\/membership-subscriptions\/.+/.test(path)) return 'Chi tiết gói thành viên';

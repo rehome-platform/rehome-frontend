@@ -118,7 +118,7 @@ export default function LoginPage() {
           </picture>
           <p className="mt-2 text-xs font-semibold text-[#5B6776] uppercase">Cổng Vận Hành Nội Bộ</p>
           <p className="text-xs text-[#5B6776] mt-3 max-w-xs leading-relaxed">
-            Hệ thống đăng nhập dành cho Quản trị viên (Admin) và Nhân viên kiểm định kho (Moderator).
+            Hệ thống đăng nhập dành cho Quản trị viên và Nhân viên kiểm định kho.
           </p>
         </div>
 
@@ -163,8 +163,8 @@ export default function LoginPage() {
                 }}
                 placeholder="name@example.com"
                 className={`w-full pl-3.5 pr-10 py-2.5 text-sm rounded-xl border transition-all outline-none ${errorMessage
-                    ? 'border-[#D92D20] bg-[#FFF5F5] focus:ring-2 focus:ring-[#D92D20]/20'
-                    : 'border-[#DDE5D9] bg-white hover:border-[#006B2C]/50 focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15'
+                  ? 'border-[#D92D20] bg-[#FFF5F5] focus:ring-2 focus:ring-[#D92D20]/20'
+                  : 'border-[#DDE5D9] bg-white hover:border-[#006B2C]/50 focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15'
                   } text-[#1F2A37]`}
               />
               <svg
@@ -207,8 +207,8 @@ export default function LoginPage() {
                 }}
                 placeholder="••••••••"
                 className={`w-full pl-3.5 pr-11 py-2.5 text-sm rounded-xl border transition-all outline-none ${errorMessage
-                    ? 'border-[#D92D20] bg-[#FFF5F5] focus:ring-2 focus:ring-[#D92D20]/20'
-                    : 'border-[#DDE5D9] bg-white hover:border-[#006B2C]/50 focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15'
+                  ? 'border-[#D92D20] bg-[#FFF5F5] focus:ring-2 focus:ring-[#D92D20]/20'
+                  : 'border-[#DDE5D9] bg-white hover:border-[#006B2C]/50 focus:border-[#006B2C] focus:ring-2 focus:ring-[#006B2C]/15'
                   } text-[#1F2A37]`}
               />
               <button

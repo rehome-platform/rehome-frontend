@@ -6,6 +6,7 @@ import ComparisonBadge from './ComparisonBadge.jsx';
 import useAdminPeriod from '../hooks/useAdminPeriod.js';
 import { Spinner } from '../../../components/common/index.js';
 import usePreviousTotal from '../hooks/usePreviousTotal.js';
+import { DASHBOARD_STALE_TIME_MS, useAdminCache } from '../hooks/useAdminQuery.jsx';
 import { pickTrendGranularity } from '../utils/adminDateUtils.js';
 
 const UNIT_NAME = { day: 'ngày', week: 'tuần', month: 'tháng' };
@@ -79,60 +80,104 @@ function periodName(point, granularity) {
  * theo độ dài khoảng để số cột luôn vừa phải.
  */
 export default function AdminRevenueTrendChart() {
+  const cache = useAdminCache();
   const filter = useAdminPeriod('MONTH');
   const { activeRange, dateError, previousRange, previousPeriodLabel } = filter;
   const from = activeRange.apiFrom;
   const to = activeRange.apiTo;
   const granularity = pickTrendGranularity(from, to);
 
+  const trendCacheKey = `admin:dashboard:revenue-trend:${granularity}:${from || ''}:${to || ''}`;
+  const prevTrendRevKey = previousRange
+    ? `admin:dashboard:prev-trend-rev:${previousRange.apiFrom || ''}:${previousRange.apiTo || ''}`
+    : null;
+
   const fetchPreviousTotal = useCallback(
     (range) => adminApi.getRevenueTrendTotal({ from: range.apiFrom, to: range.apiTo }),
     []
   );
-  const { previousTotal, loadingPrevious } = usePreviousTotal(fetchPreviousTotal, previousRange);
+  const { previousTotal, loadingPrevious } = usePreviousTotal(
+    fetchPreviousTotal,
+    previousRange,
+    [],
+    prevTrendRevKey
+  );
 
-  const [trend, setTrend] = useState({ total: 0, from: undefined, to: undefined, granularity: 'day', points: [] });
-  const [loading, setLoading] = useState(true);
+  const initialCached = cache?.read(trendCacheKey)?.data || null;
+  const [trend, setTrend] = useState(
+    () => initialCached || { total: 0, from: undefined, to: undefined, granularity: 'day', points: [] }
+  );
+  const [loading, setLoading] = useState(() => !initialCached);
   const [error, setError] = useState(null);
   const [hoveredIdx, setHoveredIdx] = useState(null);
 
   const reqSeqRef = useRef(0);
+  const mountedRef = useRef(true);
 
-  const fetchTrend = useCallback(async () => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const fetchTrend = useCallback(async ({ force = false } = {}) => {
     if (dateError) {
       setLoading(false);
       return;
     }
+
+    const cachedEntry = cache?.read(trendCacheKey) || null;
+    if (!force && cachedEntry && cache.isFresh(cachedEntry, DASHBOARD_STALE_TIME_MS)) {
+      setTrend(cachedEntry.data);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     const reqId = ++reqSeqRef.current;
-    try {
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached) {
+      setTrend(cachedEntry.data);
+      setError(null);
+      setLoading(false);
+    } else {
       setLoading(true);
       setError(null);
+    }
+
+    try {
       const data = await adminApi.getRevenueTrend({ from, to, granularity });
-      if (reqId === reqSeqRef.current && data) {
-        setTrend({
+      if (!mountedRef.current || reqId !== reqSeqRef.current) return;
+      if (data) {
+        const nextTrend = {
           total: data.total ?? 0,
           from: data.from,
           to: data.to,
           granularity: data.granularity || granularity,
           points: Array.isArray(data.points) ? data.points : [],
-        });
+        };
+        cache?.write(trendCacheKey, nextTrend);
+        setTrend(nextTrend);
         setHoveredIdx(null);
       }
     } catch (err) {
-      if (reqId === reqSeqRef.current) {
+      if (mountedRef.current && reqId === reqSeqRef.current) {
         console.error('Lỗi tải biểu đồ doanh thu:', err);
-        if (err?.response?.data?.code === 'INVALID_DATE_RANGE') {
-          setError('Khoảng thời gian vượt quá 366 kỳ dữ liệu. Vui lòng thu hẹp khoảng thời gian.');
-        } else {
-          setError('Không thể tải biểu đồ doanh thu nền tảng.');
+        if (!hasCached || force) {
+          if (err?.response?.data?.code === 'INVALID_DATE_RANGE') {
+            setError('Khoảng thời gian vượt quá 366 kỳ dữ liệu. Vui lòng thu hẹp khoảng thời gian.');
+          } else {
+            setError('Không thể tải biểu đồ doanh thu nền tảng.');
+          }
         }
       }
     } finally {
-      if (reqId === reqSeqRef.current) {
+      if (mountedRef.current && reqId === reqSeqRef.current) {
         setLoading(false);
       }
     }
-  }, [from, to, granularity, dateError]);
+  }, [cache, trendCacheKey, from, to, granularity, dateError]);
 
   useEffect(() => {
     fetchTrend();
@@ -208,7 +253,7 @@ export default function AdminRevenueTrendChart() {
           <p className="text-xs font-semibold text-[#B91C1C]">{error}</p>
           <button
             type="button"
-            onClick={fetchTrend}
+            onClick={() => fetchTrend({ force: true })}
             className="px-3 py-1.5 rounded-lg bg-[#006B2C] text-white text-xs font-semibold"
           >
             Thử lại

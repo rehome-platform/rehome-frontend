@@ -1,8 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import adminApi from '../services/adminApi';
-import { Button, Spinner, Modal } from '../../../components/common/index.js';
+import { Button, Spinner, Modal, TableActionButton } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
+import {
+  DEFAULT_STALE_TIME_MS,
+  STATIC_STALE_TIME_MS,
+  useAdminCache,
+  useAdminCacheActions,
+} from '../hooks/useAdminQuery.jsx';
 
 /**
  * View Quản lý Nhân sự ReHome
@@ -12,12 +18,12 @@ import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
  * - PATCH /api/admin/moderators/{id}/warehouse: Đổi kho công tác
  * - PATCH /api/admin/accounts/{id}/ban & unban: Khóa/Mở khóa tài khoản Moderator
  */
+const WAREHOUSE_OPTIONS_CACHE_KEY = 'admin:warehouses:options';
+
 export default function AdminModeratorsView({ onLogAction }) {
   const toast = useToast();
-  const [moderators, setModerators] = useState([]);
-  const [warehouses, setWarehouses] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const cache = useAdminCache();
+  const cacheActions = useAdminCacheActions();
 
   const [searchKeyword, setSearchKeyword] = useState('');
   const {
@@ -27,6 +33,15 @@ export default function AdminModeratorsView({ onLogAction }) {
   } = useDebouncedSearch(searchKeyword);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [warehouseFilter, setWarehouseFilter] = useState('ALL');
+
+  const initialWarehouses = cache?.read(WAREHOUSE_OPTIONS_CACHE_KEY)?.data || null;
+  const modCacheKey = `admin:moderators:list:${debouncedSearch || ''}:${statusFilter}:${warehouseFilter}`;
+  const initialMods = cache?.read(modCacheKey)?.data || null;
+
+  const [moderators, setModerators] = useState(() => initialMods ?? []);
+  const [warehouses, setWarehouses] = useState(() => initialWarehouses ?? []);
+  const [isLoading, setIsLoading] = useState(() => !initialMods);
+  const [error, setError] = useState(null);
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -40,56 +55,102 @@ export default function AdminModeratorsView({ onLogAction }) {
   const [togglingStatus, setTogglingStatus] = useState(false);
 
   // Create Form State
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     fullName: '',
     email: '',
     phone: '',
-    warehouseId: '',
-  });
+    warehouseId: initialWarehouses?.[0]?.id || '',
+  }));
   const [formErrors, setFormErrors] = useState({});
 
-  // Fetch initial warehouses
+  const modSeqRef = useRef(0);
+  const mountedRef = useRef(true);
+
   useEffect(() => {
-    loadWarehouses();
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
-  // Fetch moderators when filters change (debounce 400ms & tối thiểu 2 ký tự qua useDebouncedSearch)
-  useEffect(() => {
-    loadModerators();
-  }, [debouncedSearch, statusFilter, warehouseFilter]);
+  const loadWarehouses = useCallback(async () => {
+    const cached = cache?.read(WAREHOUSE_OPTIONS_CACHE_KEY) || null;
+    if (cached && cache.isFresh(cached, STATIC_STALE_TIME_MS)) {
+      const list = cached.data || [];
+      setWarehouses(list);
+      if (list.length > 0) {
+        setFormData((prev) => (prev.warehouseId ? prev : { ...prev, warehouseId: list[0].id }));
+      }
+      return;
+    }
 
-  const loadWarehouses = async () => {
     try {
       const data = await adminApi.getWarehouses();
+      if (!mountedRef.current) return;
       const list = Array.isArray(data) ? data : data?.content || data?.result || [];
+      cache?.write(WAREHOUSE_OPTIONS_CACHE_KEY, list);
       setWarehouses(list);
-      if (list.length > 0 && !formData.warehouseId) {
-        setFormData((prev) => ({ ...prev, warehouseId: list[0].id }));
+      if (list.length > 0) {
+        setFormData((prev) => (prev.warehouseId ? prev : { ...prev, warehouseId: list[0].id }));
       }
     } catch (err) {
       console.error('Lỗi tải danh sách kho:', err);
     }
-  };
+  }, [cache]);
 
-  const loadModerators = async () => {
-    try {
+  const loadModerators = useCallback(async ({ force = false } = {}) => {
+    const cachedEntry = cache?.read(modCacheKey) || null;
+    if (!force && cachedEntry && cache.isFresh(cachedEntry, DEFAULT_STALE_TIME_MS)) {
+      setModerators(cachedEntry.data ?? []);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
+    const reqId = ++modSeqRef.current;
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached) {
+      setModerators(cachedEntry.data);
+      setError(null);
+      setIsLoading(false);
+    } else {
       setIsLoading(true);
       setError(null);
+    }
+
+    try {
       const params = {
         search: debouncedSearch || undefined,
         status: statusFilter !== 'ALL' ? statusFilter : undefined,
         warehouseId: warehouseFilter !== 'ALL' ? warehouseFilter : undefined,
       };
       const res = await adminApi.getModerators(params);
+      if (!mountedRef.current || reqId !== modSeqRef.current) return;
       const list = Array.isArray(res) ? res : res?.content || res?.result?.content || res?.result || [];
+      cache?.write(modCacheKey, list);
       setModerators(list);
     } catch (err) {
+      if (!mountedRef.current || reqId !== modSeqRef.current) return;
       console.error('Lỗi tải danh sách Moderator:', err);
-      setError('Không thể tải danh sách Moderator. Vui lòng thử lại sau.');
+      if (!hasCached || force) {
+        setError('Không thể tải danh sách Moderator. Vui lòng thử lại sau.');
+      }
     } finally {
-      setIsLoading(false);
+      if (mountedRef.current && reqId === modSeqRef.current) {
+        setIsLoading(false);
+      }
     }
-  };
+  }, [cache, modCacheKey, debouncedSearch, statusFilter, warehouseFilter]);
+
+  // Fetch initial warehouses
+  useEffect(() => {
+    loadWarehouses();
+  }, [loadWarehouses]);
+
+  // Fetch moderators when filters change (debounce 400ms & tối thiểu 2 ký tự qua useDebouncedSearch)
+  useEffect(() => {
+    loadModerators();
+  }, [loadModerators]);
 
   const showNotification = (msg) => {
     setActionSuccessMsg(msg);
@@ -151,7 +212,8 @@ export default function AdminModeratorsView({ onLogAction }) {
         });
       }
 
-      await loadModerators();
+      cacheActions?.invalidate(['admin:moderators:', 'admin:warehouses:', 'admin:accounts:', 'admin:audit-logs:', 'admin:dashboard:']);
+      await loadModerators({ force: true });
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Không thể tạo tài khoản Moderator';
       setFormErrors({ general: msg });
@@ -201,7 +263,8 @@ export default function AdminModeratorsView({ onLogAction }) {
       setToggleStatusTarget(null);
       setToggleStatusReason('');
       setDetailTarget(null);
-      await loadModerators();
+      cacheActions?.invalidate(['admin:moderators:', 'admin:warehouses:', 'admin:accounts:', 'admin:audit-logs:', 'admin:dashboard:']);
+      await loadModerators({ force: true });
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || `Lỗi khi ${actionLabel} tài khoản`);
     } finally {
@@ -232,7 +295,8 @@ export default function AdminModeratorsView({ onLogAction }) {
         });
       }
 
-      await loadModerators();
+      cacheActions?.invalidate(['admin:moderators:', 'admin:warehouses:', 'admin:accounts:', 'admin:audit-logs:', 'admin:dashboard:']);
+      await loadModerators({ force: true });
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || 'Không thể chuyển địa điểm công tác cho Moderator');
     } finally {
@@ -338,7 +402,7 @@ export default function AdminModeratorsView({ onLogAction }) {
             type="button"
             variant="secondary"
             size="sm"
-            onClick={loadModerators}
+            onClick={() => loadModerators({ force: true })}
             className="mt-4"
           >
             Thử lại
@@ -359,18 +423,21 @@ export default function AdminModeratorsView({ onLogAction }) {
               ? 'Không tìm thấy kết quả phù hợp với bộ lọc hiện tại.'
               : 'Tạo tài khoản đầu tiên để bắt đầu phân công xử lý các tác vụ kiểm duyệt.'}
           </p>
-          <button
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
             onClick={() => {
               setSearchKeyword('');
               setStatusFilter('ALL');
               setWarehouseFilter('ALL');
               setIsCreateModalOpen(true);
             }}
-            className="px-4 py-2 bg-[#006B2C] text-white text-xs font-semibold rounded-xl hover:bg-[#005523] transition-colors flex items-center gap-1.5 shadow-sm"
+            className="gap-1.5"
           >
-            <span className="material-symbols-outlined text-sm">add</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-sm">add</span>
             <span>Tạo tài khoản nhân viên</span>
-          </button>
+          </Button>
         </div>
       ) : (
         <div
@@ -451,15 +518,11 @@ export default function AdminModeratorsView({ onLogAction }) {
                       </td>
 
                       {/* Actions */}
-                      <td className="py-3.5 pl-4 pr-8 text-center align-middle whitespace-nowrap">
-                        <button
-                          type="button"
+                      <td className="py-3.5 pl-4 pr-8 text-right align-middle whitespace-nowrap">
+                        <TableActionButton
+                          action="view"
                           onClick={() => setDetailTarget(mod)}
-                          className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 whitespace-nowrap rounded-xl text-xs font-semibold text-[#006B2C] border border-[#006B2C]/30 hover:bg-[#E8F5E9] transition-colors"
-                        >
-                          <span className="material-symbols-outlined text-base">visibility</span>
-                          <span>Xem chi tiết</span>
-                        </button>
+                        />
                       </td>
                     </tr>
                   );
@@ -542,38 +605,39 @@ export default function AdminModeratorsView({ onLogAction }) {
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-[#DDE5D9]">
                 <div className="flex items-center gap-2">
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => {
                       setChangeWarehouseTarget(detailTarget);
                       setSelectedNewWarehouseId(detailTarget.warehouseId || warehouses[0]?.id || "");
                       setDetailTarget(null);
                     }}
-                    className="px-4 py-2 text-xs font-semibold text-[#00685F] hover:bg-[#E0F2F1] rounded-xl border border-[#00685F]/30 flex items-center gap-1.5"
+                    className="gap-1.5 border-[#00685F]/40 text-[#00685F] hover:bg-[#E0F2F1] hover:border-[#00685F] hover:text-[#00685F]"
                   >
-                    <span className="material-symbols-outlined text-base">sync_alt</span>
+                    <span aria-hidden="true" className="material-symbols-outlined text-base">sync_alt</span>
                     <span>Chuyển địa điểm công tác</span>
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    size="sm"
+                    variant={!dLocked ? "danger-outline" : "outline"}
                     onClick={() => handleToggleStatus(detailTarget)}
-                    className={`px-4 py-2 text-xs font-semibold rounded-xl border flex items-center gap-1.5 ${
-                      !dLocked
-                        ? "text-[#DC2626] border-[#DC2626]/30 hover:bg-[#FEE2E2]/50"
-                        : "text-[#006B2C] border-[#006B2C]/30 hover:bg-[#E8F5E9]"
-                    }`}
+                    className={!dLocked ? "gap-1.5" : "gap-1.5 border-[#ABEFC6] text-[#006B2C] hover:bg-[#ECFDF3] hover:border-[#006B2C] hover:text-[#006B2C]"}
                   >
                     <span className="material-symbols-outlined text-base" aria-hidden="true">{!dLocked ? "lock" : "lock_open"}</span>
                     <span>{!dLocked ? "Khóa tài khoản" : "Mở khóa tài khoản"}</span>
-                  </button>
+                  </Button>
                 </div>
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => setDetailTarget(null)}
-                  className="px-4 py-2 text-xs font-semibold border border-[#DDE5D9] bg-white text-[#5B6776] hover:bg-[#F6F9F4] rounded-xl"
                 >
                   Đóng
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -620,25 +684,24 @@ export default function AdminModeratorsView({ onLogAction }) {
               </div>
 
               <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#DDE5D9]">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isSubmitting}
                   onClick={() => setChangeWarehouseTarget(null)}
-                  className="px-4 py-2 text-xs font-semibold text-[#5B6776] hover:bg-[#F6F9F4] rounded-xl border border-[#DDE5D9]"
                 >
                   Hủy
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
+                  variant="primary"
+                  size="sm"
+                  loading={isSubmitting}
                   disabled={isSubmitting}
-                  className="px-4 py-2 text-xs font-semibold bg-[#006B2C] text-white hover:bg-[#005523] rounded-xl flex items-center gap-1.5 shadow-sm disabled:opacity-50"
                 >
-                  {isSubmitting && (
-                    <span className="material-symbols-outlined animate-spin text-sm">
-                      progress_activity
-                    </span>
-                  )}
-                  <span>Xác nhận chuyển địa điểm</span>
-                </button>
+                  Xác nhận chuyển địa điểm
+                </Button>
               </div>
             </form>
           </div>
@@ -802,25 +865,24 @@ export default function AdminModeratorsView({ onLogAction }) {
 
               {/* Modal Actions */}
               <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#DDE5D9]">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isSubmitting}
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-[#5B6776] hover:bg-[#F6F9F4] rounded-xl transition-colors border border-[#DDE5D9]"
                 >
                   Hủy
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
+                  variant="primary"
+                  size="sm"
+                  loading={isSubmitting}
                   disabled={isSubmitting}
-                  className="px-4 py-2 text-xs font-semibold bg-[#006B2C] text-white hover:bg-[#005523] rounded-xl transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50"
                 >
-                  {isSubmitting && (
-                    <span className="material-symbols-outlined animate-spin text-sm">
-                      progress_activity
-                    </span>
-                  )}
-                  <span>Tạo tài khoản</span>
-                </button>
+                  Tạo tài khoản
+                </Button>
               </div>
             </form>
           </div>

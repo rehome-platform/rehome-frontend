@@ -3,6 +3,7 @@ import { Button, Spinner } from '../../../components/common/index.js';
 import { formatCurrencyVND, formatDateTime } from '../../../utils/formatters.js';
 import adminApi from '../services/adminApi.js';
 import { validateDateRange } from '../utils/adminDateUtils.js';
+import { DASHBOARD_STALE_TIME_MS, useAdminCache } from '../hooks/useAdminQuery.jsx';
 
 const PAGE_SIZE = 20;
 
@@ -18,31 +19,65 @@ function formatRatePercent(rate) {
  * showSummary=false chỉ giữ bảng món đã bán (bỏ tiêu đề và 3 thẻ tóm tắt hoa hồng theo kỳ).
  */
 export default function AdminRevenueReportView({ from, to, dashboardData = {}, showSummary = true }) {
+  const cache = useAdminCache();
   const [term, setTerm] = useState('ALL');
   const [page, setPage] = useState(0);
-  const [itemsPage, setItemsPage] = useState({
-    content: [],
-    page: 0,
-    size: PAGE_SIZE,
-    totalElements: 0,
-    totalPages: 0,
-  });
-  const [loading, setLoading] = useState(true);
+
+  const itemsCacheKey = `admin:dashboard:sold-items:${from || ''}:${to || ''}:${term}:${page}`;
+  const initialCached = cache?.read(itemsCacheKey)?.data || null;
+
+  const [itemsPage, setItemsPage] = useState(
+    () =>
+      initialCached || {
+        content: [],
+        page: 0,
+        size: PAGE_SIZE,
+        totalElements: 0,
+        totalPages: 0,
+      }
+  );
+  const [loading, setLoading] = useState(() => !initialCached);
   const [error, setError] = useState(null);
 
   const reqSeqRef = useRef(0);
   const prevRangeRef = useRef({ from, to });
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const loadItems = useCallback(
-    async (targetPage, targetTerm) => {
+    async (targetPage, targetTerm, { force = false } = {}) => {
       if (validateDateRange(from, to)) {
         setLoading(false);
         return;
       }
+
+      const key = `admin:dashboard:sold-items:${from || ''}:${to || ''}:${targetTerm}:${targetPage}`;
+      const cachedEntry = cache?.read(key) || null;
+      if (!force && cachedEntry && cache.isFresh(cachedEntry, DASHBOARD_STALE_TIME_MS)) {
+        setItemsPage(cachedEntry.data);
+        setError(null);
+        setLoading(false);
+        return;
+      }
+
       const reqId = ++reqSeqRef.current;
-      try {
+      const hasCached = Boolean(cachedEntry?.data);
+      if (hasCached) {
+        setItemsPage(cachedEntry.data);
+        setError(null);
+        setLoading(false);
+      } else {
         setLoading(true);
         setError(null);
+      }
+
+      try {
         const data = await adminApi.getRevenueItems({
           from,
           to,
@@ -50,27 +85,32 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {}, s
           page: targetPage,
           size: PAGE_SIZE,
         });
-        if (reqId === reqSeqRef.current && data) {
-          setItemsPage({
+        if (!mountedRef.current || reqId !== reqSeqRef.current) return;
+        if (data) {
+          const nextPage = {
             content: Array.isArray(data.content) ? data.content : [],
             page: data.page ?? targetPage,
             size: data.size ?? PAGE_SIZE,
             totalElements: data.totalElements ?? 0,
             totalPages: data.totalPages ?? 0,
-          });
+          };
+          cache?.write(key, nextPage);
+          setItemsPage(nextPage);
         }
       } catch (err) {
-        if (reqId === reqSeqRef.current) {
+        if (mountedRef.current && reqId === reqSeqRef.current) {
           console.error('Lỗi tải danh sách món đã bán:', err);
-          setError('Không thể tải danh sách món đã bán theo kỳ.');
+          if (!hasCached || force) {
+            setError('Không thể tải danh sách món đã bán theo kỳ.');
+          }
         }
       } finally {
-        if (reqId === reqSeqRef.current) {
+        if (mountedRef.current && reqId === reqSeqRef.current) {
           setLoading(false);
         }
       }
     },
-    [from, to]
+    [cache, from, to]
   );
 
   useEffect(() => {
@@ -193,7 +233,7 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {}, s
               type="button"
               variant="primary"
               size="sm"
-              onClick={() => loadItems(currentPage, term)}
+              onClick={() => loadItems(currentPage, term, { force: true })}
             >
               Thử lại
             </Button>

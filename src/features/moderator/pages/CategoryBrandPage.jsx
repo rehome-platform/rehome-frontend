@@ -7,7 +7,7 @@ import TableActionButton from '../../../components/common/TableActionButton.jsx'
 import CatalogEditor from '../components/CatalogEditor.jsx';
 import { catalogService } from '../services/warehouseApi.js';
 import { phase2Contract, isFixtureMode } from '../config/warehouseContract.js';
-import { useResource } from '../hooks/warehouseHooks.jsx';
+import { STATIC_STALE_TIME_MS, useResource } from '../hooks/warehouseHooks.jsx';
 import { Page, ResourceState } from '../components/WarehouseUi.jsx';
 import { filterCatalogItems, formatTryOnSlot } from '../models/warehouseModel.js';
 import { TABLE_COLUMN_LABELS } from '../../../constants/tableColumns.js';
@@ -27,13 +27,18 @@ export default function CategoryBrandPage() {
   const [deleting, setDeleting] = useState(null);
   const [feedback, setFeedback] = useState(null);
 
-  const resource = useResource((options) => catalogService.list(options), []);
+  const resource = useResource((options) => catalogService.list(options), [], {
+    cacheKey: 'catalog:list',
+    staleTime: STATIC_STALE_TIME_MS,
+    invalidatePrefixes: ['catalog:'],
+  });
   const enums = useResource(
     async () =>
       isFixtureMode
         ? (await import('../fixtures/warehouseFixtures.js')).fixtureOptions
         : phase2Contract.options,
     [],
+    { cacheKey: 'enums:warehouse', staleTime: STATIC_STALE_TIME_MS },
   );
 
   const categories = resource.data?.categories || [];

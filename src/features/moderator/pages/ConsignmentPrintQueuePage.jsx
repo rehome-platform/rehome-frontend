@@ -10,8 +10,12 @@ import { downloadLabelPdf } from '../services/skuLabelApi.js';
 export default function ConsignmentPrintQueuePage() {
   const [searchParams] = useSearchParams();
   const focusedSku = searchParams.get('sku');
-  const { signal } = usePhase2();
-  const resource = useResource(options => skuLabelService.list({ ...options, sku: focusedSku }), [focusedSku]);
+  const { signal, cache } = usePhase2();
+  const resource = useResource(
+    (options) => skuLabelService.list({ ...options, sku: focusedSku }),
+    [focusedSku],
+    { cacheKey: `print-queue:list:${focusedSku || ''}` },
+  );
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState([]);
   const [pendingMark, setPendingMark] = useState([]);
@@ -58,6 +62,7 @@ export default function ConsignmentPrintQueuePage() {
       }
       await skuLabelService.markPrinted(skus, { signal: controller.signal });
       if (signal.aborted || controller.signal.aborted) return;
+      cache?.invalidate(['print-queue:', 'inventory:', 'history:']);
       setPendingMark([]);
       setSelected(previous => previous.filter(sku => !skus.includes(sku)));
       setFeedback({ error: false, message: `Đã tải PDF ${skus.length} tem và cập nhật hàng đợi.` });
@@ -76,7 +81,12 @@ export default function ConsignmentPrintQueuePage() {
 
   return (
     <Page title="Hàng đợi in tem" subtitle="Món nhập kho xong tự vào đây. Tải PDF để in gom cả lô."
-      actions={<Button variant="outline" disabled={busy} onClick={resource.refresh}>Tải lại</Button>}>
+      actions={
+        <Button variant="outline" disabled={busy} onClick={resource.refresh} className="gap-1.5 whitespace-nowrap">
+          <span aria-hidden="true" className="material-symbols-outlined text-[16px]">refresh</span>
+          <span>Tải lại</span>
+        </Button>
+      }>
       <ResourceState resource={resource} />
       {feedback && <p role={feedback.error ? 'alert' : 'status'} className={`rounded-xl border p-4 text-sm ${feedback.error ? 'bg-red-50 text-red-800' : 'bg-green-50 text-green-800'}`}>{feedback.message}</p>}
       <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">

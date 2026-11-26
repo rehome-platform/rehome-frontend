@@ -1,11 +1,18 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, Modal, Table } from '../../../components/common/index.js';
+import { Badge, Button, Modal, Table, TableActionButton } from '../../../components/common/index.js';
 import { formatCurrencyVND } from '../../../utils/formatters.js';
 import { membershipAdminApi } from '../services/membershipAdminApi.js';
 import { TIER_LABELS, TIER_ORDER, formatQuotaValue } from './membershipConstants.js';
 import PlanEditModal from './PlanEditModal.jsx';
 import TierBadge from './TierBadge.jsx';
+import {
+  STATIC_STALE_TIME_MS,
+  useAdminCache,
+  useAdminCacheActions,
+} from '../hooks/useAdminQuery.jsx';
+
+const PLANS_CACHE_KEY = 'admin:membership:plans';
 
 function sortPlansByTierOrder(list) {
   const items = Array.isArray(list) ? [...list] : [];
@@ -19,24 +26,63 @@ function sortPlansByTierOrder(list) {
 }
 
 export default function MembershipPlansPage() {
-  const [plans, setPlans] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const cache = useAdminCache();
+  const cacheActions = useAdminCacheActions();
+  const initialCached = cache?.read(PLANS_CACHE_KEY)?.data || null;
+
+  const [plans, setPlans] = useState(() => (initialCached ? sortPlansByTierOrder(initialCached) : []));
+  const [loading, setLoading] = useState(() => !initialCached);
   const [error, setError] = useState('');
   const [editingPlan, setEditingPlan] = useState(null);
   const [detailPlan, setDetailPlan] = useState(null);
 
-  const loadPlans = useCallback(async () => {
-    setLoading(true);
-    setError('');
+  const seqRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const loadPlans = useCallback(async ({ force = false } = {}) => {
+    const cachedEntry = cache?.read(PLANS_CACHE_KEY) || null;
+    if (!force && cachedEntry && cache.isFresh(cachedEntry, STATIC_STALE_TIME_MS)) {
+      setPlans(sortPlansByTierOrder(cachedEntry.data));
+      setError('');
+      setLoading(false);
+      return;
+    }
+
+    const reqId = ++seqRef.current;
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached) {
+      setPlans(sortPlansByTierOrder(cachedEntry.data));
+      setError('');
+      setLoading(false);
+    } else {
+      setLoading(true);
+      setError('');
+    }
+
     try {
       const data = await membershipAdminApi.getPlans();
-      setPlans(sortPlansByTierOrder(data));
+      if (!mountedRef.current || reqId !== seqRef.current) return;
+      const sorted = sortPlansByTierOrder(data);
+      cache?.write(PLANS_CACHE_KEY, sorted);
+      setPlans(sorted);
     } catch (err) {
-      setError(err?.response?.data?.message || 'Không thể tải danh sách gói thành viên.');
+      if (!mountedRef.current || reqId !== seqRef.current) return;
+      if (!hasCached || force) {
+        setError(err?.response?.data?.message || 'Không thể tải danh sách gói thành viên.');
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current && reqId === seqRef.current) {
+        setLoading(false);
+      }
     }
-  }, []);
+  }, [cache]);
 
   useEffect(() => {
     loadPlans();
@@ -87,26 +133,16 @@ export default function MembershipPlansPage() {
       header: 'Thao tác',
       render: (row) => (
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
+          <TableActionButton
+            action="view"
             onClick={() => setDetailPlan(row)}
             aria-label={`Xem chi tiết gói ${row.tier}`}
-            className="gap-1"
-          >
-            <span className="material-symbols-outlined text-sm">visibility</span>
-            <span>Xem chi tiết</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
+          />
+          <TableActionButton
+            action="edit"
             onClick={() => setEditingPlan(row)}
             aria-label={`Sửa gói ${row.tier}`}
-            className="gap-1"
-          >
-            <span className="material-symbols-outlined text-sm">edit</span>
-            <span>Sửa</span>
-          </Button>
+          />
         </div>
       ),
     },
@@ -118,7 +154,7 @@ export default function MembershipPlansPage() {
         {error && (
           <div className="flex items-center justify-between gap-3 rounded-xl border border-[#D92D20]/30 bg-[#FFF5F5] px-4 py-3 text-sm text-[#D92D20]">
             <span>{error}</span>
-            <Button variant="secondary" size="sm" onClick={loadPlans}>
+            <Button variant="secondary" size="sm" onClick={() => loadPlans({ force: true })}>
               Thử lại
             </Button>
           </div>
@@ -141,7 +177,10 @@ export default function MembershipPlansPage() {
         isOpen={Boolean(editingPlan)}
         plan={editingPlan}
         onClose={() => setEditingPlan(null)}
-        onSuccess={loadPlans}
+        onSuccess={() => {
+          cacheActions?.invalidate(['admin:membership:plans', 'admin:dashboard:membership-stats:', 'admin:audit-logs:']);
+          loadPlans({ force: true });
+        }}
       />
 
       <Modal

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrencyVND } from '../../../utils/formatters.js';
 import { Button } from '../../../components/common/index.js';
@@ -14,6 +14,11 @@ import ComparisonBadge from '../components/ComparisonBadge.jsx';
 import AdminDonutChart from '../components/AdminDonutChart.jsx';
 import useAdminPeriod from '../hooks/useAdminPeriod.js';
 import usePreviousTotal from '../hooks/usePreviousTotal.js';
+import {
+  DASHBOARD_STALE_TIME_MS,
+  STATIC_STALE_TIME_MS,
+  useAdminCache,
+} from '../hooks/useAdminQuery.jsx';
 import { PAID_TIERS, TIER_SHORT_LABELS, TIER_HEX_COLOR } from '../membership/membershipConstants.js';
 import { DASHBOARD_TONES, DASHBOARD_CARD_CLASS } from '../../../constants/dashboardTheme.js';
 
@@ -58,14 +63,34 @@ const TABS = [
  * - Kho: tồn kho theo trạng thái / kỳ, tác vụ quá hạn, đánh giá dịch vụ kho.
  * Giao dịch (quỹ nền tảng ↔ ví Member) nằm ở trang riêng (/admin/fund-ledger).
  */
+const DASHBOARD_TAB_CACHE_KEY = 'admin:dashboard:ui:activeTab';
+const PLANS_CACHE_KEY = 'admin:membership:plans';
+
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
+  const cache = useAdminCache();
 
-  const [activeTab, setActiveTab] = useState('revenue');
+  const [activeTab, setActiveTab] = useState(
+    () => cache?.read(DASHBOARD_TAB_CACHE_KEY)?.data || 'revenue'
+  );
   const [exportModalOpen, setExportModalOpen] = useState(false);
+
+  const handleSelectTab = (tabId) => {
+    setActiveTab(tabId);
+    cache?.write(DASHBOARD_TAB_CACHE_KEY, tabId);
+  };
 
   const filter = useAdminPeriod('MONTH');
   const { activeRange, dateError, previousRange, previousPeriodLabel } = filter;
+
+  const dashSummaryKey = `admin:dashboard:summary:${activeRange.apiFrom || ''}:${activeRange.apiTo || ''}`;
+  const membershipStatsKey = `admin:dashboard:membership-stats:${activeRange.apiFrom || ''}:${activeRange.apiTo || ''}`;
+  const prevPlatformRevKey = previousRange
+    ? `admin:dashboard:prev-platform-rev:${previousRange.apiFrom || ''}:${previousRange.apiTo || ''}`
+    : null;
+  const prevMembershipRevKey = previousRange
+    ? `admin:dashboard:prev-membership-rev:${previousRange.apiFrom || ''}:${previousRange.apiTo || ''}`
+    : null;
 
   const fetchPreviousPlatformRevenue = useCallback(
     (range) => adminApi.getRevenueTrendTotal({ from: range.apiFrom, to: range.apiTo }),
@@ -73,7 +98,9 @@ export default function AdminDashboardPage() {
   );
   const { previousTotal: previousPlatformRevenue, loadingPrevious: loadingPreviousRevenue } = usePreviousTotal(
     fetchPreviousPlatformRevenue,
-    previousRange
+    previousRange,
+    [],
+    prevPlatformRevKey
   );
 
   const fetchPreviousMembershipRevenue = useCallback(
@@ -84,111 +111,191 @@ export default function AdminDashboardPage() {
     []
   );
   const { previousTotal: previousMembershipRevenue, loadingPrevious: loadingPreviousMembershipRevenue } =
-    usePreviousTotal(fetchPreviousMembershipRevenue, previousRange);
+    usePreviousTotal(fetchPreviousMembershipRevenue, previousRange, [], prevMembershipRevKey);
 
-  const [loading, setLoading] = useState(true);
-  const [dashboardData, setDashboardData] = useState(DEFAULT_DASHBOARD);
+  const initialDash = cache?.read(dashSummaryKey)?.data || null;
+  const initialMembershipStats = cache?.read(membershipStatsKey)?.data ?? null;
+  const initialPlans = cache?.read(PLANS_CACHE_KEY)?.data ?? null;
 
-  const [membershipStats, setMembershipStats] = useState(null);
-  const [membershipLoading, setMembershipLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !initialDash);
+  const [dashboardData, setDashboardData] = useState(
+    () => (initialDash ? { ...DEFAULT_DASHBOARD, ...initialDash } : DEFAULT_DASHBOARD)
+  );
+
+  const [membershipStats, setMembershipStats] = useState(() => initialMembershipStats);
+  const [membershipLoading, setMembershipLoading] = useState(() => !initialMembershipStats);
   const membershipSeqRef = useRef(0);
 
   // Số thành viên đang hoạt động theo hạng (Bạc/Vàng/Kim cương) - số hiện tại, không theo khoảng thời gian lọc
-  const [tierCounts, setTierCounts] = useState(null);
-  const [tierCountsLoading, setTierCountsLoading] = useState(true);
+  const [tierPlans, setTierPlans] = useState(() => initialPlans);
+  const [tierCountsLoading, setTierCountsLoading] = useState(() => !initialPlans);
   const [dashboardError, setDashboardError] = useState('');
-  const [reloadKey, setReloadKey] = useState(0);
 
   const dashSeqRef = useRef(0);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    if (dateError) return;
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const loadDashboardSummary = useCallback(async ({ force = false } = {}) => {
+    if (dateError) {
+      setLoading(false);
+      return;
+    }
+
+    const cachedEntry = cache?.read(dashSummaryKey) || null;
+    if (!force && cachedEntry && cache.isFresh(cachedEntry, DASHBOARD_STALE_TIME_MS)) {
+      setDashboardData({ ...DEFAULT_DASHBOARD, ...cachedEntry.data });
+      setDashboardError('');
+      setLoading(false);
+      return;
+    }
 
     const reqId = ++dashSeqRef.current;
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        setDashboardError('');
-        const dashRes = await adminApi.getDashboard({
-          from: activeRange.apiFrom,
-          to: activeRange.apiTo,
-        });
-        if (reqId === dashSeqRef.current && dashRes) {
-          setDashboardData({ ...DEFAULT_DASHBOARD, ...dashRes });
-        }
-      } catch (err) {
-        if (reqId === dashSeqRef.current) {
-          console.error('Lỗi tải dữ liệu dashboard:', err);
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached) {
+      setDashboardData({ ...DEFAULT_DASHBOARD, ...cachedEntry.data });
+      setDashboardError('');
+      setLoading(false);
+    } else {
+      setLoading(true);
+      setDashboardError('');
+    }
+
+    try {
+      const dashRes = await adminApi.getDashboard({
+        from: activeRange.apiFrom,
+        to: activeRange.apiTo,
+      });
+      if (!mountedRef.current || reqId !== dashSeqRef.current) return;
+      if (dashRes) {
+        const merged = { ...DEFAULT_DASHBOARD, ...dashRes };
+        cache?.write(dashSummaryKey, merged);
+        setDashboardData(merged);
+      }
+    } catch (err) {
+      if (mountedRef.current && reqId === dashSeqRef.current) {
+        console.error('Lỗi tải dữ liệu dashboard:', err);
+        if (!hasCached || force) {
           setDashboardError(
             err?.response?.data?.message || err?.message || 'Không thể tải dữ liệu doanh thu từ máy chủ.'
           );
         }
-      } finally {
-        if (reqId === dashSeqRef.current) {
-          setLoading(false);
-        }
       }
-    };
+    } finally {
+      if (mountedRef.current && reqId === dashSeqRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [cache, dashSummaryKey, activeRange.apiFrom, activeRange.apiTo, dateError]);
 
-    loadData();
-  }, [activeRange.apiFrom, activeRange.apiTo, dateError, reloadKey]);
+  useEffect(() => {
+    loadDashboardSummary();
+  }, [loadDashboardSummary]);
 
   // Tóm tắt gói thành viên & voucher cho tab Doanh thu (xem chi tiết đầy đủ ở trang Danh sách thành viên)
   useEffect(() => {
-    if (dateError) return;
+    if (dateError) {
+      setMembershipLoading(false);
+      return;
+    }
+
+    const cachedEntry = cache?.read(membershipStatsKey) || null;
+    if (cachedEntry && cache.isFresh(cachedEntry, DASHBOARD_STALE_TIME_MS)) {
+      setMembershipStats(cachedEntry.data);
+      setMembershipLoading(false);
+      return;
+    }
+
     const reqId = ++membershipSeqRef.current;
+    const hasCached = Boolean(cachedEntry);
+    if (hasCached) {
+      setMembershipStats(cachedEntry.data);
+      setMembershipLoading(false);
+    } else {
+      setMembershipLoading(true);
+    }
+
     const loadMembershipStats = async () => {
       try {
-        setMembershipLoading(true);
         const res = await membershipAdminApi.getMembershipStats({
           from: activeRange.apiFrom,
           to: activeRange.apiTo,
         });
-        if (reqId === membershipSeqRef.current) {
-          setMembershipStats(res || {});
-        }
+        if (!mountedRef.current || reqId !== membershipSeqRef.current) return;
+        const normalized = res || {};
+        cache?.write(membershipStatsKey, normalized);
+        setMembershipStats(normalized);
       } catch (err) {
-        if (reqId === membershipSeqRef.current) {
+        if (mountedRef.current && reqId === membershipSeqRef.current) {
           console.error('Lỗi tải thống kê gói thành viên:', err);
-          setMembershipStats(null);
+          if (!hasCached) {
+            setMembershipStats(null);
+          }
         }
       } finally {
-        if (reqId === membershipSeqRef.current) {
+        if (mountedRef.current && reqId === membershipSeqRef.current) {
           setMembershipLoading(false);
         }
       }
     };
     loadMembershipStats();
-  }, [activeRange.apiFrom, activeRange.apiTo, dateError]);
+  }, [cache, membershipStatsKey, activeRange.apiFrom, activeRange.apiTo, dateError]);
 
   useEffect(() => {
+    const cachedEntry = cache?.read(PLANS_CACHE_KEY) || null;
+    if (cachedEntry && cache.isFresh(cachedEntry, STATIC_STALE_TIME_MS)) {
+      setTierPlans(Array.isArray(cachedEntry.data) ? cachedEntry.data : []);
+      setTierCountsLoading(false);
+      return;
+    }
+
     let cancelled = false;
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached) {
+      setTierPlans(Array.isArray(cachedEntry.data) ? cachedEntry.data : []);
+      setTierCountsLoading(false);
+    } else {
+      setTierCountsLoading(true);
+    }
+
     const loadTierCounts = async () => {
       try {
-        setTierCountsLoading(true);
         const plans = await membershipAdminApi.getPlans();
-        if (cancelled) return;
+        if (cancelled || !mountedRef.current) return;
         const list = Array.isArray(plans) ? plans : [];
-        const counts = {};
-        for (const tier of PAID_TIERS) {
-          const plan = list.find((p) => p.tier === tier);
-          counts[tier] = Number(plan?.activeSubscriberCount ?? 0);
-        }
-        setTierCounts(counts);
+        cache?.write(PLANS_CACHE_KEY, list);
+        setTierPlans(list);
       } catch (err) {
-        if (!cancelled) {
+        if (!cancelled && mountedRef.current) {
           console.error('Lỗi tải số thành viên theo hạng:', err);
-          setTierCounts(null);
+          if (!hasCached) {
+            setTierPlans(null);
+          }
         }
       } finally {
-        if (!cancelled) setTierCountsLoading(false);
+        if (!cancelled && mountedRef.current) setTierCountsLoading(false);
       }
     };
     loadTierCounts();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [cache]);
+
+  const tierCounts = useMemo(() => {
+    if (!Array.isArray(tierPlans)) return null;
+    const counts = {};
+    for (const tier of PAID_TIERS) {
+      const plan = tierPlans.find((p) => p.tier === tier);
+      counts[tier] = Number(plan?.activeSubscriberCount ?? 0);
+    }
+    return counts;
+  }, [tierPlans]);
 
   const membershipRevenue = Number(membershipStats?.totalRevenue ?? 0);
   const tierSegments = PAID_TIERS.map((tier) => ({
@@ -240,7 +347,7 @@ export default function AdminDashboardPage() {
               type="button"
               role="tab"
               aria-selected={activeTab === tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleSelectTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 ${
                 activeTab === tab.id
                   ? 'bg-[#006B2C] text-white shadow-sm'
@@ -289,7 +396,7 @@ export default function AdminDashboardPage() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setReloadKey((k) => k + 1)}
+                onClick={() => loadDashboardSummary({ force: true })}
               >
                 Thử lại
               </Button>

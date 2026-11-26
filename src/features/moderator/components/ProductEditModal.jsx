@@ -382,7 +382,7 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
             variant="primary"
             loading={submitting}
             disabled={isSaveDisabled}
-            className="px-4 py-1.5 text-xs font-bold bg-[#006B2C] hover:bg-[#005221]"
+            className="px-4 py-1.5 text-xs font-bold"
           >
             Lưu thay đổi
           </Button>

@@ -1,21 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import { Button, Badge, Modal, Input, Spinner } from '../../../components/common/index.js';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Button, Badge, Modal, Input, Spinner, TableActionButton } from '../../../components/common/index.js';
 import adminApi from '../services/adminApi.js';
 import { useToast } from '../../../context/ToastContext.jsx';
 import OpeningHoursPicker from './OpeningHoursPicker.jsx';
+import {
+  DASHBOARD_STALE_TIME_MS,
+  STATIC_STALE_TIME_MS,
+  useAdminCache,
+  useAdminCacheActions,
+} from '../hooks/useAdminQuery.jsx';
 
 /**
  * View Quản lý Điểm Kí Gửi ReHome (Admin)
  * Chế độ Strict Real Data: 100% dữ liệu thực từ Backend API GET /api/admin/warehouses
  * Thực thi nghiêm ngặt: Hết hàng kí gửi (inventoryCount === 0) mới được ẩn kho (F-155)
  */
+const PROVINCES_CACHE_KEY = 'admin:geo:provinces';
+
 export default function AdminWarehousesView({ onLogAction }) {
   const toast = useToast();
-  const [warehouses, setWarehouses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [apiError, setApiError] = useState(null);
+  const cache = useAdminCache();
+  const cacheActions = useAdminCacheActions();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+
+  const warehouseCacheKey = `admin:warehouses:list:${statusFilter}`;
+  const initialCachedWarehouses = cache?.read(warehouseCacheKey)?.data || null;
+
+  const [warehouses, setWarehouses] = useState(() => initialCachedWarehouses ?? []);
+  const [loading, setLoading] = useState(() => !initialCachedWarehouses);
+  const [apiError, setApiError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingWarehouse, setEditingWarehouse] = useState(null);
   const [stockBlockModal, setStockBlockModal] = useState(null);
@@ -23,11 +37,21 @@ export default function AdminWarehousesView({ onLogAction }) {
   const [togglingId, setTogglingId] = useState(null);
 
   // Danh mục hành chính 2 cấp GHN
-  const [provinces, setProvinces] = useState([]);
+  const [provinces, setProvinces] = useState(() => cache?.read(PROVINCES_CACHE_KEY)?.data ?? []);
   const [wards, setWards] = useState([]);
   const [loadingProvinces, setLoadingProvinces] = useState(false);
   const [loadingWards, setLoadingWards] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
+
+  const reqSeqRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // Form State chuẩn hóa theo hợp đồng Backend
   const [formData, setFormData] = useState({
@@ -44,17 +68,23 @@ export default function AdminWarehousesView({ onLogAction }) {
 
   // Tải danh mục Tỉnh / Thành phố từ Backend GHN
   const loadProvinces = async () => {
+    const cached = cache?.read(PROVINCES_CACHE_KEY) || null;
+    if (cached && cache.isFresh(cached, STATIC_STALE_TIME_MS)) {
+      setProvinces(cached.data || []);
+      return cached.data || [];
+    }
     try {
       setLoadingProvinces(true);
       const res = await adminApi.getProvinces();
       const list = Array.isArray(res) ? res : res?.result || [];
-      setProvinces(list);
+      cache?.write(PROVINCES_CACHE_KEY, list);
+      if (mountedRef.current) setProvinces(list);
       return list;
     } catch (err) {
       console.error('Lỗi tải danh mục tỉnh thành:', err);
       return [];
     } finally {
-      setLoadingProvinces(false);
+      if (mountedRef.current) setLoadingProvinces(false);
     }
   };
 
@@ -68,70 +98,94 @@ export default function AdminWarehousesView({ onLogAction }) {
       setLoadingWards(true);
       const res = await adminApi.getWards(provinceId);
       const list = Array.isArray(res) ? res : res?.result || [];
-      setWards(list);
+      if (mountedRef.current) setWards(list);
       return list;
     } catch (err) {
       console.error('Lỗi tải danh mục phường xã:', err);
-      setWards([]);
+      if (mountedRef.current) setWards([]);
       return [];
     } finally {
-      setLoadingWards(false);
+      if (mountedRef.current) setLoadingWards(false);
     }
   };
 
   // Tải danh sách điểm kí gửi từ Backend API
-  const fetchWarehouses = async (nextStatus = statusFilter) => {
+  const fetchWarehouses = useCallback(async (nextStatus = statusFilter, { force = false } = {}) => {
     const activeStatus = typeof nextStatus === 'string' ? nextStatus : statusFilter;
-    try {
+    const key = `admin:warehouses:list:${activeStatus}`;
+    const cachedEntry = cache?.read(key) || null;
+
+    if (!force && cachedEntry && cache.isFresh(cachedEntry, DASHBOARD_STALE_TIME_MS)) {
+      setWarehouses(cachedEntry.data ?? []);
+      setApiError(null);
+      setLoading(false);
+      return;
+    }
+
+    const reqId = ++reqSeqRef.current;
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached) {
+      setWarehouses(cachedEntry.data);
+      setApiError(null);
+      setLoading(false);
+    } else {
       setLoading(true);
       setApiError(null);
-      const res = await adminApi.getWarehouses(activeStatus === 'ALL' ? undefined : activeStatus);
-      const rawList = Array.isArray(res) ? res : res?.content || res?.result || [];
-      if (rawList && rawList.length > 0) {
-        const mapped = rawList.map((w, idx) => {
-          const lat = w.latitude;
-          const lng = w.longitude;
-          const coordsStr =
-            lat != null && lng != null
-              ? `${lat}, ${lng}`
-              : w.coordinates || 'Chưa cập nhật';
+    }
 
-          return {
-            id: w.warehouseId || w.id || `WH-0${idx + 1}`,
-            code: w.code,
-            name: w.name,
-            address: w.address,
-            latitude: lat,
-            longitude: lng,
-            coordinates: coordsStr,
-            openingHours: w.openingHours || '08:00 - 20:00 (Thứ 2 - Chủ nhật)',
-            wardName: w.wardName,
-            provinceName: w.provinceName,
-            provinceId: w.provinceId,
-            wardCode: w.wardCode,
-            isNewAddress: w.isNewAddress,
-            moderatorCount: w.moderatorCount ?? 0,
-            inventoryCount: w.inventoryCount ?? 0,
-            activeOrders: w.activeOrders ?? 0,
-            status: w.status || 'ACTIVE',
-          };
-        });
-        setWarehouses(mapped);
-      } else {
+    try {
+      const res = await adminApi.getWarehouses(activeStatus === 'ALL' ? undefined : activeStatus);
+      if (!mountedRef.current || reqId !== reqSeqRef.current) return;
+      const rawList = Array.isArray(res) ? res : res?.content || res?.result || [];
+      const mapped = rawList.length > 0
+        ? rawList.map((w, idx) => {
+            const lat = w.latitude;
+            const lng = w.longitude;
+            const coordsStr =
+              lat != null && lng != null
+                ? `${lat}, ${lng}`
+                : w.coordinates || 'Chưa cập nhật';
+
+            return {
+              id: w.warehouseId || w.id || `WH-0${idx + 1}`,
+              code: w.code,
+              name: w.name,
+              address: w.address,
+              latitude: lat,
+              longitude: lng,
+              coordinates: coordsStr,
+              openingHours: w.openingHours || '08:00 - 20:00 (Thứ 2 - Chủ nhật)',
+              wardName: w.wardName,
+              provinceName: w.provinceName,
+              provinceId: w.provinceId,
+              wardCode: w.wardCode,
+              isNewAddress: w.isNewAddress,
+              moderatorCount: w.moderatorCount ?? 0,
+              inventoryCount: w.inventoryCount ?? 0,
+              activeOrders: w.activeOrders ?? 0,
+              status: w.status || 'ACTIVE',
+            };
+          })
+        : [];
+      cache?.write(key, mapped);
+      setWarehouses(mapped);
+    } catch (err) {
+      if (!mountedRef.current || reqId !== reqSeqRef.current) return;
+      console.error('Lỗi kết nối API kho:', err);
+      if (!hasCached || force) {
+        setApiError('Không thể kết nối máy chủ điểm kí gửi. Vui lòng kiểm tra lại dịch vụ backend.');
         setWarehouses([]);
       }
-    } catch (err) {
-      console.error('Lỗi kết nối API kho:', err);
-      setApiError('Không thể kết nối máy chủ điểm kí gửi. Vui lòng kiểm tra lại dịch vụ backend.');
-      setWarehouses([]);
     } finally {
-      setLoading(false);
+      if (mountedRef.current && reqId === reqSeqRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [cache, statusFilter]);
 
   useEffect(() => {
     fetchWarehouses(statusFilter);
-  }, [statusFilter]);
+  }, [fetchWarehouses, statusFilter]);
 
   const filteredWarehouses = warehouses.filter(
     (w) =>
@@ -334,7 +388,8 @@ export default function AdminWarehousesView({ onLogAction }) {
       setIsSubmitting(true);
       if (editingWarehouse) {
         await adminApi.updateWarehouse(editingWarehouse.id, payload);
-        await fetchWarehouses();
+        cacheActions?.invalidate(['admin:warehouses:', 'admin:dashboard:warehouse:', 'admin:audit-logs:', 'admin:moderators:']);
+        await fetchWarehouses(statusFilter, { force: true });
         toast.success(`Cập nhật thông tin điểm kí gửi "${formData.name}" thành công!`);
         if (onLogAction) {
           onLogAction({
@@ -347,7 +402,8 @@ export default function AdminWarehousesView({ onLogAction }) {
         setIsModalOpen(false);
       } else {
         await adminApi.createWarehouse(payload);
-        await fetchWarehouses();
+        cacheActions?.invalidate(['admin:warehouses:', 'admin:dashboard:warehouse:', 'admin:audit-logs:', 'admin:moderators:']);
+        await fetchWarehouses(statusFilter, { force: true });
         toast.success(`Tạo mới điểm kí gửi "${formData.name}" thành công!`);
         if (onLogAction) {
           onLogAction({
@@ -382,7 +438,8 @@ export default function AdminWarehousesView({ onLogAction }) {
       try {
         setTogglingId(w.id);
         await adminApi.hideWarehouse(w.id);
-        await fetchWarehouses();
+        cacheActions?.invalidate(['admin:warehouses:', 'admin:dashboard:warehouse:', 'admin:audit-logs:', 'admin:moderators:']);
+        await fetchWarehouses(statusFilter, { force: true });
         toast.success(`Đã ẩn điểm kí gửi "${w.name}".`);
         if (onLogAction) {
           onLogAction({
@@ -408,7 +465,8 @@ export default function AdminWarehousesView({ onLogAction }) {
       try {
         setTogglingId(w.id);
         await adminApi.unhideWarehouse(w.id);
-        await fetchWarehouses();
+        cacheActions?.invalidate(['admin:warehouses:', 'admin:dashboard:warehouse:', 'admin:audit-logs:', 'admin:moderators:']);
+        await fetchWarehouses(statusFilter, { force: true });
         toast.success(`Đã mở hoạt động lại điểm kí gửi "${w.name}".`);
         if (onLogAction) {
           onLogAction({
@@ -434,22 +492,28 @@ export default function AdminWarehousesView({ onLogAction }) {
       {/* Header & Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4">
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => fetchWarehouses()}
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
             disabled={loading}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-[#DDE5D9] bg-white text-xs font-semibold text-[#5B6776] hover:bg-[#F6F9F4] hover:text-[#006B2C] transition-colors"
+            onClick={() => fetchWarehouses(statusFilter, { force: true })}
+            className="gap-1.5 whitespace-nowrap"
           >
-            <span className={`material-symbols-outlined text-base ${loading ? 'animate-spin' : ''}`}>
+            <span aria-hidden="true" className={`material-symbols-outlined text-base ${loading ? 'animate-spin' : ''}`}>
               refresh
             </span>
             <span>Làm mới</span>
-          </button>
+          </Button>
           <Button
+            type="button"
+            variant="primary"
+            size="md"
             onClick={handleOpenCreate}
-            className="bg-[#006B2C] hover:bg-[#005221] text-white text-xs shrink-0 rounded-xl px-4 py-2.5"
+            className="gap-1.5 shrink-0 whitespace-nowrap"
           >
-            <span className="material-symbols-outlined text-[18px] mr-1.5">add_location_alt</span>
-            Thêm điểm kí gửi mới
+            <span aria-hidden="true" className="material-symbols-outlined text-[18px]">add_location_alt</span>
+            <span>Thêm điểm kí gửi mới</span>
           </Button>
         </div>
       </div>
@@ -490,12 +554,13 @@ export default function AdminWarehousesView({ onLogAction }) {
         <div className="bg-white rounded-2xl border border-[#FEE2E2] p-8 text-center space-y-3">
           <span className="material-symbols-outlined text-3xl text-[#DC2626]">error</span>
           <p className="text-sm font-bold text-[#1F2A37]">{apiError}</p>
-          <button
-            onClick={() => fetchWarehouses()}
-            className="px-4 py-2 bg-[#006B2C] text-white text-xs font-semibold rounded-xl"
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => fetchWarehouses(statusFilter, { force: true })}
           >
             Thử kết nối lại
-          </button>
+          </Button>
         </div>
       ) : filteredWarehouses.length === 0 ? (
         <div className="bg-white rounded-2xl border border-[#DDE5D9] p-12 text-center space-y-3">
@@ -506,7 +571,7 @@ export default function AdminWarehousesView({ onLogAction }) {
           <p className="text-xs text-[#5B6776] max-w-sm mx-auto">
             Hệ thống chưa ghi nhận điểm kí gửi nào phù hợp. Vui lòng thêm điểm kí gửi mới.
           </p>
-          <Button onClick={handleOpenCreate} className="bg-[#006B2C] text-white text-xs mt-2">
+          <Button variant="primary" size="sm" onClick={handleOpenCreate} className="mt-2">
             Thêm điểm kí gửi đầu tiên
           </Button>
         </div>
@@ -592,26 +657,33 @@ export default function AdminWarehousesView({ onLogAction }) {
                 )}
                 {(!w.inventoryCount || w.inventoryCount === 0) && <div></div>}
 
-                <div className="flex items-center space-x-2">
-                  <Button size="sm" variant="outline" className="rounded-xl" onClick={() => handleOpenEdit(w)}>
-                    Sửa thông tin
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={w.status === 'ACTIVE' ? 'danger' : 'outline'}
-                    disabled={togglingId === w.id}
-                    className="rounded-xl"
-                    onClick={() => handleToggleHide(w)}
-                  >
-                    {togglingId === w.id ? (
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                        <span>Đang xử lý...</span>
-                      </div>
-                    ) : (
-                      w.status === 'ACTIVE' ? 'Ẩn điểm kí gửi' : 'Mở hoạt động'
-                    )}
-                  </Button>
+                <div className="flex items-center gap-2">
+                  <TableActionButton
+                    action="edit"
+                    label="Sửa thông tin"
+                    onClick={() => handleOpenEdit(w)}
+                  />
+                  {w.status === 'ACTIVE' ? (
+                    <TableActionButton
+                      action="view"
+                      icon="visibility_off"
+                      label={togglingId === w.id ? 'Đang xử lý...' : 'Ẩn điểm kí gửi'}
+                      loading={togglingId === w.id}
+                      disabled={togglingId === w.id}
+                      onClick={() => handleToggleHide(w)}
+                      className="border-[#FECDCA] text-[#B42318] hover:bg-[#FEF3F2] hover:border-[#D92D20] hover:text-[#B42318]"
+                    />
+                  ) : (
+                    <TableActionButton
+                      action="view"
+                      icon="visibility"
+                      label={togglingId === w.id ? 'Đang xử lý...' : 'Mở hoạt động'}
+                      loading={togglingId === w.id}
+                      disabled={togglingId === w.id}
+                      onClick={() => handleToggleHide(w)}
+                      className="border-[#ABEFC6] text-[#006B2C] hover:bg-[#ECFDF3] hover:border-[#006B2C] hover:text-[#006B2C]"
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -793,26 +865,20 @@ export default function AdminWarehousesView({ onLogAction }) {
 
           <div className="flex justify-end space-x-2 pt-3 border-t border-[#DDE5D9]">
             <Button
-              variant="ghost"
+              type="button"
+              variant="outline"
               disabled={isSubmitting}
-              className="rounded-xl"
               onClick={() => setIsModalOpen(false)}
             >
               Hủy
             </Button>
             <Button
               type="submit"
+              variant="primary"
+              loading={isSubmitting}
               disabled={isSubmitting}
-              className="bg-[#006B2C] text-white hover:bg-[#005523] rounded-xl flex items-center gap-2"
             >
-              {isSubmitting ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Đang lưu...</span>
-                </>
-              ) : (
-                editingWarehouse ? 'Lưu cập nhật' : 'Tạo điểm kí gửi mới'
-              )}
+              {isSubmitting ? 'Đang lưu...' : (editingWarehouse ? 'Lưu cập nhật' : 'Tạo điểm kí gửi mới')}
             </Button>
           </div>
         </form>

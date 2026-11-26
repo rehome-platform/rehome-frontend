@@ -77,7 +77,7 @@ export default function ReturnProcessingPage() {
                 <Button
                   variant="outline"
                   loading={model.loading}
-                  onClick={() => model.fetchReturns?.()}
+                  onClick={() => model.fetchReturns?.({ force: true })}
                   className="whitespace-nowrap"
                 >
                   Tải lại
@@ -136,7 +136,7 @@ export default function ReturnProcessingPage() {
             {!model.loading && model.error && (
               <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700 flex items-center justify-between gap-3">
                 <span>{model.error}</span>
-                <Button variant="outline" size="sm" onClick={() => model.fetchReturns?.()}>
+                <Button variant="outline" size="sm" onClick={() => model.fetchReturns?.({ force: true })}>
                   Thử lại
                 </Button>
               </div>

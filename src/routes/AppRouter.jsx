@@ -10,6 +10,7 @@ const ProfilePage = lazy(() => import('../features/auth/pages/ProfilePage.jsx'))
 const ResetPassword = lazy(() => import('../features/auth/pages/ResetPassword.jsx'));
 const VnpayReturnPage = lazy(() => import('../features/payment/pages/VnpayReturnPage.jsx'));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage.jsx'));
+const LandingPage = lazy(() => import('../features/landing/pages/LandingPage.jsx'));
 
 // Moderator Pages (Cổng Vận Hành Điểm Ký Gửi & Kiểm Duyệt)
 const CounterPage = lazy(() => import('../features/moderator/pages/CounterPage.jsx'));
@@ -40,6 +41,7 @@ const AdminBanProposalsPage = lazy(() => import('../features/admin/pages/AdminBa
 const AdminWarehousesPage = lazy(() => import('../features/admin/pages/AdminWarehousesPage.jsx'));
 const ConfigPage = lazy(() => import('../features/admin/pages/ConfigPage.jsx'));
 const AdminAuditLogsPage = lazy(() => import('../features/admin/pages/AdminAuditLogsPage.jsx'));
+const AdminContentReviewsPage = lazy(() => import('../features/admin/pages/AdminContentReviewsPage.jsx'));
 const ViolationWordsPage = lazy(() => import('../features/admin/pages/ViolationWordsPage.jsx'));
 const ReceiptClauseTemplatesPage = lazy(() => import('../features/admin/pages/ReceiptClauseTemplatesPage.jsx'));
 const MembershipPlansPage = lazy(() => import('../features/admin/membership/MembershipPlansPage.jsx'));
@@ -58,9 +60,7 @@ function RouteFallback() {
 
 /**
  * Root Redirect Handler (Điều hướng gốc /)
- * Requirement A:
  * - Người dùng chưa đăng nhập truy cập / được chuyển trực tiếp đến trang Login.
- * - Không hiển thị Landing Page hoặc màn hình chọn vai trò trước khi đăng nhập.
  * - Nếu đã có session hợp lệ, chuyển thẳng tới dashboard theo vai trò:
  *     ADMIN -> /admin
  *     STAFF / MODERATOR -> /moderator/counter
@@ -95,8 +95,9 @@ export default function AppRouter() {
   return (
     <Suspense fallback={<RouteFallback />}>
     <Routes>
-      {/* 1. Public & Auth Routes (Chỉ cho Admin & Moderator) */}
+      {/* 1. Public & Auth Routes (Tách riêng /landing cho Trang đích và / -> /login cho Admin & Moderator) */}
       <Route path="/" element={<RootRedirect />} />
+      <Route path="/landing" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
@@ -254,6 +255,7 @@ export default function AppRouter() {
         <Route path="warehouses" element={<AdminWarehousesPage />} />
         <Route path="configs" element={<ConfigPage />} />
         <Route path="audit-logs" element={<AdminAuditLogsPage />} />
+        <Route path="content-reviews" element={<AdminContentReviewsPage />} />
         <Route path="violation-words" element={<ViolationWordsPage />} />
         <Route path="membership-plans" element={<MembershipPlansPage />} />
         <Route path="membership-subscriptions" element={<MembershipSubscriptionsPage />} />

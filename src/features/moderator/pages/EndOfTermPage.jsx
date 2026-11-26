@@ -140,7 +140,9 @@ export default function EndOfTermPage() {
   const sku = search.get('sku');
   const [keyword, setKeyword] = useState('');
 
-  const list = useResource((options) => endTermService.list({ page }, options), [page]);
+  const list = useResource((options) => endTermService.list({ page }, options), [page], {
+    cacheKey: `end-of-term:list:${page}`,
+  });
   const rawItems = listItems(list.data);
   const normalizedItems = useMemo(
     () => rawItems.map(normalizeUnclaimedItem).filter(Boolean),
@@ -173,8 +175,9 @@ export default function EndOfTermPage() {
           <Link to="/moderator/counter">
             <Button variant="outline">Quầy tiếp nhận</Button>
           </Link>
-          <Button variant="outline" onClick={list.refresh}>
-            Tải lại
+          <Button variant="outline" onClick={list.refresh} className="gap-1.5 whitespace-nowrap">
+            <span aria-hidden="true" className="material-symbols-outlined text-[16px]">refresh</span>
+            <span>Tải lại</span>
           </Button>
         </div>
       }

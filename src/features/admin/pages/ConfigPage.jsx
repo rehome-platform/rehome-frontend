@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { useToast } from '../../../context/ToastContext.jsx';
@@ -9,6 +9,13 @@ import {
   saveEffectiveConsignmentConfig,
 } from '../../../configs/systemParams.config.js';
 import adminApi from '../services/adminApi';
+import {
+  STATIC_STALE_TIME_MS,
+  useAdminCache,
+  useAdminCacheActions,
+} from '../hooks/useAdminQuery.jsx';
+
+const CONFIG_CACHE_KEY = 'admin:config:all';
 
 /**
  * Trang Cấu Hình Tham Số Hệ Thống ReHome
@@ -128,16 +135,35 @@ export default function ConfigPage() {
   const { user } = useAuth();
   const { onLogAction } = useOutletContext() || {};
   const toast = useToast();
+  const cache = useAdminCache();
+  const cacheActions = useAdminCacheActions();
+  const initialCached = cache?.read(CONFIG_CACHE_KEY)?.data || null;
+
   const [activeTab, setActiveTab] = useState('consignment');
-  const [configs, setConfigs] = useState(DEFAULT_SYSTEM_CONFIGS);
-  const [savedConfigs, setSavedConfigs] = useState(DEFAULT_SYSTEM_CONFIGS);
-  const [specs, setSpecs] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [loaded, setLoaded] = useState(false);
+  const [configs, setConfigs] = useState(() =>
+    initialCached?.configs ? JSON.parse(JSON.stringify(initialCached.configs)) : DEFAULT_SYSTEM_CONFIGS
+  );
+  const [savedConfigs, setSavedConfigs] = useState(() =>
+    initialCached?.configs ? JSON.parse(JSON.stringify(initialCached.configs)) : DEFAULT_SYSTEM_CONFIGS
+  );
+  const [specs, setSpecs] = useState(() => initialCached?.specs || {});
+  const [loading, setLoading] = useState(() => !initialCached);
+  const [loaded, setLoaded] = useState(() => Boolean(initialCached));
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [editingKeys, setEditingKeys] = useState(() => new Set());
+
+  const hasDirtyRef = useRef(false);
+  const reqSeqRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!savedSuccess) return;
@@ -145,12 +171,10 @@ export default function ConfigPage() {
     return () => clearTimeout(timer);
   }, [savedSuccess]);
 
-  useEffect(() => {
-    loadBackendConfigs();
-  }, []);
-
-  const fetchBackendConfigs = async () => {
+  const fetchBackendConfigs = useCallback(async ({ applyDraft = true } = {}) => {
+    const reqId = ++reqSeqRef.current;
     const data = await adminApi.getConfigs();
+    if (!mountedRef.current || reqId !== reqSeqRef.current) return;
     if (!Array.isArray(data)) throw new Error('Dữ liệu cấu hình từ máy chủ không hợp lệ.');
     const updated = JSON.parse(JSON.stringify(DEFAULT_SYSTEM_CONFIGS));
     const nextSpecs = {};
@@ -168,27 +192,74 @@ export default function ConfigPage() {
       nextSpecs[mapping.key] = spec;
     }
     if (!Object.keys(nextSpecs).length) throw new Error('Máy chủ chưa trả về tham số cấu hình được hỗ trợ.');
-    setConfigs(updated);
+    cache?.write(CONFIG_CACHE_KEY, { configs: updated, specs: nextSpecs });
     setSavedConfigs(JSON.parse(JSON.stringify(updated)));
     setSpecs(nextSpecs);
     setLoaded(true);
-    setEditingKeys(new Set());
     saveEffectiveConsignmentConfig(updated);
-  };
+    if (applyDraft && !hasDirtyRef.current) {
+      setConfigs(updated);
+      setEditingKeys(new Set());
+    } else if (applyDraft === 'force') {
+      setConfigs(updated);
+      setEditingKeys(new Set());
+    }
+  }, [cache]);
 
-  const loadBackendConfigs = async () => {
+  const loadBackendConfigs = useCallback(async ({ force = false } = {}) => {
+    const cachedEntry = cache?.read(CONFIG_CACHE_KEY) || null;
+    if (!force && cachedEntry && cache.isFresh(cachedEntry, STATIC_STALE_TIME_MS)) {
+      const { configs: cachedConfigs, specs: cachedSpecs } = cachedEntry.data;
+      setSavedConfigs(JSON.parse(JSON.stringify(cachedConfigs)));
+      setSpecs(cachedSpecs);
+      setLoaded(true);
+      setLoading(false);
+      setErrorMessage('');
+      if (!hasDirtyRef.current) {
+        setConfigs(JSON.parse(JSON.stringify(cachedConfigs)));
+      }
+      return;
+    }
+
+    const hasCached = Boolean(cachedEntry?.data);
+    if (hasCached && !force) {
+      const { configs: cachedConfigs, specs: cachedSpecs } = cachedEntry.data;
+      setSavedConfigs(JSON.parse(JSON.stringify(cachedConfigs)));
+      setSpecs(cachedSpecs);
+      setLoaded(true);
+      setLoading(false);
+      setErrorMessage('');
+      if (!hasDirtyRef.current) {
+        setConfigs(JSON.parse(JSON.stringify(cachedConfigs)));
+      }
+      try {
+        await fetchBackendConfigs({ applyDraft: true });
+      } catch (err) {
+        console.warn('Background refresh config thất bại, giữ bản cache:', err);
+      }
+      return;
+    }
+
     setLoading(true);
     setLoaded(false);
     setSavedSuccess(false);
     setErrorMessage('');
     try {
-      await fetchBackendConfigs();
+      await fetchBackendConfigs({ applyDraft: 'force' });
     } catch (err) {
-      setErrorMessage(err.response?.data?.message || err.message || 'Không thể tải cấu hình từ máy chủ.');
+      if (mountedRef.current) {
+        setErrorMessage(err.response?.data?.message || err.message || 'Không thể tải cấu hình từ máy chủ.');
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [cache, fetchBackendConfigs]);
+
+  useEffect(() => {
+    loadBackendConfigs();
+  }, [loadBackendConfigs]);
 
   const getMapping = (group, field) =>
     SYSTEM_CONFIG_FIELDS.find(item => item.group === group && item.field === field);
@@ -206,6 +277,7 @@ export default function ConfigPage() {
     }
     return result;
   }, [configs, savedConfigs, loaded]);
+  hasDirtyRef.current = dirtyFields.length > 0;
 
   const isDirty = (group, field) =>
     dirtyFields.some(d => d.group === group && d.field === field);
@@ -279,7 +351,8 @@ export default function ConfigPage() {
         throw new Error(`Chưa lưu đầy đủ cấu hình. Một số tham số có thể đã được cập nhật. Vui lòng kiểm tra và thử lưu lại. ${failures.join('; ')}`);
       }
       // Confirm effective values instead of persisting a browser-only snapshot.
-      await fetchBackendConfigs();
+      cacheActions?.invalidate(['admin:config:', 'admin:audit-logs:']);
+      await fetchBackendConfigs({ applyDraft: 'force' });
       setSavedSuccess(true);
       toast.success('Đã lưu cấu hình tham số hệ thống thành công!');
 
@@ -456,7 +529,7 @@ export default function ConfigPage() {
         <div role="alert" className="p-4 bg-[#FFF5F5] border border-[#DC2626]/20 text-[#DC2626] rounded-2xl text-xs font-semibold flex items-center space-x-2 shadow-sm animate-fade-in">
           <span className="material-symbols-outlined text-lg">error</span>
           <span>{errorMessage}</span>
-          {!loaded && !loading && <Button size="sm" variant="outline" className="rounded-xl" onClick={loadBackendConfigs}>Thử lại</Button>}
+          {!loaded && !loading && <Button size="sm" variant="outline" className="rounded-xl" onClick={() => loadBackendConfigs({ force: true })}>Thử lại</Button>}
         </div>
       )}
 
