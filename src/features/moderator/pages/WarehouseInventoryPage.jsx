@@ -7,6 +7,7 @@ import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
 import Button, { getButtonClasses } from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
 import TableActionButton from '../../../components/common/TableActionButton.jsx';
+import ImageLightbox from '../../../components/common/ImageLightbox.jsx';
 import QRScannerModal from '../../../components/QRScannerModal.jsx';
 import { inventoryService } from '../services/warehouseApi.js';
 import { returnService, pendingReturnFromInventory } from '../services/returnApi.js';
@@ -46,6 +47,84 @@ export const INVENTORY_STATUS_LABELS = {
   PLATFORM_FINAL: 'Tài sản nền tảng / Đã xử lý',
 };
 
+function resolveInventoryPhotos(item) {
+  if (!item) return [];
+  const rawList = [];
+  if (Array.isArray(item.photos)) {
+    for (const p of item.photos) {
+      const url = typeof p === 'string' ? p : p?.url || p?.imageUrl;
+      if (url && typeof url === 'string' && url.trim()) rawList.push(url.trim());
+    }
+  }
+  const singleCandidates = [
+    item.thumbnailUrl,
+    item.photoUrl,
+    item.imageUrl,
+    item.coverPhoto,
+    item.productPhotoUrl,
+  ];
+  for (const url of singleCandidates) {
+    if (url && typeof url === 'string' && url.trim()) rawList.push(url.trim());
+  }
+  return Array.from(new Set(rawList));
+}
+
+function InventoryThumbnailCell({ item, onZoom }) {
+  const photos = useMemo(() => resolveInventoryPhotos(item), [item]);
+  const thumbSrc = photos[0] || null;
+  const [imgFailed, setImgFailed] = useState(false);
+
+  useEffect(() => {
+    setImgFailed(false);
+  }, [thumbSrc]);
+
+  if (thumbSrc && !imgFailed) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onZoom(photos, item?.name || item?.sku || 'Ảnh sản phẩm');
+        }}
+        className="group relative w-11 h-11 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4] overflow-hidden flex items-center justify-center shrink-0 cursor-zoom-in hover:ring-2 hover:ring-[#006B2C]/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#006B2C]/40"
+        title={`Phóng to ảnh ${item?.name || 'sản phẩm'}`}
+      >
+        <img
+          src={thumbSrc}
+          alt={item?.name || 'Ảnh sản phẩm'}
+          loading="lazy"
+          onError={() => setImgFailed(true)}
+          className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+        />
+      </button>
+    );
+  }
+
+  return (
+    <div
+      data-testid="inventory-thumb-fallback"
+      title="Chưa có ảnh sản phẩm"
+      aria-label="Chưa có ảnh sản phẩm"
+      className="w-11 h-11 rounded-xl border border-dashed border-[#D0D7CE] bg-[#F6F9F4] text-[#8A948C] flex items-center justify-center shrink-0"
+    >
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="w-[18px] h-[18px]"
+      >
+        <rect x="3" y="4" width="18" height="16" rx="2.5" />
+        <circle cx="8.5" cy="9.5" r="1.5" />
+        <path d="M21 15l-4.5-4.5a1.5 1.5 0 0 0-2.1 0L7 18" />
+      </svg>
+    </div>
+  );
+}
+
 export default function WarehouseInventoryPage() {
   const [search, setSearch] = useSearchParams();
   const navigate = useNavigate();
@@ -53,6 +132,7 @@ export default function WarehouseInventoryPage() {
   const [degradedModalItem, setDegradedModalItem] = useState(null);
   const [relistTarget, setRelistTarget] = useState(null);
   const [relistSubmitting, setRelistSubmitting] = useState(false);
+  const [lightboxState, setLightboxState] = useState(null);
   const relistLock = useRef(false);
   const toast = useToast();
   const cache = useModeratorCache();
@@ -107,6 +187,8 @@ export default function WarehouseInventoryPage() {
               daysIntoTerm: detail.daysIntoTerm ?? item.daysIntoTerm,
               currentPrice: detail.currentPrice ?? item.currentPrice,
               agreedPrice: item.agreedPrice ?? detail.agreedPrice ?? detail.currentPrice,
+              photos: item.photos?.length ? item.photos : detail.photos,
+              thumbnailUrl: item.thumbnailUrl || detail.thumbnailUrl || null,
             };
           },
           options,
@@ -120,6 +202,7 @@ export default function WarehouseInventoryPage() {
             )
           : enriched;
         return {
+          items: filtered,
           content: filtered,
           totalElements: filtered.length,
           totalPages: 1,
@@ -309,6 +392,7 @@ export default function WarehouseInventoryPage() {
                 <table className="min-w-[700px] w-full text-left text-xs">
                   <thead>
                     <tr className="bg-[#FFFAEB] border-b border-[#FEDF89] text-[10px] font-bold uppercase tracking-wider text-[#B54708] whitespace-nowrap">
+                      <th className="py-3 px-4 w-16">Ảnh</th>
                       <th className="py-3 px-4">Sản phẩm</th>
                       <th className="py-3 px-4 w-28">Ngày báo</th>
                       <th className="py-3 px-4">Lý do xuống cấp</th>
@@ -323,6 +407,12 @@ export default function WarehouseInventoryPage() {
                       const subMeta = [cleanBrand, item.size ? `Size ${item.size}` : ''].filter(Boolean).join(' · ');
                       return (
                       <tr key={item.sku || item.id} className="hover:bg-[#FFFDF5] transition-colors">
+                        <td className="py-3.5 px-4 w-16">
+                          <InventoryThumbnailCell
+                            item={item}
+                            onZoom={(images, title) => setLightboxState({ images, title })}
+                          />
+                        </td>
                         <td className="py-3.5 px-4">
                           <p className="font-semibold text-[#191C19]">{item.name}</p>
                           {subMeta && (
@@ -366,6 +456,7 @@ export default function WarehouseInventoryPage() {
                 <table className="min-w-[700px] w-full text-left text-xs">
                   <thead>
                     <tr className="bg-[#f4f4f4] border-b border-[#8a8a8a] text-[10px] font-bold uppercase tracking-wider text-[#5f5f5f] whitespace-nowrap">
+                      <th className="py-2.5 px-4 w-16">Ảnh</th>
                       <th className="py-2.5 px-4">Sản phẩm</th>
                       <th className="py-2.5 px-4">{TABLE_COLUMN_LABELS.STATUS}</th>
                       <th className="py-2.5 px-4">Kỳ ký gửi</th>
@@ -394,6 +485,12 @@ export default function WarehouseInventoryPage() {
                             : 'hover:bg-[#fcfdfc]'
                             }`}
                         >
+                          <td className="py-2.5 px-4 w-16">
+                            <InventoryThumbnailCell
+                              item={item}
+                              onZoom={(images, title) => setLightboxState({ images, title })}
+                            />
+                          </td>
                           <td className="py-3.5 px-4">
                             <p className="font-semibold text-[#191C19]">{item.name}</p>
                             {subMeta && (
@@ -517,6 +614,16 @@ export default function WarehouseInventoryPage() {
         submitting={relistSubmitting}
         handleConfirmOutcome={handleConfirmRelist}
       />
+
+      {lightboxState && (
+        <ImageLightbox
+          isOpen={Boolean(lightboxState)}
+          onClose={() => setLightboxState(null)}
+          images={lightboxState?.images || []}
+          initialIndex={0}
+          categoryLabel={lightboxState?.title || 'Ảnh sản phẩm'}
+        />
+      )}
       </WarehouseHistoryTabs>
     </Page>
   );

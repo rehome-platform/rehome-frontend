@@ -190,6 +190,7 @@ export const inventoryService = {
     const payload = {
       name: String(data?.name || '').trim(),
       photoUrls: Array.isArray(data?.photoUrls) ? data.photoUrls : [],
+      ...(data?.categoryId ? { categoryId: data.categoryId } : {}),
     };
 
     const res = await callBackend(
@@ -276,6 +277,10 @@ async function enrichInventoryResult(result, options) {
       const fields = {};
       for (const field of INVENTORY_DETAIL_FIELDS) {
         if (item[field] == null && detail[field] != null) fields[field] = detail[field];
+      }
+      if (!item.thumbnailUrl && detail.thumbnailUrl) fields.thumbnailUrl = detail.thumbnailUrl;
+      if ((!Array.isArray(item.photos) || !item.photos.length) && Array.isArray(detail.photos) && detail.photos.length) {
+        fields.photos = detail.photos;
       }
       return { ...item, ...fields };
     },

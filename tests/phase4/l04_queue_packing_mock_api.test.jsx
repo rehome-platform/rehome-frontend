@@ -69,6 +69,13 @@ beforeEach(() => {
       return HttpResponse.json({ result, isSuccess: true, statusCode: 200, message: 'Đã tạo vận đơn' });
     }),
 
+    // API 71: PUT /orders/:id/pack/photos
+    http.put(`${API_BASE_URL}/orders/:id/pack/photos`, async ({ params, request }) => {
+      const body = await request.json();
+      const result = await packingMockApi.updatePackingPhotos(params.id, body.photoUrls);
+      return HttpResponse.json({ result, isSuccess: true, statusCode: 200 });
+    }),
+
     // API 72: POST /counter/handover
     http.post(`${API_BASE_URL}${API_ENDPOINTS.MODERATOR.COUNTER_HANDOVER}`, async ({ request }) => {
       const body = await request.json();
@@ -201,6 +208,9 @@ describe('L-04 Phase 4: Mock API Integration Suite (APIs 68-72)', () => {
   });
 
   it('APIs 69, 70 & 72: Full packing lifecycle from barcode scan to GHN shipment and counter handover', async () => {
+    await packingMockApi.updatePackingPhotos('DH-00244', [
+      'https://storage.rehome.test/order-packing/dh244-1.jpg',
+    ]);
     render(
       <MemoryRouter initialEntries={['/moderator/packing?orderId=DH-00244']}>
         <Phase2Provider>

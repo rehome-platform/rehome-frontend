@@ -3,7 +3,16 @@ import { Link, useNavigate } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import { catalogService, consignmentService, inventoryService } from '../services/warehouseApi.js';
 import { STATIC_STALE_TIME_MS, useResource } from '../hooks/warehouseHooks.jsx';
-import { canStockIn, extractReceiptId } from '../models/warehouseModel.js';
+import {
+  SUPPORTED_TRYON_SLOTS,
+  TRYON_SLOT_CONFIG,
+  canStockIn,
+  extractReceiptId,
+  formatTryOnSlot,
+  groupCategoriesBySlot,
+  inferTryOnSlotFromName,
+  normalizeTryOnSlot,
+} from '../models/warehouseModel.js';
 import { Card, Field, ResourceState, money } from './WarehouseUi.jsx';
 import PhotoUpload from './PhotoUpload.jsx';
 import BrandQuickAddModal from './BrandQuickAddModal.jsx';
@@ -73,6 +82,7 @@ export default function StockInForm({ receipt, form, onSuccess }) {
   const initialCategoryId = receipt?.categoryId || form?.categoryId || '';
   const initialBrandId = receipt?.brandId || form?.brandId || '';
   const [categoryId, setCategory] = useState(initialCategoryId);
+  const [slotFilter, setSlotFilter] = useState('ALL');
   const [brandId, setBrand] = useState(initialBrandId);
 
   const initialColor = (receipt?.color || form?.color || '').trim();
@@ -92,6 +102,21 @@ export default function StockInForm({ receipt, form, onSuccess }) {
   const categories = (catalog.data?.categories || []).filter(
     (item) => !item.hidden || (Boolean(initialCategoryId) && item.id === initialCategoryId)
   );
+  const hasSlotMetadata = categories.some((item) => Boolean(normalizeTryOnSlot(item)));
+  const visibleCategories =
+    slotFilter !== 'ALL' && hasSlotMetadata
+      ? categories.filter((item) => normalizeTryOnSlot(item) === slotFilter)
+      : categories;
+  const groupedCategories =
+    slotFilter === 'ALL'
+      ? groupCategoriesBySlot(visibleCategories)
+      : [{ key: slotFilter, label: null, items: visibleCategories }];
+  const selectedCategory = categories.find((item) => item.id === categoryId) || null;
+  const effectiveSlot = normalizeTryOnSlot(selectedCategory);
+  const effectiveSlotConfig = effectiveSlot ? formatTryOnSlot(effectiveSlot) : null;
+  const inferredNameSlot = inferTryOnSlotFromName(name);
+  const hasSlotMismatch =
+    Boolean(effectiveSlot) && Boolean(inferredNameSlot) && inferredNameSlot !== effectiveSlot;
   const brands = [...(catalog.data?.brands || []), ...(addedBrand ? [addedBrand] : [])]
     .filter((item, i, all) => !item.hidden && all.findIndex(other => other.id === item.id) === i);
   const valid = canStockIn(receipt) && verification.data && !verification.data.alreadyStockedIn && !verification.error &&
@@ -99,6 +124,22 @@ export default function StockInForm({ receipt, form, onSuccess }) {
     categories.some(item => item.id === categoryId) && brands.some(item => item.id === brandId) && photos.length > 0 && !photosPending;
   const errors = operation.error?.fields || {};
   const printUrl = sku => `/moderator/consignments/print-queue?sku=${encodeURIComponent(sku)}`;
+
+  const handleSlotFilterChange = (nextSlot) => {
+    setSlotFilter(nextSlot);
+    if (nextSlot !== 'ALL' && hasSlotMetadata && selectedCategory && normalizeTryOnSlot(selectedCategory) !== nextSlot) {
+      setCategory('');
+    }
+  };
+
+  const handleCategoryChange = (nextCategoryId) => {
+    setCategory(nextCategoryId);
+    const chosen = categories.find((item) => item.id === nextCategoryId);
+    const chosenSlot = normalizeTryOnSlot(chosen);
+    if (slotFilter !== 'ALL' && chosenSlot && chosenSlot !== slotFilter) {
+      setSlotFilter(chosenSlot);
+    }
+  };
 
   return (
     <Card title="Nhập thông tin sản phẩm và nhập kho">
@@ -142,9 +183,34 @@ export default function StockInForm({ receipt, form, onSuccess }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Tên sản phẩm" required value={name} onChange={e => setName(e.target.value)} error={errors.name} />
             <Field label="Size" value={size} onChange={e => setSize(e.target.value)} error={errors.size} />
-            <Field label="Danh mục" error={errors.categoryId}><select required value={categoryId} onChange={e => setCategory(e.target.value)}>
-              <option value="">Chọn danh mục</option>{categories.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-            </select></Field>
+            <Field label="Lọc theo Slot thử đồ AI">
+              <select value={slotFilter} onChange={e => handleSlotFilterChange(e.target.value)}>
+                <option value="ALL">Tất cả slot (tự theo danh mục)</option>
+                {SUPPORTED_TRYON_SLOTS.map(slot => (
+                  <option key={slot} value={slot}>
+                    {TRYON_SLOT_CONFIG[slot]?.label || slot}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Danh mục" error={errors.categoryId}>
+              <select required value={categoryId} onChange={e => handleCategoryChange(e.target.value)}>
+                <option value="">Chọn danh mục</option>
+                {groupedCategories.map(group =>
+                  group.label ? (
+                    <optgroup key={group.key} label={group.label}>
+                      {group.items.map(item => (
+                        <option key={item.id} value={item.id}>{item.name}</option>
+                      ))}
+                    </optgroup>
+                  ) : (
+                    group.items.map(item => (
+                      <option key={item.id} value={item.id}>{item.name}</option>
+                    ))
+                  )
+                )}
+              </select>
+            </Field>
             <Field label="Thương hiệu" error={errors.brandId}><select required value={brandId} onChange={e => setBrand(e.target.value)}>
               <option value="">Chọn thương hiệu</option>{brands.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select></Field>
@@ -176,6 +242,30 @@ export default function StockInForm({ receipt, form, onSuccess }) {
               />
             )}
           </div>
+          {effectiveSlotConfig && (
+            <div
+              data-testid="stockin-tryon-slot-badge"
+              className="flex flex-wrap items-center gap-2 rounded-xl border border-[#DDE5D9] bg-[#FAFBF9] px-3.5 py-2 text-xs text-[#3F493E]"
+            >
+              <span className="font-semibold">Slot thử đồ AI áp dụng:</span>
+              <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 font-bold ${effectiveSlotConfig.badgeClass}`}>
+                {effectiveSlotConfig.label}
+              </span>
+              {selectedCategory?.name && (
+                <span className="text-[#5B6776]">theo danh mục {selectedCategory.name}</span>
+              )}
+            </div>
+          )}
+          {hasSlotMismatch && (
+            <div
+              data-testid="stockin-slot-mismatch-warning"
+              role="status"
+              className="rounded-xl border border-[#FEDF89] bg-[#FFFAEB] px-3.5 py-2.5 text-xs font-medium text-[#B54708]"
+            >
+              Tên sản phẩm có vẻ thuộc <strong>{formatTryOnSlot(inferredNameSlot).label}</strong>, nhưng danh mục{' '}
+              <strong>"{selectedCategory?.name}"</strong> đang gắn <strong>{effectiveSlotConfig?.label}</strong>. Vui lòng kiểm tra lại danh mục để tránh nhầm slot thử đồ AI của Member.
+            </div>
+          )}
           <Button type="button" variant="outline" onClick={() => setQuickAdd(true)}>+ Thêm nhanh thương hiệu</Button>
           <Field label="Mô tả bán hàng" error={errors.description}><textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} /></Field>
           <p className="text-sm">Ghi chú kiểm định: {receipt.conditionNote || '—'}</p>

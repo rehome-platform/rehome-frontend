@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import Button from "../../../../components/common/Button.jsx";
 import Modal from "../../../../components/common/Modal.jsx";
 import TableActionButton from "../../../../components/common/TableActionButton.jsx";
+import ImageLightbox from "../../../../components/common/ImageLightbox.jsx";
 
 import { Status, DetailLink, money, date } from "../WarehouseUi.jsx";
 
@@ -327,8 +328,16 @@ function resolveCounterTaskAction(task) {
 
 export function CounterConsignmentTasks({ taskGroups }) {
   const [detailTask, setDetailTask] = useState(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const detailSku = detailTask?.productSku || detailTask?.sku || detailTask?.product?.sku || '';
   const detailPhoto = detailTask?.productPhotoUrl || detailTask?.photoUrl || detailTask?.photos?.[0]?.url || detailTask?.photos?.[0] || null;
+  const detailPhotos = React.useMemo(() => {
+    const raw = Array.isArray(detailTask?.photos)
+      ? detailTask.photos.map((p) => (typeof p === 'string' ? p : p?.url || p?.imageUrl)).filter(Boolean)
+      : [];
+    if (raw.length > 0) return raw;
+    return detailPhoto ? [detailPhoto] : [];
+  }, [detailTask, detailPhoto]);
 
   return (
     <div className="space-y-3">
@@ -399,11 +408,24 @@ export function CounterConsignmentTasks({ taskGroups }) {
           <div className="space-y-4 text-xs text-textSecondary">
             {detailPhoto && (
               <div className="flex justify-center">
-                <img
-                  src={detailPhoto}
-                  alt={detailTask.name || detailTask.productName || 'Ảnh sản phẩm'}
-                  className="h-40 w-40 rounded-xl object-cover border border-neutral"
-                />
+                <button
+                  type="button"
+                  onClick={() => setLightboxOpen(true)}
+                  className="group relative h-40 w-40 rounded-xl overflow-hidden border border-neutral cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-[#006B2C]/40"
+                  title="Phóng to ảnh sản phẩm"
+                >
+                  <img
+                    src={detailPhoto}
+                    alt={detailTask.name || detailTask.productName || 'Ảnh sản phẩm'}
+                    className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/65 text-white text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    Phóng to
+                  </span>
+                </button>
               </div>
             )}
             <div className="rounded-xl border border-neutral bg-[#F6F9F4] p-3.5 space-y-2">
@@ -493,6 +515,15 @@ export function CounterConsignmentTasks({ taskGroups }) {
           </div>
         )}
       </Modal>
+      {lightboxOpen && detailPhotos.length > 0 && (
+        <ImageLightbox
+          isOpen={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+          images={detailPhotos}
+          initialIndex={0}
+          title={detailTask?.name || detailTask?.productName || 'Ảnh sản phẩm'}
+        />
+      )}
     </div>
   );
 }

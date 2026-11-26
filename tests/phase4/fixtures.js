@@ -8,6 +8,7 @@ export function orderFixture() {
       { productId: 'sku-a', name: 'Áo', shelfLocation: 'A1' },
       { productId: 'SKU-B', name: 'Quần', shelfLocation: 'B2' },
     ], scannedProductIds: [], scannedCount: 0, totalCount: 2,
+    packingPhotoUrls: ['https://storage.rehome.test/order-packing/default-1.jpg'],
     shipmentOutcome: 'NOT_CREATED', ghnTrackingCode: null,
   };
 }

@@ -108,7 +108,7 @@ it('does not increment scannedCount on wrong SKU (or rejected scan), shows wrong
   expect(screen.getByRole('button', { name: 'Tạo vận đơn GHN' })).toBeDisabled();
 
   // Đóng modal sai món nếu có
-  const closeModalBtn = screen.queryByRole('button', { name: /Đóng|Quay lại/i });
+  const closeModalBtn = screen.queryByRole('button', { name: /^(Đóng|Quay lại)$/i });
   if (closeModalBtn) fireEvent.click(closeModalBtn);
 
   // 2. Quét SKU không tồn tại (reject 404) -> onError hoạt động, không tăng tiến độ, hiển thị lỗi

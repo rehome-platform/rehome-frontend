@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
-import { Button, Tooltip } from '../../../components/common/index.js';
+import { Button, Tooltip, ImageLightbox } from '../../../components/common/index.js';
 import Spinner from '../../../components/common/Spinner.jsx';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { warehouseInboxService } from '../services/warehouseInboxApi.js';
@@ -41,6 +41,7 @@ export default function WarehouseInboxPage() {
   const [activeTab, setActiveTab] = useState('ALL'); // Mặc định mở tab 'Tất cả' ('ALL' | 'DONE' | 'UNANSWERED')
   const [selectedConv, setSelectedConv] = useState(() => initialSelectedConv);
   const [showMemberInfo, setShowMemberInfo] = useState(true);
+  const [lightboxState, setLightboxState] = useState(null);
 
   // Tin nhắn của hội thoại đang chọn
   const [messages, setMessages] = useState(() =>
@@ -732,19 +733,25 @@ export default function WarehouseInboxPage() {
                           {msgImages.length > 0 && (
                             <div className="flex flex-wrap gap-2 pt-1">
                               {msgImages.map((imgUrl, imgIdx) => (
-                                <a
+                                <button
                                   key={imgIdx}
-                                  href={imgUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="block overflow-hidden rounded-lg border border-white/20 hover:opacity-90 transition-opacity"
+                                  type="button"
+                                  onClick={() =>
+                                    setLightboxState({
+                                      images: msgImages,
+                                      index: imgIdx,
+                                      categoryLabel: 'Ảnh đính kèm tin nhắn',
+                                    })
+                                  }
+                                  className="block overflow-hidden rounded-lg border border-white/20 hover:opacity-90 transition-opacity cursor-zoom-in"
+                                  title="Bấm để xem & phóng to ảnh"
                                 >
                                   <img
                                     src={imgUrl}
                                     alt={`Ảnh đính kèm ${imgIdx + 1}`}
                                     className="w-28 h-28 object-cover rounded-lg bg-black/10"
                                   />
-                                </a>
+                                </button>
                               ))}
                             </div>
                           )}
@@ -784,12 +791,28 @@ export default function WarehouseInboxPage() {
                 <div className="flex items-center gap-2 p-2.5 px-3 border-t border-neutral bg-background flex-wrap shrink-0">
                   {pendingImages.map((img, i) => (
                     <div key={i} className="relative group w-14 h-14 rounded-lg overflow-hidden border border-neutral bg-surface">
-                      <img src={img} alt="Ảnh đính kèm" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setLightboxState({
+                            images: pendingImages,
+                            index: i,
+                            categoryLabel: 'Ảnh chuẩn bị gửi',
+                          })
+                        }
+                        className="w-full h-full block cursor-zoom-in"
+                        title="Xem trước & phóng to ảnh"
+                      >
+                        <img src={img} alt="Ảnh đính kèm" className="w-full h-full object-cover" />
+                      </button>
                       <Tooltip content="Xóa ảnh đính kèm" className="absolute top-0 right-0">
                         <button
                           type="button"
                           aria-label={`Xóa ảnh đính kèm ${i + 1}`}
-                          onClick={() => removePendingImage(i)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removePendingImage(i);
+                          }}
                           className="bg-black/75 hover:bg-[#D92D20] text-white rounded-bl px-1.5 py-0.5 text-[10px] font-bold transition-colors"
                         >
                           ✕
@@ -945,6 +968,15 @@ export default function WarehouseInboxPage() {
           )}
         </div>
       </div>
+      {lightboxState && (
+        <ImageLightbox
+          isOpen={Boolean(lightboxState)}
+          onClose={() => setLightboxState(null)}
+          images={lightboxState?.images || []}
+          initialIndex={lightboxState?.index ?? 0}
+          categoryLabel={lightboxState?.categoryLabel || 'Ảnh đính kèm'}
+        />
+      )}
     </ModeratorLayout>
   );
 }

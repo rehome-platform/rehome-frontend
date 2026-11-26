@@ -284,7 +284,7 @@ describe('StockInForm - Try-on cleanup & Category/Brand locking', () => {
     });
   });
 
-  it('does not render AI try-on slot or background-removal info block', async () => {
+  it('does not render background-removal info block while syncing category try-on slot', async () => {
     render(
       <StockInForm
         receipt={{ id: 'rcpt-lock-1', confirmedAt: '2026-11-05T10:00:00Z', categoryId: 'cat-top', brandId: 'brand-1' }}
@@ -293,9 +293,10 @@ describe('StockInForm - Try-on cleanup & Category/Brand locking', () => {
     );
 
     await screen.findByLabelText('Danh mục');
+    expect(screen.getByLabelText('Lọc theo Slot thử đồ AI')).toBeInTheDocument();
+    expect(screen.getByTestId('stockin-tryon-slot-badge')).toHaveTextContent('Áo (TOP)');
     expect(screen.queryByText(/Ảnh dùng cho thử đồ AI/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Không cần tách nền/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Chưa có thông tin slot thử đồ/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/chưa tách nền/i)).not.toBeInTheDocument();
   });
 

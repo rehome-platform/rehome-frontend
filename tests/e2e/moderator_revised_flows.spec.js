@@ -153,7 +153,7 @@ test('ProductEditModal only allows editing name and photoUrls when ON_SALE and s
   });
 });
 
-test('StockInForm has no AI try-on slot or background-removal UI', async ({ page }) => {
+test('StockInForm syncs category AI try-on slot and has no background-removal UI', async ({ page }) => {
   await page.route('**/moderator/consignment-forms/form-1*', (route) =>
     route.fulfill({
       json: {
@@ -187,7 +187,7 @@ test('StockInForm has no AI try-on slot or background-removal UI', async ({ page
     }),
   );
   await page.route('**/categories*', (route) =>
-    route.fulfill({ json: [{ id: 'cat-1', name: 'Áo sơ mi', hidden: false }] }),
+    route.fulfill({ json: [{ id: 'cat-1', name: 'Áo sơ mi', tryonSlot: 'TOP', hidden: false }] }),
   );
   await page.route('**/brands*', (route) =>
     route.fulfill({ json: [{ id: 'brand-1', name: 'Uniqlo', hidden: false }] }),
@@ -195,7 +195,10 @@ test('StockInForm has no AI try-on slot or background-removal UI', async ({ page
 
   await page.goto('/moderator/consignments/form-1');
   await expect(page.getByText('Nhập thông tin sản phẩm và nhập kho')).toBeVisible();
-  await expect(page.getByText(/Slot thử đồ AI|tryOnSlot|Xóa nền|Tách nền|removeBackground/i)).toHaveCount(0);
+  await expect(page.getByLabel('Lọc theo Slot thử đồ AI')).toBeVisible();
+  await page.getByLabel('Danh mục').selectOption('cat-1');
+  await expect(page.getByTestId('stockin-tryon-slot-badge')).toContainText('Áo (TOP)');
+  await expect(page.getByText(/Xóa nền|Tách nền|removeBackground/i)).toHaveCount(0);
 });
 
 test('DonationsPage supports ACTIVE vs HISTORY tabs, blocks new donation on closed campaign, and requires both handover checkboxes', async ({

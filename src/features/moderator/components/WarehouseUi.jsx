@@ -1,9 +1,10 @@
-import React, { useId } from 'react';
+import React, { useId, useState } from 'react';
 import '../styles/apiColors.css';
 import { Link } from 'react-router-dom';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 import Button from '../../../components/common/Button.jsx';
 import Spinner from '../../../components/common/Spinner.jsx';
+import ImageLightbox, { ZoomableImage } from '../../../components/common/ImageLightbox.jsx';
 import { safeDocumentUrl } from '../models/warehouseModel.js';
 import { isFixtureMode } from '../config/warehouseContract.js';
 import { getStatusMeta } from '../config/statusTheme.js';
@@ -170,10 +171,13 @@ export function MemberSummary({ member }) {
   return (
     <div className="flex items-center gap-3 rounded-xl bg-background p-3">
       {member.avatarUrl && (
-        <img
-          className="h-12 w-12 rounded-full object-cover"
+        <ZoomableImage
           src={member.avatarUrl}
           alt="Ảnh Member"
+          className="h-12 w-12 rounded-full overflow-hidden shrink-0"
+          imgClassName="h-12 w-12 rounded-full object-cover"
+          categoryLabel={member.fullName || 'Ảnh Member'}
+          showHoverBadge={false}
         />
       )}
       <div>
@@ -185,7 +189,8 @@ export function MemberSummary({ member }) {
     </div>
   );
 }
-export function Photos({ photos = [] }) {
+export function Photos({ photos = [], title = 'Ảnh sản phẩm' }) {
+  const [lightboxIndex, setLightboxIndex] = useState(null);
   const validPhotos = Array.isArray(photos)
     ? photos.filter((photo) => {
         if (!photo) return false;
@@ -193,32 +198,66 @@ export function Photos({ photos = [] }) {
         return Boolean(src);
       })
     : [];
+  const statusLabelOf = (photo) => {
+    if (typeof photo !== 'object' || !photo?.status) return '';
+    return photo.status === 'DONE'
+      ? 'Đã tách nền'
+      : photo.status === 'FAILED'
+        ? 'Tách nền thất bại'
+        : photo.status === 'PROCESSING'
+          ? 'Đang tách nền'
+          : 'Ảnh gốc';
+  };
+  const lightboxItems = validPhotos.map((photo, index) => {
+    const src = typeof photo === 'string' ? photo : photo.url || photo.imageUrl;
+    return {
+      src,
+      alt: `Ảnh sản phẩm ${index + 1}`,
+      caption: statusLabelOf(photo),
+    };
+  });
+
   return (
-    <div className="flex flex-wrap gap-3">
-      {validPhotos.map((photo, index) => {
-        const src = typeof photo === 'string' ? photo : photo.url || photo.imageUrl;
-        return (
-          <figure key={(typeof photo === 'object' && photo.photoId) || src || index} className="space-y-1">
-            <img
-              className="h-32 w-28 rounded-xl object-cover border border-neutral"
-              src={src}
-              alt={`Ảnh sản phẩm ${index + 1}`}
-            />
-            {typeof photo === 'object' && photo.status && (
-              <figcaption className="text-xs">
-                {photo.status === 'DONE'
-                  ? 'Đã tách nền'
-                  : photo.status === 'FAILED'
-                    ? 'Tách nền thất bại'
-                    : photo.status === 'PROCESSING'
-                      ? 'Đang tách nền'
-                      : 'Ảnh gốc'}
-              </figcaption>
-            )}
-          </figure>
-        );
-      })}
-    </div>
+    <>
+      <div className="flex flex-wrap gap-3">
+        {validPhotos.map((photo, index) => {
+          const src = typeof photo === 'string' ? photo : photo.url || photo.imageUrl;
+          const statusLabel = statusLabelOf(photo);
+          return (
+            <figure key={(typeof photo === 'object' && photo.photoId) || src || index} className="space-y-1">
+              <button
+                type="button"
+                onClick={() => setLightboxIndex(index)}
+                title="Bấm để xem & phóng to ảnh"
+                className="group relative block rounded-xl overflow-hidden border border-neutral cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              >
+                <img
+                  className="h-32 w-28 object-cover transition-transform duration-200 group-hover:scale-105"
+                  src={src}
+                  alt={`Ảnh sản phẩm ${index + 1}`}
+                />
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/65 text-white text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  Phóng to
+                </span>
+              </button>
+              {statusLabel && <figcaption className="text-xs">{statusLabel}</figcaption>}
+            </figure>
+          );
+        })}
+      </div>
+      {lightboxIndex !== null && (
+        <ImageLightbox
+          isOpen={lightboxIndex !== null}
+          onClose={() => setLightboxIndex(null)}
+          images={lightboxItems}
+          initialIndex={lightboxIndex ?? 0}
+          title={title}
+        />
+      )}
+    </>
   );
 }
 export function DocumentLink({ url, children = 'Mở PDF' }) {

@@ -21,6 +21,41 @@ export const TRYON_SLOT_CONFIG = {
 
 export const SUPPORTED_TRYON_SLOTS = ['TOP', 'BOTTOM', 'DRESS'];
 
+export function normalizeTryOnSlot(itemOrSlot) {
+  const raw =
+    typeof itemOrSlot === 'string'
+      ? itemOrSlot
+      : itemOrSlot?.tryonSlot || itemOrSlot?.slot || '';
+  const upper = String(raw || '').trim().toUpperCase();
+  return SUPPORTED_TRYON_SLOTS.includes(upper) ? upper : '';
+}
+
+export function inferTryOnSlotFromName(name = '') {
+  const normalized = String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  if (!normalized) return null;
+  if (/(đầm|váy liền|jumpsuit|áo dài|liền thân)/i.test(normalized)) return 'DRESS';
+  if (/(quần|chân váy|jeans|kaki|short|jogger|legging|culottes|skirt|pants|trouser)/i.test(normalized)) return 'BOTTOM';
+  if (/(áo|sơ mi|thun|polo|hoodie|blazer|khoác|cardigan|sweater|gile|shirt|jacket)/i.test(normalized)) return 'TOP';
+  return null;
+}
+
+export function groupCategoriesBySlot(categories = []) {
+  const hasAnySlot = categories.some((item) => Boolean(normalizeTryOnSlot(item)));
+  if (!hasAnySlot) {
+    return [{ key: 'ALL', label: null, items: categories }];
+  }
+  const groups = SUPPORTED_TRYON_SLOTS.map((slot) => ({
+    key: slot,
+    label: TRYON_SLOT_CONFIG[slot]?.label || slot,
+    items: categories.filter((item) => normalizeTryOnSlot(item) === slot),
+  }));
+  const other = categories.filter((item) => !normalizeTryOnSlot(item));
+  if (other.length > 0) {
+    groups.push({ key: 'OTHER', label: 'Khác / Chưa phân slot', items: other });
+  }
+  return groups.filter((group) => group.items.length > 0);
+}
+
 export function formatTryOnSlot(slot) {
   if (!slot) {
     return {

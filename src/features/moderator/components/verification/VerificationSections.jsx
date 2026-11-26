@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { Button, Badge, Modal, TableActionButton } from "../../../../components/common/index.js";
+import { Button, Badge, Modal, TableActionButton, ImageLightbox } from "../../../../components/common/index.js";
 import Spinner from "../../../../components/common/Spinner.jsx";
 import { useToast } from "../../../../context/ToastContext.jsx";
 import baseApi from "../../../../services/baseApi.js";
@@ -46,6 +46,7 @@ function LegalDocumentPreviewModal({ doc, onClose }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useGSAP(
     () => {
@@ -151,13 +152,26 @@ function LegalDocumentPreviewModal({ doc, onClose }) {
             />
           </div>
         ) : (
-          <div className="flex items-center justify-center rounded-xl border border-neutral bg-background overflow-hidden min-h-[280px] max-h-[520px]">
-            <img
-              src={blobUrl}
-              alt={doc.title || 'Tài liệu pháp lý'}
-              className="w-full max-h-[480px] object-contain rounded-xl"
-              onError={() => setError(true)}
-            />
+          <div className="relative group flex items-center justify-center rounded-xl border border-neutral bg-background overflow-hidden min-h-[280px] max-h-[520px]">
+            <button
+              type="button"
+              onClick={() => setLightboxOpen(true)}
+              className="w-full flex items-center justify-center cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              title="Bấm để phóng to chi tiết"
+            >
+              <img
+                src={blobUrl}
+                alt={doc.title || 'Tài liệu pháp lý'}
+                className="w-full max-h-[480px] object-contain rounded-xl"
+                onError={() => setError(true)}
+              />
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-black/70 text-white text-[11px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                Phóng to / Zoom
+              </span>
+            </button>
           </div>
         )}
         <div className="flex justify-end pt-2 border-t border-neutral">
@@ -166,6 +180,15 @@ function LegalDocumentPreviewModal({ doc, onClose }) {
           </Button>
         </div>
       </div>
+      {lightboxOpen && blobUrl && (
+        <ImageLightbox
+          isOpen={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+          images={[{ src: blobUrl, alt: doc.title || 'Tài liệu pháp lý' }]}
+          initialIndex={0}
+          categoryLabel={doc.title || 'Tài liệu pháp lý'}
+        />
+      )}
     </Modal>
   );
 }

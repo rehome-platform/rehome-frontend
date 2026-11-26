@@ -12,7 +12,7 @@ import {
 } from '../components/verification/VerificationSections.jsx';
 import React, { useState, useEffect } from "react";
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
-import { Button, Modal, Tooltip } from "../../../components/common/index.js";
+import { Button, Modal, Tooltip, ImageLightbox } from "../../../components/common/index.js";
 import baseApi from '../../../services/baseApi.js';
 import { API_BASE_URL } from '../../../configs/api.config.js';
 
@@ -31,6 +31,7 @@ function AuthenticatedImage({ src, alt, className }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     if (!src) {
@@ -179,18 +180,39 @@ function AuthenticatedImage({ src, alt, className }) {
   return (
     <div className="space-y-3">
       <div className="relative group flex items-center justify-center rounded-xl border border-neutral bg-background overflow-hidden min-h-[300px] max-h-[520px]">
-        <img
-          src={blobUrl}
-          alt={alt}
-          className={className || "w-full max-h-[480px] object-contain rounded-xl"}
-          onError={() => setError(true)}
-        />
+        <button
+          type="button"
+          onClick={() => setLightboxOpen(true)}
+          className="w-full flex items-center justify-center cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          title="Bấm để mở toàn màn hình & phóng to"
+        >
+          <img
+            src={blobUrl}
+            alt={alt}
+            className={className || "w-full max-h-[480px] object-contain rounded-xl"}
+            onError={() => setError(true)}
+          />
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-black/70 text-white text-[11px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            Phóng to / Kéo xem chi tiết
+          </span>
+        </button>
       </div>
       <div className="flex flex-wrap items-center justify-between text-xs text-textSecondary bg-surface p-2.5 rounded-xl border border-neutral gap-2">
         <span className="text-[11px] text-textSecondary">
           Kiểm tra con dấu, chữ ký và thời hạn hiệu lực theo quy trình kiểm chứng
         </span>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setLightboxOpen(true)}
+            className="text-primary hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+          >
+            Phóng to / Zoom
+          </button>
+          <span>·</span>
           <a
             href={blobUrl}
             target="_blank"
@@ -209,6 +231,15 @@ function AuthenticatedImage({ src, alt, className }) {
           </a>
         </div>
       </div>
+      {lightboxOpen && blobUrl && (
+        <ImageLightbox
+          isOpen={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+          images={[{ src: blobUrl, alt }]}
+          initialIndex={0}
+          categoryLabel={alt || 'Tài liệu pháp lý'}
+        />
+      )}
     </div>
   );
 }
