@@ -11,3 +11,4 @@ export { default as ToastItem } from './ToastItem.jsx';
 export { default as Tooltip } from './Tooltip.jsx';
 export { default as UserAccountDropdown } from './UserAccountDropdown.jsx';
 export { default as TableActionButton } from './TableActionButton.jsx';
+export { default as ImageLightbox, ZoomableImage } from './ImageLightbox.jsx';
