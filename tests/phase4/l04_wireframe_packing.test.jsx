@@ -86,6 +86,9 @@ describe('L-04 Moderator Packing Wireframe Test Suite (DG-01 to DG-04)', () => {
   });
 
   it('DG-03 & DG-03-SaiMon: Scans SKU and opens warning modal when wrong SKU is scanned', async () => {
+    await packingMockApi.updatePackingPhotos('DH-00244', [
+      'https://storage.rehome.test/order-packing/dh244-1.jpg',
+    ]);
     render(
       <MemoryRouter initialEntries={['/moderator/packing?orderId=DH-00244']}>
         <Phase2Provider>
@@ -121,6 +124,9 @@ describe('L-04 Moderator Packing Wireframe Test Suite (DG-01 to DG-04)', () => {
   });
 
   it('DG-04: Creates GHN shipment and allows printing waybills', async () => {
+    await packingMockApi.updatePackingPhotos('DH-00244', [
+      'https://storage.rehome.test/order-packing/dh244-1.jpg',
+    ]);
     render(
       <MemoryRouter initialEntries={['/moderator/packing?orderId=DH-00244']}>
         <Phase2Provider>

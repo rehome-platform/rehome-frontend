@@ -28,6 +28,9 @@ describe('packing eligibility', () => {
     order.scannedProductIds = ['sku-a', 'SKU-B'];
     expect(canShip(order, scope)).toBeTruthy();
     expect(canShip({ ...order, allowedActions: ['CREATE_SHIPMENT'] }, scope)).toBeTruthy();
+    expect(canShip({ ...order, packingPhotoUrls: [] }, scope)).toBeFalsy();
+    expect(canShip(order, scope, Date.now(), [])).toBeFalsy();
+    expect(canShip(order, scope, Date.now(), ['https://storage.rehome.test/box.jpg'])).toBeTruthy();
     expect(canShip({ ...order, shipmentOutcome: 'UNKNOWN' }, scope)).toBeFalsy();
     expect(canShip({ ...order, ghnTrackingCode: 'GHN-REAL' }, scope)).toBeFalsy();
   });
