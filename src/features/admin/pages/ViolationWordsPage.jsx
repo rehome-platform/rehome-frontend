@@ -16,7 +16,8 @@ const PAGE_SIZE = 20;
 const CATEGORY_LABELS = {
   PROFANITY: 'Ngôn từ thô tục',
   FRAUD: 'Lừa đảo',
-  SPAM: 'Tin rác (Spam)',
+  COUNTERFEIT: 'Hàng giả / Hàng nhái',
+  SPAM: 'Tin rác',
   INAPPROPRIATE: 'Không phù hợp',
 };
 
@@ -36,7 +37,24 @@ const ACTION_LABELS = {
   NOTIFY_ADMIN: 'Thông báo quản trị viên',
 };
 
-export { CATEGORY_LABELS, SEVERITY_LABELS, ACTION_LABELS };
+function formatEnumLabel(value, mapping) {
+  if (value == null || String(value).trim() === '') return '—';
+  const key = String(value).trim().toUpperCase();
+  return mapping[key] || 'Không xác định';
+}
+
+const formatViolationCategory = (value) => formatEnumLabel(value, CATEGORY_LABELS);
+const formatViolationSeverity = (value) => formatEnumLabel(value, SEVERITY_LABELS);
+const formatViolationAction = (value) => formatEnumLabel(value, ACTION_LABELS);
+
+export {
+  CATEGORY_LABELS,
+  SEVERITY_LABELS,
+  ACTION_LABELS,
+  formatViolationCategory,
+  formatViolationSeverity,
+  formatViolationAction,
+};
 
 export default function ViolationWordsPage() {
   const toast = useToast();
@@ -214,19 +232,22 @@ export default function ViolationWordsPage() {
     },
     {
       header: 'Nhóm',
-      render: (row) => CATEGORY_LABELS[row.category] || row.category,
+      render: (row) => formatViolationCategory(row.category),
     },
     {
       header: 'Mức độ',
-      render: (row) => (
-        <Badge variant={SEVERITY_VARIANTS[row.severity] || 'default'}>
-          {SEVERITY_LABELS[row.severity] || row.severity}
-        </Badge>
-      ),
+      render: (row) => {
+        const severityKey = String(row.severity || '').trim().toUpperCase();
+        return (
+          <Badge variant={SEVERITY_VARIANTS[severityKey] || 'default'}>
+            {formatViolationSeverity(row.severity)}
+          </Badge>
+        );
+      },
     },
     {
       header: 'Hành động hệ thống',
-      render: (row) => ACTION_LABELS[row.action] || row.action,
+      render: (row) => formatViolationAction(row.action),
     },
     {
       header: 'Trạng thái',
