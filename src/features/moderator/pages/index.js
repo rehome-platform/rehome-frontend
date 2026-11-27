@@ -9,6 +9,7 @@ export { default as ConsignmentQueuePage } from './ConsignmentQueuePage.jsx';
 export { default as WarehouseInventoryPage } from './WarehouseInventoryPage.jsx';
 export { default as PackingOrdersPage } from './PackingOrdersPage.jsx';
 export { default as ReturnProcessingPage } from './ReturnProcessingPage.jsx';
+export { default as ReturnShipBackDetailPage } from './ReturnShipBackDetailPage.jsx';
 export { default as OrgVerificationPage } from './OrgVerificationPage.jsx';
 export { default as ViolationReportsPage } from './ViolationReportsPage.jsx';
 export { default as DonationsPage } from './DonationsPage.jsx';

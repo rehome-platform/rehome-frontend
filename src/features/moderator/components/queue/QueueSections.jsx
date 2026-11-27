@@ -5,9 +5,9 @@ import Modal from "../../../../components/common/Modal.jsx";
 import TableActionButton from "../../../../components/common/TableActionButton.jsx";
 
 import { WORK_TYPES } from "../../pages/ConsignmentQueuePage.config.js";
-import { formatElapsedHours, withdrawalCounterLink } from '../../models/queueModel.js';
+import { formatElapsedHours, isShipBackDeadlineNear, withdrawalCounterLink } from '../../models/queueModel.js';
 import { inventoryService } from '../../services/inventoryApi.js';
-import { money, formatDeadlineWithCountdown, Status } from "../WarehouseUi.jsx";
+import { date, money, formatDeadlineWithCountdown, Status } from "../WarehouseUi.jsx";
 import { ReturnImageLightbox } from "../returns/ReturnEvidence.jsx";
 
 export function QueueClaimDialog({ claimTarget, resource, setClaimTarget, handleClaim }) {
@@ -165,17 +165,27 @@ export function QueueTaskDetailModal({ target, onClose, busy = false, onApproveW
   const waitText = target.waitTimeFormatted || formatElapsedHours(target.hours ?? 0);
   const fee = target.feeCharged ?? target.withdrawalFee ?? 0;
   const isPaid = Boolean(target.feePaid || target.feePaidAt);
+  const isReturnShipBack = target.type === 'RETURN_SHIP_BACK';
+  const shipBackNearDeadline = isReturnShipBack && isShipBackDeadlineNear(target.shipBackDeadline);
+  const shipBackMethodLabel =
+    target.shipBackPaymentMethod === 'WALLET'
+      ? 'Ví ReHome'
+      : target.shipBackPaymentMethod === 'VNPAY'
+        ? 'VNPay'
+        : null;
   const statusLabel =
     isWithdrawal && target.status === 'PENDING_APPROVAL'
       ? 'Chờ duyệt'
       : isWithdrawal && target.status === 'PENDING_PICKUP'
         ? 'Chờ bàn giao'
-        : target.status || 'Đang chờ xử lý';
+        : isReturnShipBack
+          ? 'Chờ gửi lại GHN'
+          : target.status || 'Đang chờ xử lý';
 
   return (
     <Modal
       isOpen={Boolean(target)}
-      title="Chi tiết công việc"
+      title={isReturnShipBack ? 'Chi tiết gửi lại hàng trả không hợp lệ' : 'Chi tiết công việc'}
       onClose={onClose}
       size="md"
     >
@@ -183,8 +193,14 @@ export function QueueTaskDetailModal({ target, onClose, busy = false, onApproveW
         <div className="rounded-xl border border-neutral bg-[#F6F9F4] p-3.5 space-y-2">
           <div className="flex justify-between gap-4">
             <span className="font-semibold text-textSecondary shrink-0">Loại công việc:</span>
-            <span className="font-bold text-text text-right">{target.typeLabel || target.kindLabel || 'Công việc kho'}</span>
+            <span className="font-bold text-text text-right">{target.typeLabel || target.kindLabel || 'Công việc điểm kí gửi'}</span>
           </div>
+          {target.orderNo && (
+            <div className="flex justify-between gap-4">
+              <span className="font-semibold text-textSecondary shrink-0">Mã đơn hàng:</span>
+              <span className="font-mono font-bold text-text text-right">{target.orderNo}</span>
+            </div>
+          )}
           <div className="flex justify-between gap-4">
             <span className="font-semibold text-textSecondary shrink-0">Mã công việc:</span>
             <span className="font-mono font-bold text-text text-right break-all">{codeValue}</span>
@@ -208,9 +224,52 @@ export function QueueTaskDetailModal({ target, onClose, busy = false, onApproveW
             </div>
           )}
           <div className="flex justify-between gap-4">
-            <span className="font-semibold text-textSecondary shrink-0">Đối tượng:</span>
-            <span className="font-medium text-text text-right">{subjectText}</span>
+            <span className="font-semibold text-textSecondary shrink-0">{isReturnShipBack ? 'Người nhận:' : 'Đối tượng:'}</span>
+            <span className="font-medium text-text text-right">{target.recipientName || subjectText}</span>
           </div>
+          {isReturnShipBack && target.shippingPhone && (
+            <div className="flex justify-between gap-4">
+              <span className="font-semibold text-textSecondary shrink-0">Số điện thoại:</span>
+              <span className="text-text text-right">{target.shippingPhone}</span>
+            </div>
+          )}
+          {isReturnShipBack && target.shippingProvinceName && (
+            <div className="flex justify-between gap-4">
+              <span className="font-semibold text-textSecondary shrink-0">Tỉnh/Thành:</span>
+              <span className="font-medium text-text text-right">{target.shippingProvinceName}</span>
+            </div>
+          )}
+          {isReturnShipBack && target.shippingAddress && (
+            <div className="flex justify-between gap-4">
+              <span className="font-semibold text-textSecondary shrink-0">Địa chỉ:</span>
+              <span className="text-text text-right">{target.shippingAddress}</span>
+            </div>
+          )}
+          {isReturnShipBack && (
+            <>
+              <div className="flex justify-between gap-4">
+                <span className="font-semibold text-textSecondary shrink-0">Phí đã thu:</span>
+                <span className="font-bold text-[#006B2C] text-right">
+                  {money(target.shipBackFee ?? fee ?? 0)}
+                  {shipBackMethodLabel ? ` (${shipBackMethodLabel})` : ''}
+                </span>
+              </div>
+              {target.shipBackFeePaidAt && (
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold text-textSecondary shrink-0">Thời điểm trả phí:</span>
+                  <span className="text-text text-right">{date(target.shipBackFeePaidAt)}</span>
+                </div>
+              )}
+              {target.shipBackDeadline && (
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold text-textSecondary shrink-0">Hạn gửi:</span>
+                  <span className={`text-right font-semibold ${shipBackNearDeadline ? 'text-[#B42318]' : 'text-text'}`}>
+                    {formatDeadlineWithCountdown(target.shipBackDeadline)}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
           {target.memberCode && (
             <div className="flex justify-between gap-4">
               <span className="font-semibold text-textSecondary shrink-0">Mã Member:</span>
@@ -288,13 +347,19 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
 
   const isWithdrawal = item.type === 'WITHDRAWAL' || item.type === 'ITEM_WITHDRAWAL';
   const isPendingWithdrawalApproval = isWithdrawal && item.status === 'PENDING_APPROVAL';
+  const isReturnShipBack = item.type === 'RETURN_SHIP_BACK';
+  const shipBackNearDeadline = isReturnShipBack && isShipBackDeadlineNear(item.shipBackDeadline);
   const subjectName = extractQueueSubjectName(item);
 
   return (
     <tr
       ref={rowRef}
       key={item.queueId}
-      className={`transition-colors hover:bg-[#F6F9F4] ${item.isOverdue ? 'border-l-4 border-l-[#006B2C] bg-[#F6F9F4]' : ''
+      className={`transition-colors hover:bg-[#F6F9F4] ${shipBackNearDeadline
+        ? 'border-l-4 border-l-[#B42318] bg-[#FEF3F2]/40'
+        : item.isOverdue
+          ? 'border-l-4 border-l-[#006B2C] bg-[#F6F9F4]'
+          : ''
         } ${isFocused ? 'bg-[#EBF1E8] ring-2 ring-inset ring-primary' : ''}`}
     >
       <td className="py-3 px-4 font-semibold text-text whitespace-nowrap align-middle">
@@ -307,8 +372,29 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
           )}
         </div>
       </td>
-      <td className="py-3 px-3 text-text font-medium whitespace-nowrap align-middle">
-        {subjectName}
+      <td className="py-3 px-3 text-text font-medium align-middle">
+        {isReturnShipBack ? (
+          <div className="space-y-0.5 min-w-[220px]">
+            <p className="font-bold text-text">
+              {item.orderNo || '—'} · <span className="font-mono">{item.sku || '—'}</span>
+            </p>
+            <p className="text-[11px] text-textSecondary">
+              {item.targetName || item.name || '—'} · {item.recipientName || subjectName}
+              {item.shippingProvinceName ? ` (${item.shippingProvinceName})` : ''}
+            </p>
+            <p className="text-[11px] text-textSecondary">
+              Phí đã thu: <strong className="text-[#006B2C]">{money(item.shipBackFee ?? item.feeCharged ?? 0)}</strong>
+              {item.shipBackFeePaidAt ? ` · Trả lúc ${date(item.shipBackFeePaidAt)}` : ''}
+            </p>
+            {item.shipBackDeadline && (
+              <p className={`text-[11px] ${shipBackNearDeadline ? 'text-[#B42318] font-bold' : 'text-textSecondary'}`}>
+                Hạn gửi: {formatDeadlineWithCountdown(item.shipBackDeadline)}
+              </p>
+            )}
+          </div>
+        ) : (
+          <span className="whitespace-nowrap">{subjectName}</span>
+        )}
       </td>
       <td className="py-3 px-3 text-textSecondary whitespace-nowrap align-middle">
         {item.formattedTime}
@@ -384,7 +470,121 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
             </Button>
           ) : isMine && linkTarget ? (
             <Link to={linkTarget} className={`${QUEUE_PRIMARY_LINK_CLASS} w-full`}>
-              {item.type === 'PACKING' ? 'Đóng gói' : 'Mở việc'}
+              {item.type === 'PACKING' ? 'Đóng gói' : item.type === 'RETURN_SHIP_BACK' ? 'Gửi hàng' : 'Mở việc'}
+            </Link>
+          ) : (
+            <span aria-hidden="true" />
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+export function ReturnShipBackQueueRow({
+  item,
+  isFocused,
+  isMine,
+  isClaimedByOther,
+  resource,
+  handleClaim,
+  setClaimTarget,
+  linkTarget,
+  setFeedback,
+  setReleaseTarget,
+  onViewDetail,
+}) {
+  const rowRef = React.useRef(null);
+  React.useEffect(() => {
+    if (isFocused && !resource.loading) {
+      rowRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    }
+  }, [isFocused, resource.loading]);
+
+  const nearDeadline = isShipBackDeadlineNear(item.shipBackDeadline);
+  const recipient = item.recipientName || extractQueueSubjectName(item);
+
+  return (
+    <tr
+      ref={rowRef}
+      key={item.queueId}
+      className={`transition-colors hover:bg-[#F6F9F4] ${nearDeadline ? 'border-l-4 border-l-[#B42318] bg-[#FEF3F2]/50' : ''} ${
+        isFocused ? 'bg-[#EBF1E8] ring-2 ring-inset ring-primary' : ''
+      }`}
+    >
+      <td className="py-3 px-4 align-middle">
+        <p className="font-mono font-bold text-text">{item.orderNo || '—'}</p>
+        <p className="font-mono text-[11px] font-semibold text-[#006B2C]">{item.sku || '—'}</p>
+        <p className="text-xs font-medium text-text">{item.targetName || item.name || '—'}</p>
+      </td>
+      <td className="py-3 px-3 align-middle">
+        <p className="font-semibold text-text">{recipient}</p>
+        <p className="text-[11px] text-textSecondary">{item.shippingProvinceName || '—'}</p>
+      </td>
+      <td className="py-3 px-3 align-middle whitespace-nowrap">
+        <p className="font-bold text-[#006B2C]">{money(item.shipBackFee ?? item.feeCharged ?? 0)}</p>
+        <p className="text-[11px] text-textSecondary">
+          {item.shipBackFeePaidAt ? date(item.shipBackFeePaidAt) : '—'}
+        </p>
+      </td>
+      <td className="py-3 px-3 align-middle whitespace-nowrap">
+        <span className={`font-semibold ${nearDeadline ? 'text-[#B42318] font-bold' : 'text-text'}`}>
+          {item.shipBackDeadline ? formatDeadlineWithCountdown(item.shipBackDeadline) : '—'}
+        </span>
+      </td>
+      <td className="py-3 px-3 text-textSecondary whitespace-nowrap align-middle">
+        {isMine ? (
+          <span className="font-bold text-[#006B2C]">Bạn đang nhận việc này</span>
+        ) : isClaimedByOther ? (
+          <span>người khác giữ</span>
+        ) : (
+          <span>chưa ai nhận</span>
+        )}
+      </td>
+      <td className="py-3 px-3 text-center whitespace-nowrap align-middle">
+        {onViewDetail ? (
+          <TableActionButton action="view" onClick={() => onViewDetail(item)} />
+        ) : (
+          <span className="text-textSecondary">—</span>
+        )}
+      </td>
+      <td className="py-3 px-4 text-left align-middle whitespace-nowrap">
+        <div className="grid grid-cols-[140px_112px] items-center justify-items-start gap-2">
+          {!item.claimedBy ? (
+            <Button
+              size="sm"
+              variant="primary"
+              className={`${QUEUE_PRIMARY_BTN_CLASS} w-full`}
+              loading={resource.busy}
+              onClick={() => (setClaimTarget ? setClaimTarget(item) : handleClaim(item))}
+            >
+              Nhận việc
+            </Button>
+          ) : isMine ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className={`${QUEUE_SECONDARY_BTN_CLASS} w-full`}
+              onClick={() => {
+                setFeedback?.(null);
+                setReleaseTarget(item);
+              }}
+            >
+              Nhả việc
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              disabled
+              variant="outline"
+              className={`${QUEUE_ACTION_BTN_CLASS} w-full opacity-50 cursor-not-allowed`}
+            >
+              Đã có người nhận
+            </Button>
+          )}
+          {isMine && linkTarget ? (
+            <Link to={linkTarget} className={`${QUEUE_PRIMARY_LINK_CLASS} w-full`}>
+              Gửi hàng
             </Link>
           ) : (
             <span aria-hidden="true" />
@@ -712,7 +912,7 @@ function WithdrawalModalContent({ target, busy, onApprove, onReject, onClose }) 
         <>
           <div className="rounded-xl border border-neutral bg-white p-3 space-y-1 leading-relaxed">
             <p className="font-bold text-text">Lưu ý nghiệp vụ trước khi ra Quầy:</p>
-            <p>• Moderator kiểm tra hiện vật trong kho theo Mã hàng hóa, chuẩn bị sẵn để chờ giao.</p>
+            <p>• Moderator kiểm tra hiện vật trong điểm kí gửi theo Mã hàng hóa, chuẩn bị sẵn để chờ giao.</p>
             <p>• Khi Member tới, vào <strong>Quầy tiếp nhận</strong> đối chiếu danh tính và quét Mã hàng hóa để bàn giao.</p>
           </div>
 

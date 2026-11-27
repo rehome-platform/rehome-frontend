@@ -3,9 +3,11 @@ import { DEGRADED_DECISION_POLICY } from '../../models/degradedCaseModel.js';
 import { ReturnQueueRow } from './ReturnQueueRow.jsx';
 import { needsItemAction } from '../../services/returnApi.js';
 import React from "react";
+import { Link } from "react-router-dom";
 import { Button, Modal, ImageLightbox, ZoomableImage } from "../../../../components/common/index.js";
 import { formatCurrencyVND } from "../../../../utils/formatters.js";
-import { formatDeadlineWithCountdown } from "../WarehouseUi.jsx";
+import { date, formatDeadlineWithCountdown, money } from "../WarehouseUi.jsx";
+import returnService from "../../services/returnApi.js";
 import { ReturnEvidence, ReturnPhotoComparison } from './ReturnEvidence.jsx';
 import { useToast } from "../../../../context/ToastContext.jsx";
 import { TABLE_COLUMN_LABELS } from "../../../../constants/tableColumns.js";
@@ -321,7 +323,7 @@ export function DegradedCaseModal({
             Không phạt người ký gửi
           </div>
           <p className="text-xs text-[#3a3a3a]">
-            Không phải lỗi người mua, cũng không phải lỗi người ký gửi. Kho sắp xếp vận chuyển nên kho đền. Món hàng bị hư hỏng trong quá trình vận chuyển trả về.
+            Không phải lỗi người mua, cũng không phải lỗi người ký gửi. Điểm kí gửi sắp xếp vận chuyển nên điểm kí gửi đền. Món hàng bị hư hỏng trong quá trình vận chuyển trả về.
           </p>
         </div>
 
@@ -670,7 +672,7 @@ export function ReturnVerdictForm({ inspectionVerdict, setInspectionVerdict, inv
       {inspectionVerdict === 'INVALID' && (
         <div className="pt-2 space-y-2">
           <label className="block text-[11px] font-semibold text-error">
-            Lý do không hợp lệ & ghi chú chụp ảnh kho (Bắt buộc):
+            Lý do không hợp lệ & ghi chú chụp ảnh điểm kí gửi (Bắt buộc):
           </label>
           <textarea
             rows="3"
@@ -682,7 +684,7 @@ export function ReturnVerdictForm({ inspectionVerdict, setInspectionVerdict, inv
         </div>
       )}
       <p className="text-[10px] text-textSecondary">
-        Chọn Không hợp lệ thì bắt buộc nhập lý do và tải lên từ 2 đến 5 ảnh kho chụp để đối chất.
+        Chọn Không hợp lệ thì bắt buộc nhập lý do và tải lên từ 2 đến 5 ảnh điểm kí gửi chụp để đối chất.
       </p>
     </div>
   );
@@ -782,7 +784,7 @@ export function ReturnInspectionVerdict({
         )}
         <div className="flex justify-between">
           <span className="text-textSecondary">Phí trả hàng</span>
-          <span className="text-primary font-bold">kho chịu</span>
+          <span className="text-primary font-bold">điểm kí gửi chịu</span>
         </div>
         <div className="flex justify-between text-sm font-bold pt-2 border-t border-neutral text-text">
           <span>Hoàn vào ví người mua</span>
@@ -913,7 +915,209 @@ export function ReturnInspectionProduct({
   );
 }
 
-export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybill, setIsRejectModalOpen, handleOpenOutcomeModal, approvingReturn = false }) {
+function shipBackMethodLabel(method) {
+  if (method === 'WALLET') return 'Ví ReHome';
+  if (method === 'VNPAY') return 'VNPay';
+  return method || '';
+}
+
+export function InvalidReturnDispositionCard({ selectedItem, onNavigateToCounter }) {
+  const [copiedCode, setCopiedCode] = React.useState(false);
+  const [printingLabel, setPrintingLabel] = React.useState(false);
+  const [labelError, setLabelError] = React.useState('');
+
+  if (!selectedItem || selectedItem.rawStatus !== 'INVALID') {
+    return null;
+  }
+
+  const choice = selectedItem.invalidReturnChoice;
+  const hasShipBackHistory = Boolean(
+    choice === 'SHIP_BACK' ||
+      selectedItem.shipBackFeePaidAt ||
+      selectedItem.shipBackTrackingCode ||
+      selectedItem.shipBackDeliveredAt ||
+      selectedItem.shipBackDeliveryFailedAt ||
+      selectedItem.shipBackFeePaymentDeadline,
+  );
+  const isWarehousePickup = choice === 'WAREHOUSE_PICKUP';
+
+  const handleCopyCode = async (code) => {
+    if (!code) return;
+    try {
+      await navigator.clipboard?.writeText?.(code);
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
+    } catch {
+      // Ignore clipboard failures in restricted environments
+    }
+  };
+
+  const handleOpenLabel = async () => {
+    if (!selectedItem.id || printingLabel) return;
+    setLabelError('');
+    if (selectedItem.shipBackPrintUrl) {
+      window.open(selectedItem.shipBackPrintUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    setPrintingLabel(true);
+    try {
+      const label = await returnService.shipBackLabel(selectedItem.id, 'A5');
+      if (label?.printUrl) {
+        window.open(label.printUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        setLabelError('GHN chưa trả về đường dẫn in nhãn.');
+      }
+    } catch (err) {
+      setLabelError(err?.message || 'Không thể lấy nhãn in GHN.');
+    } finally {
+      setPrintingLabel(false);
+    }
+  };
+
+  return (
+    <div className="border border-neutral rounded-2xl p-4 bg-surface space-y-3 text-xs shadow-sm">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] uppercase font-bold text-textSecondary tracking-wider">
+          Cách nhận lại hàng trả không hợp lệ
+        </span>
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FFFAEB] text-[#B54708] border border-[#FEDF89]">
+          {hasShipBackHistory && isWarehousePickup
+            ? 'Gửi lại thất bại → Nhận tại quầy'
+            : choice === 'SHIP_BACK' || hasShipBackHistory
+              ? 'Gửi lại qua GHN'
+              : isWarehousePickup
+                ? 'Đến điểm kí gửi nhận lại'
+                : 'Chờ người mua chọn'}
+        </span>
+      </div>
+
+      {hasShipBackHistory && (
+        <div className="space-y-2 rounded-xl border border-neutral bg-background p-3">
+          <p className="font-bold text-text">Tiến trình gửi lại hàng trả (SHIP_BACK)</p>
+          <ul className="space-y-1.5 text-[11px]">
+            <li>
+              <span className="font-semibold text-text">1. Chờ trả phí: </span>
+              {selectedItem.shipBackFeePaidAt ? (
+                <span className="text-[#067647]">Đã hoàn tất</span>
+              ) : (
+                <span className="text-[#B54708]">
+                  Đang chờ thanh toán
+                  {selectedItem.shipBackFeePaymentDeadline
+                    ? ` · Hạn trả phí: ${formatDeadlineWithCountdown(selectedItem.shipBackFeePaymentDeadline)}`
+                    : ''}
+                </span>
+              )}
+            </li>
+            <li>
+              <span className="font-semibold text-text">2. Đã trả phí: </span>
+              {selectedItem.shipBackFeePaidAt ? (
+                <span className="text-[#067647] font-medium">
+                  {selectedItem.shipBackFee != null ? money(selectedItem.shipBackFee) : 'Đã thanh toán'}
+                  {selectedItem.shipBackPaymentMethod ? ` (${shipBackMethodLabel(selectedItem.shipBackPaymentMethod)})` : ''}
+                  {` lúc ${date(selectedItem.shipBackFeePaidAt)}`}
+                </span>
+              ) : (
+                <span className="text-textSecondary">Chưa thanh toán</span>
+              )}
+            </li>
+            <li>
+              <span className="font-semibold text-text">3. Đã gửi: </span>
+              {selectedItem.shipBackTrackingCode ? (
+                <span className="inline-flex flex-wrap items-center gap-2">
+                  <span className="font-mono font-bold text-[#006B2C]">{selectedItem.shipBackTrackingCode}</span>
+                  {selectedItem.shipBackShippedAt && (
+                    <span className="text-textSecondary">({date(selectedItem.shipBackShippedAt)})</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleCopyCode(selectedItem.shipBackTrackingCode)}
+                    className="px-1.5 py-0.5 rounded border border-neutral bg-white text-[10px] font-semibold hover:bg-background"
+                  >
+                    {copiedCode ? 'Đã sao chép' : 'Copy'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenLabel}
+                    disabled={printingLabel}
+                    className="px-1.5 py-0.5 rounded border border-[#006B2C] text-[#006B2C] bg-white text-[10px] font-semibold hover:bg-[#ECFDF3]"
+                  >
+                    {printingLabel ? 'Đang mở...' : 'In nhãn GHN'}
+                  </button>
+                </span>
+              ) : selectedItem.shipBackFeePaidAt && !isWarehousePickup ? (
+                <span className="inline-flex items-center gap-2 text-[#B54708]">
+                  <span>Chờ điểm kí gửi tạo vận đơn GHN</span>
+                  {selectedItem.id && (
+                    <Link
+                      to={`/moderator/returns/ship-back/${encodeURIComponent(selectedItem.id)}`}
+                      className="font-bold text-[#006B2C] underline"
+                    >
+                      Mở màn gửi lại →
+                    </Link>
+                  )}
+                </span>
+              ) : (
+                <span className="text-textSecondary">Chưa gửi</span>
+              )}
+            </li>
+            {selectedItem.shipBackDeliveredAt && (
+              <li className="text-[#067647] font-semibold">
+                4. Đã giao: Đã giao thành công lúc {date(selectedItem.shipBackDeliveredAt)}
+              </li>
+            )}
+            {selectedItem.shipBackDeliveryFailedAt && (
+              <li className="text-[#B42318] font-semibold">
+                5. Giao thất bại: Giao thất bại lúc {date(selectedItem.shipBackDeliveryFailedAt)}
+                {selectedItem.shipBackDeliveryFailReason ? ` (${selectedItem.shipBackDeliveryFailReason})` : ''}
+                {' · Hệ thống đã chuyển về nhận tại quầy.'}
+              </li>
+            )}
+          </ul>
+          {labelError && <p className="text-[11px] text-[#B42318]">{labelError}</p>}
+        </div>
+      )}
+
+      {isWarehousePickup && (
+        <div className="space-y-1.5 rounded-xl border border-neutral bg-background p-3">
+          <p className="font-bold text-text">Nhận lại tại quầy (WAREHOUSE_PICKUP)</p>
+          {selectedItem.pickedUpAt ? (
+            <p className="font-semibold text-[#006B2C]">
+              Đã bàn giao tại quầy lúc {date(selectedItem.pickedUpAt)}
+            </p>
+          ) : (
+            <div className="space-y-1.5">
+              <p className="text-textSecondary">
+                Người mua đến Quầy tiếp nhận để lấy lại hàng trả.
+                {selectedItem.pickupDeadline ? ` Hạn nhận: ${formatDeadlineWithCountdown(selectedItem.pickupDeadline)}` : ''}
+              </p>
+              {onNavigateToCounter && (
+                <Button type="button" variant="outline" size="sm" onClick={onNavigateToCounter}>
+                  Mở Quầy tiếp nhận →
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!hasShipBackHistory && !isWarehousePickup && (
+        <p className="text-[11px] text-textSecondary">
+          Người mua chưa chọn cách nhận lại hàng.
+          {selectedItem.pickupDeadline ? ` Hạn chọn/nhận lại: ${formatDeadlineWithCountdown(selectedItem.pickupDeadline)}` : ''}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function ReturnReviewDecision({
+  selectedItem,
+  handleApproveAndCreateWaybill,
+  setIsRejectModalOpen,
+  handleOpenOutcomeModal,
+  approvingReturn = false,
+  onNavigateToCounter,
+}) {
   const thumbUrl = selectedItem?.packingPhotoUrls?.[0] || selectedItem?.stockInPhotos?.[0] || null;
   const decisionPhotos = selectedItem?.packingPhotoUrls?.length
     ? selectedItem.packingPhotoUrls
@@ -1026,7 +1230,7 @@ export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybi
             )}
             {selectedItem?.pickupDeadline && (
               <div className="flex justify-between gap-2">
-                <span className="text-textSecondary">Hạn nhận lại tại kho:</span>
+                <span className="text-textSecondary">Hạn nhận lại tại điểm kí gửi:</span>
                 <span className="font-semibold text-text">{formatDeadlineWithCountdown(selectedItem.pickupDeadline)}</span>
               </div>
             )}
@@ -1034,6 +1238,11 @@ export function ReturnReviewDecision({ selectedItem, handleApproveAndCreateWaybi
         )}
       </div>
     
+      <InvalidReturnDispositionCard
+        selectedItem={selectedItem}
+        onNavigateToCounter={onNavigateToCounter}
+      />
+
       {/* Footer Buttons */}
       {selectedItem?.status === 'PENDING_APPROVAL' && (
         <div className="pt-2 flex flex-col sm:flex-row gap-3">
@@ -1110,8 +1319,8 @@ export function ReturnRequestDetails({ selectedItem, setIsCompareModalOpen }) {
             <div className="text-xs font-bold text-text">Đối chiếu hình ảnh</div>
             <p className="text-[11px] text-textSecondary">
               {hasPackingPhotos
-                ? 'Ảnh đóng gói do kho chụp trước khi bàn giao GHN — dùng làm mốc chuẩn đối chiếu với ảnh người mua gửi.'
-                : 'Đơn hàng cũ chưa có ảnh đóng gói, dùng ảnh kho tự chụp lúc nhập làm mốc chuẩn đối chiếu.'}
+                ? 'Ảnh đóng gói do điểm kí gửi chụp trước khi bàn giao GHN — dùng làm mốc chuẩn đối chiếu với ảnh người mua gửi.'
+                : 'Đơn hàng cũ chưa có ảnh đóng gói, dùng ảnh điểm kí gửi tự chụp lúc nhập làm mốc chuẩn đối chiếu.'}
             </p>
           </div>
           {setIsCompareModalOpen && (
@@ -1144,7 +1353,7 @@ export function ReturnQuickDetailModal({ item, onClose, onOpenFullReview }) {
   const statusMap = {
     PENDING_APPROVAL: 'Chờ duyệt',
     WAITING_BUYER_DISPATCH: 'Chờ người mua gửi',
-    RETURNING: 'Đang về kho',
+    RETURNING: 'Đang về điểm kí gửi',
     RECEIVED_INSPECT: 'Hàng đã về, chờ kiểm',
     RESOLVED: needsItemAction(item) ? 'Đã hoàn tiền · Chờ xử lý món' : 'Đã xong',
   };
@@ -1213,6 +1422,18 @@ export function ReturnQuickDetailModal({ item, onClose, onOpenFullReview }) {
             <span className="font-semibold shrink-0">Trạng thái:</span>
             <span className="font-bold text-text text-right">{statusMap[item.status] || item.carrierStatus || item.status}</span>
           </div>
+          {item.rawStatus === 'INVALID' && item.pickedUpAt && (
+            <div className="flex justify-between gap-4">
+              <span className="font-semibold shrink-0">Bàn giao tại quầy:</span>
+              <span className="font-semibold text-[#006B2C] text-right">Đã bàn giao tại quầy lúc {date(item.pickedUpAt)}</span>
+            </div>
+          )}
+          {item.rawStatus === 'INVALID' && item.shipBackTrackingCode && (
+            <div className="flex justify-between gap-4">
+              <span className="font-semibold shrink-0">Mã vận đơn gửi lại:</span>
+              <span className="font-mono font-bold text-[#006B2C] text-right">{item.shipBackTrackingCode}</span>
+            </div>
+          )}
           <div className="pt-2 border-t border-neutral">
             <span className="font-semibold block mb-1">Lý do trả hàng:</span>
             <p className="text-text font-medium leading-relaxed">{item.reason || '—'}</p>
@@ -1346,7 +1567,7 @@ export function ReturnQueueTabs({ setActiveTab, activeTab, tabCounts }) {
             : 'bg-surface text-textSecondary border border-neutral hover:bg-background'
         }`}
       >
-        Đang về kho · {tabCounts.RETURNING}
+        Đang về điểm kí gửi · {tabCounts.RETURNING}
       </button>
       <button
         onClick={() => setActiveTab('RECEIVED_INSPECT')}
