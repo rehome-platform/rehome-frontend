@@ -63,7 +63,7 @@ describe('ProductEditModal', () => {
 
     const categorySelect = await screen.findByLabelText(/Danh mục/i);
     await waitFor(() => expect(categorySelect).not.toBeDisabled());
-    expect(screen.getByTestId('edit-product-tryon-slot')).toHaveTextContent('Áo (TOP)');
+    expect(screen.getByTestId('edit-product-tryon-slot')).toHaveTextContent(/^Áo$/);
 
     // Only name and photos are edited -> payload omits unchanged categoryId
     const nameInput = screen.getByLabelText(/Tên sản phẩm/i);
@@ -103,7 +103,7 @@ describe('ProductEditModal', () => {
     const categorySelect = await screen.findByLabelText(/Danh mục/i);
     await waitFor(() => expect(categorySelect).toHaveValue('cat-top'));
     fireEvent.change(categorySelect, { target: { value: 'cat-bottom' } });
-    expect(screen.getByTestId('edit-product-tryon-slot')).toHaveTextContent('Quần / Váy (BOTTOM)');
+    expect(screen.getByTestId('edit-product-tryon-slot')).toHaveTextContent(/^Quần \/ Váy$/);
 
     fireEvent.click(screen.getByRole('button', { name: /Lưu thay đổi/i }));
 
@@ -238,7 +238,7 @@ describe('ProductEditModal', () => {
 
     const categorySelect = await screen.findByLabelText(/Danh mục/i);
     await waitFor(() => expect(categorySelect).toHaveValue('cat-dress'));
-    expect(screen.getByTestId('edit-product-tryon-slot')).toHaveTextContent('Đầm / Liền thân (DRESS)');
+    expect(screen.getByTestId('edit-product-tryon-slot')).toHaveTextContent(/^Đầm \/ Liền thân$/);
 
     const saveBtn = screen.getByRole('button', { name: /Lưu thay đổi/i });
     fireEvent.click(saveBtn);
@@ -277,7 +277,7 @@ describe('ProductEditModal', () => {
     const categorySelect = await screen.findByLabelText(/Danh mục/i);
     await waitFor(() => expect(categorySelect).not.toBeDisabled());
     expect(categorySelect).toHaveValue('cat-top');
-    expect(screen.getByTestId('edit-product-tryon-slot')).toHaveTextContent('Áo (TOP)');
+    expect(screen.getByTestId('edit-product-tryon-slot')).toHaveTextContent(/^Áo$/);
 
     rerender(
       <ProductEditModal isOpen={false} item={baseItem} onUpdated={vi.fn()} onClose={vi.fn()} />,

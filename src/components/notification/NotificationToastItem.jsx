@@ -6,6 +6,7 @@ import { useNotification } from '../../context/NotificationContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { resolveNotificationUrl } from '../../utils/notificationNavigator.js';
 import { formatDateTime } from '../../utils/formatters.js';
+import { formatNotificationDisplayText } from '../../utils/notificationText.js';
 
 gsap.registerPlugin(useGSAP);
 
@@ -108,6 +109,9 @@ export default function NotificationToastItem({ toast, onDismiss, userRole }) {
     dismiss();
   };
 
+  const displayTitle = formatNotificationDisplayText(toast.title) || 'Thông báo mới';
+  const displayMessage = formatNotificationDisplayText(toast.message);
+
   return (
     <div
       ref={toastRef}
@@ -136,12 +140,14 @@ export default function NotificationToastItem({ toast, onDismiss, userRole }) {
         >
           <div className="flex items-center justify-between gap-1">
             <h4 className="text-sm font-bold text-[#1F2A37] truncate">
-              {toast.title || 'Thông báo mới'}
+              {displayTitle}
             </h4>
           </div>
-          <p className="text-xs text-[#586776] line-clamp-2 mt-1 leading-relaxed">
-            {toast.message}
-          </p>
+          {displayMessage && (
+            <p className="text-xs text-[#586776] line-clamp-2 mt-1 leading-relaxed">
+              {displayMessage}
+            </p>
+          )}
           {toast.createdAt && (
             <span className="text-[10px] text-[#586776] mt-1 block">
               {formatDateTime(toast.createdAt)}

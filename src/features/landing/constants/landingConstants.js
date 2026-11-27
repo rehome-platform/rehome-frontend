@@ -60,8 +60,8 @@ export const AI_OUTFIT_COMBOS = [
     label: 'Thanh lịch',
     modelType: 'Nữ',
     matchScore: '96%',
-    top: { name: 'Áo sơ mi Zara trắng tay dài', tag: 'Slot Áo (TOP)', price: 220000 },
-    bottom: { name: 'Quần kaki Uniqlo be ống đứng', tag: 'AI gợi ý (BOTTOM)', price: 245000 },
+    top: { name: 'Áo sơ mi Zara trắng tay dài', tag: 'Slot Áo', price: 220000 },
+    bottom: { name: 'Quần kaki Uniqlo be ống đứng', tag: 'AI gợi ý', price: 245000 },
     styleNote:
       'AI cân đối phom suông và tông trắng–be trung tính, tôn dáng gọn gàng đi làm hoặc gặp đối tác.',
   },
@@ -70,8 +70,8 @@ export const AI_OUTFIT_COMBOS = [
     label: 'Năng động',
     modelType: 'Nam',
     matchScore: '94%',
-    top: { name: 'Áo khoác gió Nike xanh đen', tag: 'Slot Áo (TOP)', price: 380000 },
-    bottom: { name: 'Quần jeans Levi’s 501 ống đứng', tag: 'AI gợi ý (BOTTOM)', price: 420000 },
+    top: { name: 'Áo khoác gió Nike xanh đen', tag: 'Slot Áo', price: 380000 },
+    bottom: { name: 'Quần jeans Levi’s 501 ống đứng', tag: 'AI gợi ý', price: 420000 },
     styleNote:
       'Kết hợp áo khoác dáng thể thao với denim ống đứng giúp giữ phom năng động cho cuối tuần.',
   },
@@ -80,7 +80,7 @@ export const AI_OUTFIT_COMBOS = [
     label: 'Tối giản',
     modelType: 'Nữ',
     matchScore: '97%',
-    top: { name: 'Áo thun Uniqlo cotton trắng trơn', tag: 'Slot Áo (TOP)', price: 165000 },
+    top: { name: 'Áo thun Uniqlo cotton trắng trơn', tag: 'Slot Áo', price: 165000 },
     bottom: { name: 'Đầm / Chân váy midi linen', tag: 'AI gợi ý đồng bộ', price: 260000 },
     styleNote:
       'Tối ưu tỷ lệ thân trên–dưới với chất liệu thoáng nhẹ, mặc thử một chạm trên mẫu cá nhân.',

@@ -6,6 +6,7 @@ import { useNotification } from '../../context/NotificationContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { resolveNotificationUrl } from '../../utils/notificationNavigator.js';
 import { formatDateTime } from '../../utils/formatters.js';
+import { formatNotificationDisplayText } from '../../utils/notificationText.js';
 
 gsap.registerPlugin(useGSAP);
 
@@ -150,6 +151,8 @@ export default function NotificationDropdown({ onClose, userRole, className = ''
         ) : (
           filteredNotifications.map((item) => {
             const isUnread = !item.isRead && !item.read;
+            const displayTitle = formatNotificationDisplayText(item.title) || 'Thông báo';
+            const displayMessage = formatNotificationDisplayText(item.message);
             return (
               <div
                 key={item.id}
@@ -198,12 +201,14 @@ export default function NotificationDropdown({ onClose, userRole, className = ''
                           : 'font-semibold text-[#1F2A37]'
                       }`}
                     >
-                      {item.title || 'Thông báo'}
+                      {displayTitle}
                     </h4>
                   </div>
-                  <p className="text-xs text-[#586776] line-clamp-2 mt-0.5 leading-relaxed">
-                    {item.message}
-                  </p>
+                  {displayMessage && (
+                    <p className="text-xs text-[#586776] line-clamp-2 mt-0.5 leading-relaxed">
+                      {displayMessage}
+                    </p>
+                  )}
                   {item.createdAt && (
                     <span className="text-[10px] text-[#586776] mt-1 block">
                       {formatDateTime(item.createdAt)}

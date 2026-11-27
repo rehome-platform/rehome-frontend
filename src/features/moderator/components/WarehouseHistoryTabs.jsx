@@ -32,7 +32,7 @@ function detailLink(row) {
   return null;
 }
 
-export function WarehouseHistoryTabs({ type, children }) {
+export function WarehouseHistoryTabs({ type, children, onWorkTabClick }) {
   const [search, setSearch] = useSearchParams();
   const history = search.get('view') === 'history';
   const page = Math.max(0, Number(search.get('historyPage')) || 0);
@@ -47,7 +47,7 @@ export function WarehouseHistoryTabs({ type, children }) {
   return (
     <div className="space-y-4">
       <div role="tablist" aria-label="Công việc và lịch sử" className="flex flex-wrap gap-2">
-        <Button role="tab" aria-selected={!history} variant={history ? 'outline' : 'primary'} onClick={() => update('view', null)}>Công việc</Button>
+        <Button role="tab" aria-selected={!history} variant={history ? 'outline' : 'primary'} onClick={() => (onWorkTabClick ? onWorkTabClick() : update('view', null))}>Công việc</Button>
         <Button role="tab" aria-selected={history} variant={history ? 'primary' : 'outline'} onClick={() => update('view', 'history')}>Lịch sử</Button>
       </div>
       {history ? <section aria-label="Lịch sử thao tác kho" className="space-y-4">

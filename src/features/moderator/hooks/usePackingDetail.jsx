@@ -191,6 +191,7 @@ export function usePackingDetail({ orderId, onChanged }) {
                 ? prev.items.map(item => {
                     const isMatch =
                       (matchedId && (item.productId === matchedId || item.id === matchedId)) ||
+                      (item.productId && String(item.productId).toUpperCase() === code.toUpperCase()) ||
                       (item.sku && item.sku.toUpperCase() === code.toUpperCase());
                     return isMatch ? { ...item, scanned: true } : item;
                   })

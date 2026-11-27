@@ -67,6 +67,10 @@ export default function WarehouseInboxPage() {
   const messagesEndRef = useRef(null);
   const activeConvIdRef = useRef(null);
   const fetchSeqRef = useRef(0);
+  const isMountedRef = useRef(true);
+  const convFetchSeqRef = useRef(0);
+  const inFlightConversationsRef = useRef(null);
+  const inFlightMessagesRef = useRef(new Map());
 
   activeConvIdRef.current = selectedConv?.id ?? null;
 
@@ -104,12 +108,26 @@ export default function WarehouseInboxPage() {
       }
     }
     const silent = Boolean(!force && Array.isArray(cached?.data));
+    const seq = ++convFetchSeqRef.current;
+    let requestPromise = !force ? inFlightConversationsRef.current : null;
     try {
       if (!silent) {
         setLoading(true);
         setError(null);
       }
-      const res = await warehouseInboxService.getConversations();
+      if (!requestPromise) {
+        const createdPromise = warehouseInboxService.getConversations();
+        requestPromise = createdPromise.finally(() => {
+          if (inFlightConversationsRef.current === requestPromise) {
+            inFlightConversationsRef.current = null;
+          }
+        });
+        inFlightConversationsRef.current = requestPromise;
+      }
+      const res = await requestPromise;
+      if (!isMountedRef.current || seq !== convFetchSeqRef.current) {
+        return;
+      }
       const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
       setConversations(list);
       cache?.write(INBOX_CONVS_KEY, list);
@@ -127,18 +145,27 @@ export default function WarehouseInboxPage() {
         return null;
       });
     } catch (err) {
+      if (!isMountedRef.current || seq !== convFetchSeqRef.current) {
+        return;
+      }
       console.error('Failed to load conversations:', err);
       if (!silent) {
         setError('Không thể kết nối đến máy chủ hộp thư (Lỗi 500 hoặc mất kết nối). Vui lòng thử lại sau.');
         setConversations([]);
       }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current && seq === convFetchSeqRef.current) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
+    isMountedRef.current = true;
     fetchConversations();
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   // Tải danh sách tin nhắn của hội thoại được chọn (API 112)
@@ -158,6 +185,7 @@ export default function WarehouseInboxPage() {
       }
     }
     const silent = Boolean(!force && !append && page === 0 && cachedMsgEntry?.data);
+    const inflightKey = `${convId}:${page}:${append}`;
     try {
       if (append) {
         setLoadingMoreMessages(true);
@@ -171,14 +199,24 @@ export default function WarehouseInboxPage() {
       let fetchedList = [];
       let res = null;
       if (typeof warehouseInboxService.getMessages === 'function') {
-        res = await warehouseInboxService.getMessages(convId, { page, size: 50 });
+        let msgPromise = !force ? inFlightMessagesRef.current.get(inflightKey) : null;
+        if (!msgPromise) {
+          const createdMsgPromise = warehouseInboxService.getMessages(convId, { page, size: 50 });
+          msgPromise = createdMsgPromise.finally(() => {
+            if (inFlightMessagesRef.current.get(inflightKey) === msgPromise) {
+              inFlightMessagesRef.current.delete(inflightKey);
+            }
+          });
+          inFlightMessagesRef.current.set(inflightKey, msgPromise);
+        }
+        res = await msgPromise;
         fetchedList = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
       } else {
         fetchedList = initialMessages;
       }
 
-      // Guard against stale responses after switching conversations
-      if (seq !== fetchSeqRef.current || String(activeConvIdRef.current) !== String(convId)) {
+      // Guard against stale responses after unmount or switching conversations
+      if (!isMountedRef.current || seq !== fetchSeqRef.current || String(activeConvIdRef.current) !== String(convId)) {
         return;
       }
 
@@ -228,7 +266,7 @@ export default function WarehouseInboxPage() {
         cache?.write(key, { messages: uniqueMessages, hasMore: nextHasMore, page });
       }
     } catch (err) {
-      if (seq !== fetchSeqRef.current || String(activeConvIdRef.current) !== String(convId)) {
+      if (!isMountedRef.current || seq !== fetchSeqRef.current || String(activeConvIdRef.current) !== String(convId)) {
         return;
       }
       console.error('Failed to fetch messages for conversation:', convId, err);
@@ -239,7 +277,7 @@ export default function WarehouseInboxPage() {
         }
       }
     } finally {
-      if (seq === fetchSeqRef.current && String(activeConvIdRef.current) === String(convId)) {
+      if (isMountedRef.current && seq === fetchSeqRef.current && String(activeConvIdRef.current) === String(convId)) {
         setMessagesLoading(false);
         setLoadingMoreMessages(false);
       }

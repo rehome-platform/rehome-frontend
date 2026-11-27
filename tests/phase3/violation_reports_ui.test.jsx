@@ -196,5 +196,40 @@ describe('ViolationReportsPage UI & Design Tokens', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Chi tiết' }));
     expect(await screen.findByText(/Bài viết quảng cáo đánh bạc trái phép/i)).toBeInTheDocument();
   });
+
+  it('renders only a single back button in RESOLVED detail view without duplicate bottom button', async () => {
+    vi.mocked(violationReportService.list).mockResolvedValue({
+      data: [mockReports[0]],
+      total: 1,
+    });
+    vi.mocked(violationReportService.getDetail).mockResolvedValue({
+      ...mockDetail,
+      status: 'RESOLVED',
+      resolutionReason: 'Đã gỡ bài viết vi phạm',
+    });
+
+    render(
+      <MemoryRouter>
+        <ViolationReportsPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('5 báo cáo')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('5 báo cáo').closest('tr'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Đối tượng này đã được quyết định xử lý xong/i)).toBeInTheDocument();
+    });
+
+    const backButtons = screen.getAllByRole('button', { name: 'Quay lại danh sách hàng đợi' });
+    expect(backButtons).toHaveLength(1);
+    fireEvent.click(backButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText('5 báo cáo')).toBeInTheDocument();
+    });
+  });
 });
 

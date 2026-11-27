@@ -179,8 +179,9 @@ export default function InventoryDetailPage() {
       subtitle={`Mã hàng hóa: ${sku}`}
       actions={
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => navigate('/moderator/inventory')}>
-            ← Quay lại Quản lý sản phẩm
+          <Button variant="outline" onClick={() => navigate('/moderator/inventory')} className="gap-1.5">
+            <span aria-hidden="true">←</span>
+            <span>Quay lại Quản lý sản phẩm</span>
           </Button>
           <Button variant="outline" onClick={() => product.refresh()}>
             Tải lại
@@ -197,9 +198,6 @@ export default function InventoryDetailPage() {
           <p className="text-xs text-amber-800 leading-relaxed">
             Sản phẩm với Mã hàng hóa <strong>{sku}</strong> đang được lưu trữ tại chi nhánh kho khác. Bạn chỉ có quyền kiểm kê và in tem đối với các sản phẩm thuộc kho bạn được phân công.
           </p>
-          <Button variant="outline" onClick={() => navigate('/moderator/inventory')}>
-            Quay lại Quản lý sản phẩm
-          </Button>
         </div>
       )}
 
@@ -211,9 +209,6 @@ export default function InventoryDetailPage() {
           <p className="text-xs text-red-800 leading-relaxed">
             Hệ thống không tìm thấy bất kỳ sản phẩm nào có Mã hàng hóa: <strong>{sku}</strong>. Vui lòng kiểm tra lại tem nhãn hoặc quét lại mã QR.
           </p>
-          <Button variant="outline" onClick={() => navigate('/moderator/inventory')}>
-            Quay lại Quản lý sản phẩm
-          </Button>
         </div>
       )}
 

@@ -894,7 +894,7 @@ describe('ConsignmentDetailPage component behaviors', () => {
       expect(
         await screen.findByText('Sản phẩm không thuộc kho bạn quản lý'),
       ).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Quay lại Quản lý sản phẩm' })).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: 'Quay lại Quản lý sản phẩm' })).toHaveLength(1);
     });
   });
 
@@ -923,7 +923,10 @@ describe('ConsignmentDetailPage component behaviors', () => {
       // Check header and categories table
       expect(await screen.findByRole('heading', { name: 'Danh mục & thương hiệu' })).toBeInTheDocument();
       expect(screen.getByText('Áo khoác dạ')).toBeInTheDocument();
-      expect(screen.getByText('Áo (TOP)')).toBeInTheDocument();
+      const table = screen.getByRole('table');
+      expect(within(table).getByText('Áo')).toBeInTheDocument();
+      expect(within(table).getByText('Quần / Váy')).toBeInTheDocument();
+      expect(screen.queryByText(/\((TOP|BOTTOM|DRESS)\)/)).not.toBeInTheDocument();
       expect(screen.getByText('Quần tây nam')).toBeInTheDocument();
       expect(screen.getByText('ĐÃ ẨN')).toBeInTheDocument();
 

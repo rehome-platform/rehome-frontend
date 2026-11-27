@@ -534,4 +534,81 @@ describe('WarehouseInboxPage Crash Resistance & Design Tokens', () => {
     });
     expect(screen.queryByText('Vui lòng không dùng đồ ngu')).not.toBeInTheDocument();
   });
+
+  it('deduplicates initial conversations and messages fetches under React.StrictMode', async () => {
+    vi.mocked(warehouseInboxService.getConversations).mockResolvedValueOnce({
+      data: [
+        {
+          id: 'conv-strict-1',
+          memberName: 'Nguyễn Strict',
+          status: 'UNANSWERED',
+          lastMessage: { content: 'Xin chào', createdAt: '2026-11-27T10:00:00Z' },
+        },
+      ],
+      total: 1,
+    });
+    vi.mocked(warehouseInboxService.getMessages).mockResolvedValueOnce({
+      data: [
+        {
+          id: 'msg-strict-1',
+          senderId: 'member-1',
+          content: 'Tin nhắn StrictMode',
+          createdAt: '2026-11-27T10:00:00Z',
+          isMine: false,
+        },
+      ],
+      total: 1,
+    });
+
+    render(
+      <React.StrictMode>
+        <MemoryRouter>
+          <WarehouseInboxPage />
+        </MemoryRouter>
+      </React.StrictMode>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Tin nhắn StrictMode')).toBeInTheDocument();
+    });
+
+    expect(warehouseInboxService.getConversations).toHaveBeenCalledTimes(1);
+    expect(warehouseInboxService.getMessages).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows manual reload via "Tải lại" button after an initial 500 error', async () => {
+    vi.mocked(warehouseInboxService.getConversations)
+      .mockRejectedValueOnce(new Error('Internal Server Error 500'))
+      .mockResolvedValueOnce({
+        data: [
+          {
+            id: 'conv-retry-1',
+            memberName: 'Khách Retry',
+            status: 'UNANSWERED',
+            lastMessage: { content: 'Đã tải lại', createdAt: '2026-11-27T10:05:00Z' },
+          },
+        ],
+        total: 1,
+      });
+    vi.mocked(warehouseInboxService.getMessages).mockResolvedValueOnce({
+      data: [],
+      total: 0,
+    });
+
+    render(
+      <MemoryRouter>
+        <WarehouseInboxPage />
+      </MemoryRouter>
+    );
+
+    const reloadBtn = await screen.findByRole('button', { name: /Tải lại/i });
+    expect(warehouseInboxService.getConversations).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(reloadBtn);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Khách Retry').length).toBeGreaterThan(0);
+    });
+    expect(warehouseInboxService.getConversations).toHaveBeenCalledTimes(2);
+  });
 });
