@@ -25,6 +25,7 @@ import {
 } from '../models/queueModel.js';
 import { OVERDUE_THRESHOLD_HOURS } from './ConsignmentQueuePage.config.js';
 import { TABLE_COLUMN_LABELS } from '../../../constants/tableColumns.js';
+import { formatWarehouseDisplayName } from '../../../utils/formatters.js';
 
 const countOf = (data) => data?.totalElements ?? listItems(data).length;
 
@@ -158,7 +159,7 @@ export default function WarehouseHomePage() {
   return (
     <Page
       title="Tổng quan hôm nay"
-      subtitle={`${today} · mọi số liệu chỉ tính trong ${warehouse?.name || 'điểm kí gửi hiện tại'}`}
+      subtitle={`${today} · mọi số liệu chỉ tính trong ${formatWarehouseDisplayName(warehouse?.name) || 'điểm kí gửi hiện tại'}`}
       actions={
         <>
           <Button variant="outline" onClick={refresh} className="gap-1.5">
@@ -285,18 +286,21 @@ export default function WarehouseHomePage() {
                           )}
                         </td>
                         <td className="py-3 px-3.5 text-right whitespace-nowrap align-middle">
-                          <div className="flex items-center justify-end gap-2 flex-nowrap">
+                          <div
+                            data-testid="home-task-actions-cell"
+                            className="inline-grid grid-cols-[auto_144px] items-center gap-2 whitespace-nowrap"
+                          >
                             <TableActionButton
                               action="view"
                               onClick={() => setDetailTarget(task)}
                             />
                             {!task.claimedBy ? (
-                              <Button size="sm" className={QUEUE_PRIMARY_BTN_CLASS} loading={task.source.busy} onClick={() => setClaimTarget(task)}>
+                              <Button size="sm" className={`${QUEUE_PRIMARY_BTN_CLASS} w-full`} loading={task.source.busy} onClick={() => setClaimTarget(task)}>
                                 Nhận việc
                               </Button>
                             ) : mine ? (
                               <Link
-                                className={QUEUE_PRIMARY_LINK_CLASS}
+                                className={`${QUEUE_PRIMARY_LINK_CLASS} w-full`}
                                 to={link}
                               >
                                 Mở
@@ -306,7 +310,7 @@ export default function WarehouseHomePage() {
                                 size="sm"
                                 disabled
                                 variant="outline"
-                                className={`${QUEUE_ACTION_BTN_CLASS} opacity-50 cursor-not-allowed`}
+                                className={`${QUEUE_ACTION_BTN_CLASS} w-full opacity-50 cursor-not-allowed`}
                               >
                                 Đã có người nhận
                               </Button>
