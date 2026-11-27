@@ -197,7 +197,8 @@ test('StockInForm syncs category AI try-on slot and has no background-removal UI
   await expect(page.getByText('Nhập thông tin sản phẩm và nhập kho')).toBeVisible();
   await expect(page.getByLabel('Lọc theo Slot thử đồ AI')).toBeVisible();
   await page.getByLabel('Danh mục').selectOption('cat-1');
-  await expect(page.getByTestId('stockin-tryon-slot-badge')).toContainText('Áo (TOP)');
+  await expect(page.getByTestId('stockin-tryon-slot-badge')).toContainText('Áo');
+  await expect(page.getByTestId('stockin-tryon-slot-badge')).not.toContainText('(TOP)');
   await expect(page.getByText(/Xóa nền|Tách nền|removeBackground/i)).toHaveCount(0);
 });
 

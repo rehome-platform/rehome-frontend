@@ -193,15 +193,18 @@ describe('Phase 2 boundary rules', () => {
       expect(formatTryOnSlot('').label).toBe('Không xác định');
 
       const top = formatTryOnSlot('TOP');
-      expect(top.label).toBe('Áo (TOP)');
+      expect(top.code).toBe('TOP');
+      expect(top.label).toBe('Áo');
       expect(top.badgeClass).toContain('bg-[#EFF8FF]');
 
       const bottom = formatTryOnSlot('bottom');
-      expect(bottom.label).toBe('Quần / Váy (BOTTOM)');
+      expect(bottom.code).toBe('BOTTOM');
+      expect(bottom.label).toBe('Quần / Váy');
       expect(bottom.badgeClass).toContain('bg-[#F4F3FF]');
 
       const dress = formatTryOnSlot('DRESS');
-      expect(dress.label).toBe('Đầm / Liền thân (DRESS)');
+      expect(dress.code).toBe('DRESS');
+      expect(dress.label).toBe('Đầm / Liền thân');
       expect(dress.badgeClass).toContain('bg-[#FFFAEB]');
 
       const custom = formatTryOnSlot('CUSTOM_SLOT');

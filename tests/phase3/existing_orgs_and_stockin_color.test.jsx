@@ -294,7 +294,8 @@ describe('StockInForm - Try-on cleanup & Category/Brand locking', () => {
 
     await screen.findByLabelText('Danh mục');
     expect(screen.getByLabelText('Lọc theo Slot thử đồ AI')).toBeInTheDocument();
-    expect(screen.getByTestId('stockin-tryon-slot-badge')).toHaveTextContent('Áo (TOP)');
+    expect(screen.getByTestId('stockin-tryon-slot-badge')).toHaveTextContent('Áo');
+    expect(screen.getByTestId('stockin-tryon-slot-badge')).not.toHaveTextContent('(TOP)');
     expect(screen.queryByText(/Ảnh dùng cho thử đồ AI/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Không cần tách nền/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/chưa tách nền/i)).not.toBeInTheDocument();

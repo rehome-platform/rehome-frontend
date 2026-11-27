@@ -230,10 +230,12 @@ describe('Task 5: Allow editing Category, Brand and Color during stock-in', () =
     );
 
     const badge = await screen.findByTestId('stockin-tryon-slot-badge');
-    expect(badge).toHaveTextContent('Áo (TOP)');
+    expect(badge).toHaveTextContent('Áo');
+    expect(badge).not.toHaveTextContent('(TOP)');
 
     // Tên sản phẩm là "Quần jeans..." nhưng đang chọn danh mục TOP -> hiện cảnh báo lệch slot
-    expect(screen.getByTestId('stockin-slot-mismatch-warning')).toHaveTextContent(/Quần \/ Váy \(BOTTOM\)/);
+    expect(screen.getByTestId('stockin-slot-mismatch-warning')).toHaveTextContent(/Quần \/ Váy/);
+    expect(screen.getByTestId('stockin-slot-mismatch-warning')).not.toHaveTextContent(/\((TOP|BOTTOM|DRESS)\)/);
 
     // Lọc theo BOTTOM -> chỉ còn danh mục BOTTOM trong select Danh mục và reset category không khớp
     const slotFilter = screen.getByLabelText('Lọc theo Slot thử đồ AI');
@@ -245,7 +247,8 @@ describe('Task 5: Allow editing Category, Brand and Color during stock-in', () =
     expect(screen.getByRole('option', { name: 'Quần jeans' })).toBeInTheDocument();
 
     fireEvent.change(categorySelect, { target: { value: 'cat-bottom' } });
-    expect(screen.getByTestId('stockin-tryon-slot-badge')).toHaveTextContent('Quần / Váy (BOTTOM)');
+    expect(screen.getByTestId('stockin-tryon-slot-badge')).toHaveTextContent('Quần / Váy');
+    expect(screen.getByTestId('stockin-tryon-slot-badge')).not.toHaveTextContent('(BOTTOM)');
     expect(screen.queryByTestId('stockin-slot-mismatch-warning')).not.toBeInTheDocument();
   });
 });
