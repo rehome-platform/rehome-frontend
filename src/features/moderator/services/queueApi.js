@@ -61,6 +61,7 @@ export const queueService = {
         refId: item.refId ?? item.id,
         // RETURN & RETURN_SHIP_BACK refId point to the return request; claim/release uses queueId.
         ...((item.type === 'RETURN' || item.type === 'RETURN_SHIP_BACK') ? { returnId: item.returnId ?? item.refId } : {}),
+        ...(item.type === 'RECONSIGN_COUNTER' ? { decisionId: item.decisionId ?? item.refId } : {}),
         formId: item.formId ?? item.refId ?? item.id,
         orderId: item.orderId ?? item.refId,
         orderCreatedAt,
@@ -72,15 +73,19 @@ export const queueService = {
         name: item.targetName ?? item.name ?? item.productName ?? item.orderNo ?? item.orgName,
         memberName: item.subjectSubtitle ?? item.memberName ?? item.recipientName,
         sku: item.sku ?? item.productId ?? null,
+        productId: item.productId ?? item.sku ?? null,
         productImageUrl: item.productImageUrl ?? item.imageUrl ?? item.photoUrl ?? null,
-        shippingProvinceName: item.shippingProvinceName ?? item.provinceName ?? null,
-        shippingPhone: item.shippingPhone ?? null,
-        shippingAddress: item.shippingAddress ?? null,
+        shippingProvinceName: item.shipBackProvinceName ?? item.shippingProvinceName ?? item.provinceName ?? null,
+        shippingPhone: item.shippingPhone ?? item.shipBackPhone ?? null,
+        shippingAddress:
+          item.shippingAddress ??
+          ([item.shipBackAddressDetail, item.shipBackWardName, item.shipBackProvinceName].filter(Boolean).join(', ') || null),
         shipBackFee: item.shipBackFee ?? item.feeCharged ?? null,
         shipBackPaymentMethod: item.shipBackPaymentMethod ?? null,
-        shipBackFeePaidAt: item.shipBackFeePaidAt ?? null,
-        shipBackDeadline: item.shipBackDeadline ?? null,
+        shipBackFeePaidAt: item.shipBackPaidAt ?? item.shipBackFeePaidAt ?? null,
+        shipBackDeadline: item.shipBackShipDeadline ?? item.shipBackDeadline ?? null,
         shipBackTrackingCode: item.shipBackTrackingCode ?? null,
+        shipBackStatus: item.shipBackStatus ?? (item.type === 'RETURN_SHIP_BACK' ? item.status : null),
         status: item.status || (item.claimedBy ? 'PROCESSING' : 'PENDING'),
       };
     };

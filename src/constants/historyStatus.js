@@ -37,6 +37,8 @@ export const HISTORY_ACTION_LABELS = {
   HANDOVER_ITEM: 'Bàn giao nhận lại',
   CONFIRM_UNCLAIMED_TRANSFER: 'Chuyển giao hàng quá hạn nhận lại',
   APPLY_RETURN_ITEM_ACTION: 'Xử lý món hàng hoàn trả',
+  HANDOVER_INVALID_RETURN: 'Bàn giao hàng trả không hợp lệ',
+  SHIP_BACK_RETURN: 'Tạo vận đơn gửi lại hàng trả',
   UPDATE_PRICE: 'Cập nhật giá',
   UPDATE_PRODUCT: 'Cập nhật sản phẩm',
 };
@@ -50,6 +52,8 @@ export const HISTORY_NON_PRODUCT_RESULT_LABELS = {
   REJECTED: 'Đã từ chối',
   STARTED: 'Đã bắt đầu',
   CONFIRMED: 'Đã xác nhận',
+  COMPLETED: 'Đã hoàn tất',
+  RESOLVED: 'Đã hoàn tất',
   HANDED_OVER: 'Đã bàn giao',
   OPENED: 'Đã mở hồ sơ',
   PROPOSED: 'Đã đề xuất',

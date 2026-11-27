@@ -4,6 +4,15 @@ import { useToast } from '../../../context/ToastContext.jsx';
 import receiptClauseAdminApi from '../services/receiptClauseAdminApi.js';
 import ReceiptPreviewPanel from './ReceiptPreviewPanel.jsx';
 import {
+  RECEIPT_PLACEHOLDERS,
+  RECEIPT_PLACEHOLDER_MAP,
+  editorTextToTemplate,
+  extractUsedPlaceholders,
+  findUnknownPlaceholders,
+  templateToEditorText,
+  tokenizeClauseTemplate,
+} from './receiptClausePlaceholders.js';
+import {
   STATIC_STALE_TIME_MS,
   useAdminCache,
   useAdminCacheActions,
@@ -12,14 +21,36 @@ import {
 const RECEIPT_CLAUSES_CACHE_KEY = 'admin:receipt-clauses:list';
 
 const EMPTY_DRAFT = { title: '', bodyTemplate: '', active: true };
-// Mỗi placeholder được thay bằng số liệu thật của chính biên nhận đó lúc tạo — không phải số
-// chung cho mọi đơn, nên khác nhau giữa các biên nhận dù cùng dùng một mẫu điều khoản
-const PLACEHOLDER_HINTS = [
-  { key: 'floorPrice', desc: 'Giá sàn — giá thấp nhất được giảm xuống của biên nhận này' },
-  { key: 'withdrawalFee', desc: 'Phí rút hàng ngoài thời gian miễn phí' },
-  { key: 'freeWithdrawalWindowDays', desc: 'Số ngày đầu mỗi kỳ được rút hàng không mất phí' },
-  { key: 'degradedCompensationRate', desc: 'Tỷ lệ đền bù khi hàng xuống cấp, tính trên giá bán hiện tại' },
-];
+
+function renderClauseBodyReadable(template) {
+  const tokens = tokenizeClauseTemplate(template);
+  if (tokens.length === 0) return '—';
+  return tokens.map((token, idx) => {
+    if (token.type !== 'placeholder') {
+      return <React.Fragment key={idx}>{token.value}</React.Fragment>;
+    }
+    if (token.meta) {
+      return (
+        <span
+          key={`${token.key}-${idx}`}
+          title={`${token.meta.label} — ${token.meta.desc}`}
+          className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-[#ECFDF3] border border-[#ABEFC6] text-[#006B2C] font-semibold text-xs tabular-nums"
+        >
+          {token.meta.sample}
+        </span>
+      );
+    }
+    return (
+      <span
+        key={`${token.key}-${idx}`}
+        title="Thông số chưa được hệ thống hỗ trợ"
+        className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-[#FFFAEB] border border-[#FEDF89] text-[#B54708] font-semibold text-xs"
+      >
+        Thông số chưa hỗ trợ
+      </span>
+    );
+  });
+}
 
 export default function ReceiptClauseTemplatesPage() {
   const toast = useToast();
@@ -37,11 +68,13 @@ export default function ReceiptClauseTemplatesPage() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
+  const [showVariableGuide, setShowVariableGuide] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const deletingRef = useRef(false);
 
+  const bodyInputRef = useRef(null);
   const seqRef = useRef(0);
   const mountedRef = useRef(true);
 
@@ -97,17 +130,48 @@ export default function ReceiptClauseTemplatesPage() {
     fetchClauses();
   }, [fetchClauses]);
 
+  const sortedItems = useMemo(
+    () => items.slice().sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)),
+    [items],
+  );
+
+  const activeCount = useMemo(
+    () => items.filter((item) => item.active !== false).length,
+    [items],
+  );
+
+  const previewNoMap = useMemo(() => {
+    const map = {};
+    let n = 5;
+    for (const clause of sortedItems) {
+      if (clause.active !== false) {
+        map[clause.id] = n++;
+      }
+    }
+    return map;
+  }, [sortedItems]);
+
+  const normalizedDraftBody = useMemo(
+    () => editorTextToTemplate(draft.bodyTemplate),
+    [draft.bodyTemplate],
+  );
+
   // Biên nhận mẫu bên phải luôn phản ánh đúng những gì đang gõ bên trái, chưa cần bấm Lưu
   const previewClauses = useMemo(() => {
     if (editingId === null) return items;
+    const draftForPreview = { ...draft, bodyTemplate: normalizedDraftBody };
     if (editingId === 'new') {
       const nextOrder = items.reduce((max, c) => Math.max(max, c.displayOrder ?? 0), 0) + 1;
-      return [...items, { id: 'new-draft', displayOrder: nextOrder, ...draft }];
+      return [...items, { id: 'new-draft', displayOrder: nextOrder, ...draftForPreview }];
     }
-    return items.map((c) => (c.id === editingId ? { ...c, ...draft } : c));
-  }, [items, editingId, draft]);
+    return items.map((c) => (c.id === editingId ? { ...c, ...draftForPreview } : c));
+  }, [items, editingId, draft, normalizedDraftBody]);
 
   const highlightId = editingId === 'new' ? 'new-draft' : editingId;
+  const unknownDraftVars = useMemo(
+    () => findUnknownPlaceholders(normalizedDraftBody),
+    [normalizedDraftBody],
+  );
 
   const startCreate = () => {
     setEditingId('new');
@@ -117,7 +181,11 @@ export default function ReceiptClauseTemplatesPage() {
 
   const startEdit = (clause) => {
     setEditingId(clause.id);
-    setDraft({ title: clause.title, bodyTemplate: clause.bodyTemplate, active: clause.active });
+    setDraft({
+      title: clause.title,
+      bodyTemplate: templateToEditorText(clause.bodyTemplate),
+      active: clause.active,
+    });
     setErrors({});
   };
 
@@ -125,6 +193,34 @@ export default function ReceiptClauseTemplatesPage() {
     setEditingId(null);
     setDraft(EMPTY_DRAFT);
     setErrors({});
+  };
+
+  const insertPlaceholder = (key) => {
+    const meta = RECEIPT_PLACEHOLDER_MAP[key];
+    if (!meta) return;
+    const token = meta.editorToken;
+    const el = bodyInputRef.current;
+    if (el && typeof el.selectionStart === 'number' && typeof el.selectionEnd === 'number') {
+      const start = el.selectionStart;
+      const end = el.selectionEnd;
+      const nextBody =
+        draft.bodyTemplate.slice(0, start) + token + draft.bodyTemplate.slice(end);
+      setDraft((d) => ({ ...d, bodyTemplate: nextBody }));
+      if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(() => {
+          if (bodyInputRef.current) {
+            bodyInputRef.current.focus();
+            const pos = start + token.length;
+            bodyInputRef.current.setSelectionRange(pos, pos);
+          }
+        });
+      }
+      return;
+    }
+    setDraft((d) => ({
+      ...d,
+      bodyTemplate: d.bodyTemplate ? `${d.bodyTemplate}${d.bodyTemplate.endsWith(' ') ? '' : ' '}${token}` : token,
+    }));
   };
 
   const validate = () => {
@@ -141,7 +237,7 @@ export default function ReceiptClauseTemplatesPage() {
 
     const payload = {
       title: draft.title.trim(),
-      bodyTemplate: draft.bodyTemplate.trim(),
+      bodyTemplate: editorTextToTemplate(draft.bodyTemplate).trim(),
       active: draft.active,
     };
 
@@ -201,7 +297,79 @@ export default function ReceiptClauseTemplatesPage() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 font-sans">
+      {/* Top Toolbar Card */}
+      <div className="bg-white p-5 rounded-xl border border-[#DDE5D9] space-y-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="text-sm text-[#5B6776]">
+              Quản lý các điều khoản tùy chỉnh áp dụng từ Điều 5 cho biên nhận ký gửi tạo mới.
+            </p>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#F2F4F7] text-[#344054]">
+                {items.length} điều khoản
+              </span>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#ECFDF3] text-[#067647] border border-[#ABEFC6]">
+                {activeCount} đang áp dụng
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <Button
+              type="button"
+              variant="outline"
+              aria-expanded={showVariableGuide}
+              onClick={() => setShowVariableGuide((prev) => !prev)}
+              className="gap-1.5 whitespace-nowrap"
+            >
+              <span aria-hidden="true" className="material-symbols-outlined text-base">
+                tune
+              </span>
+              <span>Thông số tự động ({RECEIPT_PLACEHOLDERS.length})</span>
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={startCreate}
+              disabled={editingId === 'new'}
+              className="gap-1.5 whitespace-nowrap"
+            >
+              <span aria-hidden="true" className="material-symbols-outlined text-base">
+                add
+              </span>
+              <span>Thêm điều khoản</span>
+            </Button>
+          </div>
+        </div>
+
+        {showVariableGuide && (
+          <div className="pt-3 border-t border-[#DDE5D9] space-y-2.5">
+            <p className="text-xs text-[#5B6776]">
+              Các thông số tự động dưới đây sẽ được điền theo số liệu thực tế của từng biên nhận khi phát hành:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {RECEIPT_PLACEHOLDERS.map((item) => (
+                <div
+                  key={item.key}
+                  className="rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]/60 px-3 py-2.5 text-xs space-y-1"
+                >
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#ECFDF3] border border-[#ABEFC6] text-[#006B2C] font-semibold">
+                      {item.label}
+                    </span>
+                    <span className="font-semibold text-[#1F2A37] tabular-nums">
+                      Mẫu: {item.sampleLabel}
+                    </span>
+                  </div>
+                  <p className="text-[#5B6776] leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {error && (
         <div
           role="alert"
@@ -214,14 +382,26 @@ export default function ReceiptClauseTemplatesPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-        {/* Cột trái: soạn / danh sách điều khoản */}
-        <div className="space-y-4">
-          {editingId !== null ? (
-            <div className="bg-white p-5 rounded-xl border border-[#006B2C]/30 space-y-4">
-              <p className="text-sm font-semibold text-[#1F2A37]">
-                {editingId === 'new' ? 'Thêm điều khoản mới' : 'Chỉnh sửa điều khoản'}
-              </p>
+      {/* Aligned Two-Column Workspace */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Cột trái: Form soạn & danh sách điều khoản */}
+        <div className="lg:col-span-7 space-y-3.5">
+          {editingId !== null && (
+            <div className="bg-white p-5 rounded-xl border-2 border-[#006B2C]/35 shadow-sm space-y-4">
+              <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#DDE5D9]">
+                <p className="text-sm font-bold text-[#1F2A37]">
+                  {editingId === 'new' ? 'Thêm điều khoản mới' : 'Chỉnh sửa điều khoản'}
+                </p>
+                <button
+                  type="button"
+                  aria-label="Đóng biểu mẫu"
+                  onClick={cancelEdit}
+                  disabled={submitting}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-[#5B6776] hover:text-[#1F2A37] hover:bg-[#F6F9F4] transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
 
               <Input
                 id="rct-title"
@@ -230,38 +410,64 @@ export default function ReceiptClauseTemplatesPage() {
                 value={draft.title}
                 onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
                 error={errors.title}
-                placeholder="Ví dụ: ĐIỀU 4 — GIẢM GIÁ"
+                placeholder="Ví dụ: ĐIỀU 5 — GIẢM GIÁ"
               />
 
-              <div className="w-full">
-                <label htmlFor="rct-body" className="block text-xs font-semibold text-[#1F2A37] mb-1.5">
+              <div className="w-full space-y-2.5">
+                <label htmlFor="rct-body" className="block text-xs font-semibold text-[#1F2A37]">
                   Nội dung <span className="text-[#D92D20]">*</span>
                 </label>
                 <textarea
+                  ref={bodyInputRef}
                   id="rct-body"
-                  rows={6}
+                  rows={5}
                   value={draft.bodyTemplate}
                   onChange={(e) => setDraft((d) => ({ ...d, bodyTemplate: e.target.value }))}
-                  placeholder="Nội dung điều khoản. Có thể chèn số liệu bằng placeholder, ví dụ {{floorPrice}}"
-                  className="w-full px-3.5 py-2 text-sm bg-white border border-[#DDE5D9] rounded-xl focus:outline-none focus:ring-2 focus:border-[#006B2C] focus:ring-[#006B2C]/15 text-[#1F2A37]"
+                  placeholder="Nhập nội dung điều khoản. Bấm các nút bên dưới để chèn thông số tự động như Giá sàn, Phí rút hàng..."
+                  className="w-full px-3.5 py-2.5 text-sm leading-relaxed bg-white border border-[#DDE5D9] rounded-xl focus:outline-none focus:ring-2 focus:border-[#006B2C] focus:ring-[#006B2C]/15 text-[#1F2A37]"
                 />
                 {errors.bodyTemplate ? (
-                  <p className="mt-1.5 text-xs text-[#D92D20] font-medium">{errors.bodyTemplate}</p>
+                  <p className="text-xs text-[#D92D20] font-medium">{errors.bodyTemplate}</p>
                 ) : null}
-                <div className="mt-1.5 space-y-1">
-                  <p className="text-xs text-[#5B6776]">
-                    Placeholder hỗ trợ (tự thay bằng số liệu thật của biên nhận lúc tạo):
-                  </p>
-                  <ul className="space-y-0.5">
-                    {PLACEHOLDER_HINTS.map(({ key, desc }) => (
-                      <li key={key} className="text-xs text-[#5B6776] flex items-baseline gap-1.5">
-                        <code className="px-1 py-0.5 rounded bg-[#F6F9F4] text-[#006B2C] shrink-0">
-                          {`{{${key}}}`}
-                        </code>
-                        <span>{desc}</span>
-                      </li>
+
+                {unknownDraftVars.length > 0 && (
+                  <div
+                    role="alert"
+                    className="rounded-xl border border-[#FEDF89] bg-[#FFFAEB] px-3 py-2 text-xs text-[#B54708]"
+                  >
+                    Phát hiện thông số chưa được hệ thống hỗ trợ. Vui lòng chỉ sử dụng 4 thông số tự động bên dưới.
+                  </div>
+                )}
+
+                <div className="rounded-xl border border-[#DDE5D9] bg-[#F6F9F4]/70 p-3.5 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-[#1F2A37]">
+                      Chèn nhanh thông số tự động
+                    </span>
+                    <span className="text-[11px] text-[#5B6776]">
+                      Tự động điền số liệu thật lúc tạo biên nhận
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {RECEIPT_PLACEHOLDERS.map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => insertPlaceholder(item.key)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[#ABEFC6] bg-white hover:bg-[#ECFDF3] text-xs font-semibold text-[#006B2C] transition-colors"
+                      >
+                        <span>+ {item.label}</span>
+                      </button>
                     ))}
-                  </ul>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1 border-t border-[#DDE5D9]">
+                    {RECEIPT_PLACEHOLDERS.map((item) => (
+                      <p key={item.key} className="text-[11px] text-[#5B6776] leading-snug">
+                        <span className="font-semibold text-[#006B2C]">{item.label}:</span>{' '}
+                        {item.desc} · <span className="text-[#344054] font-medium">mẫu {item.sampleLabel}</span>
+                      </p>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -287,45 +493,48 @@ export default function ReceiptClauseTemplatesPage() {
                 </Button>
               </div>
             </div>
-          ) : (
-            <Button variant="primary" onClick={startCreate} className="gap-1.5">
-              <span className="material-symbols-outlined text-base">add</span>
-              <span>Thêm điều khoản</span>
-            </Button>
           )}
 
-          <div className="space-y-2">
-            {loading ? (
-              <p className="text-sm text-[#5B6776] px-1">Đang tải...</p>
-            ) : items.length === 0 ? (
-              <p className="text-sm text-[#5B6776] px-1">Chưa có điều khoản nào.</p>
+          <div className="space-y-3">
+            {loading && sortedItems.length === 0 ? (
+              <div className="bg-white p-6 rounded-xl border border-[#DDE5D9] text-sm text-[#5B6776]">
+                Đang tải danh sách điều khoản...
+              </div>
+            ) : sortedItems.length === 0 ? (
+              <div className="bg-white p-6 rounded-xl border border-[#DDE5D9] text-sm text-[#5B6776]">
+                Chưa có điều khoản nào. Bấm "Thêm điều khoản" để bắt đầu.
+              </div>
             ) : (
-              items
-                .slice()
-                .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
-                .map((clause) => (
+              sortedItems.map((clause) => {
+                const isEditing = clause.id === editingId;
+                const usedVars = extractUsedPlaceholders(clause.bodyTemplate);
+                const previewNo = previewNoMap[clause.id];
+
+                return (
                   <div
                     key={clause.id}
-                    className={`bg-white p-4 rounded-xl border space-y-2 ${
-                      clause.id === editingId ? 'border-[#006B2C]' : 'border-[#DDE5D9]'
+                    className={`bg-white rounded-xl border transition-all overflow-hidden ${
+                      isEditing
+                        ? 'border-[#006B2C] ring-2 ring-[#006B2C]/15'
+                        : 'border-[#DDE5D9] hover:border-[#C4D1BF]'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-[#1F2A37]">{clause.title}</p>
-                        <p className="text-xs text-[#5B6776] mt-0.5 line-clamp-2">{clause.bodyTemplate}</p>
-                      </div>
+                    {/* Header Card */}
+                    <div className="px-4 pt-4 pb-2.5 flex items-start justify-between gap-3">
+                      <p className="text-sm font-bold text-[#1F2A37] leading-snug">
+                        {clause.title}
+                      </p>
                       <button
                         type="button"
                         role="switch"
                         aria-checked={clause.active}
                         onClick={() => handleToggle(clause)}
                         title={clause.active ? 'Đang áp dụng — bấm để tắt' : 'Đã tắt — bấm để bật'}
-                        className="shrink-0"
+                        className="inline-flex items-center gap-2 shrink-0 group"
                       >
                         <span
                           className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 ${
-                            clause.active ? 'bg-[#006B2C]' : 'bg-[#D9DEDA]'
+                            clause.active ? 'bg-[#006B2C]' : 'bg-[#D9DEDA] group-hover:bg-[#C4CCC6]'
                           }`}
                         >
                           <span
@@ -334,20 +543,78 @@ export default function ReceiptClauseTemplatesPage() {
                             }`}
                           />
                         </span>
+                        <span
+                          className={`text-xs font-semibold whitespace-nowrap ${
+                            clause.active ? 'text-[#006B2C]' : 'text-[#5B6776]'
+                          }`}
+                        >
+                          {clause.active ? 'Đang áp dụng' : 'Đã tắt'}
+                        </span>
                       </button>
                     </div>
-                    <div className="flex items-center gap-2 pt-1 border-t border-[#F0F2EF]">
-                      <TableActionButton action="edit" onClick={() => startEdit(clause)} />
-                      <TableActionButton action="delete" onClick={() => setDeleteTarget(clause)} />
+
+                    {/* Body Card */}
+                    <div className="px-4 pb-3 space-y-2.5">
+                      <p className="text-[13.5px] leading-relaxed text-[#344054] whitespace-pre-wrap">
+                        {renderClauseBodyReadable(clause.bodyTemplate)}
+                      </p>
+
+                      {usedVars.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                          <span className="text-[11px] font-medium text-[#5B6776]">
+                            Thông số tự động:
+                          </span>
+                          {usedVars.map(({ key, meta }) => (
+                            <span
+                              key={key}
+                              className="inline-flex items-center gap-1 rounded-lg bg-[#F6F9F4] border border-[#DDE5D9] px-2 py-0.5 text-[11px] text-[#344054]"
+                            >
+                              <span className="font-semibold text-[#006B2C]">
+                                {meta ? meta.label : 'Không xác định'}
+                              </span>
+                              {meta ? (
+                                <>
+                                  <span className="text-[#98A2B3]">·</span>
+                                  <span>mẫu {meta.sampleLabel}</span>
+                                </>
+                              ) : null}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Footer Card */}
+                    <div className="px-4 py-2.5 bg-[#FAFBF9] border-t border-[#EEF2EC] flex items-center justify-between gap-2 flex-wrap">
+                      <span
+                        className={`text-xs font-medium ${
+                          isEditing
+                            ? 'text-[#B54708]'
+                            : clause.active && previewNo
+                              ? 'text-[#5B6776]'
+                              : 'text-[#667085]'
+                        }`}
+                      >
+                        {isEditing
+                          ? 'Đang chỉnh sửa ở biểu mẫu'
+                          : clause.active && previewNo
+                            ? `Hiển thị tại Điều ${previewNo}`
+                            : 'Không hiện trên biên nhận mới'}
+                      </span>
+                      <div className="inline-flex items-center gap-2">
+                        <TableActionButton action="edit" onClick={() => startEdit(clause)} />
+                        <TableActionButton action="delete" onClick={() => setDeleteTarget(clause)} />
+                      </div>
                     </div>
                   </div>
-                ))
+                );
+              })
             )}
           </div>
         </div>
 
-        {/* Cột phải: biên nhận mẫu, luôn hiện và cập nhật live */}
-        <div className="lg:sticky lg:top-4">
+        {/* Cột phải: Biên nhận mẫu cập nhật live */}
+        <div className="lg:col-span-5 lg:sticky lg:top-4">
           <ReceiptPreviewPanel clauses={previewClauses} highlightId={highlightId} />
         </div>
       </div>

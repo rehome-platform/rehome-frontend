@@ -26,9 +26,9 @@ export default function ViolationWordModal({ isOpen, onClose, word = null, onSuc
     if (!isOpen) return;
     if (word) {
       setWordText(word.word || '');
-      setCategory(word.category || 'PROFANITY');
-      setSeverity(word.severity || 'WARNING');
-      setAction(word.action || DEFAULT_ACTION);
+      setCategory(word.category ? String(word.category).trim().toUpperCase() : 'PROFANITY');
+      setSeverity(word.severity ? String(word.severity).trim().toUpperCase() : 'WARNING');
+      setAction(word.action ? String(word.action).trim().toUpperCase() : DEFAULT_ACTION);
       setActive(word.isActive !== undefined ? Boolean(word.isActive) : true);
       setNote(word.note || '');
     } else {

@@ -37,6 +37,25 @@ const STATUS_VARIANTS = {
 
 const PAGE_SIZE = 20;
 
+function renderDaysRemaining(item) {
+  const hasDays = item.daysRemaining !== null && item.daysRemaining !== undefined;
+  if (item.status !== 'ACTIVE' || item.tier === 'FREE' || !hasDays) {
+    return <span className="text-[#98A2B3]">—</span>;
+  }
+  const days = Math.max(0, Number(item.daysRemaining));
+  if (!Number.isFinite(days)) {
+    return <span className="text-[#98A2B3]">—</span>;
+  }
+  if (days <= 3) {
+    return (
+      <Badge variant="warning" size="sm" className="tabular-nums">
+        {days} ngày
+      </Badge>
+    );
+  }
+  return <span className="font-medium text-[#1F2A37] tabular-nums">{days} ngày</span>;
+}
+
 export default function MembershipSubscriptionsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -183,19 +202,32 @@ export default function MembershipSubscriptionsPage() {
   };
 
   return (
-    <div className="space-y-5">
-      {/* Action */}
-      <div className="flex justify-end">
-        <Button variant="primary" onClick={() => setIsGrantOpen(true)} className="gap-1.5">
-          <span className="material-symbols-outlined text-base">card_giftcard</span>
-          <span>Tặng / gia hạn gói</span>
-        </Button>
-      </div>
+    <div className="space-y-4">
+      {/* Toolbar + Filters */}
+      <div className="bg-white p-5 rounded-xl border border-[#DDE5D9] space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3.5 border-b border-[#DDE5D9]">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <p className="text-sm text-[#5B6776]">
+              Theo dõi trạng thái gói thành viên, thời hạn còn lại và cấp/gia hạn thủ công.
+            </p>
+            {totalElements > 0 && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#E8F5E9] text-[#006B2C] whitespace-nowrap">
+                {totalElements} gói
+              </span>
+            )}
+          </div>
+          <Button
+            variant="primary"
+            onClick={() => setIsGrantOpen(true)}
+            className="gap-1.5 shrink-0 whitespace-nowrap"
+          >
+            <span className="material-symbols-outlined text-base">card_giftcard</span>
+            <span>Tặng / gia hạn gói</span>
+          </Button>
+        </div>
 
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-xl border border-[#DDE5D9]">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
-          <div className="md:col-span-2">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+          <div className="md:col-span-4">
             <label htmlFor="sub-search" className="block text-xs font-semibold text-[#1F2A37] mb-1">
               Tìm kiếm thành viên
             </label>
@@ -212,7 +244,7 @@ export default function MembershipSubscriptionsPage() {
             )}
           </div>
 
-          <div>
+          <div className="md:col-span-3">
             <label htmlFor="filter-tier" className="block text-xs font-semibold text-[#1F2A37] mb-1">
               Lọc theo hạng
             </label>
@@ -232,7 +264,7 @@ export default function MembershipSubscriptionsPage() {
             </select>
           </div>
 
-          <div>
+          <div className="md:col-span-2">
             <label htmlFor="filter-status" className="block text-xs font-semibold text-[#1F2A37] mb-1">
               Trạng thái
             </label>
@@ -252,7 +284,7 @@ export default function MembershipSubscriptionsPage() {
             </select>
           </div>
 
-          <div className="flex gap-2 items-end">
+          <div className="md:col-span-3 flex gap-2 items-end">
             <div className="flex-1">
               <label htmlFor="filter-expiring" className="block text-xs font-semibold text-[#1F2A37] mb-1">
                 Sắp hết hạn
@@ -319,8 +351,6 @@ export default function MembershipSubscriptionsPage() {
                 </tr>
               ) : (
                 items.map((item) => {
-                  const hasDays = item.daysRemaining !== null && item.daysRemaining !== undefined;
-                  const isExpiringSoon = hasDays && Number(item.daysRemaining) <= 3;
                   const isTerminal =
                     item.status === 'CANCELLED' ||
                     item.status === 'EXPIRED' ||
@@ -333,7 +363,7 @@ export default function MembershipSubscriptionsPage() {
                       className="hover:bg-[#F6F9F4] cursor-pointer transition-colors"
                     >
                       <td className="py-3 px-4">
-                        <p className="text-[#1F2A37]">{item.memberEmail || '-'}</p>
+                        <p className="text-[#1F2A37]">{item.memberEmail || '—'}</p>
                       </td>
                       <td className="py-3 px-4">
                         <TierBadge tier={item.tier} label={item.tierName || TIER_LABELS[item.tier] || item.tier} />
@@ -343,26 +373,20 @@ export default function MembershipSubscriptionsPage() {
                           {SUBSCRIPTION_STATUS_LABELS[item.status] || item.status}
                         </Badge>
                       </td>
-                      <td className="py-3 px-4">
-                        {BILLING_CYCLE_LABELS[item.billingCycle] || item.billingCycle || '-'}
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        {BILLING_CYCLE_LABELS[item.billingCycle] || item.billingCycle || '—'}
                       </td>
-                      <td className="py-3 px-4 text-right font-medium tabular-nums">
+                      <td className="py-3 px-4 text-right font-medium tabular-nums whitespace-nowrap">
                         {formatCurrencyVND(item.pricePaid)}
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap">
-                        {hasDays ? (
-                          <Badge variant={isExpiringSoon ? 'danger' : 'default'} size="sm">
-                            {item.daysRemaining} ngày
-                          </Badge>
-                        ) : (
-                          '-'
-                        )}
+                        {renderDaysRemaining(item)}
                       </td>
                       <td
                         className="py-3 px-4 text-right whitespace-nowrap"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="inline-flex items-center justify-end gap-2">
                           <TableActionButton
                             action="view"
                             to={`/admin/membership-subscriptions/${item.id}`}
@@ -393,6 +417,7 @@ export default function MembershipSubscriptionsPage() {
         <div className="flex items-center justify-between px-4 py-3 border-t border-[#DDE5D9] bg-[#F6F9F4]/50 text-xs text-[#5B6776]">
           <span>
             Trang {page + 1} / {Math.max(totalPages, 1)}
+            {totalElements > 0 && <span className="ml-2 font-medium">({totalElements} bản ghi)</span>}
           </span>
           <div className="flex gap-2">
             <Button

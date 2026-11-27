@@ -91,6 +91,7 @@ export function useConsignmentQueue() {
         const isWithdrawal = item.type === 'WITHDRAWAL' || item.type === 'ITEM_WITHDRAWAL';
         const isViolationReport = item.type === 'VIOLATION_REPORT';
         const isReturnShipBack = item.type === 'RETURN_SHIP_BACK';
+        const isReConsignCounter = item.type === 'RECONSIGN_COUNTER';
         const isReturn = item.type === 'RETURN';
         const isPacking = item.type === 'PACKING';
         const msg = release
@@ -101,6 +102,8 @@ export function useConsignmentQueue() {
               : `Đã nhận việc "${item.typeLabel}" (${item.formId || item.orderId || item.refId || item.queueId}) thành công! Bạn có thể mở Quầy tiếp nhận để bàn giao cho khách khi khách đến quầy.`
             : isReturnShipBack
               ? `Đã nhận việc "${item.typeLabel}" (${item.orderNo || item.refId || item.queueId}) thành công! Bạn có thể bấm "Gửi hàng" để đối chiếu SKU, đóng gói và tạo vận đơn GHN.`
+            : isReConsignCounter
+              ? `Đã nhận việc "${item.typeLabel}" (${item.sku || item.productId || item.refId || item.queueId}) thành công! Bạn có thể bấm "Phản hồi giá" để chốt giá ký gửi lại với Member.`
             : isReturn
               ? `Đã nhận việc "${item.typeLabel}" (${item.returnId || item.refId || item.queueId}) thành công! Bạn có thể mở trang "Trả hàng" để duyệt và xử lý yêu cầu.`
             : isPacking

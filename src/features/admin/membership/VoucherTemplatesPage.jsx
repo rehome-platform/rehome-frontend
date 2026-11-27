@@ -144,18 +144,26 @@ export default function VoucherTemplatesPage() {
   const columns = [
     {
       header: 'Tên',
-      render: (row) => <span className="font-semibold text-[#1F2A37]">{row.name}</span>,
+      className: 'w-[28%]',
+      cellClassName: 'font-semibold text-[#1F2A37]',
+      render: (row) => row.name,
     },
     {
       header: 'Loại',
+      className: 'w-[24%]',
+      cellClassName: 'text-[#475467] whitespace-nowrap',
       render: (row) => VOUCHER_TYPE_LABELS[row.type] || row.type,
     },
     {
       header: 'Hiệu lực',
+      className: 'w-[14%]',
+      cellClassName: 'tabular-nums whitespace-nowrap text-[#1F2A37]',
       render: (row) => `${row.validDays} ngày`,
     },
     {
       header: 'Trạng thái',
+      className: 'w-[16%]',
+      cellClassName: 'whitespace-nowrap',
       render: (row) => (
         <button
           type="button"
@@ -185,8 +193,10 @@ export default function VoucherTemplatesPage() {
     },
     {
       header: 'Thao tác',
+      className: 'w-[18%] text-right',
+      cellClassName: 'text-right whitespace-nowrap',
       render: (row) => (
-        <div className="flex items-center gap-2">
+        <div className="inline-flex items-center justify-end gap-2">
           <TableActionButton action="view" onClick={() => setDetailTemplate(row)} />
           <TableActionButton action="edit" onClick={() => handleOpenEdit(row)} />
         </div>
@@ -195,37 +205,38 @@ export default function VoucherTemplatesPage() {
   ];
 
   return (
-    <div className="p-6 bg-white rounded-xl border border-[#DDE5D9] space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <p className="text-xs text-[#5B6776] mt-0.5">
+    <div className="p-5 bg-white rounded-xl border border-[#DDE5D9] space-y-4">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pb-3.5 border-b border-[#DDE5D9]">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <p className="text-sm text-[#5B6776]">
             Thiết lập mẫu voucher định kỳ phát cho các hạng thành viên.
           </p>
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#E8F5E9] text-[#006B2C] whitespace-nowrap">
+            {filteredTemplates.length}/{templates.length} mẫu
+          </span>
         </div>
-        <Button variant="primary" onClick={handleOpenCreate} className="gap-1.5">
-          <span className="material-symbols-outlined text-base">add</span>
-          <span>Tạo mẫu voucher</span>
-        </Button>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <label htmlFor="voucher-status-filter" className="text-xs font-medium text-[#5B6776]">
-          Trạng thái:
-        </label>
-        <select
-          id="voucher-status-filter"
-          aria-label="Lọc theo trạng thái"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-xl border border-[#DDE5D9] bg-white px-3 py-2 text-xs font-medium text-[#1F2A37] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/30"
-        >
-          <option value="ALL">Tất cả</option>
-          <option value="ACTIVE">Đang phát</option>
-          <option value="INACTIVE">Ngừng phát</option>
-        </select>
-        <span className="text-xs text-[#5B6776]">
-          {filteredTemplates.length}/{templates.length} mẫu
-        </span>
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-2">
+            <label htmlFor="voucher-status-filter" className="text-xs font-medium text-[#5B6776] whitespace-nowrap">
+              Trạng thái
+            </label>
+            <select
+              id="voucher-status-filter"
+              aria-label="Lọc theo trạng thái"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="rounded-xl border border-[#DDE5D9] bg-white px-3 py-2 text-sm font-medium text-[#1F2A37] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/20 focus:border-[#006B2C]"
+            >
+              <option value="ALL">Tất cả</option>
+              <option value="ACTIVE">Đang phát</option>
+              <option value="INACTIVE">Ngừng phát</option>
+            </select>
+          </div>
+          <Button variant="primary" onClick={handleOpenCreate} className="gap-1.5 whitespace-nowrap">
+            <span className="material-symbols-outlined text-base">add</span>
+            <span>Tạo mẫu voucher</span>
+          </Button>
+        </div>
       </div>
 
       {error ? (

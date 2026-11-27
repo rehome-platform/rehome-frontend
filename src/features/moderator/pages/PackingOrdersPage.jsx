@@ -279,6 +279,7 @@ export default function PackingOrdersPage() {
           setSearch((previous) => {
             const next = new URLSearchParams(previous);
             next.delete('view');
+            next.delete('historyPage');
             next.delete('orderId');
             return next;
           })

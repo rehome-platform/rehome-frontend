@@ -1,89 +1,175 @@
 import React from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import { useResource } from '../hooks/warehouseHooks.jsx';
 import { warehouseHistoryService } from '../services/warehouseHistoryApi.js';
-import { warehouseDateTime } from '../models/warehouseTime.js';
 import { listItems } from '../models/warehouseModel.js';
+import { mapWarehouseHistoryRow } from '../models/historyTableModel.js';
 import { Pager, ResourceState } from './WarehouseUi.jsx';
-import { HISTORY_TABLE_COLUMNS } from '../../../constants/tableColumns.js';
-import {
-  formatHistoryAction,
-  formatHistoryResult,
-  formatHistoryTarget,
-} from '../../../utils/formatHistoryValue.js';
+import { ModeratorHistoryTable } from './ModeratorHistoryTable.jsx';
 
-function detailLink(row) {
-  let targetType = row.targetType;
-  let targetId = row.targetId;
+export { ModeratorHistoryTable };
 
-  if (row.target) {
-    const parts = String(row.target).trim().split(/\s+/);
-    if (!targetType) targetType = parts[0];
-    if (!targetId) targetId = parts.slice(1).join(' ');
-  }
-
-  const normalizedType = String(targetType || '').trim().toUpperCase();
-  if (!targetId) return null;
-  const id = encodeURIComponent(String(targetId).trim());
-  if (normalizedType === 'ORDER') return `/moderator/packing?orderId=${id}`;
-  if (normalizedType === 'CONSIGNMENT_FORM') return `/moderator/consignments/${id}`;
-  if (normalizedType === 'PRODUCT') return `/moderator/inventory/${id}`;
-  return null;
-}
-
-export function WarehouseHistoryTabs({ type, children, onWorkTabClick }) {
+export function WarehouseHistoryTabs({
+  type,
+  children,
+  onWorkTabClick,
+  historySource,
+  historyCount,
+  tabBarExtra,
+  tabListLabel = 'Công việc và lịch sử',
+  emptyText = 'Chưa có lịch sử thao tác.',
+  sectionLabel = 'Lịch sử thao tác điểm kí gửi',
+}) {
   const [search, setSearch] = useSearchParams();
   const history = search.get('view') === 'history';
   const page = Math.max(0, Number(search.get('historyPage')) || 0);
-  const resource = useResource(options => warehouseHistoryService.list(type, { page, size: 20 }, options),
-    [type, page], { enabled: history, cacheKey: `history:${type}:${page}` });
-  const rows = resource.data?.content ?? listItems(resource.data);
-  const update = (key, value) => setSearch(previous => {
-    const next = new URLSearchParams(previous);
-    value === null ? next.delete(key) : next.set(key, String(value));
-    return next;
-  });
+  const isCustomMode = Boolean(historySource);
+
+  const resource = useResource(
+    (options) => warehouseHistoryService.list(type, { page, size: 20 }, options),
+    [type, page],
+    {
+      enabled: history && !isCustomMode && Boolean(type),
+      cacheKey: `history:${type}:${page}`,
+    },
+  );
+
+  const serverRows = React.useMemo(
+    () => (resource.data?.content ?? listItems(resource.data)).map(mapWarehouseHistoryRow),
+    [resource.data],
+  );
+
+  const customPageSize = historySource?.pageSize || 20;
+  const customAllRows = historySource?.rows || [];
+  const customHasExternalTotalPages = historySource?.totalPages != null;
+  const customTotalPages = customHasExternalTotalPages
+    ? Math.max(1, Number(historySource.totalPages) || 1)
+    : Math.max(1, Math.ceil(customAllRows.length / customPageSize));
+  const customCurrentPage = Math.min(page, customTotalPages - 1);
+  const customPagedRows = customHasExternalTotalPages
+    ? customAllRows
+    : customAllRows.slice(
+        customCurrentPage * customPageSize,
+        (customCurrentPage + 1) * customPageSize,
+      );
+
+  const rows = isCustomMode ? customPagedRows : serverRows;
+  const currentPage = isCustomMode ? customCurrentPage : page;
+  const totalPages = isCustomMode
+    ? customTotalPages
+    : Math.max(1, Number(resource.data?.totalPages) || 1);
+  const showPager = isCustomMode
+    ? !historySource.loading && !historySource.error
+    : Boolean(resource.data);
+
+  const handleWorkClick = () => {
+    if (onWorkTabClick) {
+      onWorkTabClick();
+      return;
+    }
+    setSearch((previous) => {
+      const next = new URLSearchParams(previous);
+      next.delete('view');
+      next.delete('historyPage');
+      return next;
+    });
+  };
+
+  const handleHistoryClick = () => {
+    setSearch((previous) => {
+      const next = new URLSearchParams(previous);
+      next.set('view', 'history');
+      return next;
+    });
+  };
+
+  const handlePageChange = (value) => {
+    const targetPage = Math.max(0, Number(value) || 0);
+    setSearch((previous) => {
+      const next = new URLSearchParams(previous);
+      next.set('view', 'history');
+      next.set('historyPage', String(targetPage));
+      return next;
+    });
+  };
+
+  const historyTabLabel =
+    historyCount != null ? `Lịch sử (${historyCount})` : 'Lịch sử';
+
   return (
     <div className="space-y-4">
-      <div role="tablist" aria-label="Công việc và lịch sử" className="flex flex-wrap gap-2">
-        <Button role="tab" aria-selected={!history} variant={history ? 'outline' : 'primary'} onClick={() => (onWorkTabClick ? onWorkTabClick() : update('view', null))}>Công việc</Button>
-        <Button role="tab" aria-selected={history} variant={history ? 'primary' : 'outline'} onClick={() => update('view', 'history')}>Lịch sử</Button>
-      </div>
-      {history ? <section aria-label="Lịch sử thao tác điểm kí gửi" className="space-y-4">
-        <div className="flex justify-end">
-          <Button variant="outline" onClick={resource.refresh} className="gap-1.5 whitespace-nowrap">
-            <span aria-hidden="true" className="material-symbols-outlined text-[16px]">refresh</span>
-            <span>Tải lại lịch sử</span>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div role="tablist" aria-label={tabListLabel} className="flex flex-wrap gap-2">
+          <Button
+            role="tab"
+            size="sm"
+            aria-selected={!history}
+            variant={history ? 'outline' : 'primary'}
+            className="whitespace-nowrap"
+            onClick={handleWorkClick}
+          >
+            Công việc
+          </Button>
+          <Button
+            role="tab"
+            size="sm"
+            aria-selected={history}
+            variant={history ? 'primary' : 'outline'}
+            className="whitespace-nowrap"
+            onClick={handleHistoryClick}
+          >
+            {historyTabLabel}
           </Button>
         </div>
-        <ResourceState resource={resource} />
-        {!resource.loading && !resource.error && <div className="overflow-x-auto rounded-xl border border-neutral bg-surface">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="bg-background"><tr>
-              {HISTORY_TABLE_COLUMNS.map(label => <th key={label} className="p-3">{label}</th>)}
-            </tr></thead>
-            <tbody className="divide-y divide-neutral">{rows.length ? rows.map((row, idx) => {
-              const href = detailLink(row);
-              const targetDisplay = formatHistoryTarget(row);
-              const actionDisplay = formatHistoryAction(row);
-              const actorDisplay = row.actorName || row.actor || 'Chưa có thông tin';
-              const resultDisplay = formatHistoryResult(row);
-              const timeDisplay = warehouseDateTime(row.createdAt || row.timestamp);
-              const rowKey = row.id || `${row.timestamp || row.createdAt || ''}-${row.target || row.targetId || ''}-${row.action || row.actionType || ''}-${idx}`;
+        {tabBarExtra}
+      </div>
 
-              return <tr key={rowKey}>
-                <td className="p-3">{timeDisplay}</td>
-                <td className="p-3 break-words">{href ? <Link className="text-primary underline" to={href}>{targetDisplay}</Link> : targetDisplay}</td>
-                <td className="p-3">{actionDisplay}</td>
-                <td className="p-3">{actorDisplay}</td>
-                <td className="p-3">{resultDisplay}</td>
-              </tr>;
-            }) : <tr><td className="p-8 text-center text-textSecondary" colSpan={5}>Chưa có lịch sử thao tác.</td></tr>}</tbody>
-          </table>
-        </div>}
-        {!!resource.data && <Pager page={page} totalPages={resource.data.totalPages || 1} onChange={value => update('historyPage', value)} />}
-      </section> : children}
+      {history ? (
+        <section
+          aria-label={historySource?.sectionLabel || sectionLabel}
+          className="space-y-4"
+        >
+          {isCustomMode ? (
+            historySource.error ? (
+              <div
+                role="alert"
+                className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700 flex items-center justify-between gap-3"
+              >
+                <span>{historySource.error}</span>
+                {historySource.onRefresh && (
+                  <Button variant="outline" size="sm" onClick={historySource.onRefresh}>
+                    Thử lại
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <ModeratorHistoryTable
+                rows={rows}
+                loading={Boolean(historySource.loading)}
+                emptyText={historySource.emptyText || emptyText}
+              />
+            )
+          ) : (
+            <>
+              <ResourceState resource={resource} />
+              {!resource.loading && !resource.error && (
+                <ModeratorHistoryTable rows={rows} emptyText={emptyText} />
+              )}
+            </>
+          )}
+
+          {showPager && (
+            <Pager
+              page={currentPage}
+              totalPages={totalPages}
+              onChange={handlePageChange}
+            />
+          )}
+        </section>
+      ) : (
+        children
+      )}
     </div>
   );
 }

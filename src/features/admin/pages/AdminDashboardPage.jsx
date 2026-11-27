@@ -311,7 +311,7 @@ export default function AdminDashboardPage() {
     {
       label: 'Doanh thu nền tảng',
       value: dashboardData.platformRevenue || 0,
-      description: 'Hoa hồng và phí rút hàng đã thu, chưa trừ chi đền bù',
+      description: 'Hoa hồng, phí rút hàng, phí gửi lại hàng trả và gói thành viên đã thu, chưa trừ chi đền bù',
       icon: 'trending_up',
       iconBox: DASHBOARD_TONES.primary.iconBox,
       badge: 'Theo khoảng thời gian đã chọn',

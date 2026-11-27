@@ -18,5 +18,12 @@ export async function pendingPricing(options = {}) {
 }
 
 export function pricingForProduct(rows, productId) {
-  return rows.find(row => String(row.productId).toUpperCase() === String(productId).toUpperCase()) || null;
+  const target = String(productId || '').trim().toUpperCase();
+  if (!target || !Array.isArray(rows)) return null;
+  return (
+    rows.find((row) => {
+      const candidate = String(row?.productId || row?.sku || '').trim().toUpperCase();
+      return Boolean(candidate) && candidate === target;
+    }) || null
+  );
 }

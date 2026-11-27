@@ -81,6 +81,8 @@ describe('historyObjectType, historyStatus, tableColumns constants', () => {
       'HANDOVER_DEGRADED_ITEM',
       'CONFIRM_UNCLAIMED_TRANSFER',
       'APPLY_RETURN_ITEM_ACTION',
+      'HANDOVER_INVALID_RETURN',
+      'SHIP_BACK_RETURN',
       'UPDATE_PRICE',
     ];
     for (const action of backendActions) {
@@ -122,13 +124,15 @@ describe('historyObjectType, historyStatus, tableColumns constants', () => {
 
   it('defines unified Moderator column labels', () => {
     expect(TABLE_COLUMN_LABELS.ACTIONS).toBe('Thao tác');
+    expect(TABLE_COLUMN_LABELS.CONTENT_ACTION).toBe('Nội dung / Thao tác');
     expect(TABLE_COLUMN_LABELS.WAITED).toBe('Đã chờ');
     expect(HISTORY_TABLE_COLUMNS).toEqual([
       'Thời gian',
       'Đối tượng',
-      'Thao tác',
+      'Nội dung / Thao tác',
       'Người thực hiện',
       'Kết quả',
+      'Thao tác',
     ]);
   });
 });
@@ -177,6 +181,7 @@ describe('formatHistoryValue & domain formatters', () => {
     expect(formatHistoryResult({ result: 'UNKNOWN_RESULT_XYZ' })).toBe(HISTORY_UNKNOWN_FALLBACK);
     expect(formatHistoryAction({ action: null })).toBe(HISTORY_EMPTY_FALLBACK);
     expect(formatHistoryResult({ result: '' })).toBe(HISTORY_EMPTY_FALLBACK);
+    expect(formatHistoryResult({ action: 'SHIP_BACK_RETURN', result: 'GHN-SB-999' })).toBe('Mã vận đơn GHN-SB-999');
   });
 });
 
@@ -236,7 +241,21 @@ describe('WarehouseHistoryTabs localized rendering', () => {
     expect(screen.getByText('Cập nhật giá')).toBeInTheDocument();
     expect(screen.getByText('Đang bán')).toBeInTheDocument();
 
-    expect(screen.getByText('Yêu cầu trả hàng RH-000123')).toBeInTheDocument();
+    for (const col of ['Thời gian', 'Đối tượng', 'Nội dung / Thao tác', 'Người thực hiện', 'Kết quả', 'Thao tác']) {
+      expect(screen.getByRole('columnheader', { name: col })).toBeInTheDocument();
+    }
+
+    const viewLinks = screen.getAllByRole('link', { name: 'Xem chi tiết' });
+    expect(viewLinks.map((el) => el.getAttribute('href'))).toEqual([
+      '/moderator/inventory/RH-M4T19B',
+      '/moderator/returns?id=RH-000123',
+      '/moderator/consignments/CF-0009',
+    ]);
+
+    expect(screen.getByRole('link', { name: 'Yêu cầu trả hàng RH-000123' })).toHaveAttribute(
+      'href',
+      '/moderator/returns?id=RH-000123',
+    );
     expect(screen.getByText('Xử lý món hàng hoàn trả')).toBeInTheDocument();
     expect(screen.getByText('Đăng bán lại')).toBeInTheDocument();
 
@@ -245,8 +264,9 @@ describe('WarehouseHistoryTabs localized rendering', () => {
     expect(screen.getByText('Trả hàng tại chỗ')).toBeInTheDocument();
     expect(screen.getByText('Đã trả tại quầy')).toBeInTheDocument();
 
-    // Unknown enums never leak raw English values
+    // Unknown enums never leak raw English values and show "—" when unnavigable
     expect(screen.getByText('Không xác định ID-9')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.queryByText(/NEW_BACKEND_ENTITY/)).not.toBeInTheDocument();
     expect(screen.queryByText('NEW_BACKEND_ACTION')).not.toBeInTheDocument();
     expect(screen.queryByText('NEW_BACKEND_RESULT')).not.toBeInTheDocument();
