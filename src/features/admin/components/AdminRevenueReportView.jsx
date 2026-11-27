@@ -184,6 +184,21 @@ export default function AdminRevenueReportView({ from, to, dashboardData = {}, s
               </div>
             ))}
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white p-4 rounded-2xl border border-[#DDE5D9] shadow-xs flex items-center justify-between">
+              <span className="text-xs font-semibold text-[#5B6776]">Phí rút hàng</span>
+              <span className="text-base font-black font-heading text-[#673AB7]">
+                {formatCurrencyVND(dashboardData.withdrawalFeeRevenue || 0)}
+              </span>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border border-[#DDE5D9] shadow-xs flex items-center justify-between">
+              <span className="text-xs font-semibold text-[#5B6776]">Phí gửi lại hàng trả</span>
+              <span className="text-base font-black font-heading text-[#0284C7]">
+                {formatCurrencyVND(dashboardData.returnShipBackFeeRevenue || 0)}
+              </span>
+            </div>
+          </div>
         </>
       )}
 

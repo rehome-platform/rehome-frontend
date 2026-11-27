@@ -129,6 +129,7 @@ describe('INVALID return SHIP_BACK Web flow (Specs 2.1 - 2.5)', () => {
             orderNo: 'OD-2026-000999',
             status: 'INVALID',
             invalidReturnChoice: 'SHIP_BACK',
+            shipBackStatus: 'PAID',
             sku: 'HCM-AK-000018',
             productName: 'Áo khoác gió Uniqlo chống nước',
             packingPhotoUrls: ['https://cdn.rehome.vn/a.jpg'],
@@ -136,12 +137,13 @@ describe('INVALID return SHIP_BACK Web flow (Specs 2.1 - 2.5)', () => {
             buyerPhone: '0988777666',
             shipBackRecipientName: 'Nguyễn Văn B',
             shipBackPhone: '0988777666',
-            shipBackAddress: '12 Nguyễn Huệ, Bến Nghé, TP.HCM',
+            shipBackAddressDetail: '12 Nguyễn Huệ',
+            shipBackWardName: 'Bến Nghé',
             shipBackProvinceName: 'TP.HCM',
             shipBackFee: 35000,
             shipBackPaymentMethod: 'VNPAY',
-            shipBackFeePaidAt: '2026-11-27T04:30:00Z',
-            shipBackDeadline: '2026-11-29T04:30:00Z',
+            shipBackPaidAt: '2026-11-27T04:30:00Z',
+            shipBackShipDeadline: '2026-11-29T04:30:00Z',
             shipBackTrackingCode: shippedCode,
             shipBackShippedAt: shippedCode ? '2026-11-27T05:00:00Z' : null,
           },
@@ -168,6 +170,7 @@ describe('INVALID return SHIP_BACK Web flow (Specs 2.1 - 2.5)', () => {
             orderNo: 'OD-2026-000999',
             status: 'INVALID',
             invalidReturnChoice: 'SHIP_BACK',
+            shipBackStatus: 'SHIPPING',
             shipBackTrackingCode: shippedCode,
             shipBackShippedAt: '2026-11-27T05:00:00Z',
             shipBackPrintUrl: 'https://dev-online-gateway.ghn.vn/a5/public-api/printA5?token=tok123',
@@ -223,33 +226,77 @@ describe('INVALID return SHIP_BACK Web flow (Specs 2.1 - 2.5)', () => {
     );
   });
 
-  it('2.3: ReturnReviewDecision renders SHIP_BACK milestones and WAREHOUSE_PICKUP counter handover timestamp for INVALID return', () => {
+  it('2.3: ReturnReviewDecision renders SHIP_BACK milestones (AWAITING_PAYMENT -> DELIVERED / FAILED) and WAREHOUSE_PICKUP pickedUpAt for INVALID return', () => {
+    const awaitingPaymentItem = mapReturnItem({
+      id: 'rr-3a',
+      orderId: 'ord-3a',
+      orderNo: 'OD-2026-000331',
+      status: 'INVALID',
+      invalidReturnChoice: 'SHIP_BACK',
+      shipBackStatus: 'AWAITING_PAYMENT',
+      shipBackFee: 30000,
+      shipBackFeeDeadline: '2026-11-27T05:15:00Z',
+    });
+
+    const { rerender } = render(
+      <MemoryRouter>
+        <ReturnReviewDecision selectedItem={awaitingPaymentItem} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Cách nhận lại hàng trả không hợp lệ')).toBeInTheDocument();
+    expect(screen.getByText('ReHome gửi lại')).toBeInTheDocument();
+    expect(screen.getByText('Chờ trả phí')).toBeInTheDocument();
+
     const shipBackItem = mapReturnItem({
       id: 'rr-3',
       orderId: 'ord-3',
       orderNo: 'OD-2026-000333',
       status: 'INVALID',
       invalidReturnChoice: 'SHIP_BACK',
+      shipBackStatus: 'DELIVERED',
       shipBackFee: 30000,
       shipBackPaymentMethod: 'WALLET',
-      shipBackFeePaymentDeadline: '2026-11-27T05:15:00Z',
-      shipBackFeePaidAt: '2026-11-27T05:05:00Z',
+      shipBackFeeDeadline: '2026-11-27T05:15:00Z',
+      shipBackPaidAt: '2026-11-27T05:05:00Z',
       shipBackTrackingCode: 'GHN-SB-333',
       shipBackShippedAt: '2026-11-27T06:00:00Z',
       shipBackDeliveredAt: '2026-11-28T09:00:00Z',
     });
 
-    const { rerender } = render(
+    rerender(
       <MemoryRouter>
         <ReturnReviewDecision selectedItem={shipBackItem} />
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('Cách nhận lại hàng trả không hợp lệ')).toBeInTheDocument();
-    expect(screen.getByText('Gửi lại qua GHN')).toBeInTheDocument();
+    expect(screen.getByText('ReHome gửi lại')).toBeInTheDocument();
+    expect(screen.getByText('Đã giao lại thành công')).toBeInTheDocument();
     expect(screen.getByText(/30\.000/)).toBeInTheDocument();
     expect(screen.getByText('GHN-SB-333')).toBeInTheDocument();
     expect(screen.getByText(/Đã giao thành công lúc/i)).toBeInTheDocument();
+
+    const failedFallbackItem = mapReturnItem({
+      id: 'rr-3f',
+      orderId: 'ord-3f',
+      orderNo: 'OD-2026-000339',
+      status: 'INVALID',
+      invalidReturnChoice: 'WAREHOUSE_PICKUP',
+      shipBackStatus: 'FAILED',
+      shipBackFee: 30000,
+      shipBackPaidAt: '2026-11-27T05:05:00Z',
+      shipBackTrackingCode: 'GHN-SB-999',
+      shipBackFailedAt: '2026-11-29T10:00:00Z',
+    });
+
+    rerender(
+      <MemoryRouter>
+        <ReturnReviewDecision selectedItem={failedFallbackItem} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('ReHome gửi lại (thất bại) → Đến địa điểm lấy')).toBeInTheDocument();
+    expect(screen.getByText(/Giao thất bại lúc/i)).toBeInTheDocument();
 
     const pickupItem = mapReturnItem({
       id: 'rr-4',
@@ -266,16 +313,19 @@ describe('INVALID return SHIP_BACK Web flow (Specs 2.1 - 2.5)', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('Đến điểm kí gửi nhận lại')).toBeInTheDocument();
+    expect(screen.getByText('Đến địa điểm lấy')).toBeInTheDocument();
     expect(screen.getByText(/Đã bàn giao tại quầy lúc/i)).toBeInTheDocument();
   });
 
-  it('2.5: Admin ConfigPage shows the 2 return ship-back config params & AdminDashboardPage shows Phí gửi lại hàng trả row', async () => {
+  it('2.5: Admin ConfigPage shows all 5 new config params & AdminDashboardPage shows Phí gửi lại hàng trả row', async () => {
     const configRows = [
       { key: 'term_length_days', value: '30', defaultValue: '30', type: 'INT', min: 1, max: 365 },
+      { key: 're_consign_confirm_days', value: '7', defaultValue: '7', type: 'INT', min: 1, max: 30 },
+      { key: 're_consign_max_counter_rounds', value: '2', defaultValue: '2', type: 'INT', min: 0, max: 10 },
+      { key: 're_consign_moderator_response_days', value: '2', defaultValue: '2', type: 'INT', min: 1, max: 14 },
       { key: 'order_payment_timeout_minutes', value: '15', defaultValue: '15', type: 'INT', min: 1, max: 1440 },
-      { key: 'return_ship_back_payment_timeout_minutes', value: '15', defaultValue: '15', type: 'INT', min: 1, max: 1440 },
-      { key: 'return_ship_back_dispatch_days', value: '2', defaultValue: '2', type: 'INT', min: 1, max: 30 },
+      { key: 'return_ship_back_fee_deadline_minutes', value: '30', defaultValue: '30', type: 'INT', min: 5, max: 1440 },
+      { key: 'return_ship_back_ship_within_days', value: '2', defaultValue: '2', type: 'INT', min: 1, max: 30 },
     ];
     let putCall = null;
 
@@ -325,10 +375,14 @@ describe('INVALID return SHIP_BACK Web flow (Specs 2.1 - 2.5)', () => {
       expect(screen.getByRole('spinbutton', { name: /Độ dài một kỳ/ })).toHaveValue(30);
     });
 
+    expect(screen.getByLabelText('Hạn Member xác nhận giá ký gửi lại (ngày)')).toHaveValue(7);
+    expect(screen.getByLabelText('Số lượt trả giá tối đa khi ký gửi lại')).toHaveValue(2);
+    expect(screen.getByLabelText('Hạn Moderator phản hồi trả giá (ngày)')).toHaveValue(2);
+
     fireEvent.click(screen.getByRole('button', { name: /4\. Đơn & Trả hàng/i }));
     const timeoutInput = screen.getByLabelText('Hạn trả phí gửi lại (phút)');
     const dispatchInput = screen.getByLabelText('Hạn Moderator gửi hàng (ngày)');
-    expect(timeoutInput).toHaveValue(15);
+    expect(timeoutInput).toHaveValue(30);
     expect(dispatchInput).toHaveValue(2);
 
     fireEvent.click(screen.getByRole('button', { name: 'Sửa: Hạn Moderator gửi hàng (ngày)' }));
@@ -336,7 +390,7 @@ describe('INVALID return SHIP_BACK Web flow (Specs 2.1 - 2.5)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Lưu thay đổi tham số/i }));
 
     await waitFor(() => {
-      expect(putCall).toEqual({ key: 'return_ship_back_dispatch_days', value: '3' });
+      expect(putCall).toEqual({ key: 'return_ship_back_ship_within_days', value: '3' });
     });
     viewCfg.unmount();
 

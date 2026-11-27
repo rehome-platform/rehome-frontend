@@ -10,6 +10,9 @@ export const DEFAULT_SYSTEM_CONFIGS = {
     maxRenewals: 2, // Số lần gia hạn tối đa (tổng tối đa 90 ngày trên sàn)
     freeWithdrawalDays: 7, // Cửa sổ rút hàng miễn phí (ngày đầu mỗi kỳ)
     unclaimedDeadlineDays: 30, // Hạn chọn cách xử lý cuối kỳ (ngày) - quá hạn thành vô thừa nhận
+    reConsignConfirmDays: 7, // Hạn Member xác nhận giá ký gửi lại (ngày)
+    reConsignMaxCounterRounds: 2, // Số lượt Member trả giá tối đa khi ký gửi lại
+    reConsignModeratorResponseDays: 2, // Hạn Moderator phản hồi trả giá ký gửi lại (ngày)
     bringItemDeadlineDays: 7, // Hạn mang đồ đến kho sau khi duyệt form (ngày)
     maxPendingFormsPerMember: 5, // Số form đang chờ tối đa mỗi Member
   },
@@ -40,7 +43,7 @@ export const DEFAULT_SYSTEM_CONFIGS = {
     returnRequestWindowDays: 3, // Thời hạn gửi yêu cầu trả hàng (ngày sau khi nhận)
     returnHandoverCarrierDays: 3, // Thời hạn bàn giao hàng trả cho GHN (ngày)
     counterPickupDays: 7, // Thời hạn đến kho nhận hàng trả/rút về (ngày)
-    returnShipBackPaymentTimeoutMinutes: 15, // Hạn trả phí gửi lại hàng trả không hợp lệ (phút)
+    returnShipBackPaymentTimeoutMinutes: 30, // Hạn trả phí gửi lại hàng trả không hợp lệ (phút)
     returnShipBackDispatchDays: 2, // Hạn Moderator tạo vận đơn gửi lại hàng trả (ngày)
   },
 
@@ -67,6 +70,9 @@ export const SYSTEM_CONFIG_FIELDS = [
   { key: 'max_renewals', group: 'consignment', field: 'maxRenewals' },
   { key: 'free_withdrawal_window_days', group: 'consignment', field: 'freeWithdrawalDays' },
   { key: 'end_of_term_decision_days', group: 'consignment', field: 'unclaimedDeadlineDays' },
+  { key: 're_consign_confirm_days', group: 'consignment', field: 'reConsignConfirmDays' },
+  { key: 're_consign_max_counter_rounds', group: 'consignment', field: 'reConsignMaxCounterRounds' },
+  { key: 're_consign_moderator_response_days', group: 'consignment', field: 'reConsignModeratorResponseDays' },
   { key: 'bring_in_deadline_days', group: 'consignment', field: 'bringItemDeadlineDays' },
   { key: 'max_pending_forms_per_member', group: 'consignment', field: 'maxPendingFormsPerMember' },
   { key: 'commission_rate_term1', group: 'pricingAndCommission', field: 'commissionTerm1', percent: true },
@@ -83,8 +89,8 @@ export const SYSTEM_CONFIG_FIELDS = [
   { key: 'return_request_window_days', group: 'ordersAndReturns', field: 'returnRequestWindowDays' },
   { key: 'return_handover_carrier_days', group: 'ordersAndReturns', field: 'returnHandoverCarrierDays' },
   { key: 'counter_pickup_days', group: 'ordersAndReturns', field: 'counterPickupDays' },
-  { key: 'return_ship_back_payment_timeout_minutes', group: 'ordersAndReturns', field: 'returnShipBackPaymentTimeoutMinutes' },
-  { key: 'return_ship_back_dispatch_days', group: 'ordersAndReturns', field: 'returnShipBackDispatchDays' },
+  { key: 'return_ship_back_fee_deadline_minutes', group: 'ordersAndReturns', field: 'returnShipBackPaymentTimeoutMinutes' },
+  { key: 'return_ship_back_ship_within_days', group: 'ordersAndReturns', field: 'returnShipBackDispatchDays' },
   { key: 'max_concurrent_campaigns', group: 'operationsAndCommunity', field: 'maxConcurrentCampaignsPerOrg' },
   { key: 'legal_image_retention_days', group: 'operationsAndCommunity', field: 'legalDocsRetentionDays' },
   { key: 'overdue_task_hours', group: 'operationsAndCommunity', field: 'taskAutoReleaseHours' },
