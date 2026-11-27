@@ -32,7 +32,7 @@ export default function BarcodePrintModal({ isOpen, onClose, item }) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Tem mã vạch SKU · ${sku}`}>
+    <Modal isOpen={isOpen} onClose={onClose} title={`Tem mã vạch Mã hàng hóa · ${sku}`}>
       <div className="space-y-4">
         <ResourceState resource={label} />
 

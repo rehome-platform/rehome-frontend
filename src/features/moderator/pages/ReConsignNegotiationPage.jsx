@@ -86,7 +86,7 @@ function Negotiation({ sku }) {
   };
 
   return (
-    <Page title="Ký gửi lại — chốt giá mới" subtitle={`Mã SKU: ${sku}`} actions={
+    <Page title="Ký gửi lại — chốt giá mới" subtitle={`Mã hàng hóa: ${sku}`} actions={
       <div className="flex gap-3 items-center">
         <Link className="text-primary hover:underline" to={`/moderator/inventory/${encodeURIComponent(sku)}`}>← Chi tiết sản phẩm</Link>
         <Button variant="outline" onClick={resource.refresh} className="gap-1.5 whitespace-nowrap">
