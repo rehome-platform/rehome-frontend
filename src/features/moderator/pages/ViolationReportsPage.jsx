@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
 import { TableActionButton } from '../../../components/common/index.js';
-import { Button, Badge, Modal } from '../../../components/common/index.js';
+import { Button, Badge, Modal, ImageLightbox } from '../../../components/common/index.js';
 import Spinner from '../../../components/common/Spinner.jsx';
 import { violationReportService } from '../services/violationReportApi.js';
 import { useModerationShortcuts } from '../hooks/useModerationShortcuts.js';
@@ -125,7 +125,7 @@ export default function ViolationReportsPage() {
   const [selectedReportId, setSelectedReportId] = useState(null);
   const [selectedReport, setSelectedReport] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [previewImage, setPreviewImage] = useState(null);
+  const [lightboxState, setLightboxState] = useState(null);
 
   // Form xử lý vi phạm trong VP-02
   const [selectedAction, setSelectedAction] = useState('');
@@ -277,11 +277,9 @@ export default function ViolationReportsPage() {
   };
 
   useModerationShortcuts({
-    enabled: Boolean(previewImage) || (viewMode === 'DETAIL' && !confirmDestructiveOpen),
+    enabled: !lightboxState && viewMode === 'DETAIL' && !confirmDestructiveOpen,
     onEscape: () => {
-      if (previewImage) {
-        setPreviewImage(null);
-      } else if (viewMode === 'DETAIL' && !confirmDestructiveOpen) {
+      if (viewMode === 'DETAIL' && !confirmDestructiveOpen) {
         handleBackToQueue();
       }
     },
@@ -634,7 +632,13 @@ export default function ViolationReportsPage() {
                                 <button
                                   key={idx}
                                   type="button"
-                                  onClick={() => setPreviewImage(imgUrl)}
+                                  onClick={() =>
+                                    setLightboxState({
+                                      images: targetSnapshot.postPhotoUrls,
+                                      index: idx,
+                                      categoryLabel: 'Hình ảnh bài viết bị báo cáo',
+                                    })
+                                  }
                                   className="relative aspect-square rounded-xl overflow-hidden border border-neutral bg-neutral-light hover:opacity-90 transition-opacity cursor-pointer group"
                                 >
                                   <img
@@ -666,7 +670,18 @@ export default function ViolationReportsPage() {
                     {selectedReport.targetType === 'CAMPAIGN' && (
                       <div className="space-y-3 text-xs">
                         {targetSnapshot?.campaignCoverUrl && (
-                          <div className="relative h-44 rounded-xl overflow-hidden border border-neutral bg-neutral-light">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setLightboxState({
+                                images: [targetSnapshot.campaignCoverUrl],
+                                index: 0,
+                                categoryLabel: 'Ảnh bìa chiến dịch',
+                              })
+                            }
+                            className="relative h-44 w-full rounded-xl overflow-hidden border border-neutral bg-neutral-light cursor-zoom-in group block"
+                            title="Phóng to ảnh bìa chiến dịch"
+                          >
                             <img
                               src={targetSnapshot.campaignCoverUrl}
                               alt="Ảnh bìa chiến dịch"
@@ -677,7 +692,13 @@ export default function ViolationReportsPage() {
                                   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='200'><rect width='100%' height='100%' fill='%23f3f4f6'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%236b7280' font-size='14' font-family='sans-serif'>Không tải được ảnh bìa</text></svg>";
                               }}
                             />
-                          </div>
+                            <span
+                              aria-hidden="true"
+                              className="pointer-events-none absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/65 text-white text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              Phóng to
+                            </span>
+                          </button>
                         )}
                         <div>
                           <h3 className="text-sm font-bold text-text mb-1">
@@ -699,11 +720,24 @@ export default function ViolationReportsPage() {
                         <div className="flex items-start gap-4">
                           <div className="w-16 h-16 rounded-2xl overflow-hidden border border-neutral bg-background shrink-0 flex items-center justify-center">
                             {targetSnapshot?.organizationLogoUrl ? (
-                              <img
-                                src={targetSnapshot.organizationLogoUrl}
-                                alt="Logo tổ chức"
-                                className="w-full h-full object-cover"
-                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setLightboxState({
+                                    images: [targetSnapshot.organizationLogoUrl],
+                                    index: 0,
+                                    categoryLabel: targetSnapshot?.organizationDisplayName || 'Logo tổ chức',
+                                  })
+                                }
+                                className="w-full h-full block cursor-zoom-in"
+                                title="Phóng to logo tổ chức"
+                              >
+                                <img
+                                  src={targetSnapshot.organizationLogoUrl}
+                                  alt="Logo tổ chức"
+                                  className="w-full h-full object-cover"
+                                />
+                              </button>
                             ) : (
                               <span className="text-sm font-bold text-textSecondary">TC</span>
                             )}
@@ -1022,35 +1056,15 @@ export default function ViolationReportsPage() {
         </div>
       </Modal>
 
-      {/* MODAL XEM ẢNH FULL SIZE */}
-      {previewImage && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Xem ảnh phóng to"
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-xs"
-          onClick={() => setPreviewImage(null)}
-        >
-          <div
-            className="relative max-w-4xl max-h-[90vh] bg-surface rounded-2xl overflow-hidden p-2 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              aria-label="Đóng ảnh phóng to"
-              title="Đóng"
-              onClick={() => setPreviewImage(null)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center text-sm font-bold hover:bg-black transition-colors z-10 cursor-pointer"
-            >
-              ✕
-            </button>
-            <img
-              src={previewImage}
-              alt="Ảnh phóng to"
-              className="max-h-[85vh] w-auto object-contain rounded-xl"
-            />
-          </div>
-        </div>
+      {/* LIGHTBOX XEM & PHÓNG TO ẢNH */}
+      {lightboxState && (
+        <ImageLightbox
+          isOpen={Boolean(lightboxState)}
+          onClose={() => setLightboxState(null)}
+          images={lightboxState?.images || []}
+          initialIndex={lightboxState?.index ?? 0}
+          categoryLabel={lightboxState?.categoryLabel || 'Xem ảnh phóng to'}
+        />
       )}
     </ModeratorLayout>
   );

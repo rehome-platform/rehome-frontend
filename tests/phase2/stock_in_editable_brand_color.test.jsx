@@ -182,4 +182,70 @@ describe('Task 5: Allow editing Category, Brand and Color during stock-in', () =
       );
     });
   });
+
+  it('filters categories by AI try-on slot, shows active slot badge, and warns on name/slot mismatch', async () => {
+    vi.spyOn(catalogService, 'list').mockResolvedValue({
+      categories: [
+        { id: 'cat-top', name: 'Áo sơ mi', tryonSlot: 'TOP' },
+        { id: 'cat-bottom', name: 'Quần jeans', tryonSlot: 'BOTTOM' },
+        { id: 'cat-dress', name: 'Đầm dự tiệc', tryonSlot: 'DRESS' },
+      ],
+      brands: [{ id: 'brand-1', name: 'Zara' }],
+    });
+    vi.spyOn(consignmentService, 'receipt').mockResolvedValue({
+      id: 'rec-slot-1',
+      confirmedAt: '2026-11-26T00:00:00Z',
+      agreedPrice: 350000,
+      categoryId: 'cat-top',
+      brandId: 'brand-1',
+    });
+    vi.spyOn(consignmentService, 'read').mockResolvedValue({
+      id: 'form-slot-1',
+      formId: 'form-slot-1',
+      productName: 'Quần jeans ống rộng Zara',
+      categoryId: 'cat-top',
+      brandId: 'brand-1',
+    });
+
+    render(
+      <MemoryRouter>
+        <Phase2Provider>
+          <StockInForm
+            receipt={{
+              id: 'rec-slot-1',
+              confirmedAt: '2026-11-26T00:00:00Z',
+              agreedPrice: 350000,
+              categoryId: 'cat-top',
+              brandId: 'brand-1',
+            }}
+            form={{
+              formId: 'form-slot-1',
+              productName: 'Quần jeans ống rộng Zara',
+              categoryId: 'cat-top',
+              brandId: 'brand-1',
+            }}
+          />
+        </Phase2Provider>
+      </MemoryRouter>,
+    );
+
+    const badge = await screen.findByTestId('stockin-tryon-slot-badge');
+    expect(badge).toHaveTextContent('Áo (TOP)');
+
+    // Tên sản phẩm là "Quần jeans..." nhưng đang chọn danh mục TOP -> hiện cảnh báo lệch slot
+    expect(screen.getByTestId('stockin-slot-mismatch-warning')).toHaveTextContent(/Quần \/ Váy \(BOTTOM\)/);
+
+    // Lọc theo BOTTOM -> chỉ còn danh mục BOTTOM trong select Danh mục và reset category không khớp
+    const slotFilter = screen.getByLabelText('Lọc theo Slot thử đồ AI');
+    fireEvent.change(slotFilter, { target: { value: 'BOTTOM' } });
+
+    const categorySelect = screen.getByLabelText('Danh mục');
+    expect(categorySelect.value).toBe('');
+    expect(screen.queryByRole('option', { name: 'Áo sơ mi' })).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Quần jeans' })).toBeInTheDocument();
+
+    fireEvent.change(categorySelect, { target: { value: 'cat-bottom' } });
+    expect(screen.getByTestId('stockin-tryon-slot-badge')).toHaveTextContent('Quần / Váy (BOTTOM)');
+    expect(screen.queryByTestId('stockin-slot-mismatch-warning')).not.toBeInTheDocument();
+  });
 });

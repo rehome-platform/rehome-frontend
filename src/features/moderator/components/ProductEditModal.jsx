@@ -1,9 +1,16 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Modal from '../../../components/common/Modal.jsx';
 import Button from '../../../components/common/Button.jsx';
+import ImageLightbox from '../../../components/common/ImageLightbox.jsx';
 import PhotoUpload from './PhotoUpload.jsx';
-import { inventoryService } from '../services/warehouseApi.js';
-import { normalizeError } from '../models/warehouseModel.js';
+import { catalogService, inventoryService } from '../services/warehouseApi.js';
+import { STATIC_STALE_TIME_MS, useResource } from '../hooks/warehouseHooks.jsx';
+import {
+  formatTryOnSlot,
+  groupCategoriesBySlot,
+  normalizeError,
+  normalizeTryOnSlot,
+} from '../models/warehouseModel.js';
 
 function photoUrlOf(photo) {
   if (!photo) return '';
@@ -45,22 +52,60 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
   const isOnSale = item?.status === 'ON_SALE';
 
   const [name, setName] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [categoryTouched, setCategoryTouched] = useState(false);
   const [existingPhotos, setExistingPhotos] = useState([]);
   const [uploadedPhotos, setUploadedPhotos] = useState([]);
   const [uploadPending, setUploadPending] = useState(false);
   const [uploadVersion, setUploadVersion] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+
+  const catalog = useResource((options) => catalogService.list(options), [isOpen], {
+    enabled: Boolean(isOpen),
+    cacheKey: 'catalog:list',
+    staleTime: STATIC_STALE_TIME_MS,
+  });
+
+  const categories = useMemo(
+    () =>
+      (catalog.data?.categories || []).filter(
+        (cat) => !cat.hidden || (item?.categoryId && cat.id === item.categoryId),
+      ),
+    [catalog.data?.categories, item?.categoryId],
+  );
+
+  const resolvedInitialCategoryId = useMemo(() => {
+    if (item?.categoryId && categories.some((cat) => cat.id === item.categoryId)) {
+      return item.categoryId;
+    }
+    if (item?.categoryId) return item.categoryId;
+    const targetName = String(item?.categoryName || item?.category?.name || '')
+      .trim()
+      .toLowerCase();
+    if (!targetName) return '';
+    return categories.find((cat) => String(cat.name || '').trim().toLowerCase() === targetName)?.id || '';
+  }, [item?.categoryId, item?.categoryName, item?.category, categories]);
 
   useEffect(() => {
     if (!isOpen) return;
     setName(item?.name || '');
+    setCategoryId(item?.categoryId || '');
+    setCategoryTouched(false);
     setExistingPhotos((item?.photos || []).map(photoUrlOf).filter(Boolean));
     setUploadedPhotos([]);
     setUploadPending(false);
     setUploadVersion((v) => v + 1);
     setErrorMessage('');
   }, [isOpen, item]);
+
+  useEffect(() => {
+    if (!isOpen || categoryTouched) return;
+    if (resolvedInitialCategoryId && categoryId !== resolvedInitialCategoryId) {
+      setCategoryId(resolvedInitialCategoryId);
+    }
+  }, [isOpen, categoryTouched, resolvedInitialCategoryId, categoryId]);
 
   const onUploadedChange = useCallback((urls, pending) => {
     setUploadedPhotos(urls);
@@ -74,6 +119,11 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
   const conditionLevel = detectConditionLevel(conditionNote);
   const categoryName = item?.categoryName || item?.category?.name || item?.category || '—';
   const brandName = item?.brandName || item?.brand?.name || item?.brand || '—';
+  const groupedCategories = useMemo(() => groupCategoriesBySlot(categories), [categories]);
+  const selectedCategory = categories.find((cat) => cat.id === categoryId) || null;
+  const activeSlot = normalizeTryOnSlot(selectedCategory) || normalizeTryOnSlot(item);
+  const activeSlotInfo = activeSlot ? formatTryOnSlot(activeSlot) : null;
+  const canEditCategory = isOnSale && categories.length > 0;
   const isSaveDisabled =
     submitting || uploadPending || !isOnSale || !name.trim() || combinedPhotos.length === 0;
 
@@ -109,9 +159,12 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
     setSubmitting(true);
     setErrorMessage('');
     try {
+      const categoryChanged =
+        Boolean(categoryId) && categoryId !== resolvedInitialCategoryId;
       const updated = await inventoryService.update(sku, {
         name: name.trim(),
         photoUrls: combinedPhotos,
+        ...(categoryChanged ? { categoryId } : {}),
       });
       await onUpdated?.(updated);
       onClose?.();
@@ -171,6 +224,78 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
           />
         </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+          <div className="space-y-1">
+            <label htmlFor="edit-product-category" className="block font-bold text-[#191C19]">
+              Danh mục {isOnSale && <span className="text-[#5B6776] font-normal">(quyết định slot thử đồ AI)</span>}
+            </label>
+            {isOnSale ? (
+              <select
+                id="edit-product-category"
+                value={categoryId}
+                disabled={submitting || !canEditCategory}
+                onChange={(e) => {
+                  setCategoryId(e.target.value);
+                  setCategoryTouched(true);
+                }}
+                className="w-full rounded-xl border border-[#8a8a8a] bg-white px-3 py-2 text-xs text-[#191C19] focus:border-[#006B2C] focus:outline-none disabled:bg-[#f3f4f6] disabled:text-[#5f5f5f]"
+              >
+                {!canEditCategory ? (
+                  <option value={categoryId || ''}>
+                    {categoryName !== '—' ? categoryName : 'Đang tải danh mục...'}
+                  </option>
+                ) : (
+                  <>
+                    <option value="">Chọn danh mục</option>
+                    {groupedCategories.map((group) =>
+                      group.label ? (
+                        <optgroup key={group.key} label={group.label}>
+                          {group.items.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ) : (
+                        group.items.map((cat) => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </option>
+                        ))
+                      ),
+                    )}
+                  </>
+                )}
+              </select>
+            ) : (
+              <input
+                id="edit-product-category"
+                type="text"
+                value={categoryName}
+                disabled
+                readOnly
+                className={READONLY_INPUT_CLASS}
+              />
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <span className="block font-semibold text-[#5f5f5f]">Slot thử đồ AI</span>
+            <div
+              data-testid="edit-product-tryon-slot"
+              className="rounded-xl border border-[#DDE5D9] bg-[#FAFBF9] px-3 py-1.5 min-h-[34px] flex items-center"
+            >
+              {activeSlotInfo ? (
+                <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${activeSlotInfo.badgeClass}`}>
+                  {activeSlotInfo.label}
+                </span>
+              ) : (
+                <span className="text-[#5B6776]">Chưa xác định</span>
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="space-y-2">
           <span className="block font-bold text-[#191C19]">
             Ảnh bán hàng ({combinedPhotos.length}) <span className="text-red-600">*</span>
@@ -183,11 +308,24 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
                   key={`${url}-${index}`}
                   className="relative rounded-xl border border-[#d4d4d4] p-1.5 bg-[#fafafa] space-y-1"
                 >
-                  <img
-                    src={url}
-                    alt={`Ảnh ${index + 1}`}
-                    className="h-20 w-full object-cover rounded-lg"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setLightboxIndex(index)}
+                    className="block w-full h-20 rounded-lg overflow-hidden cursor-zoom-in group relative focus:outline-none focus-visible:ring-2 focus-visible:ring-[#006B2C]/40"
+                    title={`Phóng to ảnh ${index + 1}`}
+                  >
+                    <img
+                      src={url}
+                      alt={`Ảnh ${index + 1}`}
+                      className="h-20 w-full object-cover rounded-lg transition-transform duration-200 group-hover:scale-105"
+                    />
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/65 text-white text-[9px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      Phóng to
+                    </span>
+                  </button>
                   <div className="flex items-center justify-between gap-1">
                     <div className="flex items-center gap-1">
                       <button
@@ -282,21 +420,7 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="space-y-1">
-              <label htmlFor="edit-product-category" className="block font-semibold text-[#5f5f5f]">
-                Danh mục
-              </label>
-              <input
-                id="edit-product-category"
-                type="text"
-                value={categoryName}
-                disabled
-                readOnly
-                className={READONLY_INPUT_CLASS}
-              />
-            </div>
-
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label htmlFor="edit-product-brand" className="block font-semibold text-[#5f5f5f]">
                 Thương hiệu
@@ -388,6 +512,15 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
           </Button>
         </div>
       </form>
+      {lightboxIndex !== null && existingPhotos.length > 0 && (
+        <ImageLightbox
+          isOpen={lightboxIndex !== null}
+          onClose={() => setLightboxIndex(null)}
+          images={existingPhotos}
+          initialIndex={lightboxIndex ?? 0}
+          categoryLabel="Ảnh bán hàng"
+        />
+      )}
     </Modal>
   );
 }

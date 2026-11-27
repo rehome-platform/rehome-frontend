@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import Button from '../../../components/common/Button.jsx';
 import Modal from '../../../components/common/Modal.jsx';
+import ImageLightbox from '../../../components/common/ImageLightbox.jsx';
 import Spinner from '../../../components/common/Spinner.jsx';
 import { useToast } from '../../../context/ToastContext.jsx';
 import PhotoUpload from '../components/PhotoUpload.jsx';
@@ -96,7 +97,7 @@ export default function DonationsPage() {
   const [unhiding, setUnhiding] = useState(false);
 
   // Xem ảnh hiện vật kích thước lớn
-  const [previewPhotoUrl, setPreviewPhotoUrl] = useState(null);
+  const [lightboxState, setLightboxState] = useState(null);
 
   const warehouses = useResource((options) => donationService.myWarehouses(options), [], {
     cacheKey: 'donations:myWarehouses',
@@ -807,11 +808,25 @@ export default function DonationsPage() {
                                   {row.isConsignedItem && (
                                     <div className="flex items-start gap-2">
                                       {row.productPhotoUrl && (
-                                        <img
-                                          src={row.productPhotoUrl}
-                                          alt={row.productName || row.sku || 'Món ký gửi'}
-                                          className="w-10 h-10 rounded-lg object-cover border border-neutral flex-shrink-0"
-                                        />
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setLightboxState({
+                                              images: [row.productPhotoUrl],
+                                              index: 0,
+                                              title: row.productName || row.sku || 'Món ký gửi',
+                                            });
+                                          }}
+                                          className="w-10 h-10 rounded-lg overflow-hidden border border-neutral flex-shrink-0 cursor-zoom-in block"
+                                          title="Phóng to ảnh sản phẩm"
+                                        >
+                                          <img
+                                            src={row.productPhotoUrl}
+                                            alt={row.productName || row.sku || 'Món ký gửi'}
+                                            className="w-full h-full object-cover"
+                                          />
+                                        </button>
                                       )}
                                       <div className="space-y-0.5 min-w-0">
                                         <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-200 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900 whitespace-nowrap">
@@ -832,7 +847,11 @@ export default function DonationsPage() {
                                           rel="noreferrer"
                                           onClick={(e) => {
                                             e.preventDefault();
-                                            setPreviewPhotoUrl(src);
+                                            setLightboxState({
+                                              images: photos,
+                                              index: i,
+                                              title: 'Ảnh hiện vật quyên góp',
+                                            });
                                           }}
                                           title="Xem ảnh hiện vật kích thước lớn"
                                           className="block"
@@ -1031,11 +1050,25 @@ export default function DonationsPage() {
                                       {row.isConsignedItem && (
                                         <div className="flex items-start gap-2.5">
                                           {row.productPhotoUrl && (
-                                            <img
-                                              src={row.productPhotoUrl}
-                                              alt={row.productName || row.sku || 'Món ký gửi'}
-                                              className="w-10 h-10 rounded-lg object-cover border border-neutral flex-shrink-0"
-                                            />
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setLightboxState({
+                                                  images: [row.productPhotoUrl],
+                                                  index: 0,
+                                                  title: row.productName || row.sku || 'Món ký gửi',
+                                                });
+                                              }}
+                                              className="w-10 h-10 rounded-lg overflow-hidden border border-neutral flex-shrink-0 cursor-zoom-in block"
+                                              title="Phóng to ảnh sản phẩm"
+                                            >
+                                              <img
+                                                src={row.productPhotoUrl}
+                                                alt={row.productName || row.sku || 'Món ký gửi'}
+                                                className="w-full h-full object-cover"
+                                              />
+                                            </button>
                                           )}
                                           <div className="space-y-1 min-w-0">
                                             <div className="inline-flex items-center rounded-full bg-amber-100 border border-amber-200 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900 whitespace-nowrap">
@@ -1081,7 +1114,11 @@ export default function DonationsPage() {
                                                     rel="noreferrer"
                                                     onClick={(e) => {
                                                       e.preventDefault();
-                                                      setPreviewPhotoUrl(src);
+                                                      setLightboxState({
+                                                        images: photos,
+                                                        index: i,
+                                                        title: 'Ảnh hiện vật quyên góp',
+                                                      });
                                                     }}
                                                     title="Xem ảnh hiện vật kích thước lớn"
                                                     className="block group"
@@ -1582,38 +1619,20 @@ export default function DonationsPage() {
         </div>
       </Modal>
 
-      {/* Modal Xem lớn ảnh quyên góp */}
-      <Modal
-        isOpen={Boolean(previewPhotoUrl)}
-        onClose={() => setPreviewPhotoUrl(null)}
-        title="Ảnh hiện vật quyên góp"
-        size="lg"
-      >
-        {previewPhotoUrl && (
-          <div className="space-y-3 text-xs">
-            <div className="flex items-center justify-center rounded-xl bg-black/5 overflow-hidden max-h-[72vh]">
-              <img
-                src={previewPhotoUrl}
-                alt="Ảnh hiện vật quyên góp kích thước lớn"
-                className="max-h-[70vh] max-w-full object-contain rounded-lg"
-              />
-            </div>
-            <div className="flex items-center justify-between pt-1">
-              <a
-                href={previewPhotoUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="font-semibold text-[#006B2C] hover:underline"
-              >
-                Mở ảnh gốc trong tab mới ↗
-              </a>
-              <Button variant="outline" size="sm" onClick={() => setPreviewPhotoUrl(null)}>
-                Đóng
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
+      {/* Lightbox Xem & phóng to ảnh quyên góp */}
+      {lightboxState && (
+        <ImageLightbox
+          isOpen={Boolean(lightboxState)}
+          onClose={() => setLightboxState(null)}
+          images={(lightboxState?.images || []).map((item) =>
+            typeof item === 'string'
+              ? { src: item, alt: 'Ảnh hiện vật quyên góp kích thước lớn' }
+              : item
+          )}
+          initialIndex={lightboxState?.index ?? 0}
+          categoryLabel={lightboxState?.title || 'Ảnh hiện vật quyên góp'}
+        />
+      )}
     </Page>
   );
 }

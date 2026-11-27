@@ -1,6 +1,6 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import Button from '../../../components/common/Button.jsx';
-import Modal from '../../../components/common/Modal.jsx';
+import ImageLightbox from '../../../components/common/ImageLightbox.jsx';
 import Spinner from '../../../components/common/Spinner.jsx';
 import { inventoryService } from '../services/warehouseApi.js';
 import { usePhase2 } from '../hooks/warehouseHooks.jsx';
@@ -14,7 +14,23 @@ export default function PhotoUpload({ onChange, disabled = false, maxFiles = nul
   const scope = phase2?.scope || 'warehouse';
 
   const [files, setFiles] = useState([]);
-  const [previewModal, setPreviewModal] = useState(null); // { url, name }
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+  const lightboxImages = useMemo(
+    () =>
+      files
+        .map((item) => {
+          const src = item.url || item.previewUrl;
+          if (!src) return null;
+          return {
+            key: item.key,
+            src,
+            alt: item.file.name,
+            caption: item.file.name,
+          };
+        })
+        .filter(Boolean),
+    [files]
+  );
   const controllers = useRef(new Set());
   const active = useRef(true);
   const fileInputRef = useRef(null);
@@ -160,7 +176,16 @@ export default function PhotoUpload({ onChange, disabled = false, maxFiles = nul
               }`}
             >
               {/* Ảnh Thumbnail */}
-              <div className="relative aspect-square w-full bg-[#F0F2EE] flex items-center justify-center overflow-hidden">
+              <div
+                onClick={() => {
+                  if (!imgSrc || item.status === 'UPLOADING') return;
+                  const idx = lightboxImages.findIndex((img) => img.key === item.key);
+                  if (idx >= 0) setLightboxIndex(idx);
+                }}
+                className={`relative aspect-square w-full bg-[#F0F2EE] flex items-center justify-center overflow-hidden ${
+                  imgSrc && item.status !== 'UPLOADING' ? 'cursor-zoom-in' : ''
+                }`}
+              >
                 {imgSrc ? (
                   <img
                     src={imgSrc}
@@ -184,7 +209,11 @@ export default function PhotoUpload({ onChange, disabled = false, maxFiles = nul
                     <button
                       type="button"
                       aria-label={`Phóng to ${item.file.name}`}
-                      onClick={() => setPreviewModal({ url: imgSrc, name: item.file.name })}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const idx = lightboxImages.findIndex((img) => img.key === item.key);
+                        setLightboxIndex(idx >= 0 ? idx : 0);
+                      }}
                       className="w-8 h-8 rounded-full bg-white text-[#191C19] flex items-center justify-center text-xs font-bold hover:bg-[#E8F5E9] transition-colors shadow"
                       title="Xem phóng to"
                     >
@@ -199,7 +228,10 @@ export default function PhotoUpload({ onChange, disabled = false, maxFiles = nul
                       type="button"
                       aria-label={`Xóa ảnh ${item.file.name}`}
                       disabled={disabled}
-                      onClick={() => removePhoto(item)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removePhoto(item);
+                      }}
                       className="w-8 h-8 rounded-full bg-white text-[#D92D20] flex items-center justify-center text-xs font-bold hover:bg-[#FEE4E2] transition-colors shadow"
                       title="Xóa ảnh"
                     >
@@ -331,30 +363,15 @@ export default function PhotoUpload({ onChange, disabled = false, maxFiles = nul
         onChange={handleFilesAdded}
       />
 
-      {/* Modal xem trước ảnh kích thước lớn (Lightbox Zoom) */}
-      {previewModal && (
-        <Modal
-          isOpen={!!previewModal}
-          onClose={() => setPreviewModal(null)}
-          title={previewModal.name || 'Xem trước ảnh sản phẩm'}
-          size="lg"
-        >
-          <div className="flex flex-col items-center justify-center space-y-3">
-            <div className="w-full max-h-[70vh] flex items-center justify-center overflow-hidden rounded-xl bg-black/5">
-              <img
-                src={previewModal.url}
-                alt={previewModal.name}
-                className="max-h-[68vh] max-w-full object-contain rounded-lg"
-              />
-            </div>
-            <div className="flex justify-between items-center w-full pt-2">
-              <span className="text-xs text-[#5B6776] truncate">{previewModal.name}</span>
-              <Button variant="outline" size="sm" onClick={() => setPreviewModal(null)}>
-                Đóng
-              </Button>
-            </div>
-          </div>
-        </Modal>
+      {/* Lightbox xem trước & phóng to ảnh */}
+      {lightboxIndex !== null && lightboxImages.length > 0 && (
+        <ImageLightbox
+          isOpen={lightboxIndex !== null}
+          onClose={() => setLightboxIndex(null)}
+          images={lightboxImages}
+          initialIndex={lightboxIndex ?? 0}
+          title="Xem trước ảnh sản phẩm"
+        />
       )}
     </div>
   );

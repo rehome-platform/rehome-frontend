@@ -12,7 +12,7 @@ import returnService, { pendingReturnFromInventory } from '../services/returnApi
 import { endTermService } from '../services/endTermApi.js';
 import { pricingForProduct } from '../services/endTermPricingApi.js';
 import { useModeratorCache, useResource } from '../hooks/warehouseHooks.jsx';
-import { listItems, resolveInventoryTermAndRates } from '../models/warehouseModel.js';
+import { formatTryOnSlot, listItems, resolveInventoryTermAndRates } from '../models/warehouseModel.js';
 import { Page, Card, Photos, Status, ResourceState, date, money } from '../components/WarehouseUi.jsx';
 import { ReturnOutcomeDialog } from '../components/returns/ReturnSections.jsx';
 import { useToast } from '../../../context/ToastContext.jsx';
@@ -326,19 +326,31 @@ export default function InventoryDetailPage() {
                   </p>
                 </div>
 
-                <div className="p-3.5 rounded-xl border border-[#e0e0e0] bg-[#fafafa]">
+                <div className="p-3.5 rounded-xl border border-[#e0e0e0] bg-[#fafafa] space-y-1.5">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-[#5f5f5f]">Kích cỡ & Phân loại</p>
-                  <p className="text-base font-semibold text-[#191C19] mt-0.5">
+                  <p className="text-base font-semibold text-[#191C19]">
+                    {data.categoryName ? `${data.categoryName} · ` : ''}
                     {data.brandName || data.brand || 'ReHome'}
                     {data.size ? ` · Size ${data.size}` : ''}
                   </p>
+                  {data.tryonSlot && (() => {
+                    const slotInfo = formatTryOnSlot(data.tryonSlot);
+                    return (
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className="text-[#5f5f5f]">Slot thử đồ AI:</span>
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-bold ${slotInfo.badgeClass}`}>
+                          {slotInfo.label}
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
               {data.photos && data.photos.length > 0 && (
                 <div className="pt-2">
                   <p className="text-xs font-bold text-[#191C19] mb-2">Ảnh sản phẩm lưu kho</p>
-                  <Photos photos={data.photos} />
+                  <Photos photos={data.photos} title="Ảnh sản phẩm lưu kho" />
                 </div>
               )}
             </div>

@@ -519,6 +519,20 @@ function WithdrawalModalContent({ target, busy, onApprove, onReject, onClose }) 
   }, [target.sku, existingImage]);
 
   const productImage = existingImage || firstPhotoUrl(detail?.photos);
+  const allProductImages = React.useMemo(() => {
+    const rawPhotos = Array.isArray(detail?.photos)
+      ? detail.photos
+      : Array.isArray(target.photos)
+        ? target.photos
+        : [];
+    const urls = rawPhotos
+      .map((p) => (typeof p === 'string' ? p : p?.url || p?.imageUrl))
+      .filter(Boolean);
+    if (urls.length > 0) {
+      return productImage && !urls.includes(productImage) ? [productImage, ...urls] : urls;
+    }
+    return productImage ? [productImage] : [];
+  }, [detail?.photos, target.photos, productImage]);
   const productName = target.targetName || target.productName || detail?.name || '—';
   const isPendingApproval = target.status === 'PENDING_APPROVAL';
   const deadline = target.pickupDeadline || null;
@@ -567,7 +581,7 @@ function WithdrawalModalContent({ target, busy, onApprove, onReject, onClose }) 
         <ReturnImageLightbox
           isOpen={lightboxOpen}
           onClose={() => setLightboxOpen(false)}
-          images={[productImage]}
+          images={allProductImages}
           initialIndex={0}
           categoryLabel={productName}
         />

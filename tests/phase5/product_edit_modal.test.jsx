@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Phase2Provider } from '../../src/features/moderator/hooks/warehouseHooks.jsx';
 import { Phase2Error } from '../../src/features/moderator/models/warehouseModel.js';
-import { inventoryService } from '../../src/features/moderator/services/warehouseApi.js';
+import { catalogService, inventoryService } from '../../src/features/moderator/services/warehouseApi.js';
 import baseApi from '../../src/services/baseApi.js';
 import ProductEditModal from '../../src/features/moderator/components/ProductEditModal.jsx';
 
@@ -19,7 +19,9 @@ const baseItem = {
   status: 'ON_SALE',
   name: 'Áo sơ mi Zara trắng',
   currentPrice: 250000,
+  categoryId: 'cat-top',
   categoryName: 'Áo sơ mi',
+  tryonSlot: 'TOP',
   brandName: 'Zara',
   size: 'M',
   conditionNote: 'Mới 95%',
@@ -28,10 +30,17 @@ const baseItem = {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  vi.spyOn(catalogService, 'list').mockResolvedValue({
+    categories: [
+      { id: 'cat-top', name: 'Áo sơ mi', tryonSlot: 'TOP', hidden: false },
+      { id: 'cat-bottom', name: 'Quần jeans', tryonSlot: 'BOTTOM', hidden: false },
+    ],
+    brands: [{ id: 'brand-1', name: 'Zara', hidden: false }],
+  });
 });
 
 describe('ProductEditModal', () => {
-  it('submits strictly { name, photoUrls } when ON_SALE and keeps other fields read-only', async () => {
+  it('submits { name, photoUrls } when ON_SALE without category change and keeps non-editable fields read-only', async () => {
     const updated = { ...baseItem, name: 'Áo sơ mi Zara mới' };
     const updateSpy = vi.spyOn(inventoryService, 'update').mockResolvedValue(updated);
     const onUpdated = vi.fn();
@@ -46,13 +55,16 @@ describe('ProductEditModal', () => {
     expect(screen.getByLabelText(/SKU/i)).toBeDisabled();
     expect(screen.getByLabelText(/Trạng thái/i)).toBeDisabled();
     expect(screen.getByLabelText(/Giá bán/i)).toBeDisabled();
-    expect(screen.getByLabelText(/Danh mục/i)).toBeDisabled();
     expect(screen.getByLabelText(/Thương hiệu/i)).toBeDisabled();
     expect(screen.getByLabelText(/Kích cỡ/i)).toBeDisabled();
     expect(screen.getByLabelText(/Mức độ tình trạng/i)).toBeDisabled();
     expect(screen.getByLabelText(/Ghi chú tình trạng/i)).toBeDisabled();
 
-    // Only name and photos are editable
+    const categorySelect = await screen.findByLabelText(/Danh mục/i);
+    await waitFor(() => expect(categorySelect).not.toBeDisabled());
+    expect(screen.getByTestId('edit-product-tryon-slot')).toHaveTextContent('Áo (TOP)');
+
+    // Only name and photos are edited -> payload omits unchanged categoryId
     const nameInput = screen.getByLabelText(/Tên sản phẩm/i);
     expect(nameInput).not.toBeDisabled();
     fireEvent.change(nameInput, { target: { value: '  Áo sơ mi Zara mới  ' } });
@@ -73,6 +85,36 @@ describe('ProductEditModal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('updates try-on slot badge preview and sends categoryId when Danh mục is changed', async () => {
+    const updated = {
+      ...baseItem,
+      categoryId: 'cat-bottom',
+      categoryName: 'Quần jeans',
+      tryonSlot: 'BOTTOM',
+    };
+    const updateSpy = vi.spyOn(inventoryService, 'update').mockResolvedValue(updated);
+
+    render(
+      <ProductEditModal isOpen item={baseItem} onUpdated={vi.fn()} onClose={vi.fn()} />,
+      { wrapper },
+    );
+
+    const categorySelect = await screen.findByLabelText(/Danh mục/i);
+    await waitFor(() => expect(categorySelect).toHaveValue('cat-top'));
+    fireEvent.change(categorySelect, { target: { value: 'cat-bottom' } });
+    expect(screen.getByTestId('edit-product-tryon-slot')).toHaveTextContent('Quần / Váy (BOTTOM)');
+
+    fireEvent.click(screen.getByRole('button', { name: /Lưu thay đổi/i }));
+
+    await waitFor(() =>
+      expect(updateSpy).toHaveBeenCalledWith('Q7-AK-000845', {
+        name: 'Áo sơ mi Zara trắng',
+        photoUrls: ['https://cdn.example/1.jpg', 'https://cdn.example/2.jpg'],
+        categoryId: 'cat-bottom',
+      }),
+    );
+  });
+
   it('disables editing and save button with clear message when status is not ON_SALE', () => {
     const updateSpy = vi.spyOn(inventoryService, 'update');
     const soldItem = { ...baseItem, status: 'SOLD' };
@@ -83,9 +125,10 @@ describe('ProductEditModal', () => {
     );
 
     expect(
-      screen.getByText('Chỉ được chỉnh sửa tên và ảnh bán hàng khi sản phẩm đang ON_SALE.'),
+      screen.getByText('Chỉ được chỉnh sửa tên và ảnh bán hàng khi sản phẩm đang ở trạng thái Đang bán.'),
     ).toBeInTheDocument();
     expect(screen.getByLabelText(/Tên sản phẩm/i)).toBeDisabled();
+    expect(screen.getByLabelText(/Danh mục/i)).toBeDisabled();
     expect(screen.getByRole('button', { name: /Lưu thay đổi/i })).toBeDisabled();
     screen.getAllByRole('button', { name: 'Xóa' }).forEach((btn) => {
       expect(btn).toBeDisabled();
@@ -125,12 +168,12 @@ describe('ProductEditModal', () => {
     );
     const updateSpy = vi.spyOn(inventoryService, 'update');
 
-    const { container } = render(
+    render(
       <ProductEditModal isOpen item={baseItem} onUpdated={vi.fn()} onClose={vi.fn()} />,
       { wrapper },
     );
 
-    const fileInput = container.querySelector('input[type="file"]');
+    const fileInput = document.body.querySelector('input[type="file"]');
     const file = new File(['img'], 'new.jpg', { type: 'image/jpeg' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 

@@ -143,4 +143,45 @@ describe('Ảnh đóng gói đơn hàng (ORDER_PACKING + PUT /orders/{id}/pack/p
     expect(screen.queryByLabelText(/Tải ảnh đóng gói/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Xóa ảnh đóng gói 1/i })).not.toBeInTheDocument();
   });
+
+  it('vô hiệu hóa nút Tạo vận đơn GHN và nhắc tải ảnh đóng gói khi chưa có ảnh; bật lại sau khi tải ảnh', async () => {
+    const order = {
+      ...orderFixture(),
+      scannedProductIds: ['sku-a', 'SKU-B'],
+      scannedCount: 2,
+      totalCount: 2,
+      packingPhotoUrls: [],
+    };
+    vi.spyOn(packingService, 'read').mockImplementation(async () => structuredClone(order));
+    vi.spyOn(inventoryService, 'upload').mockResolvedValue({
+      url: 'https://storage.rehome.test/order-packing/uploaded-1.jpg',
+    });
+    vi.spyOn(packingService, 'updatePhotos').mockImplementation(async (_id, urls) => {
+      order.packingPhotoUrls = [...urls];
+      return [...urls];
+    });
+
+    mountPackingDetail('o1');
+
+    const shipmentBtn = await screen.findByRole('button', { name: 'Tạo vận đơn GHN' });
+    expect(shipmentBtn).toBeDisabled();
+    expect(screen.getByTestId('packing-photo-required-notice')).toHaveTextContent(
+      /ít nhất 1 ảnh đóng gói/i
+    );
+    expect(screen.getByTestId('packing-photo-dropzone')).toBeInTheDocument();
+
+    const fileInput = screen.getByLabelText(/Tải ảnh đóng gói/i);
+    const file = new File(['box-bytes'], 'packed-parcel.jpg', { type: 'image/jpeg' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    expect(await screen.findByText('1 / 5 ảnh')).toBeInTheDocument();
+    await waitFor(() => expect(shipmentBtn).toBeEnabled());
+    expect(screen.queryByTestId('packing-photo-required-notice')).not.toBeInTheDocument();
+
+    // Xóa hết ảnh -> nút Tạo vận đơn GHN bị khóa lại và nhắc lại
+    fireEvent.click(screen.getByRole('button', { name: /Xóa ảnh đóng gói 1/i }));
+    expect(await screen.findByText('0 / 5 ảnh')).toBeInTheDocument();
+    await waitFor(() => expect(shipmentBtn).toBeDisabled());
+    expect(screen.getByTestId('packing-photo-required-notice')).toBeInTheDocument();
+  });
 });
