@@ -84,7 +84,7 @@ export default function ReHomeInfoModal({
                   </span>
                 </div>
                 <p className="text-xs text-white/75 mt-0.5">
-                  Quy trình kiểm định tại kho, quy chế ký gửi 90%, cài đặt APK &amp; chính sách bảo
+                  Quy trình kiểm định tại điểm kí gửi, quy chế ký gửi 90%, cài đặt APK &amp; chính sách bảo
                   vệ
                 </p>
               </div>
@@ -227,7 +227,7 @@ export default function ReHomeInfoModal({
                   <p className="text-xs text-white/80">Chuyển trực tiếp về Ví ReHome sau khi bán.</p>
                 </div>
                 <div className="rounded-2xl bg-white border border-[#071D12]/10 p-4 space-y-1">
-                  <p className="text-[11px] font-bold uppercase text-[#46564C]">Phí dịch vụ kho</p>
+                  <p className="text-[11px] font-bold uppercase text-[#46564C]">Phí dịch vụ điểm kí gửi</p>
                   <p className="text-2xl font-extrabold text-[#006B2C] tabular-nums">10%</p>
                   <p className="text-xs text-[#46564C]">
                     Trọn gói kiểm định, chụp ảnh, gắn AI &amp; bán hộ.
@@ -256,7 +256,7 @@ export default function ReHomeInfoModal({
                     <CheckCircleIcon className="w-4 h-4 text-[#006B2C] shrink-0 mt-0.5" />
                     <span>
                       <strong className="text-[#071D12]">Nhận lại đồ miễn phí:</strong> trong vòng 7
-                      ngày tại điểm kho đã ký gửi.
+                      ngày tại điểm kí gửi ban đầu.
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
@@ -315,7 +315,7 @@ export default function ReHomeInfoModal({
                   1. Chính sách kiểm hàng &amp; đổi trả 3 ngày
                 </h3>
                 <p className="text-xs text-[#46564C] leading-relaxed">
-                  Mọi sản phẩm trên sàn đều đã được dán tem Mã hàng hóa kiểm định tại kho. Người mua được hỗ
+                  Mọi sản phẩm trên sàn đều đã được dán tem Mã hàng hóa kiểm định tại điểm kí gửi. Người mua được hỗ
                   trợ khiếu nại và hoàn trả minh bạch trong vòng 3 ngày nếu sản phẩm sai mô tả phân hạng.
                 </p>
               </div>
@@ -325,7 +325,7 @@ export default function ReHomeInfoModal({
                 </h3>
                 <p className="text-xs text-[#46564C] leading-relaxed">
                   Chỉ các tổ chức hoàn tất xác minh giấy tờ pháp lý mới được mở chiến dịch tiếp nhận
-                  quyên góp công khai tại điểm kho ReHome.
+                  quyên góp công khai tại điểm kí gửi ReHome.
                 </p>
               </div>
               <div className="rounded-2xl bg-white border border-[#071D12]/10 p-4 space-y-1">

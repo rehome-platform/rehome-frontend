@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { isFixtureMode } from '../config/warehouseContract.js';
+import { formatWarehouseDisplayName } from '../../../utils/formatters.js';
 import { normalizeError, warehouseOf } from '../models/warehouseModel.js';
 import {
   DEFAULT_STALE_TIME_MS,
@@ -88,7 +89,7 @@ function ScopedSession({ user, warehouse, children }) {
       cache,
       warehouse: {
         ...warehouse,
-        name: warehouse.name || (isFixtureMode ? 'Điểm kí gửi A · dữ liệu thử' : 'Chưa có thông tin điểm kí gửi'),
+        name: formatWarehouseDisplayName(warehouse.name) || (isFixtureMode ? 'Điểm kí gửi A · dữ liệu thử' : 'Chưa có thông tin điểm kí gửi'),
       },
     }),
     [scope, user, identity, controller, cache, warehouse.id, warehouse.name],

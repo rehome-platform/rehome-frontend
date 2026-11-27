@@ -58,15 +58,21 @@ export const inventoryService = {
 
       let normalized = inventoryResult(result, params);
       if (normalized.items.some(item => item.status === 'WAREHOUSE')) {
-        const [details, pricing] = await Promise.all([
-          enrichListRows(normalized.items,
-            item => item.status === 'WAREHOUSE' && item.decisionId === undefined,
-            async item => ({ ...item, ...await inventoryService.read(item.sku, options) }), options),
-          pendingPricing(options),
-        ]);
+        const needsEndOfTermEnrichment = normalized.items.some(
+          item => item.status === 'WAREHOUSE' && !item.activeWithdrawalStatus,
+        );
+        const [details, pricing] = needsEndOfTermEnrichment
+          ? await Promise.all([
+              enrichListRows(normalized.items,
+                item => item.status === 'WAREHOUSE' && !item.activeWithdrawalStatus && item.decisionId === undefined,
+                async item => ({ ...item, ...await inventoryService.read(item.sku, options) }), options),
+              pendingPricing(options),
+            ])
+          : [normalized.items, []];
         const items = details.map(item => {
-          const request = item.status === 'WAREHOUSE' && pricingForProduct(pricing, item.sku);
-          const proposal = item.status === 'WAREHOUSE' && proposalForProduct(readProposals(options), item, request);
+          const isActiveWithdrawal = Boolean(item.activeWithdrawalStatus);
+          const request = item.status === 'WAREHOUSE' && !isActiveWithdrawal && pricingForProduct(pricing, item.sku);
+          const proposal = item.status === 'WAREHOUSE' && !isActiveWithdrawal && proposalForProduct(readProposals(options), item, request);
           return inventoryItemWithReason(inventoryDetail({
             ...item,
             ...(proposal ? { reConsignStatus: 'PROPOSAL_SENT', newReceiptId: proposal.receiptId } : {}), ...(request ? {
@@ -312,7 +318,8 @@ async function termExpiredRows(options, includeTerminal) {
     includeTerminal ? allInventory('UNCLAIMED', options) : [],
     pendingPricing(options),
   ]);
-  const storedDetails = await enrichListRows(stored, () => true, async item => ({
+  const storedCandidates = stored.filter(item => !item.activeWithdrawalStatus);
+  const storedDetails = await enrichListRows(storedCandidates, () => true, async item => ({
     ...item, ...await inventoryService.read(item.id || item.sku, options),
   }), options);
   const proposals = readProposals(options);
@@ -328,7 +335,7 @@ async function termExpiredRows(options, includeTerminal) {
         previousAgreedPrice: request.previousAgreedPrice
       } : {}),
     }, item.id || item.sku));
-  }).filter(item => ['WITHDRAWN', 'UNCLAIMED'].includes(item.status) || (item.status === 'WAREHOUSE' && (item.decisionId || item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT')));
+  }).filter(item => !item.activeWithdrawalStatus && (['WITHDRAWN', 'UNCLAIMED'].includes(item.status) || (item.status === 'WAREHOUSE' && (item.decisionId || item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT'))));
 }
 
 const rowsOf = result => result?.content || result?.items || (Array.isArray(result) ? result : []);

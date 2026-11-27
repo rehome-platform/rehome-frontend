@@ -86,7 +86,7 @@ export default function InventoryDetailPage() {
       ? [existingCase.data, submittedCase].find(item => item?.id === data.degradedCaseId)
       : existingCase.data || submittedCase;
   const pricing = useResource(options => endTermService.pendingPricing(options), [sku], {
-    enabled: Boolean(data && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(data.status)),
+    enabled: Boolean(data && !data.activeWithdrawalStatus && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(data.status)),
   });
   const pendingReturnData = useMemo(() => pendingReturnFromInventory(data), [data]);
   const pendingReturn = useMemo(
@@ -193,10 +193,10 @@ export default function InventoryDetailPage() {
       {isForbidden && (
         <div className="rounded-2xl border border-amber-300 bg-amber-50 p-6 space-y-3">
           <div className="flex items-center gap-2">
-            <h3 className="font-bold text-amber-900 text-base">Sản phẩm không thuộc kho bạn quản lý</h3>
+            <h3 className="font-bold text-amber-900 text-base">Sản phẩm không thuộc điểm kí gửi bạn quản lý</h3>
           </div>
           <p className="text-xs text-amber-800 leading-relaxed">
-            Sản phẩm với Mã hàng hóa <strong>{sku}</strong> đang được lưu trữ tại chi nhánh kho khác. Bạn chỉ có quyền kiểm kê và in tem đối với các sản phẩm thuộc kho bạn được phân công.
+            Sản phẩm với Mã hàng hóa <strong>{sku}</strong> đang được lưu trữ tại điểm kí gửi khác. Bạn chỉ có quyền kiểm kê và in tem đối với các sản phẩm thuộc điểm kí gửi bạn được phân công.
           </p>
         </div>
       )}
@@ -219,6 +219,8 @@ export default function InventoryDetailPage() {
           ...data,
           warehouseReason:
             data.warehouseReason ||
+            (data.activeWithdrawalStatus === 'PENDING_APPROVAL' ? WAREHOUSE_REASON.WITHDRAWAL_PENDING_APPROVAL : undefined) ||
+            (data.activeWithdrawalStatus === 'PENDING_PICKUP' ? WAREHOUSE_REASON.WITHDRAWAL_PENDING_PICKUP : undefined) ||
             (activeCase && !activeCase.choice ? WAREHOUSE_REASON.DEGRADED : undefined) ||
             (canNegotiate ? WAREHOUSE_REASON.NEGOTIATING : undefined) ||
             warehouseReasonOf(data),
@@ -354,7 +356,7 @@ export default function InventoryDetailPage() {
               <div className="rounded-xl border border-[#FEDF89] bg-[#FFFAEB] p-4 text-xs space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-bold text-[#B54708]">
-                    Hàng đã bàn giao về kho (chưa mở bán lại · không thuộc sở hữu nền tảng)
+                    Hàng đã bàn giao về điểm kí gửi (chưa mở bán lại · không thuộc sở hữu nền tảng)
                   </span>
                   {pendingReturn.data && (
                     <Link
@@ -368,14 +370,62 @@ export default function InventoryDetailPage() {
                 <p className="text-[#414942] leading-relaxed">
                   {pendingReturn.data
                     ? 'Người mua đã được hoàn tiền · Món hàng đang chờ chọn phương án xử lý (Đăng bán lại) hoặc báo hàng xuống cấp nếu phát hiện hư hỏng.'
-                    : 'Sản phẩm đang ở trạng thái Đã bàn giao tại kho. Nếu phát hiện hư hỏng thực tế, bạn có thể lập biên bản hàng xuống cấp.'}
+                    : 'Sản phẩm đang ở trạng thái Đã bàn giao tại điểm kí gửi. Nếu phát hiện hư hỏng thực tế, bạn có thể lập biên bản hàng xuống cấp.'}
                 </p>
               </div>
             )}
 
-            {data.status === 'WAREHOUSE' && (
+            {data.status === 'WAREHOUSE' && !data.activeWithdrawalStatus && (
               <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">
                 Sản phẩm đang lưu kho, tạm ngừng bán trong khi chờ xử lý. {activeCase && DEGRADED_DECISION_POLICY}
+              </div>
+            )}
+
+            {data.activeWithdrawalStatus === 'PENDING_APPROVAL' && (
+              <div className="rounded-2xl border border-[#FEDF89] bg-[#FFFAEB] p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-[#B54708] text-white rounded">
+                      CHỜ DUYỆT RÚT HÀNG
+                    </span>
+                    <h3 className="text-sm font-bold text-[#B54708]">Người ký gửi đã tạo yêu cầu rút hàng</h3>
+                  </div>
+                  <p className="text-xs text-[#7A2E0E]">
+                    Sản phẩm đã tạm ngừng bán và đang lưu tại điểm kí gửi chờ Moderator duyệt yêu cầu rút hàng. Trạng thái chỉ chuyển sang &ldquo;Đã hoàn trả người bán&rdquo; sau khi bàn giao hoàn tất tại quầy.
+                  </p>
+                </div>
+                <Link to="/moderator/queue?type=WITHDRAWAL">
+                  <Button variant="outline" className="text-xs border-[#B54708] text-[#B54708] font-bold">
+                    Hàng đợi rút hàng →
+                  </Button>
+                </Link>
+              </div>
+            )}
+
+            {data.activeWithdrawalStatus === 'PENDING_PICKUP' && (
+              <div className="rounded-2xl border border-[#FEDF89] bg-[#FFFAEB] p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-[#B54708] text-white rounded">
+                      CHỜ NHẬN LẠI
+                    </span>
+                    <h3 className="text-sm font-bold text-[#B54708]">Yêu cầu rút hàng đã duyệt — Chờ khách đến nhận</h3>
+                  </div>
+                  <p className="text-xs text-[#7A2E0E]">
+                    Khách sẽ đến quầy để nhận lại hiện vật. Trạng thái chỉ chuyển sang &ldquo;Đã hoàn trả người bán&rdquo; sau khi Moderator xác nhận bàn giao tại quầy.
+                  </p>
+                </div>
+                <Link
+                  to={
+                    (data.member?.memberCode || data.memberCode)
+                      ? `/moderator/counter?memberCode=${encodeURIComponent(data.member?.memberCode || data.memberCode)}&refId=${encodeURIComponent(data.activeWithdrawalId || data.id || data.sku || sku || '')}`
+                      : '/moderator/counter'
+                  }
+                >
+                  <Button variant="outline" className="text-xs border-[#B54708] text-[#B54708] font-bold">
+                    Quầy tiếp nhận →
+                  </Button>
+                </Link>
               </div>
             )}
             <ResourceState resource={existingCase} />

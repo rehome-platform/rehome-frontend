@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import adminApi from '../services/adminApi';
 import { Button, Spinner, Modal, TableActionButton } from '../../../components/common/index.js';
 import { useToast } from '../../../context/ToastContext.jsx';
+import { formatWarehouseDisplayName } from '../../../utils/formatters.js';
 import { useDebouncedSearch } from '../../../hooks/useDebouncedSearch.js';
 import {
   DEFAULT_STALE_TIME_MS,
@@ -282,7 +283,8 @@ export default function AdminModeratorsView({ onLogAction }) {
       await adminApi.assignWarehouse(modId, selectedNewWarehouseId);
 
       const targetWarehouse = warehouses.find((w) => w.id === selectedNewWarehouseId);
-      showNotification(`Đã điều chuyển ${changeWarehouseTarget.fullName || changeWarehouseTarget.name} sang địa điểm ký gửi ${targetWarehouse?.name || ''}`);
+      const targetWarehouseName = formatWarehouseDisplayName(targetWarehouse?.name);
+      showNotification(`Đã điều chuyển ${changeWarehouseTarget.fullName || changeWarehouseTarget.name} sang địa điểm ký gửi ${targetWarehouseName || ''}`);
       setChangeWarehouseTarget(null);
       setSelectedNewWarehouseId('');
 
@@ -291,7 +293,7 @@ export default function AdminModeratorsView({ onLogAction }) {
           time: new Date().toLocaleString('vi-VN'),
           user: 'Admin',
           role: 'Admin',
-          action: `Chuyển địa điểm công tác cho Moderator "${changeWarehouseTarget.fullName || changeWarehouseTarget.name}" sang ${targetWarehouse?.name || ''}`,
+          action: `Chuyển địa điểm công tác cho Moderator "${changeWarehouseTarget.fullName || changeWarehouseTarget.name}" sang ${targetWarehouseName || ''}`,
         });
       }
 
@@ -368,7 +370,7 @@ export default function AdminModeratorsView({ onLogAction }) {
             <option value="ALL">Địa điểm ký gửi: Tất cả</option>
             {warehouses.map((w) => (
               <option key={w.id} value={w.id}>
-                {w.name}
+                {formatWarehouseDisplayName(w.name)}
               </option>
             ))}
           </select>
@@ -486,12 +488,12 @@ export default function AdminModeratorsView({ onLogAction }) {
                       </td>
 
                       {/* Warehouse */}
-                      <td className="py-3.5 px-4 whitespace-nowrap overflow-hidden" title={mod.warehouseName || "Chưa gán địa điểm"}>
+                      <td className="py-3.5 px-4 whitespace-nowrap overflow-hidden" title={formatWarehouseDisplayName(mod.warehouseName) || "Chưa gán địa điểm"}>
                         <span className="inline-flex items-center gap-1.5 max-w-full px-2.5 py-1 rounded-lg text-xs font-medium bg-[#F6F9F4] text-[#5B6776] border border-[#DDE5D9]">
                           <span className="material-symbols-outlined text-sm text-[#006B2C] shrink-0">
                             warehouse
                           </span>
-                          <span className="truncate">{mod.warehouseName || 'Chưa gán địa điểm'}</span>
+                          <span className="truncate">{formatWarehouseDisplayName(mod.warehouseName) || 'Chưa gán địa điểm'}</span>
                         </span>
                       </td>
 
@@ -548,7 +550,7 @@ export default function AdminModeratorsView({ onLogAction }) {
           { label: 'Họ và tên', value: dName },
           { label: 'Email', value: detailTarget.email || '---', mono: true },
           { label: 'Số điện thoại', value: detailTarget.phone || 'Chưa cập nhật', mono: true },
-          { label: 'Địa điểm phụ trách', value: detailTarget.warehouseName || 'Chưa gán địa điểm' },
+          { label: 'Địa điểm phụ trách', value: formatWarehouseDisplayName(detailTarget.warehouseName) || 'Chưa gán địa điểm' },
           {
             label: 'Ngày tạo',
             value: detailTarget.createdAt ? new Date(detailTarget.createdAt).toLocaleString('vi-VN') : '---',
@@ -677,7 +679,7 @@ export default function AdminModeratorsView({ onLogAction }) {
                 >
                   {warehouses.map((w) => (
                     <option key={w.id} value={w.id}>
-                      {w.name} - {w.address}
+                      {formatWarehouseDisplayName(w.name)} - {w.address}
                     </option>
                   ))}
                 </select>
@@ -841,7 +843,7 @@ export default function AdminModeratorsView({ onLogAction }) {
                   <option value="">-- Chọn địa điểm ký gửi --</option>
                   {warehouses.map((w) => (
                     <option key={w.id} value={w.id}>
-                      {w.name} - {w.address}
+                      {formatWarehouseDisplayName(w.name)} - {w.address}
                     </option>
                   ))}
                 </select>

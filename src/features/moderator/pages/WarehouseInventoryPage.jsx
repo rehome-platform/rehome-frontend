@@ -282,7 +282,7 @@ export default function WarehouseInventoryPage() {
         <div className="flex items-baseline gap-3">
           <span>Quản lý sản phẩm</span>
           <span className="text-xs font-normal text-[#5f5f5f]">
-            · {resource.data?.totalElements || items.length} sản phẩm tại kho
+            · {resource.data?.totalElements || items.length} sản phẩm tại điểm kí gửi
           </span>
         </div>
       }

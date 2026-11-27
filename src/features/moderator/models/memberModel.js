@@ -28,6 +28,13 @@ const RESUME_STEP_TO_STATUS = {
 export function resolveCounterFormStatus(item) {
   if (!item) return 'PENDING';
   const productStatus = item.productStatus || item.product?.status || null;
+  const withdrawalStatus = String(
+    item.activeWithdrawalStatus || item.withdrawalStatus || item.product?.activeWithdrawalStatus || '',
+  ).trim().toUpperCase();
+  if ((productStatus === 'WAREHOUSE' || productStatus === 'WITHDRAWN') && withdrawalStatus) {
+    if (withdrawalStatus === 'PENDING_APPROVAL') return 'WAREHOUSE_WITHDRAWAL_PENDING_APPROVAL';
+    if (withdrawalStatus === 'PENDING_PICKUP') return 'WAREHOUSE_WITHDRAWAL_PENDING_PICKUP';
+  }
   if (productStatus) return productStatus;
 
   const hasProduct = Boolean(
@@ -125,8 +132,22 @@ function sortTasksNewestFirst(list) {
 
 export function normalizeMemberTasks(data) {
   const [forms, withdrawals, endOfTerm, invalidReturns = [], degradedItems = []] = taskGroups(data);
+  const pendingWithdrawalSkus = new Set(
+    (Array.isArray(withdrawals) ? withdrawals : [])
+      .map((w) => String(w?.productId || w?.sku || '').trim().toUpperCase())
+      .filter(Boolean),
+  );
   const pendingForms = sortTasksNewestFirst(
-    Array.isArray(data) ? data.map(normalizeLegacyForm) : forms.map(normalizeTaskForm),
+    Array.isArray(data)
+      ? data.map(normalizeLegacyForm)
+      : forms.map((f) => {
+          const sku = String(f?.productSku || f?.sku || f?.product?.sku || '').trim().toUpperCase();
+          const inferredWithdrawal =
+            !f?.activeWithdrawalStatus && !f?.withdrawalStatus && sku && pendingWithdrawalSkus.has(sku)
+              ? { activeWithdrawalStatus: 'PENDING_PICKUP' }
+              : {};
+          return normalizeTaskForm({ ...f, ...inferredWithdrawal });
+        }),
   );
   const pendingWithdrawals = sortTasksNewestFirst(withdrawals.map(normalizeReferencedTask));
   const pendingEndOfTerm = sortTasksNewestFirst(endOfTerm.map(normalizeReferencedTask));

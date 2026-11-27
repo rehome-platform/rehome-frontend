@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { counterService } from "../services/warehouseApi.js";
+import { money } from "../components/WarehouseUi.jsx";
 import { notifyWarehouseChanged, usePhase2, useResource } from "./warehouseHooks.jsx";
 import { listItems, lookupParams, normalizeMemberTasks, Phase2Error } from "../models/warehouseModel.js";
 import { useRecentServed } from './useRecentServed.jsx';
@@ -161,12 +162,19 @@ export function useCounter() {
       notifyWarehouseChanged(['queue:', 'inventory:', 'end-of-term:', 'returns:', 'history:']);
       tasks.refresh();
     } catch (err) {
+      const unpaidFeeMessage =
+        item?.feeCharged > 0
+          ? `Member chưa trả phí rút hàng ${money(item.feeCharged)}. Nhắc Member trả trên app ReHome (Ví hoặc VNPay), trả xong bấm Tải lại để bàn giao.`
+          : err.message ||
+            'Member chưa trả phí rút hàng. Nhắc Member trả trên app ReHome (Ví hoặc VNPay), trả xong bấm Tải lại để bàn giao.';
       setHandoverFeedback({
         type: 'error',
         message:
           err.code === 'COUNTER_IDENTITY_NOT_CONFIRMED'
             ? 'Phiên xác nhận danh tính đã hết hạn hoặc chưa được xác nhận. Vui lòng đối chiếu lại danh tính khách hàng.'
-            : (err.message || 'Không thể thực hiện bàn giao.'),
+            : err.code === 'WITHDRAWAL_FEE_NOT_PAID'
+              ? unpaidFeeMessage
+              : (err.message || 'Không thể thực hiện bàn giao.'),
       });
       setConfirmHandover(null);
     } finally {
@@ -178,6 +186,26 @@ export function useCounter() {
   const confirmed = !!selected && identity?.memberId === selected.memberId;
   const resultList = listItems(results.data);
   const taskGroups = normalizeMemberTasks(tasks.data);
+
+  useEffect(() => {
+    if (!confirmHandover || confirmHandover.context !== 'ITEM_WITHDRAWAL') return;
+    const currentId = confirmHandover.item?.id || confirmHandover.item?.refId;
+    const currentProductId = confirmHandover.item?.productId;
+    const updated = taskGroups.pendingWithdrawals.find(
+      (w) =>
+        (currentId && (w.id === currentId || w.refId === currentId)) ||
+        (currentProductId && w.productId === currentProductId),
+    );
+    if (!updated) return;
+    const prev = confirmHandover.item;
+    if (
+      Boolean(prev?.feePaid) !== Boolean(updated.feePaid) ||
+      (prev?.feePaidAt ?? null) !== (updated.feePaidAt ?? null) ||
+      Number(prev?.feeCharged ?? 0) !== Number(updated.feeCharged ?? 0)
+    ) {
+      setConfirmHandover((cur) => (cur ? { ...cur, item: updated } : cur));
+    }
+  }, [tasks.data, confirmHandover]);
 
     return {
     selected,
@@ -214,7 +242,15 @@ export function useCounter() {
       CounterLookupForm: { handleFormSubmit, kind, setKind, memberCodeInputRef, query, setQuery, setScanner },
       CounterIdentityPanel: { selected, results, confirmed, confirmIdentity, reset },
       CounterMemberResults: { submitted, results, resultList, selected, choose },
-      CounterHandoverDialog: { confirmHandover, selected, handoverLoading, setConfirmHandover, executeHandover },
+      CounterHandoverDialog: {
+        confirmHandover,
+        selected,
+        handoverLoading,
+        setConfirmHandover,
+        executeHandover,
+        onRefreshTasks: tasks.refresh,
+        tasksLoading: tasks.loading,
+      },
     },
   };
 }

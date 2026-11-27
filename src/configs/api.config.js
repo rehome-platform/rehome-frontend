@@ -138,6 +138,8 @@ export const API_ENDPOINTS = {
     FLAG_COUNTERFEIT: (id) => `/return-requests/${moderatorId(id)}/flag-counterfeit`,
     COUNTERFEIT_CONCLUSION: (id) => `/return-requests/${moderatorId(id)}/counterfeit-conclusion`,
     MARK_LOST: (id) => `/return-requests/${moderatorId(id)}/mark-lost`,
+    SHIP_BACK_RETURN: (id) => `/return-requests/${moderatorId(id)}/ship-back/ship`,
+    SHIP_BACK_LABEL: (id) => `/return-requests/${moderatorId(id)}/ship-back/label`,
     DEGRADED_CASES: "/degraded-item-cases",
     WAREHOUSE_DEGRADED_CASES: "/degraded-item-cases/warehouse",
     CREATE_DEGRADED_CASE: "/degraded-item-cases",

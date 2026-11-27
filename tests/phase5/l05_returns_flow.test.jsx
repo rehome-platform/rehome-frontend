@@ -271,7 +271,7 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
 
     expect(screen.getByText(/Chờ duyệt ·/i)).toBeInTheDocument();
     expect(screen.getByText(/Chờ người mua gửi ·/i)).toBeInTheDocument();
-    expect(screen.getByText(/Đang về kho ·/i)).toBeInTheDocument();
+    expect(screen.getByText(/Đang về điểm kí gửi ·/i)).toBeInTheDocument();
     expect(screen.getByText(/Hàng đã về, chờ kiểm ·/i)).toBeInTheDocument();
 
     // Switch to RECEIVED_INSPECT tab
@@ -339,7 +339,7 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     fireEvent.click(inspectBtns[0]);
 
     await waitFor(() => {
-      expect(screen.getByText(/kiểm tra hàng về kho/i)).toBeInTheDocument();
+      expect(screen.getByText(/kiểm tra hàng về điểm kí gửi/i)).toBeInTheDocument();
       expect(screen.getByText(/Đối chiếu hàng về với ảnh nhập kho/i)).toBeInTheDocument();
     });
 
@@ -402,7 +402,7 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     fireEvent.click(inspectBtns[0]);
 
     await waitFor(() => {
-      expect(screen.getByText(/kiểm tra hàng về kho/i)).toBeInTheDocument();
+      expect(screen.getByText(/kiểm tra hàng về điểm kí gửi/i)).toBeInTheDocument();
     });
 
     expect(screen.queryByText(/Báo nghi hàng giả/i)).not.toBeInTheDocument();
@@ -420,7 +420,7 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     );
 
     // Switch to RETURNING tab
-    fireEvent.click(screen.getByText(/Đang về kho ·/i));
+    fireEvent.click(screen.getByText(/Đang về điểm kí gửi ·/i));
 
     await waitFor(() => {
       expect(screen.getAllByRole('button', { name: /Báo thất lạc/i }).length).toBeGreaterThan(0);

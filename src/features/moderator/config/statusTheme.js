@@ -53,6 +53,8 @@ export const STATUS_META = {
   WAREHOUSE_DEGRADED: { label: productStatusLabelByKey('WAREHOUSE_DEGRADED'), tone: 'danger' },
   WAREHOUSE_TERM_EXPIRED: { label: productStatusLabelByKey('WAREHOUSE_TERM_EXPIRED'), tone: 'warning' },
   WAREHOUSE_NEGOTIATING: { label: productStatusLabelByKey('WAREHOUSE_NEGOTIATING'), tone: 'info' },
+  WAREHOUSE_WITHDRAWAL_PENDING_APPROVAL: { label: productStatusLabelByKey('WAREHOUSE_WITHDRAWAL_PENDING_APPROVAL'), tone: 'warning' },
+  WAREHOUSE_WITHDRAWAL_PENDING_PICKUP: { label: productStatusLabelByKey('WAREHOUSE_WITHDRAWAL_PENDING_PICKUP'), tone: 'warning' },
   RESERVED: { label: productStatusLabelByKey('RESERVED'), tone: 'warning' },
   SOLD: { label: productStatusLabelByKey('SOLD'), tone: 'success' },
   WITHDRAWN: { label: productStatusLabelByKey('WITHDRAWN'), tone: 'neutral' },

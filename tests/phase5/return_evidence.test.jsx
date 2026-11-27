@@ -79,7 +79,7 @@ it.each([2, 3, 5])('renders %i inspection evidence photos in a consistent object
   const removeEvidence = vi.fn();
   render(<ReturnEvidence evidenceImageUrls={urls} removeEvidence={removeEvidence} uploadEvidence={() => {}} />);
 
-  expect(screen.getByText(/Bằng chứng kiểm hàng tại kho/i)).toBeInTheDocument();
+  expect(screen.getByText(/Bằng chứng kiểm hàng tại điểm kí gửi/i)).toBeInTheDocument();
   expect(screen.getByText(`${count} / 5 ảnh đã tải lên`)).toBeInTheDocument();
 
   const imgs = screen.getAllByAltText(/Bằng chứng kiểm hàng \d+/i);

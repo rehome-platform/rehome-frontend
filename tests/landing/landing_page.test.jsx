@@ -306,7 +306,7 @@ describe('LandingPage UI & APK CTA', () => {
     // #network warehouses + charity campaign & verified organization
     const networkSection = container.querySelector('#network');
     expect(networkSection).toBeInTheDocument();
-    expect(within(networkSection).getByText('Kho ReHome Quận 1')).toBeInTheDocument();
+    expect(within(networkSection).getByText('Điểm kí gửi ReHome Quận 1')).toBeInTheDocument();
     expect(within(networkSection).getByText('Tủ đồ ấm áp mùa đông')).toBeInTheDocument();
     expect(within(networkSection).getAllByText('Quỹ Hy Vọng Xanh').length).toBeGreaterThan(0);
 
@@ -430,13 +430,13 @@ describe('LandingPage UI & APK CTA', () => {
 
     const networkSection = container.querySelector('#network');
     let warehouseCards = within(networkSection).getAllByTestId('warehouse-card');
-    expect(warehouseCards[0]).toHaveTextContent('Kho ReHome Quận 1');
+    expect(warehouseCards[0]).toHaveTextContent('Điểm kí gửi ReHome Quận 1');
 
     fireEvent.click(within(networkSection).getByRole('button', { name: 'Hà Nội' }));
     warehouseCards = within(networkSection).getAllByTestId('warehouse-card');
-    expect(warehouseCards[0]).toHaveTextContent('Kho ReHome Cầu Giấy');
+    expect(warehouseCards[0]).toHaveTextContent('Điểm kí gửi ReHome Cầu Giấy');
     expect(warehouseCards[0]).toHaveTextContent('Gần nhất');
-    expect(warehouseCards[1]).toHaveTextContent('Kho ReHome Quận 1');
+    expect(warehouseCards[1]).toHaveTextContent('Điểm kí gửi ReHome Quận 1');
 
     expect(within(networkSection).getByText('Tủ đồ ấm áp mùa đông')).toBeInTheDocument();
     expect(within(networkSection).getAllByText('Quỹ Hy Vọng Xanh').length).toBeGreaterThan(0);
@@ -543,7 +543,7 @@ describe('LandingPage UI & APK CTA', () => {
 
     const networkSection = container.querySelector('#network');
     expect(
-      within(networkSection).getByText(/Danh sách điểm kho đang được đồng bộ từ hệ thống/i)
+      within(networkSection).getByText(/Danh sách điểm kí gửi đang được đồng bộ từ hệ thống/i)
     ).toBeInTheDocument();
     expect(
       within(networkSection).getByText(/100% tổ chức xác minh pháp lý/i)

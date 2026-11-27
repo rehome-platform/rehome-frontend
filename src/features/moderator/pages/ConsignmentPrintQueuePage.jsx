@@ -6,6 +6,7 @@ import { usePhase2, useResource } from '../hooks/warehouseHooks.jsx';
 import { listItems } from '../models/warehouseModel.js';
 import { skuLabelService } from '../services/warehouseApi.js';
 import { downloadLabelPdf } from '../services/skuLabelApi.js';
+import { formatWarehouseDisplayName } from '../../../utils/formatters.js';
 
 export default function ConsignmentPrintQueuePage() {
   const [searchParams] = useSearchParams();
@@ -122,7 +123,7 @@ export default function ConsignmentPrintQueuePage() {
         <div className="space-y-4">
           <Card title="Xem trước một tem · 70 × 37 mm">
             {preview ? <div className="flex min-h-[140px] flex-col justify-center border border-neutral bg-white p-4" style={{ aspectRatio: '70 / 37' }}>
-              <p className="text-[10px] tracking-widest">REHOME · {preview.warehouseName || 'ĐIỂM KÝ GỬI'}</p>
+              <p className="text-[10px] tracking-widest">REHOME · {formatWarehouseDisplayName(preview.warehouseName) || 'ĐIỂM KÍ GỬI'}</p>
               <p className="my-2 font-mono text-xl font-bold">{preview.sku}</p>
               <p className="border-t border-neutral pt-2 text-sm font-semibold">{preview.name || preview.productName}</p>
               <p className="text-xs">{preview.brandName || preview.brand?.name || '—'} · Size {preview.size || '—'} · {preview.conditionNote || preview.condition || '—'}</p>

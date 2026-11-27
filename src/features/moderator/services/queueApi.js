@@ -59,8 +59,8 @@ export const queueService = {
         queueId: item.queueId ?? item.id,
         id: item.id ?? item.queueId,
         refId: item.refId ?? item.id,
-        // RETURN refId points to the return request; claim/release uses queueId.
-        ...(item.type === 'RETURN' ? { returnId: item.returnId ?? item.refId } : {}),
+        // RETURN & RETURN_SHIP_BACK refId point to the return request; claim/release uses queueId.
+        ...((item.type === 'RETURN' || item.type === 'RETURN_SHIP_BACK') ? { returnId: item.returnId ?? item.refId } : {}),
         formId: item.formId ?? item.refId ?? item.id,
         orderId: item.orderId ?? item.refId,
         orderCreatedAt,
@@ -73,6 +73,14 @@ export const queueService = {
         memberName: item.subjectSubtitle ?? item.memberName ?? item.recipientName,
         sku: item.sku ?? item.productId ?? null,
         productImageUrl: item.productImageUrl ?? item.imageUrl ?? item.photoUrl ?? null,
+        shippingProvinceName: item.shippingProvinceName ?? item.provinceName ?? null,
+        shippingPhone: item.shippingPhone ?? null,
+        shippingAddress: item.shippingAddress ?? null,
+        shipBackFee: item.shipBackFee ?? item.feeCharged ?? null,
+        shipBackPaymentMethod: item.shipBackPaymentMethod ?? null,
+        shipBackFeePaidAt: item.shipBackFeePaidAt ?? null,
+        shipBackDeadline: item.shipBackDeadline ?? null,
+        shipBackTrackingCode: item.shipBackTrackingCode ?? null,
         status: item.status || (item.claimedBy ? 'PROCESSING' : 'PENDING'),
       };
     };

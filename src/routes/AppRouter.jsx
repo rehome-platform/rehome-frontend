@@ -23,6 +23,7 @@ const ConsignmentQueuePage = lazy(() => import('../features/moderator/pages/Cons
 const WarehouseInventoryPage = lazy(() => import('../features/moderator/pages/WarehouseInventoryPage.jsx'));
 const PackingOrdersPage = lazy(() => import('../features/moderator/pages/PackingOrdersPage.jsx'));
 const ReturnProcessingPage = lazy(() => import('../features/moderator/pages/ReturnProcessingPage.jsx'));
+const ReturnShipBackDetailPage = lazy(() => import('../features/moderator/pages/ReturnShipBackDetailPage.jsx'));
 const OrgVerificationPage = lazy(() => import('../features/moderator/pages/OrgVerificationPage.jsx'));
 const ViolationReportsPage = lazy(() => import('../features/moderator/pages/ViolationReportsPage.jsx'));
 const DonationsPage = lazy(() => import('../features/moderator/pages/DonationsPage.jsx'));
@@ -63,7 +64,7 @@ function RouteFallback() {
  * - Người dùng chưa đăng nhập truy cập / được chuyển trực tiếp đến trang Login.
  * - Nếu đã có session hợp lệ, chuyển thẳng tới dashboard theo vai trò:
  *     ADMIN -> /admin
- *     STAFF / MODERATOR -> /moderator/counter
+ *     STAFF / MODERATOR -> /moderator
  */
 function RootRedirect() {
   const { isAuthenticated, user, loading } = useAuth();
@@ -83,7 +84,7 @@ function RootRedirect() {
       return <Navigate to="/admin" replace />;
     }
     if (role === 'staff' || role === 'moderator') {
-      return <Navigate to="/moderator/counter" replace />;
+      return <Navigate to="/moderator" replace />;
     }
   }
 
@@ -194,6 +195,14 @@ export default function AppRouter() {
         element={
           <PrivateRoute roles={['moderator', 'staff']}>
             <ReturnProcessingPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/moderator/returns/ship-back/:returnId"
+        element={
+          <PrivateRoute roles={['moderator', 'staff']}>
+            <ReturnShipBackDetailPage />
           </PrivateRoute>
         }
       />

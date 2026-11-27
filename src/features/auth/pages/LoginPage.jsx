@@ -45,7 +45,7 @@ export default function LoginPage() {
         const dest = fromLocation && fromLocation.startsWith('/admin') ? fromLocation : '/admin';
         navigate(dest, { replace: true });
       } else if (userRole === 'staff' || userRole === 'moderator') {
-        const dest = fromLocation && fromLocation.startsWith('/moderator') ? fromLocation : '/moderator/counter';
+        const dest = fromLocation && fromLocation.startsWith('/moderator') ? fromLocation : '/moderator';
         navigate(dest, { replace: true });
       }
     }
@@ -81,12 +81,12 @@ export default function LoginPage() {
         const dest = fromLocation && fromLocation.startsWith('/admin') ? fromLocation : '/admin';
         navigate(dest, { replace: true });
       } else if (userRole === 'staff' || userRole === 'moderator') {
-        const dest = fromLocation && fromLocation.startsWith('/moderator') ? fromLocation : '/moderator/counter';
+        const dest = fromLocation && fromLocation.startsWith('/moderator') ? fromLocation : '/moderator';
         navigate(dest, { replace: true });
       } else {
         // Tài khoản Member hoặc Organization (chỉ dùng trên Mobile theo Mục 2 tài liệu)
         setErrorMessage(
-          'Tài khoản này thuộc nhóm Thành viên / Tổ chức từ thiện. Cổng Web vận hành chỉ dành riêng cho Quản trị viên (Admin) và Nhân viên kiểm định kho (Moderator). Vui lòng đăng nhập trên ứng dụng Di Động (ReHome Mobile App).'
+          'Tài khoản này thuộc nhóm Thành viên / Tổ chức từ thiện. Cổng Web vận hành chỉ dành riêng cho Quản trị viên (Admin) và Nhân viên kiểm định điểm kí gửi (Moderator). Vui lòng đăng nhập trên ứng dụng Di Động (ReHome Mobile App).'
         );
       }
     } catch (err) {
@@ -118,7 +118,7 @@ export default function LoginPage() {
           </picture>
           <p className="mt-2 text-xs font-semibold text-[#5B6776] uppercase">Cổng Vận Hành Nội Bộ</p>
           <p className="text-xs text-[#5B6776] mt-3 max-w-xs leading-relaxed">
-            Hệ thống đăng nhập dành cho Quản trị viên và Nhân viên kiểm định kho.
+            Hệ thống đăng nhập dành cho Quản trị viên và Nhân viên kiểm định điểm kí gửi.
           </p>
         </div>
 

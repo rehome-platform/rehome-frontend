@@ -37,7 +37,7 @@ export default function ValueBentoSection({ onOpenInfoModal }) {
             Hệ sinh thái hai chiều
           </p>
           <h2 className="landing-text-balance text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-[-0.02em] text-[#071D12] leading-tight">
-            Mua an tâm nhờ AI. Bán nhẹ nhàng nhờ kho kiểm định.
+            Mua an tâm nhờ AI. Bán nhẹ nhàng nhờ điểm kí gửi kiểm định.
           </h2>
           <p className="text-sm sm:text-base text-[#46564C] leading-relaxed">
             Mỗi món đồ đều đi qua kiểm định vật lý trước khi lên kệ thử đồ AI và mở ký gửi minh
@@ -177,7 +177,7 @@ export default function ValueBentoSection({ onOpenInfoModal }) {
 
               <div className="space-y-1.5">
                 <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#071D12]">
-                  Kiểm tra thực tế tại kho &amp; dán tem Mã hàng hóa
+                  Kiểm tra thực tế tại điểm kí gửi &amp; dán tem Mã hàng hóa
                 </h3>
                 <p className="text-xs sm:text-sm text-[#46564C] leading-relaxed">
                   Minh bạch từng vết sờn, khóa kéo và phân hạng trước khi mở bán.
@@ -240,7 +240,7 @@ export default function ValueBentoSection({ onOpenInfoModal }) {
                   Không tự chụp ảnh, không mặc cả mất thời gian
                 </h3>
                 <p className="text-xs sm:text-sm text-[#46564C] leading-relaxed">
-                  Kho ReHome đảm nhận từ kiểm định, chụp studio, gắn slot AI đến giao hàng toàn
+                  Điểm kí gửi ReHome đảm nhận từ kiểm định, chụp studio, gắn slot AI đến giao hàng toàn
                   quốc.
                 </p>
               </div>

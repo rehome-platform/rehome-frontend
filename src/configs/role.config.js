@@ -31,6 +31,6 @@ export const ROLE_LABELS = {
 
 export const ROLE_HOME_ROUTES = {
   [ROLES.ADMIN]: "/admin",
-  [ROLES.MODERATOR]: "/moderator/counter",
-  staff: "/moderator/counter",
+  [ROLES.MODERATOR]: "/moderator",
+  staff: "/moderator",
 };

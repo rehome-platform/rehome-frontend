@@ -156,7 +156,7 @@ test('TC-B-004/005/007/008: Actual route configuration and guard preserve explic
           assert.equal(result, 'protected');
         } else {
           assert.equal(result.type, 'Navigate');
-          assert.equal(result.props.to, '/moderator/counter');
+          assert.equal(result.props.to, '/moderator');
         }
       }
     }
@@ -168,7 +168,7 @@ test('TC-B-004/005/007/008: Actual route configuration and guard preserve explic
 });
 
 test('TC-B-001/005: Existing default landing targets follow authenticated role (mocked)', () => {
-  for (const [role, expected] of [['admin', '/admin'], ['staff', '/moderator/counter'], ['moderator', '/moderator/counter']]) {
+  for (const [role, expected] of [['admin', '/admin'], ['staff', '/moderator'], ['moderator', '/moderator']]) {
     const h = harness('routes/AppRouter.jsx', role);
     const root = h.all(n => n.type === 'Route' && n.props.path === '/')[0];
     assert.equal(root.props.element.type().props.to, expected);

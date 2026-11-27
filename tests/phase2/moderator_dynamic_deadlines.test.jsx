@@ -53,7 +53,7 @@ describe('Moderator uses stored consignment deadlines', () => {
 
     expect(await screen.findByText(/Đã duyệt form ký gửi thành công.*19\/12\/2026/)).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText('Hạn mang đến kho').parentElement).toHaveTextContent('19/12/2026');
+      expect(screen.getByText('Hạn mang đến điểm kí gửi').parentElement).toHaveTextContent('19/12/2026');
     });
     expect(screen.queryByText(/có 7 ngày/)).not.toBeInTheDocument();
   });

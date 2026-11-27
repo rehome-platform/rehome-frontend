@@ -32,7 +32,7 @@ export function ReturnQueueRow({
         <div className="flex items-center gap-1.5">
           {r.status === 'PENDING_APPROVAL' && <span className="font-semibold text-text">Chờ duyệt</span>}
           {r.status === 'WAITING_BUYER_DISPATCH' && <span className="font-semibold text-text">Chờ người mua gửi</span>}
-          {r.status === 'RETURNING' && <span className="font-semibold text-text">Đang về kho</span>}
+          {r.status === 'RETURNING' && <span className="font-semibold text-text">Đang về điểm kí gửi</span>}
           {r.status === 'RECEIVED_INSPECT' && <span className="font-semibold text-text">Hàng đã về, chờ kiểm</span>}
           {r.status === 'RESOLVED' && (
             pendingItemAction ? (

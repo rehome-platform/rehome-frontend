@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { it, expect, vi, describe, beforeAll, afterAll, beforeEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
@@ -293,6 +293,291 @@ describe('L-06 Withdrawal & Counter Handover Flow (BG-01, QT-01 to QT-03)', () =
 
     await waitFor(() => {
       expect(screen.getByText(/Đã hoàn tất bàn giao/i)).toBeInTheDocument();
+    });
+  });
+
+  it('does not show "Đã hoàn trả người bán" during PENDING_APPROVAL or PENDING_PICKUP and switches only after handover', async () => {
+    let tasksState = {
+      member: mockMember,
+      pendingForms: [
+        {
+          id: 'form-w-approval',
+          productName: 'Áo khoác gió Uniqlo chống nước',
+          desiredPrice: 450000,
+          status: 'APPROVED',
+          productSku: 'HCM-AK-000018',
+          productStatus: 'WAREHOUSE',
+          activeWithdrawalId: 'w-approval-1',
+          activeWithdrawalStatus: 'PENDING_APPROVAL',
+          resumeStep: 'COMPLETED',
+        },
+      ],
+      pendingWithdrawals: [],
+      pendingEndOfTerm: [],
+      pendingInvalidReturns: [],
+    };
+
+    server.use(
+      http.get(`${API_BASE_URL}/counter/members/:id/tasks`, async () =>
+        HttpResponse.json({ result: tasksState, isSuccess: true, statusCode: 200 }),
+      ),
+    );
+
+    const { unmount } = render(
+      <Wrapper>
+        <Routes>
+          <Route path="/moderator/counter" element={<CounterPage />} />
+        </Routes>
+      </Wrapper>
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/MB-0000000/i), { target: { value: 'MB-004821' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Tra cứu$/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Chọn Member MB-004821/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Tôi đã đối chiếu đúng Member/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Áo khoác gió Uniqlo chống nước')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Chờ duyệt rút hàng')).toBeInTheDocument();
+    expect(screen.queryByText('Đã hoàn trả người bán')).not.toBeInTheDocument();
+    unmount();
+
+    // Case 2: Moderator approved (PENDING_PICKUP) with unpaid app fee -> blocks handover until Member pays on app and Moderator clicks "Tải lại"
+    tasksState = {
+      member: mockMember,
+      pendingForms: [
+        {
+          id: 'form-w-pickup',
+          productName: 'Áo khoác gió Uniqlo chống nước',
+          desiredPrice: 450000,
+          status: 'APPROVED',
+          productSku: 'HCM-AK-000018',
+          productStatus: 'WAREHOUSE',
+          activeWithdrawalId: 'w-pickup-1',
+          activeWithdrawalStatus: 'PENDING_PICKUP',
+          resumeStep: 'COMPLETED',
+        },
+      ],
+      pendingWithdrawals: [
+        {
+          id: 'w-pickup-1',
+          productId: 'HCM-AK-000018',
+          productName: 'Áo khoác gió Uniqlo chống nước',
+          feeCharged: 50000,
+          feePaid: false,
+          feePaidAt: null,
+        },
+      ],
+      pendingEndOfTerm: [],
+      pendingInvalidReturns: [],
+    };
+
+    const handoverResultPromise = new Promise((resolve) => resolve());
+    server.use(
+      http.post(`${API_BASE_URL}/counter/handover`, async () => {
+        await handoverResultPromise;
+        tasksState = {
+          member: mockMember,
+          pendingForms: [
+            {
+              id: 'form-w-pickup',
+              productName: 'Áo khoác gió Uniqlo chống nước',
+              desiredPrice: 450000,
+              status: 'APPROVED',
+              productSku: 'HCM-AK-000018',
+              productStatus: 'WITHDRAWN',
+              activeWithdrawalId: null,
+              activeWithdrawalStatus: null,
+              resumeStep: 'COMPLETED',
+            },
+          ],
+          pendingWithdrawals: [],
+          pendingEndOfTerm: [],
+          pendingInvalidReturns: [],
+        };
+        return HttpResponse.json({
+          result: { completedAt: new Date().toISOString() },
+          isSuccess: true,
+          statusCode: 200,
+        });
+      }),
+    );
+
+    const view2 = render(
+      <Wrapper>
+        <Routes>
+          <Route path="/moderator/counter" element={<CounterPage />} />
+        </Routes>
+      </Wrapper>
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/MB-0000000/i), { target: { value: 'MB-004821' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Tra cứu$/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Chọn Member MB-004821/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Tôi đã đối chiếu đúng Member/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Chờ nhận lại')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Đã hoàn trả người bán')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bàn giao cho khách' }));
+    await waitFor(() => {
+      expect(screen.getByText(/Xác nhận bàn giao hiện vật tại quầy/i)).toBeInTheDocument();
+    });
+
+    // Cash-collection checkbox removed; Option A warning alert shown instead
+    expect(screen.queryByLabelText(/Xác nhận đã thu phí rút hàng/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/trực tiếp tại quầy/i)).not.toBeInTheDocument();
+
+    const unpaidRegex = /Member chưa trả phí rút hàng 50\.000\s*₫\. Nhắc Member trả trên app ReHome \(Ví hoặc VNPay\), trả xong bấm Tải lại để bàn giao\./;
+    const warningAlert = screen.getByRole('alert');
+    expect(warningAlert).toHaveTextContent(unpaidRegex);
+
+    fireEvent.click(screen.getByText(/Khớp nhanh/i));
+    fireEvent.click(screen.getByLabelText(/Tôi đã hỏi và xác nhận đúng người nhận/i));
+
+    const confirmBtn = screen.getByRole('button', { name: /^Xác nhận bàn giao$/i });
+    expect(confirmBtn).toBeDisabled();
+
+    // Member pays fee on mobile app -> Moderator clicks "Tải lại"
+    tasksState = {
+      ...tasksState,
+      pendingWithdrawals: [
+        {
+          ...tasksState.pendingWithdrawals[0],
+          feePaid: true,
+          feePaidAt: '2026-11-27T05:05:00Z',
+        },
+      ],
+    };
+    fireEvent.click(within(warningAlert).getByRole('button', { name: /^Tải lại$/i }));
+
+    await waitFor(() => {
+      expect(confirmBtn).toBeEnabled();
+    });
+    expect(screen.queryByText(unpaidRegex)).not.toBeInTheDocument();
+
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Đã hoàn trả người bán')).toBeInTheDocument();
+    });
+    view2.unmount();
+
+    // Case 3: Legacy row still having WITHDRAWN while SKU is in pendingWithdrawals -> still shows "Chờ nhận lại"
+    tasksState = {
+      member: mockMember,
+      pendingForms: [
+        {
+          id: 'form-w-legacy',
+          productName: 'Áo khoác gió Uniqlo chống nước',
+          desiredPrice: 450000,
+          status: 'APPROVED',
+          productSku: 'HCM-AK-000018',
+          productStatus: 'WITHDRAWN',
+          resumeStep: 'COMPLETED',
+        },
+      ],
+      pendingWithdrawals: [
+        {
+          id: 'w-legacy-1',
+          productId: 'HCM-AK-000018',
+          productName: 'Áo khoác gió Uniqlo chống nước',
+          feeCharged: 0,
+        },
+      ],
+      pendingEndOfTerm: [],
+      pendingInvalidReturns: [],
+    };
+
+    render(
+      <Wrapper>
+        <Routes>
+          <Route path="/moderator/counter" element={<CounterPage />} />
+        </Routes>
+      </Wrapper>
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/MB-0000000/i), { target: { value: 'MB-004821' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Tra cứu$/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Chọn Member MB-004821/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Tôi đã đối chiếu đúng Member/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Chờ nhận lại')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Đã hoàn trả người bán')).not.toBeInTheDocument();
+  });
+
+  it('BG-01: displays unpaid withdrawal fee message when backend returns WITHDRAWAL_FEE_NOT_PAID', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/counter/members/:id/tasks`, async () =>
+        HttpResponse.json({
+          result: {
+            member: mockMember,
+            pendingForms: [],
+            pendingWithdrawals: [
+              {
+                id: 'w-unpaid-race',
+                productId: 'HCM-AK-000018',
+                productName: 'Áo khoác gió Uniqlo chống nước',
+                feeCharged: 50000,
+                feePaid: true,
+              },
+            ],
+            pendingEndOfTerm: [],
+            pendingInvalidReturns: [],
+          },
+          isSuccess: true,
+          statusCode: 200,
+        }),
+      ),
+      http.post(`${API_BASE_URL}/counter/handover`, async () =>
+        HttpResponse.json(
+          {
+            code: 'WITHDRAWAL_FEE_NOT_PAID',
+            message:
+              'Member chưa trả phí rút hàng. Nhắc Member trả trên app ReHome (Ví hoặc VNPay), trả xong bấm Tải lại để bàn giao.',
+            isSuccess: false,
+            statusCode: 409,
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+
+    render(
+      <Wrapper>
+        <Routes>
+          <Route path="/moderator/counter" element={<CounterPage />} />
+        </Routes>
+      </Wrapper>
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/MB-0000000/i), { target: { value: 'MB-004821' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Tra cứu$/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Chọn Member MB-004821/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Tôi đã đối chiếu đúng Member/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/HCM-AK-000018/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bàn giao cho khách' }));
+    await waitFor(() => {
+      expect(screen.getByText(/Xác nhận bàn giao hiện vật tại quầy/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText(/Khớp nhanh/i));
+    fireEvent.click(screen.getByLabelText(/Tôi đã hỏi và xác nhận đúng người nhận/i));
+    fireEvent.click(screen.getByRole('button', { name: /^Xác nhận bàn giao$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        /Member chưa trả phí rút hàng 50\.000\s*₫\. Nhắc Member trả trên app ReHome \(Ví hoặc VNPay\), trả xong bấm Tải lại để bàn giao\./,
+      );
     });
   });
 });

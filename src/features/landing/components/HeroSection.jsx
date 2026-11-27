@@ -141,7 +141,7 @@ export default function HeroSection({ products = [], stats = {}, onOpenInfoModal
               </div>
               <div>
                 <p className="text-xl sm:text-2xl font-extrabold text-[#071D12] tabular-nums tracking-tight">
-                  {hasWarehousesCount ? `${stats.warehousesTotal} điểm kho` : '3 ngày'}
+                  {hasWarehousesCount ? `${stats.warehousesTotal} điểm kí gửi` : '3 ngày'}
                 </p>
                 <p className="text-xs font-medium text-[#46564C] mt-0.5">
                   {hasWarehousesCount ? 'Tiếp nhận trực tiếp' : 'Bảo vệ đổi trả'}
@@ -279,7 +279,7 @@ export default function HeroSection({ products = [], stats = {}, onOpenInfoModal
                       <div className="col-span-5 aspect-[3/4] rounded-2xl overflow-hidden border border-white/15">
                         <img
                           src={heroEditorialUrl}
-                          alt="Trang phục ký gửi đã kiểm định tại kho ReHome"
+                          alt="Trang phục ký gửi đã kiểm định tại điểm kí gửi ReHome"
                           className="w-full h-full object-cover"
                         />
                       </div>
