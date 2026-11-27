@@ -8,19 +8,26 @@ import ImageLightbox from "../../../../components/common/ImageLightbox.jsx";
 
 import { Status, DetailLink, money, date } from "../WarehouseUi.jsx";
 
-export function CounterHandoverDialog({ confirmHandover, selected, handoverLoading, setConfirmHandover, executeHandover }) {
+export function CounterHandoverDialog({
+  confirmHandover,
+  selected,
+  handoverLoading,
+  setConfirmHandover,
+  executeHandover,
+  onRefreshTasks,
+  tasksLoading,
+}) {
   const item = confirmHandover?.item || {};
   const context = confirmHandover?.context || 'ITEM_WITHDRAWAL';
   const targetSku = item.sku || item.productId || item.returnId || '';
 
   const [skuInput, setSkuInput] = useState('');
   const [isIdentityConfirmed, setIsIdentityConfirmed] = useState(false);
-  const [isFeeCollected, setIsFeeCollected] = useState(false);
 
   const isFeePaid = Boolean(item.feePaid || item.feePaidAt);
   const requiresFeeConfirmation = Boolean(context === 'ITEM_WITHDRAWAL' && item.feeCharged > 0 && !isFeePaid);
   const isSkuMatched = Boolean(targetSku && skuInput.trim().toUpperCase() === targetSku.toUpperCase());
-  const canHandover = Boolean(isSkuMatched && isIdentityConfirmed && (!requiresFeeConfirmation || isFeeCollected));
+  const canHandover = Boolean(isSkuMatched && isIdentityConfirmed && !requiresFeeConfirmation);
 
   const reasonLabels = {
     ITEM_WITHDRAWAL: 'Member rút hàng',
@@ -152,31 +159,39 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
           </p>
         </div>
 
-        {/* Cảnh báo & xác nhận thu phí nếu chưa thanh toán online */}
+        {/* Cảnh báo khi Member chưa thanh toán phí rút hàng trên app */}
         {requiresFeeConfirmation && (
-          <div className="rounded-xl border-2 border-[#BA1A1A] bg-[#FFEBEE]/30 p-3.5 space-y-2 text-xs">
-            <label className="flex items-start gap-2.5 cursor-pointer font-bold text-[#BA1A1A]">
-              <input
-                type="checkbox"
-                checked={isFeeCollected}
-                onChange={(e) => setIsFeeCollected(e.target.checked)}
-                aria-label="Xác nhận đã thu phí rút hàng"
-                className="mt-0.5 h-4 w-4 rounded border-[#BA1A1A] text-[#BA1A1A] focus:ring-[#BA1A1A]"
-              />
-              <span className="leading-snug">
-                Đã thu phí rút {money(item.feeCharged)} trực tiếp tại quầy từ Member
-              </span>
-            </label>
-            <p className="text-[11px] text-[#BA1A1A] pl-6.5">
-              Đơn hàng chưa thanh toán phí rút online. Moderator cần thu tiền trước khi hoàn tất bàn giao hiện vật.
+          <div
+            role="alert"
+            className="rounded-xl border-2 border-[#BA1A1A] bg-[#FFEBEE]/30 p-3.5 space-y-2.5 text-xs"
+          >
+            <p className="font-bold text-[#BA1A1A] leading-snug">
+              Member chưa trả phí rút hàng {money(item.feeCharged)}. Nhắc Member trả trên app ReHome (Ví hoặc VNPay), trả xong bấm Tải lại để bàn giao.
             </p>
+            {onRefreshTasks && (
+              <div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  loading={tasksLoading}
+                  className="text-xs px-3 py-1.5 border-[#BA1A1A] text-[#BA1A1A] hover:bg-[#FFEBEE]"
+                  onClick={() => onRefreshTasks()}
+                >
+                  Tải lại
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
         {/* Footer actions */}
         <div className="flex items-center justify-between pt-2 border-t border-neutral">
           <span className="text-[11px] text-[#5B6776]">
-            {!canHandover ? 'Cần đối chiếu Mã hàng hóa và tích xác nhận để hoàn tất' : 'Sẵn sàng bàn giao'}
+            {requiresFeeConfirmation
+              ? 'Member cần trả phí rút hàng trên app trước khi bàn giao'
+              : !canHandover
+                ? 'Cần đối chiếu Mã hàng hóa và tích xác nhận để hoàn tất'
+                : 'Sẵn sàng bàn giao'}
           </span>
           <div className="flex gap-2">
             <Button
@@ -594,11 +609,11 @@ export function CounterIdentityPanel({ selected, results, confirmed, confirmIden
           </p>
         </div>
         <div>
-          <p className="text-[10px] text-[#717971] uppercase font-bold">Đến kho gần nhất</p>
+          <p className="text-[10px] text-[#717971] uppercase font-bold">Đến điểm kí gửi gần nhất</p>
           <p className="font-medium text-[#191C19] mt-0.5">
             {selected.lastWarehouseVisit
               ? new Date(selected.lastWarehouseVisit).toLocaleDateString('vi-VN')
-              : 'Lần đầu đến kho'}
+              : 'Lần đầu đến điểm kí gửi'}
           </p>
         </div>
         <div>
@@ -615,7 +630,7 @@ export function CounterIdentityPanel({ selected, results, confirmed, confirmIden
     
       <div className="rounded-xl border border-[#8a8a8a] bg-[#fcfdfc] p-4 space-y-2">
         <h3 className="text-xs font-bold text-[#191C19] uppercase tracking-wide">
-          Đang ký gửi tại kho này · {selected.activeConsignments?.length || 0} món
+          Đang ký gửi tại điểm kí gửi này · {selected.activeConsignments?.length || 0} món
         </h3>
         {selected.activeConsignments && selected.activeConsignments.length > 0 ? (
           <div className="flex flex-wrap gap-2">
@@ -631,7 +646,7 @@ export function CounterIdentityPanel({ selected, results, confirmed, confirmIden
             })}
           </div>
         ) : (
-          <p className="text-xs text-[#717971]">Không có món hàng nào đang ký gửi tại kho này.</p>
+          <p className="text-xs text-[#717971]">Không có món hàng nào đang ký gửi tại điểm kí gửi này.</p>
         )}
       </div>
     
