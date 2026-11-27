@@ -77,7 +77,7 @@ export default function MemberReConsignConfirmModal({
               'Món hàng còn tốt, không có lỗi mới sau 90 ngày lưu kho. Đề xuất mức giá này giúp sản phẩm cạnh tranh và dễ bán hơn trên sàn ReHome.'}
           </p>
           <div className="text-[10px] text-[#7a7a7a] pt-1 border-t border-[#ececec]">
-            Kiểm định viên kho · Hôm nay
+            Kiểm định viên điểm kí gửi · Hôm nay
           </div>
         </div>
 

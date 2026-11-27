@@ -59,7 +59,7 @@ test('API mode uses authenticated routes and exposes failures without loading fi
   expect(queue.authorization).toBe(`Bearer ${token}`);
 
   await page.goto('/moderator/consignments/form-api-403');
-  await expect(page.getByRole('alert')).toContainText('Bạn không có quyền truy cập dữ liệu của kho này.');
+  await expect(page.getByRole('alert')).toContainText('Bạn không có quyền truy cập dữ liệu của điểm kí gửi này.');
 
   await page.goto('/moderator/packing?orderId=order-api-1');
   await expect(page.getByRole('alert')).toContainText('Chưa thể xem chi tiết đơn hàng để đóng gói.');

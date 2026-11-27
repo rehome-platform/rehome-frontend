@@ -38,7 +38,7 @@ export default function BarcodePrintModal({ isOpen, onClose, item }) {
 
         {label.error?.status === 403 && (
           <p role="alert" className="text-sm text-error bg-red-50 p-3 rounded-lg border border-red-200">
-            Sản phẩm không thuộc chi nhánh kho bạn quản lý. Bạn chỉ có thể in tem cho sản phẩm tại kho mình phụ trách.
+            Sản phẩm không thuộc điểm kí gửi bạn quản lý. Bạn chỉ có thể in tem cho sản phẩm tại điểm kí gửi mình phụ trách.
           </p>
         )}
 

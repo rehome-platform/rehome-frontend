@@ -10,6 +10,7 @@ import { CAMPAIGN_STATUS_LABELS, donationService, isCampaignActive } from '../se
 import { STATIC_STALE_TIME_MS, useModeratorCache, useResource } from '../hooks/warehouseHooks.jsx';
 import { normalizeError } from '../models/warehouseModel.js';
 import { Page, Card, ResourceState, date } from '../components/WarehouseUi.jsx';
+import { formatWarehouseDisplayName } from '../../../utils/formatters.js';
 
 function extractNoteDetails(note) {
   const noteText = note || '';
@@ -472,10 +473,17 @@ export default function DonationsPage() {
     }
   };
 
+  const formattedWarehouseName = formatWarehouseDisplayName(warehouse?.name);
+  const subtitleText = formattedWarehouseName
+    ? (/^(?:địa\s+)?điểm\s+k[iíý]\s+gửi/iu.test(formattedWarehouseName)
+        ? formattedWarehouseName
+        : `Điểm kí gửi: ${formattedWarehouseName}`)
+    : 'Ghi nhận lượt quyên góp trực tiếp và bàn giao cho tổ chức từ thiện';
+
   return (
     <Page
       title="Quyên góp & Bàn giao tổ chức"
-      subtitle={warehouse?.name ? `Điểm ký gửi: ${warehouse.name}` : 'Ghi nhận lượt quyên góp trực tiếp và bàn giao cho tổ chức từ thiện'}
+      subtitle={subtitleText}
       actions={
         <Button
           variant="outline"

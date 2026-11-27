@@ -19,7 +19,7 @@ export function normalizeError(error) {
   const body = error?.response?.data ?? {};
   const status = error?.response?.status ?? error?.status ?? error?.statusCode ?? 0;
   const messages = {
-    403: 'Bạn không có quyền truy cập dữ liệu của kho này.',
+    403: 'Bạn không có quyền truy cập dữ liệu của điểm kí gửi này.',
     404: 'Không tìm thấy dữ liệu.',
     409: 'Dữ liệu đã thay đổi. Vui lòng kiểm tra trạng thái mới.',
     422: 'Vui lòng kiểm tra thông tin nhập.',

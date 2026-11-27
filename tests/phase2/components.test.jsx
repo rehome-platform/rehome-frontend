@@ -892,7 +892,7 @@ describe('ConsignmentDetailPage component behaviors', () => {
       );
 
       expect(
-        await screen.findByText('Sản phẩm không thuộc kho bạn quản lý'),
+        await screen.findByText('Sản phẩm không thuộc điểm kí gửi bạn quản lý'),
       ).toBeInTheDocument();
       expect(screen.getAllByRole('button', { name: 'Quay lại Quản lý sản phẩm' })).toHaveLength(1);
     });

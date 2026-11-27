@@ -99,7 +99,7 @@ function Negotiation({ sku }) {
       {feedback && <p role="status" className="rounded-xl border border-neutral bg-surface p-4 text-sm">{feedback}</p>}
       {product && <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         <div className="space-y-5">
-          <Card title="Món đang ở kho">
+          <Card title="Món đang ở điểm kí gửi">
             <h2 className="text-lg font-bold">{product.name}</h2>
             <p className="text-sm">{product.brandName || product.brand || '—'} · Size {product.size || '—'}</p>
             <p className="font-mono text-primary">{product.id || sku}</p>

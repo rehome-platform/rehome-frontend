@@ -190,7 +190,7 @@ describe('ProductEditModal', () => {
   });
 
   it.each([
-    [403, 'WAREHOUSE_FORBIDDEN', 'Bạn không có quyền chỉnh sửa sản phẩm thuộc kho khác.'],
+    [403, 'WAREHOUSE_FORBIDDEN', 'Bạn không có quyền chỉnh sửa sản phẩm thuộc điểm kí gửi khác.'],
     [404, 'PRODUCT_NOT_FOUND', 'Không tìm thấy sản phẩm.'],
     [409, 'PRODUCT_CANNOT_BE_UPDATED_HAS_ORDER', 'Sản phẩm đang nằm trong đơn hàng, không thể chỉnh sửa thông tin.'],
   ])('displays %i error message and keeps modal open', async (status, code, message) => {

@@ -50,7 +50,7 @@ export function WarehouseHistoryTabs({ type, children, onWorkTabClick }) {
         <Button role="tab" aria-selected={!history} variant={history ? 'outline' : 'primary'} onClick={() => (onWorkTabClick ? onWorkTabClick() : update('view', null))}>Công việc</Button>
         <Button role="tab" aria-selected={history} variant={history ? 'primary' : 'outline'} onClick={() => update('view', 'history')}>Lịch sử</Button>
       </div>
-      {history ? <section aria-label="Lịch sử thao tác kho" className="space-y-4">
+      {history ? <section aria-label="Lịch sử thao tác điểm kí gửi" className="space-y-4">
         <div className="flex justify-end">
           <Button variant="outline" onClick={resource.refresh} className="gap-1.5 whitespace-nowrap">
             <span aria-hidden="true" className="material-symbols-outlined text-[16px]">refresh</span>

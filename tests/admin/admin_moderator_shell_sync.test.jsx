@@ -92,6 +92,9 @@ describe('UserAccountDropdown & Moderator/Admin Shell Sync', () => {
 
     const trigger = screen.getByRole('button', { name: /Phạm Thị Thu Hà/i });
     expect(trigger).toHaveAttribute('aria-controls', 'moderator-account-dropdown');
+    expect(screen.getByText('Điểm kí gửi ReHome TP.HCM')).toBeInTheDocument();
+    expect(screen.queryByText('Kho ReHome TP.HCM')).not.toBeInTheDocument();
+    expect(screen.getByText('Vận hành điểm kí gửi')).toBeInTheDocument();
 
     fireEvent.click(trigger);
     expect(document.getElementById('moderator-account-dropdown')).toBeInTheDocument();

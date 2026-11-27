@@ -5,6 +5,7 @@ import { phase4Contract, operationReady } from '../config/packingContract.js';
 import { isFixtureMode } from '../config/warehouseContract.js';
 import { handoverPayload } from '../models/packingModel.js';
 import { packingMockApi } from './packingMockApi.js';
+import { formatWarehouseDisplayName } from '../../../utils/formatters.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -96,7 +97,7 @@ function normalizeOrderResult(result, orderId, scope) {
     recipientPhone,
     shippingPhone: recipientPhone,
     shippingAddress: fullAddress,
-    warehouseName: result.warehouseName || scope?.warehouseName || 'Kho Quận 7',
+    warehouseName: formatWarehouseDisplayName(result.warehouseName || scope?.warehouseName) || 'Điểm kí gửi Quận 7',
     ghnTrackingCode: result.ghnTrackingCode || '',
     packingPhotoUrls: Array.isArray(result.packingPhotoUrls) ? result.packingPhotoUrls : [],
     items,
