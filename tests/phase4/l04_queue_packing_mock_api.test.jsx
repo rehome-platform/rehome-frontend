@@ -88,7 +88,7 @@ beforeEach(() => {
 afterAll(() => server.close());
 
 async function scanSku(code) {
-  const input = await screen.findByLabelText('SKU');
+  const input = await screen.findByLabelText('Mã hàng hóa');
   fireEvent.change(input, { target: { value: code } });
   const submitBtn = screen.getByRole('button', { name: 'Đối chiếu' });
   fireEvent.click(submitBtn);
@@ -226,7 +226,7 @@ describe('L-04 Phase 4: Mock API Integration Suite (APIs 68-72)', () => {
 
     // API 69: Quét mã SKU thứ 1
     await scanSku('RH-A7F31K');
-    await screen.findByText('Đã quét 1/2 SKU');
+    await screen.findByText('Đã quét 1/2 Mã hàng hóa');
 
     // Quét mã sai để kiểm tra modal DG-03-SaiMon
     await scanSku('RH-K9B47T');
@@ -235,7 +235,7 @@ describe('L-04 Phase 4: Mock API Integration Suite (APIs 68-72)', () => {
 
     // API 69: Quét mã SKU thứ 2
     await scanSku('RH-C2M08P');
-    await screen.findByText('Đã quét 2/2 SKU');
+    await screen.findByText('Đã quét 2/2 Mã hàng hóa');
 
     // API 70: Bấm "Tạo vận đơn GHN"
     const shipmentBtn = screen.getByRole('button', { name: 'Tạo vận đơn GHN' });

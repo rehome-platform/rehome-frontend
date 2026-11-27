@@ -29,24 +29,24 @@ it('scans multi-SKU using server state, preserves case, rejects duplicates and r
     return { matched };
   });
   const first = mount();
-  await screen.findByText('Đã quét 0/2 SKU');
+  await screen.findByText('Đã quét 0/2 Mã hàng hóa');
   async function submit(code, count) {
-    fireEvent.change(screen.getByLabelText('SKU'), { target: { value: code } });
+    fireEvent.change(screen.getByLabelText('Mã hàng hóa'), { target: { value: code } });
     fireEvent.click(screen.getByRole('button', { name: 'Đối chiếu' }));
     await waitFor(() => expect(scan).toHaveBeenCalledTimes(count));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Đối chiếu' })).toBeEnabled());
   }
   await submit('sku-a', 1);
-  await screen.findByText('Đã quét 1/2 SKU');
+  await screen.findByText('Đã quét 1/2 Mã hàng hóa');
   await submit('sku-a', 2);
-  expect(screen.getByText('Đã quét 1/2 SKU')).toBeInTheDocument();
+  expect(screen.getByText('Đã quét 1/2 Mã hàng hóa')).toBeInTheDocument();
   await submit('wrong', 3);
-  await screen.findByText('SKU không thuộc đơn.');
+  await screen.findByText('Mã hàng hóa không thuộc đơn.');
   await submit('SKU-B', 4);
-  await screen.findByText('Đã quét 2/2 SKU');
+  await screen.findByText('Đã quét 2/2 Mã hàng hóa');
   expect(screen.getByRole('button', { name: 'Tạo vận đơn GHN' })).toBeEnabled();
   first.unmount(); mount();
-  await screen.findByText('Đã quét 2/2 SKU');
+  await screen.findByText('Đã quét 2/2 Mã hàng hóa');
 });
 it('locks unknown shipment outcomes, reconciles and never retries automatically', async () => {
   const order = orderFixture(); order.scannedProductIds = ['sku-a', 'SKU-B']; order.scannedCount = 2;
@@ -68,10 +68,10 @@ it('locks unknown shipment outcomes, reconciles and never retries automatically'
 it('blocks actions after owner changes on refresh', async () => {
   const order = orderFixture();
   vi.spyOn(packingService, 'read').mockImplementation(async () => structuredClone(order));
-  mount(); await screen.findByText('Đã quét 0/2 SKU');
+  mount(); await screen.findByText('Đã quét 0/2 Mã hàng hóa');
   order.claimedBy = 'another';
   fireEvent.click(screen.getByRole('button', { name: 'Kiểm tra trạng thái' }));
-  await screen.findByText('Đã quét 0/2 SKU');
+  await screen.findByText('Đã quét 0/2 Mã hàng hóa');
   expect(screen.getByRole('button', { name: 'Đối chiếu' })).toBeDisabled();
 });
 it('hides payment deadline while retaining delivery and return deadlines', async () => {
@@ -81,7 +81,7 @@ it('hides payment deadline while retaining delivery and return deadlines', async
   order.returnDeadline = new Date(Date.now() + 3 * 24 * 3600000).toISOString();
   vi.spyOn(packingService, 'read').mockImplementation(async () => structuredClone(order));
   mount();
-  await screen.findByText('Đã quét 0/2 SKU');
+  await screen.findByText('Đã quét 0/2 Mã hàng hóa');
   expect(screen.queryByText('Hạn thanh toán:')).not.toBeInTheDocument();
   expect(screen.getByText('Hạn tự động hoàn tất:')).toBeInTheDocument();
   expect(screen.getByText('Hạn yêu cầu trả hàng:')).toBeInTheDocument();
@@ -95,16 +95,16 @@ it('does not increment scannedCount on wrong SKU (or rejected scan), shows wrong
     .mockRejectedValueOnce(new Phase2Error('Không tìm thấy sản phẩm với mã SKU-404.', 422));
 
   mount();
-  await screen.findByText('Đã quét 0/2 SKU');
+  await screen.findByText('Đã quét 0/2 Mã hàng hóa');
   expect(screen.getByRole('button', { name: 'Tạo vận đơn GHN' })).toBeDisabled();
 
   // 1. Quét sai SKU (matched: false) -> không tăng tiến độ, mở modal sai món + giữ nút tạo vận đơn disabled
-  fireEvent.change(screen.getByLabelText('SKU'), { target: { value: 'WRONG-SKU' } });
+  fireEvent.change(screen.getByLabelText('Mã hàng hóa'), { target: { value: 'WRONG-SKU' } });
   fireEvent.click(screen.getByRole('button', { name: 'Đối chiếu' }));
 
   await waitFor(() => expect(scan).toHaveBeenCalledTimes(1));
-  await screen.findByText('SKU không thuộc đơn.');
-  expect(screen.getByText('Đã quét 0/2 SKU')).toBeInTheDocument();
+  await screen.findByText('Mã hàng hóa không thuộc đơn.');
+  expect(screen.getByText('Đã quét 0/2 Mã hàng hóa')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Tạo vận đơn GHN' })).toBeDisabled();
 
   // Đóng modal sai món nếu có
@@ -112,13 +112,13 @@ it('does not increment scannedCount on wrong SKU (or rejected scan), shows wrong
   if (closeModalBtn) fireEvent.click(closeModalBtn);
 
   // 2. Quét SKU không tồn tại (reject 404) -> onError hoạt động, không tăng tiến độ, hiển thị lỗi
-  fireEvent.change(screen.getByLabelText('SKU'), { target: { value: 'SKU-404' } });
+  fireEvent.change(screen.getByLabelText('Mã hàng hóa'), { target: { value: 'SKU-404' } });
   fireEvent.click(screen.getByRole('button', { name: 'Đối chiếu' }));
 
   await waitFor(() => expect(scan).toHaveBeenCalledTimes(2));
   const errorMessages = await screen.findAllByText('Không tìm thấy sản phẩm với mã SKU-404.');
   expect(errorMessages.length).toBeGreaterThan(0);
-  expect(screen.getByText('Đã quét 0/2 SKU')).toBeInTheDocument();
+  expect(screen.getByText('Đã quét 0/2 Mã hàng hóa')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Tạo vận đơn GHN' })).toBeDisabled();
 });
 
@@ -223,14 +223,14 @@ it('uses canonical resolved order.id UUID for packing mutations when mounted wit
   });
 
   mount('OD-2026-000019');
-  await screen.findByText('Đã quét 0/2 SKU');
+  await screen.findByText('Đã quét 0/2 Mã hàng hóa');
   expect(readSpy).toHaveBeenCalledWith('OD-2026-000019', expect.any(Object));
 
-  fireEvent.change(screen.getByLabelText('SKU'), { target: { value: 'sku-a' } });
+  fireEvent.change(screen.getByLabelText('Mã hàng hóa'), { target: { value: 'sku-a' } });
   fireEvent.click(screen.getByRole('button', { name: 'Đối chiếu' }));
 
   await waitFor(() => expect(scanSpy).toHaveBeenCalledWith(realUuid, 'sku-a', expect.any(Object)));
-  await screen.findByText('Đã quét 2/2 SKU');
+  await screen.findByText('Đã quét 2/2 Mã hàng hóa');
 
   const shipBtn = screen.getByRole('button', { name: 'Tạo vận đơn GHN' });
   await waitFor(() => expect(shipBtn).toBeEnabled());
