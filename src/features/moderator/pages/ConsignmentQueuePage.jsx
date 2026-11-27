@@ -45,6 +45,10 @@ export function getQueueLinkTarget(item, typeParam) {
     const id = item.returnId || refId;
     return id ? `/moderator/returns/ship-back/${encodeURIComponent(id)}` : '/moderator/returns';
   }
+  if (type === 'RECONSIGN_COUNTER') {
+    const targetSku = item.sku || item.productId;
+    return targetSku ? `/moderator/inventory/${encodeURIComponent(targetSku)}/re-consign` : '/moderator/end-of-term';
+  }
   if (type === 'ORG_VERIFICATION') {
     return refId ? `/moderator/verifications?id=${encodeURIComponent(refId)}` : `/moderator/verifications`;
   }

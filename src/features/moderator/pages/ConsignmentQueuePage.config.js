@@ -11,6 +11,7 @@ export const WORK_TYPES = [
   { key: 'DONATION_PREP', label: 'Chuẩn bị quyên góp' },
   { key: 'RETURN', label: 'Trả hàng' },
   { key: 'RETURN_SHIP_BACK', label: 'Gửi lại hàng trả không hợp lệ' },
+  { key: 'RECONSIGN_COUNTER', label: 'Trả giá ký gửi lại' },
   { key: 'ORG_VERIFICATION', label: 'Xác minh tổ chức' },
   { key: 'LEGAL_CHANGE', label: 'Thay đổi pháp lý' },
   { key: 'VIOLATION_REPORT', label: 'Vi phạm' },

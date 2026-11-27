@@ -95,7 +95,10 @@ describe('productStatus constants and helpers', () => {
     expect(warehouseReasonOf({ status: 'WAREHOUSE', activeWithdrawalStatus: 'PENDING_APPROVAL' })).toBe('WITHDRAWAL_PENDING_APPROVAL');
     expect(warehouseReasonOf({ status: 'WAREHOUSE', activeWithdrawalStatus: 'PENDING_PICKUP' })).toBe('WITHDRAWAL_PENDING_PICKUP');
     expect(warehouseReasonOf({ status: 'WAREHOUSE', pricingEligible: true })).toBe('NEGOTIATING');
+    expect(warehouseReasonOf({ status: 'WAREHOUSE', reConsignStatus: 'AWAITING_PRICE' })).toBe('NEGOTIATING');
+    expect(warehouseReasonOf({ status: 'WAREHOUSE', reConsignStatus: 'PROPOSED' })).toBe('NEGOTIATING');
     expect(warehouseReasonOf({ status: 'WAREHOUSE', reConsignStatus: 'PROPOSAL_SENT' })).toBe('NEGOTIATING');
+    expect(warehouseReasonOf({ status: 'WAREHOUSE', reConsignStatus: 'COUNTER_OFFERED' })).toBe('NEGOTIATING');
     expect(warehouseReasonOf({ status: 'WAREHOUSE', decisionId: 'dec-1' })).toBe('TERM_EXPIRED');
     expect(warehouseReasonOf({ status: 'WAREHOUSE' })).toBeUndefined();
     expect(warehouseReasonOf({ status: 'ON_SALE', decisionId: 'dec-1' })).toBeUndefined();
@@ -224,13 +227,14 @@ describe('WarehouseInventoryPage UI & QueueType coverage', () => {
     });
   });
 
-  it('covers all 12 backend QueueType values including RETURN_SHIP_BACK, DONATION_PREP and LEGAL_CHANGE', () => {
+  it('covers all 13 backend QueueType values including RECONSIGN_COUNTER, RETURN_SHIP_BACK, DONATION_PREP and LEGAL_CHANGE', () => {
     const backendQueueTypes = [
       'FORM_REVIEW',
       'INSPECTION',
       'PACKING',
       'RETURN',
       'RETURN_SHIP_BACK',
+      'RECONSIGN_COUNTER',
       'ORG_VERIFICATION',
       'LEGAL_CHANGE',
       'VIOLATION_REPORT',
