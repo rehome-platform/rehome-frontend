@@ -66,7 +66,7 @@ export default function SuspiciousCounterfeitModal({ isOpen, onClose, returnItem
         <div className="p-3 bg-background rounded-xl border border-neutral space-y-1">
           <p><strong className="text-text">Mã vận đơn trả:</strong> {returnItem.code || returnItem.returnCode || 'RET-3012'}</p>
           <p><strong className="text-text">Sản phẩm:</strong> {returnItem.itemName || returnItem.productName} ({returnItem.brand || 'Chưa rõ thương hiệu'})</p>
-          <p><strong className="text-text">SKU:</strong> <span className="font-mono text-primary font-bold">{returnItem.sku || '—'}</span></p>
+          <p><strong className="text-text">Mã hàng hóa:</strong> <span className="font-mono text-primary font-bold">{returnItem.sku || '—'}</span></p>
           <p><strong className="text-text">Ghi chú tình trạng ban đầu:</strong> {returnItem.conditionNote || returnItem.firstModNote || 'Khách báo hàng không đúng mô tả hoặc nghi ngờ chất lượng'}</p>
         </div>
 

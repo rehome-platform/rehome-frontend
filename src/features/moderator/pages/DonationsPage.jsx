@@ -830,7 +830,7 @@ export default function DonationsPage() {
                                       )}
                                       <div className="space-y-0.5 min-w-0">
                                         <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-200 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900 whitespace-nowrap">
-                                          Món ký gửi · SKU {row.sku || '—'}
+                                          Món ký gửi · Mã hàng hóa {row.sku || '—'}
                                         </span>
                                         {row.productName && <p className="font-semibold text-text">{row.productName}</p>}
                                       </div>
@@ -1072,7 +1072,7 @@ export default function DonationsPage() {
                                           )}
                                           <div className="space-y-1 min-w-0">
                                             <div className="inline-flex items-center rounded-full bg-amber-100 border border-amber-200 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900 whitespace-nowrap">
-                                              <span>Món ký gửi · SKU {row.sku || '—'}</span>
+                                              <span>Món ký gửi · Mã hàng hóa {row.sku || '—'}</span>
                                             </div>
                                             {row.productName && (
                                               row.sku ? (
@@ -1497,7 +1497,7 @@ export default function DonationsPage() {
           </div>
 
           <div className="space-y-1.5">
-            <p className="font-bold text-text">Danh sách ghi chú &amp; mã SKU cần bàn giao:</p>
+            <p className="font-bold text-text">Danh sách ghi chú &amp; Mã hàng hóa cần bàn giao:</p>
             <ul className="max-h-48 overflow-y-auto rounded-xl border border-neutral bg-white divide-y divide-neutral">
               {selectedRows.map((row) => (
                 <li key={row.id} className="p-2.5 flex items-start justify-between gap-3">

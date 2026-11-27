@@ -29,8 +29,8 @@ export function EndTermConfirmDialog({ confirm, resource, setConfirm, sku, price
           {confirm === 'HANDOVER'
             ? `Xác nhận đã bàn giao đúng sản phẩm ${sku} cho Member đã đối chiếu danh tính?`
             : confirm === 'RE_CONSIGN'
-              ? `Tạo biên nhận mới cho SKU ${sku} với giá ${money(Number(price))}?`
-              : `Xác nhận chuyển giao sản phẩm SKU ${sku} (${data?.name}) cho tổ chức từ thiện "${partner.trim()}"? Thao tác này sẽ đổi trạng thái sản phẩm sang ĐÃ CHUYỂN GIAO (DONATED) và lưu vào Audit Log.`}
+              ? `Tạo biên nhận mới cho Mã hàng hóa ${sku} với giá ${money(Number(price))}?`
+              : `Xác nhận chuyển giao sản phẩm Mã hàng hóa ${sku} (${data?.name}) cho tổ chức từ thiện "${partner.trim()}"? Thao tác này sẽ đổi trạng thái sản phẩm sang ĐÃ CHUYỂN GIAO (DONATED) và lưu vào Audit Log.`}
         </p>
         <ResourceState resource={resource} />
         <div className="flex justify-end gap-2 pt-2">

@@ -115,7 +115,7 @@ export default function ReturnProcessingPage() {
                   type="text"
                   value={model.searchQuery}
                   onChange={(e) => model.setSearchQuery(e.target.value)}
-                  placeholder="Tìm theo mã yêu cầu, mã đơn, SKU hoặc người mua..."
+                  placeholder="Tìm theo mã yêu cầu, mã đơn, Mã hàng hóa hoặc người mua..."
                   className="w-full text-xs py-2 px-3 rounded-xl border border-neutral bg-surface text-text placeholder:text-textSecondary focus:outline-none focus:border-primary"
                 />
                 {model.searchQuery && (
