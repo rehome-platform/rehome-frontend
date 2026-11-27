@@ -89,10 +89,10 @@ test('inspect → wait Member → stock-in → SKU → detail (fixtures)', async
         'base64',
       ),
     });
-  await page.getByRole('button', { name: 'Nhập kho · tạo SKU' }).click();
+  await page.getByRole('button', { name: 'Nhập kho · tạo Mã hàng hóa' }).click();
   await page.getByRole('link', { name: /Đã nhập kho · TEST-SKU-4/ }).click();
-  await expect(page.getByText('SKU: TEST-SKU-4', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Mở / In lại tem SKU' }).click();
+  await expect(page.getByText('Mã hàng hóa: TEST-SKU-4', { exact: true }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Mở / In lại tem Mã hàng hóa' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Mở PDF tem để xem và in' })).toHaveCount(0);
   await page.keyboard.press('Escape');
@@ -136,5 +136,5 @@ test('shared phone selection, catalog modal and all end-of-term branches (fixtur
   await page.getByLabel('Tên tổ chức đối tác nhận chuyển giao').fill('Đối tác thử');
   await page.getByRole('button', { name: 'Chuyển giao hàng vô thừa nhận' }).click();
   await page.getByRole('button', { name: 'Xác nhận', exact: true }).click();
-  await expect(page.getByText(/Đã chuyển giao thành công sản phẩm SKU/)).toBeVisible();
+  await expect(page.getByText(/Đã chuyển giao thành công sản phẩm Mã hàng hóa/)).toBeVisible();
 });

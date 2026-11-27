@@ -64,9 +64,9 @@ describe('photo upload and ambiguous stock-in recovery', () => {
     await user.selectOptions(screen.getByLabelText('Danh mục'), 'cat');
     await user.selectOptions(screen.getByLabelText('Thương hiệu'), 'brand');
     await user.upload(screen.getByLabelText('Ảnh sản phẩm'), file());
-    await user.click(screen.getByRole('button', { name: 'Nhập kho · tạo SKU' }));
+    await user.click(screen.getByRole('button', { name: 'Nhập kho · tạo Mã hàng hóa' }));
     await screen.findByText(/Chưa xác định được kết quả nhập kho/);
-    expect(screen.getByRole('button', { name: 'Nhập kho · tạo SKU' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Nhập kho · tạo Mã hàng hóa' })).toBeDisabled();
     expect(create).toHaveBeenCalledOnce();
     await user.click(screen.getByRole('button', { name: 'Kiểm tra kết quả theo biên nhận' }));
     await screen.findByText(/Sản phẩm đã tồn tại · ONE-SKU/);

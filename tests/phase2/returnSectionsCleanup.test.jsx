@@ -75,7 +75,7 @@ describe('Task 5: Return request detail, inspection checklist & post-refund outc
     );
 
     expect(container.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
-    expect(screen.getByText('Còn nguyên tem SKU trên sản phẩm')).toBeTruthy();
+    expect(screen.getByText('Còn nguyên tem Mã hàng hóa trên sản phẩm')).toBeTruthy();
     expect(screen.getByText('Không có hư hỏng mới so với ảnh nhập kho')).toBeTruthy();
     expect(screen.getByText('Không có dấu vết đã qua sử dụng thêm')).toBeTruthy();
     expect(screen.getByText('Đủ phụ kiện đi kèm nếu có')).toBeTruthy();

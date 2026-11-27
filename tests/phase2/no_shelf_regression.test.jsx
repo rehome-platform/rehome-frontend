@@ -211,7 +211,7 @@ describe('Phase 2 No-Shelf Regression', () => {
     expect(screen.queryByText(/Chưa gán vị trí/i)).not.toBeInTheDocument();
 
     const user = userEvent.setup();
-    const searchInput = screen.getByPlaceholderText(/Tìm theo mã SKU hoặc tên sản phẩm/i);
+    const searchInput = screen.getByPlaceholderText(/Tìm theo Mã hàng hóa hoặc tên sản phẩm/i);
     await user.type(searchInput, 'Q7-QJ-002');
 
     expect(screen.queryByText('Q7-AK-001')).not.toBeInTheDocument();
@@ -252,7 +252,7 @@ describe('Phase 2 No-Shelf Regression', () => {
     await user.upload(screen.getByLabelText('Ảnh sản phẩm'), file);
     await screen.findByText('shirt.png · Đã tải ảnh gốc');
 
-    await user.click(screen.getByRole('button', { name: 'Nhập kho · tạo SKU' }));
+    await user.click(screen.getByRole('button', { name: 'Nhập kho · tạo Mã hàng hóa' }));
 
     await waitFor(() => {
       expect(createSpy).toHaveBeenCalledTimes(1);
