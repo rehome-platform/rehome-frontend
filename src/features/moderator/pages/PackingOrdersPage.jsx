@@ -112,7 +112,7 @@ export function PackingDetail({ orderId, onChanged }) {
                 </span>
               </div>
               <p className="text-xs text-[#5f5f5f]">
-                Lấy đủ {model.totalCount} món, tick từng món, rồi sang bước đối chiếu mã SKU.
+                Lấy đủ {model.totalCount} món, tick từng món, rồi sang bước đối chiếu Mã hàng hóa.
               </p>
               <div className="pt-2 text-xs font-bold text-[#191C19] flex items-center gap-2">
                 <span>Tiến độ đối chiếu:</span>
@@ -120,7 +120,7 @@ export function PackingDetail({ orderId, onChanged }) {
                   ? 'bg-[#ECFDF3] text-[#067647] border-[#ABEFC6]'
                   : 'bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]'
                   }`}>
-                  {`Đã quét ${model.scannedCount}/${model.totalCount} SKU`}
+                  {`Đã quét ${model.scannedCount}/${model.totalCount} Mã hàng hóa`}
                 </span>
               </div>
             </div>
@@ -172,8 +172,8 @@ export function PackingDetail({ orderId, onChanged }) {
       <QRScannerModal
         isOpen={model.camera}
         onClose={() => model.setCamera(false)}
-        title="Quét barcode mã SKU sản phẩm"
-        placeholder="Mã SKU trên tem..."
+        title="Quét barcode Mã hàng hóa sản phẩm"
+        placeholder="Mã hàng hóa trên tem..."
         onScanSuccess={(code) => {
           model.setCamera(false);
           model.scan(code);
@@ -260,7 +260,7 @@ export default function PackingOrdersPage() {
   return (
     <Page
       title="Đóng gói đơn hàng"
-      subtitle="Các đơn hàng bạn đã nhận đóng gói — đối chiếu đủ SKU trước khi tạo vận đơn GHN."
+      subtitle="Các đơn hàng bạn đã nhận đóng gói — đối chiếu đủ Mã hàng hóa trước khi tạo vận đơn GHN."
       actions={
         <div className="flex gap-2">
           <Link to="/moderator/queue?type=PACKING">
@@ -286,7 +286,7 @@ export default function PackingOrdersPage() {
                   type="text"
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
-                  placeholder="Tìm SKU, mã đơn, mã Member..."
+                  placeholder="Tìm Mã hàng hóa, mã đơn, mã Member..."
                   className="w-full text-xs outline-none bg-transparent"
                 />
                 {keyword && (
