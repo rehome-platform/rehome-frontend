@@ -177,7 +177,7 @@ export default function ValueBentoSection({ onOpenInfoModal }) {
 
               <div className="space-y-1.5">
                 <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#071D12]">
-                  Kiểm tra thực tế tại kho &amp; dán tem SKU
+                  Kiểm tra thực tế tại kho &amp; dán tem Mã hàng hóa
                 </h3>
                 <p className="text-xs sm:text-sm text-[#46564C] leading-relaxed">
                   Minh bạch từng vết sờn, khóa kéo và phân hạng trước khi mở bán.

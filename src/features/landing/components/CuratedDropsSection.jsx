@@ -14,7 +14,7 @@ function ProductThumb({ src, alt }) {
           <ShoppingBagIcon className="w-5 h-5" />
         </div>
         <span className="text-[11px] font-bold tracking-wide text-[#071D12]/70">
-          Đã kiểm định SKU
+          Đã kiểm định Mã hàng hóa
         </span>
       </div>
     );
