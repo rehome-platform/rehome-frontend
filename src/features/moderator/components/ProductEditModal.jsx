@@ -88,6 +88,8 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
     return categories.find((cat) => String(cat.name || '').trim().toLowerCase() === targetName)?.id || '';
   }, [item?.categoryId, item?.categoryName, item?.category, categories]);
 
+  const groupedCategories = useMemo(() => groupCategoriesBySlot(categories), [categories]);
+
   useEffect(() => {
     if (!isOpen) return;
     setName(item?.name || '');
@@ -98,6 +100,7 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
     setUploadPending(false);
     setUploadVersion((v) => v + 1);
     setErrorMessage('');
+    setLightboxIndex(null);
   }, [isOpen, item]);
 
   useEffect(() => {
@@ -119,7 +122,6 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
   const conditionLevel = detectConditionLevel(conditionNote);
   const categoryName = item?.categoryName || item?.category?.name || item?.category || '—';
   const brandName = item?.brandName || item?.brand?.name || item?.brand || '—';
-  const groupedCategories = useMemo(() => groupCategoriesBySlot(categories), [categories]);
   const selectedCategory = categories.find((cat) => cat.id === categoryId) || null;
   const activeSlot = normalizeTryOnSlot(selectedCategory) || normalizeTryOnSlot(item);
   const activeSlotInfo = activeSlot ? formatTryOnSlot(activeSlot) : null;
