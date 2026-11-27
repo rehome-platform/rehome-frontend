@@ -31,6 +31,7 @@ const DEFAULT_DASHBOARD = {
   platformRevenue: 0,
   commissionRevenue: 0,
   withdrawalFeeRevenue: 0,
+  returnShipBackFeeRevenue: 0,
   compensationExpense: 0,
   fundBalance: 0,
   heldOrderAmount: 0,
@@ -441,6 +442,37 @@ export default function AdminDashboardPage() {
                 <p className="text-[11px] text-[#5B6776] mt-3 pt-2.5 border-t border-[#F6F9F4]">{m.description}</p>
               </div>
             ))}
+          </div>
+
+          {/* Nguồn thu nền tảng chi tiết (gồm Phí gửi lại hàng trả) */}
+          <div className={`${DASHBOARD_CARD_CLASS} p-5 space-y-3`}>
+            <h3 className="text-sm font-bold text-[#1F2A37] font-heading">Nguồn thu nền tảng</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+              <div className="rounded-xl border border-[#DDE5D9] bg-[#F6F9F4] p-3">
+                <p className="text-[#5B6776] font-medium">Hoa hồng ký gửi</p>
+                <p className="text-base font-extrabold text-[#006B2C] mt-1">
+                  {loading ? '...' : formatCurrencyVND(dashboardData.commissionRevenue || 0)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-[#DDE5D9] bg-[#F6F9F4] p-3">
+                <p className="text-[#5B6776] font-medium">Phí rút hàng</p>
+                <p className="text-base font-extrabold text-[#673AB7] mt-1">
+                  {loading ? '...' : formatCurrencyVND(dashboardData.withdrawalFeeRevenue || 0)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-[#DDE5D9] bg-[#F6F9F4] p-3">
+                <p className="text-[#5B6776] font-medium">Phí gửi lại hàng trả</p>
+                <p className="text-base font-extrabold text-[#0284C7] mt-1">
+                  {loading ? '...' : formatCurrencyVND(dashboardData.returnShipBackFeeRevenue || 0)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-[#DDE5D9] bg-[#F6F9F4] p-3">
+                <p className="text-[#5B6776] font-medium">Doanh thu gói thành viên</p>
+                <p className="text-base font-extrabold text-[#E3A712] mt-1">
+                  {loading ? '...' : formatCurrencyVND(dashboardData.membershipRevenue ?? membershipRevenue)}
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Tóm tắt gói thành viên: thẻ doanh thu nổi bật bên trái + biểu đồ tròn theo hạng bên phải */}

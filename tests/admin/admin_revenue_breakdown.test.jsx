@@ -5,9 +5,10 @@ import AdminRevenueBreakdownCard from '../../src/features/admin/components/Admin
 
 describe('AdminRevenueBreakdownCard', () => {
   const sampleData = {
-    platformRevenue: 4540000,
+    platformRevenue: 4570000,
     commissionRevenue: 4040000,
     withdrawalFeeRevenue: 500000,
+    returnShipBackFeeRevenue: 30000,
     compensationExpense: 300000,
     term1SalesRevenue: 20000000,
     term1Commission: 2000000,
@@ -19,14 +20,16 @@ describe('AdminRevenueBreakdownCard', () => {
     netProfitMarginPercent: 14.1,
   };
 
-  it('renders revenue breakdown, term commissions, withdrawal fee, and separate compensation expense', () => {
+  it('renders revenue breakdown, term commissions, withdrawal fee, return ship-back fee, and separate compensation expense', () => {
     const onViewDetail = vi.fn();
     render(<AdminRevenueBreakdownCard dashboardData={sampleData} onViewDetail={onViewDetail} />);
 
     expect(screen.getByText('Cơ Cấu Doanh Thu Nền Tảng')).toBeInTheDocument();
-    expect(screen.getByText(/4\.540\.000/)).toBeInTheDocument();
+    expect(screen.getByText(/4\.570\.000/)).toBeInTheDocument();
     expect(screen.getByText(/4\.040\.000/)).toBeInTheDocument();
     expect(screen.getAllByText(/500\.000/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Phí gửi lại hàng trả')).toBeInTheDocument();
+    expect(screen.getAllByText(/30\.000/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/2\.000\.000/)).toBeInTheDocument();
     expect(screen.getByText(/1\.200\.000/)).toBeInTheDocument();
     expect(screen.getByText(/840\.000/)).toBeInTheDocument();
