@@ -17,6 +17,7 @@ export const QUEUE_TYPE_LABELS = {
   DONATION_REASSIGN: 'Chuyển lượt quyên góp tạm giữ',
   DONATION_PREP: 'Chuẩn bị quyên góp',
   RETURN: 'Yêu cầu trả hàng',
+  RETURN_SHIP_BACK: 'Gửi lại hàng trả không hợp lệ',
   ORG_VERIFICATION: 'Xác minh tổ chức',
   LEGAL_CHANGE: 'Thay đổi pháp lý',
   VIOLATION_REPORT: 'Báo cáo vi phạm',
@@ -24,7 +25,7 @@ export const QUEUE_TYPE_LABELS = {
 
 export function taskTypeLabel(item, typeParam) {
   const type = item?.type || typeParam;
-  return QUEUE_TYPE_LABELS[type] || 'Công việc kho';
+  return QUEUE_TYPE_LABELS[type] || 'Công việc điểm kí gửi';
 }
 
 export function withdrawalCounterLink(item) {
@@ -75,6 +76,13 @@ export function queueItemElapsedHours(item, now = Date.now()) {
 export function isQueueItemOverdue(item, now = Date.now()) {
   const hours = queueItemElapsedHours(item, now);
   return hours !== null && hours >= OVERDUE_THRESHOLD_HOURS;
+}
+
+export function isShipBackDeadlineNear(deadline, now = Date.now(), thresholdHours = 12) {
+  if (!deadline) return false;
+  const ms = new Date(deadline).getTime();
+  if (!Number.isFinite(ms)) return false;
+  return ms - now <= thresholdHours * 3600 * 1000;
 }
 
 export function queueItemMeta(item, typeParam, now = Date.now()) {

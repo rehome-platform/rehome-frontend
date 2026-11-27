@@ -7,6 +7,7 @@ import { NotificationBell } from '../components/notification/index.js';
 import Logo from '../components/common/Logo.jsx';
 import UserAccountDropdown from '../components/common/UserAccountDropdown.jsx';
 import { getRoleLabel } from '../constants/roleLabels.js';
+import { formatWarehouseDisplayName } from '../utils/formatters.js';
 
 if (typeof gsap?.registerPlugin === 'function' && typeof useGSAP === 'function') {
   gsap.registerPlugin(useGSAP);
@@ -128,13 +129,13 @@ export default function ModeratorLayout({ children, apiColors = true }) {
     },
     { scope: containerRef, dependencies: [isSidebarCollapsed] }
   );
-  const warehouseName = user?.warehouseName || user?.warehouse?.name || 'Chưa có thông tin điểm kí gửi';
+  const warehouseName = formatWarehouseDisplayName(user?.warehouseName || user?.warehouse?.name) || 'Chưa có thông tin điểm kí gửi';
   const onPath = (...prefixes) =>
     prefixes.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`));
 
   const navGroups = [
     {
-      label: 'Vận hành kho',
+      label: 'Vận hành điểm kí gửi',
       items: [
         { to: '/moderator', label: 'Trang chủ điểm kí gửi', icon: 'dashboard', active: location.pathname === '/moderator' },
         {

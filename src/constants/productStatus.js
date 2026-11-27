@@ -15,17 +15,21 @@ export const PRODUCT_STATUS_LABELS = {
 
 export const PRODUCT_STATUS_FALLBACK = 'Không xác định';
 
-// WAREHOUSE dùng cho nhiều nghiệp vụ (F-036, F-029, đàm phán) nên không có nhãn cứng duy nhất.
+// WAREHOUSE dùng cho nhiều nghiệp vụ (F-036, F-029, đàm phán, rút hàng) nên không có nhãn cứng duy nhất.
 export const WAREHOUSE_REASON = {
   DEGRADED: 'DEGRADED',
   TERM_EXPIRED: 'TERM_EXPIRED',
   NEGOTIATING: 'NEGOTIATING',
+  WITHDRAWAL_PENDING_APPROVAL: 'WITHDRAWAL_PENDING_APPROVAL',
+  WITHDRAWAL_PENDING_PICKUP: 'WITHDRAWAL_PENDING_PICKUP',
 };
 
 export const WAREHOUSE_REASON_LABELS = {
   DEGRADED: 'Hàng xuống cấp',
   TERM_EXPIRED: 'Hết hạn ký gửi',
   NEGOTIATING: 'Đang thương lượng',
+  WITHDRAWAL_PENDING_APPROVAL: 'Chờ duyệt rút hàng',
+  WITHDRAWAL_PENDING_PICKUP: 'Chờ nhận lại',
 };
 
 // Chưa xác định được nghiệp vụ của WAREHOUSE từ dữ liệu Backend: không đoán.
@@ -58,9 +62,14 @@ const norm = (value) => (typeof value === 'string' ? value.trim().toUpperCase() 
 // Khóa tra cứu theme/nhãn cho một sản phẩm (WAREHOUSE phân nhánh theo nghiệp vụ).
 export function productStatusKey(item) {
   const status = norm(item?.status);
+  const withdrawalStatus = norm(item?.activeWithdrawalStatus || item?.withdrawalStatus);
+  if (status === 'WAREHOUSE' || status === 'WITHDRAWN') {
+    if (withdrawalStatus === 'PENDING_APPROVAL') return 'WAREHOUSE_WITHDRAWAL_PENDING_APPROVAL';
+    if (withdrawalStatus === 'PENDING_PICKUP') return 'WAREHOUSE_WITHDRAWAL_PENDING_PICKUP';
+  }
   if (status !== 'WAREHOUSE') return status;
-  const reason = norm(item?.warehouseReason);
-  return WAREHOUSE_REASON[reason] ? `WAREHOUSE_${reason}` : 'WAREHOUSE';
+  const reason = norm(item?.warehouseReason) || warehouseReasonOf(item);
+  return reason && WAREHOUSE_REASON[reason] ? `WAREHOUSE_${reason}` : 'WAREHOUSE';
 }
 
 // Nhãn tiếng Việt cho một khóa trạng thái; không bao giờ trả Enum thô/null/undefined.
@@ -80,9 +89,13 @@ export function resolveProductStatusLabel(item) {
 }
 
 // Xác định lý do của WAREHOUSE từ dữ liệu Backend đã có (không đoán).
+// activeWithdrawalStatus đến từ ItemWithdrawalRequest còn sống;
 // decisionId/pricingEligible/reConsignStatus đến từ EndOfTermDecision + pending-pricing.
 export function warehouseReasonOf(item) {
   if (norm(item?.status) !== 'WAREHOUSE') return undefined;
+  const withdrawalStatus = norm(item?.activeWithdrawalStatus || item?.withdrawalStatus);
+  if (withdrawalStatus === 'PENDING_APPROVAL') return WAREHOUSE_REASON.WITHDRAWAL_PENDING_APPROVAL;
+  if (withdrawalStatus === 'PENDING_PICKUP') return WAREHOUSE_REASON.WITHDRAWAL_PENDING_PICKUP;
   if (item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT') return WAREHOUSE_REASON.NEGOTIATING;
   if (item.decisionId) return WAREHOUSE_REASON.TERM_EXPIRED;
   return undefined;

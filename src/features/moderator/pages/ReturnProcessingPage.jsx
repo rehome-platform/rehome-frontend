@@ -233,7 +233,7 @@ export default function ReturnProcessingPage() {
                 <div>
                   <span className="text-xs text-textSecondary">Yêu cầu trả hàng · </span>
                   <span className="text-sm font-bold text-text">
-                    {model.selectedItem.code} · kiểm tra hàng về kho
+                    {model.selectedItem.code} · kiểm tra hàng về điểm kí gửi
                   </span>
                 </div>
               </div>

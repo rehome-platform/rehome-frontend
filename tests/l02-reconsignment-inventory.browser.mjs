@@ -109,7 +109,7 @@ try {
   await page.getByRole('button', { name: /Đàm phán giá/ }).click();
 
   await expect(page.getByRole('heading', { name: 'Ký gửi lại — chốt giá mới', exact: true })).toBeVisible({ timeout: 10000 });
-  await expect(page.getByText('Món đang ở kho')).toBeVisible();
+  await expect(page.getByText('Món đang ở điểm kí gửi')).toBeVisible();
   await expect(page.getByText('Tham khảo khi định giá lại')).toBeVisible();
   await expect(page.getByLabel('Giá bán đề xuất ký gửi lại')).toBeVisible();
 

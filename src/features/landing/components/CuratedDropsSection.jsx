@@ -102,7 +102,7 @@ export default function CuratedDropsSection({
         <div className="border-y border-[#071D12]/[0.08] bg-white/75 py-3">
           <div className="max-w-[1240px] mx-auto px-5 sm:px-8 flex items-center gap-5 overflow-hidden">
             <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#46564C] whitespace-nowrap shrink-0">
-              Thương hiệu tại kho
+              Thương hiệu tại điểm kí gửi
             </span>
             <div className="landing-marquee-viewport flex-1 min-w-0">
               <div className="landing-marquee-track gap-6">
@@ -140,7 +140,7 @@ export default function CuratedDropsSection({
           <div className="space-y-1.5">
             <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[#006B2C]">
               <span className="landing-pulse-ring w-2 h-2 rounded-full bg-[#006B2C] text-[#006B2C]" />
-              <span>Vừa kiểm định tại kho</span>
+              <span>Vừa kiểm định tại điểm kí gửi</span>
             </p>
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-[-0.02em] text-[#071D12]">
               Kệ hàng tuyển chọn hôm nay

@@ -221,8 +221,8 @@ export function ConsignmentReviewPanel({ decision, setDecision, setRejectReason,
             className="mt-1"
           />
           <div>
-            <p className="font-bold text-xs text-[#191C19]">Duyệt — mời mang đến kho</p>
-            <p className="text-[11px] text-[#5B6776] mt-0.5">Member mang sản phẩm đến kho ReHome trong thời hạn được thông báo</p>
+            <p className="font-bold text-xs text-[#191C19]">Duyệt — mời mang đến điểm kí gửi</p>
+            <p className="text-[11px] text-[#5B6776] mt-0.5">Member mang sản phẩm đến điểm kí gửi ReHome trong thời hạn được thông báo</p>
           </div>
         </div>
       </label>
@@ -298,7 +298,7 @@ export function ConsignmentReviewPanel({ decision, setDecision, setRejectReason,
                     setFeedback({
                       type: 'success',
                       message: deadline
-                        ? `Đã duyệt form ký gửi thành công! Hạn mang sản phẩm đến kho: ${date(deadline)}.`
+                        ? `Đã duyệt form ký gửi thành công! Hạn mang sản phẩm đến điểm kí gửi: ${date(deadline)}.`
                         : 'Đã duyệt form ký gửi thành công!',
                     });
                   },
@@ -306,7 +306,7 @@ export function ConsignmentReviewPanel({ decision, setDecision, setRejectReason,
               )
             }
           >
-            Duyệt form — Mời khách mang đến kho
+            Duyệt form — Mời khách mang đến điểm kí gửi
           </Button>
         ) : (
           <Button
@@ -369,7 +369,7 @@ export function ConsignmentSummary({ form }) {
         </div>
         {form.bringDeadline && (
           <div className="px-4 py-2.5 flex justify-between">
-            <span className="text-[#5f5f5f] w-32">Hạn mang đến kho</span>
+            <span className="text-[#5f5f5f] w-32">Hạn mang đến điểm kí gửi</span>
             <span className="font-medium text-[#191C19] flex-1 text-right">{date(form.bringDeadline)}</span>
           </div>
         )}

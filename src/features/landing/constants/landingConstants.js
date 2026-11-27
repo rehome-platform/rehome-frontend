@@ -18,16 +18,16 @@ export const LANDING_NAV_ITEMS = [
   { id: 'drops', href: '#drops', label: 'Đồ mới về' },
   { id: 'experience', href: '#experience', label: 'Thử đồ AI' },
   { id: 'consignment', href: '#consignment', label: 'Ký gửi 90%' },
-  { id: 'network', href: '#network', label: 'Kho & Cộng đồng' },
+  { id: 'network', href: '#network', label: 'Điểm kí gửi & Cộng đồng' },
   { id: 'download', href: '#download', label: 'Cài APK' },
 ];
 
 export const HERO_COPY = {
-  eyebrow: 'Thời trang tuần hoàn · Kiểm định tại kho',
+  eyebrow: 'Thời trang tuần hoàn · Kiểm định tại điểm kí gửi',
   headlineLead: 'Mặc thử qua AI.',
   headlineAccent: 'Ký gửi minh bạch, nhận 90%.',
   subtitle:
-    'Nền tảng thời trang đã qua sử dụng được kiểm định 6 bước tại kho vật lý — thử trực tiếp lên dáng qua camera trước khi mua, hoặc ký gửi trọn gói để nhận 90% giá bán.',
+    'Nền tảng thời trang đã qua sử dụng được kiểm định 6 bước tại điểm kí gửi vật lý — thử trực tiếp lên dáng qua camera trước khi mua, hoặc ký gửi trọn gói để nhận 90% giá bán.',
 };
 
 export const HERO_STORY_SLIDES = [
@@ -43,7 +43,7 @@ export const HERO_STORY_SLIDES = [
     label: 'Đồ kiểm định',
     badge: 'ĐÃ KIỂM ĐỊNH MÃ HÀNG HÓA',
     metric: 'Như mới 99%',
-    caption: 'Kiểm định 6 bước tại kho',
+    caption: 'Kiểm định 6 bước tại điểm kí gửi',
   },
   {
     id: 'payout',
@@ -97,7 +97,7 @@ export const INSPECTION_GRADES = [
 export const INSPECTION_CHECKLIST = [
   'Đường may, phom dáng & chất liệu vải',
   'Khóa kéo, cúc bấm & phụ kiện đi kèm',
-  'Độ sạch, mùi hương & xử lý vệ sinh kho',
+  'Độ sạch, mùi hương & xử lý vệ sinh tại điểm kí gửi',
   'Xếp hạng tình trạng 4 cấp minh bạch',
   'Chụp ảnh chuẩn sáng & gắn slot Thử đồ AI',
   'Dán tem Mã hàng hóa riêng & lập biên nhận điện tử',
@@ -114,8 +114,8 @@ export const CITY_COORDS_PRESETS = [
 export const HOW_IT_WORKS_STEPS = [
   {
     step: '01',
-    title: 'Mang đồ tới kho gần nhất',
-    description: 'Đem trang phục tới điểm kho ReHome gợi ý, không cần tự chụp ảnh hay đăng bài.',
+    title: 'Mang đồ tới điểm kí gửi gần nhất',
+    description: 'Đem trang phục tới điểm kí gửi ReHome gợi ý, không cần tự chụp ảnh hay đăng bài.',
   },
   {
     step: '02',
@@ -137,7 +137,7 @@ export const HOW_IT_WORKS_STEPS = [
 export const FOOTER_CONTACT = {
   hotline: '1900 6868 (8:00 - 21:00)',
   email: 'support@rehome.vn',
-  address: 'Hệ thống điểm kho tại TP.HCM · Hà Nội · Đà Nẵng',
+  address: 'Hệ thống điểm kí gửi tại TP.HCM · Hà Nội · Đà Nẵng',
 };
 
 export const INFO_MODAL_TABS = [
@@ -157,12 +157,12 @@ export const ECOSYSTEM_ROLES = [
   {
     role: 'Người ký gửi thông minh',
     highlight: 'Nhận tới 90% giá bán',
-    summary: 'App gợi ý điểm kho gần nhất, thương lượng giá công bằng tại quầy, bán tự động 30 ngày.',
+    summary: 'App gợi ý điểm kí gửi gần nhất, thương lượng giá công bằng tại quầy, bán tự động 30 ngày.',
   },
   {
     role: 'Tổ chức thiện nguyện',
     highlight: 'Xác minh pháp lý 100%',
-    summary: 'Mở chiến dịch rõ món cần, nhận quyên góp tại kho ReHome hoặc điểm nhận chính thức.',
+    summary: 'Mở chiến dịch rõ món cần, nhận quyên góp tại điểm kí gửi ReHome hoặc điểm nhận chính thức.',
   },
 ];
 

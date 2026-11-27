@@ -36,7 +36,7 @@ export default function LandingFooter({ onOpenInfoModal }) {
             <Logo size="sm" to="/landing" className="[&_span]:whitespace-nowrap" />
 
             <p className="text-xs sm:text-sm text-[#46564C] leading-relaxed max-w-sm">
-              Nền tảng thời trang tuần hoàn kết hợp thử đồ AI qua camera, kiểm định 6 bước tại kho
+              Nền tảng thời trang tuần hoàn kết hợp thử đồ AI qua camera, kiểm định 6 bước tại điểm kí gửi
               và thiện nguyện xác minh pháp lý.
             </p>
 

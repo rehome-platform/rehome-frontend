@@ -156,7 +156,7 @@ export default function CategoryBrandPage() {
   return (
     <Page
       title="Danh mục & thương hiệu"
-      subtitle="Quản lý cấu hình danh mục sản phẩm, slot thử đồ AI và thương hiệu ký gửi tại kho."
+      subtitle="Quản lý cấu hình danh mục sản phẩm, slot thử đồ AI và thương hiệu ký gửi tại điểm kí gửi."
       actions={
         <Button
           variant="primary"

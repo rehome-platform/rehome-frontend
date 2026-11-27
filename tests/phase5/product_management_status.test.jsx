@@ -74,6 +74,10 @@ describe('productStatus constants and helpers', () => {
     expect(resolveProductStatusLabel({ status: 'WAREHOUSE', warehouseReason: WAREHOUSE_REASON.DEGRADED })).toBe('Hàng xuống cấp');
     expect(resolveProductStatusLabel({ status: 'WAREHOUSE', warehouseReason: WAREHOUSE_REASON.TERM_EXPIRED })).toBe('Hết hạn ký gửi');
     expect(resolveProductStatusLabel({ status: 'WAREHOUSE', warehouseReason: WAREHOUSE_REASON.NEGOTIATING })).toBe('Đang thương lượng');
+    expect(resolveProductStatusLabel({ status: 'WAREHOUSE', activeWithdrawalStatus: 'PENDING_APPROVAL' })).toBe('Chờ duyệt rút hàng');
+    expect(resolveProductStatusLabel({ status: 'WAREHOUSE', activeWithdrawalStatus: 'PENDING_PICKUP' })).toBe('Chờ nhận lại');
+    expect(resolveProductStatusLabel({ status: 'WITHDRAWN', activeWithdrawalStatus: 'PENDING_PICKUP' })).toBe('Chờ nhận lại');
+    expect(resolveProductStatusLabel({ status: 'WITHDRAWN', activeWithdrawalStatus: null })).toBe('Đã hoàn trả người bán');
     expect(resolveProductStatusLabel({ status: 'WAREHOUSE' })).toBe(WAREHOUSE_UNCLASSIFIED_LABEL);
 
     expect(resolveProductStatusLabel({ status: 'UNKNOWN_ENUM' })).toBe(PRODUCT_STATUS_FALLBACK);
@@ -82,9 +86,14 @@ describe('productStatus constants and helpers', () => {
     expect(resolveProductStatusLabel(null)).toBe(PRODUCT_STATUS_FALLBACK);
     expect(productStatusLabelByKey('RAW_ENGLISH_ENUM')).toBe(PRODUCT_STATUS_FALLBACK);
     expect(productStatusKey({ status: 'WAREHOUSE', warehouseReason: 'TERM_EXPIRED' })).toBe('WAREHOUSE_TERM_EXPIRED');
+    expect(productStatusKey({ status: 'WAREHOUSE', activeWithdrawalStatus: 'PENDING_APPROVAL' })).toBe('WAREHOUSE_WITHDRAWAL_PENDING_APPROVAL');
+    expect(productStatusKey({ status: 'WAREHOUSE', activeWithdrawalStatus: 'PENDING_PICKUP' })).toBe('WAREHOUSE_WITHDRAWAL_PENDING_PICKUP');
+    expect(productStatusKey({ status: 'WITHDRAWN', activeWithdrawalStatus: 'PENDING_PICKUP' })).toBe('WAREHOUSE_WITHDRAWAL_PENDING_PICKUP');
   });
 
-  it('derives warehouseReasonOf from EndOfTermDecision/negotiation fields only', () => {
+  it('derives warehouseReasonOf from activeWithdrawalStatus and EndOfTermDecision/negotiation fields', () => {
+    expect(warehouseReasonOf({ status: 'WAREHOUSE', activeWithdrawalStatus: 'PENDING_APPROVAL' })).toBe('WITHDRAWAL_PENDING_APPROVAL');
+    expect(warehouseReasonOf({ status: 'WAREHOUSE', activeWithdrawalStatus: 'PENDING_PICKUP' })).toBe('WITHDRAWAL_PENDING_PICKUP');
     expect(warehouseReasonOf({ status: 'WAREHOUSE', pricingEligible: true })).toBe('NEGOTIATING');
     expect(warehouseReasonOf({ status: 'WAREHOUSE', reConsignStatus: 'PROPOSAL_SENT' })).toBe('NEGOTIATING');
     expect(warehouseReasonOf({ status: 'WAREHOUSE', decisionId: 'dec-1' })).toBe('TERM_EXPIRED');
@@ -110,8 +119,9 @@ describe('inventoryService.list TERM_EXPIRED and PLATFORM_FINAL', () => {
               { id: 'SKU-EXP', name: 'Áo hết hạn', status: 'WAREHOUSE' },
               { id: 'SKU-DEG', name: 'Áo xuống cấp', status: 'WAREHOUSE' },
               { id: 'SKU-NEG', name: 'Áo thương lượng', status: 'WAREHOUSE' },
+              { id: 'SKU-WDR', name: 'Áo đang rút', status: 'WAREHOUSE', activeWithdrawalStatus: 'PENDING_APPROVAL' },
             ],
-            totalElements: 3,
+            totalElements: 4,
             totalPages: 1,
           });
         }
@@ -214,12 +224,13 @@ describe('WarehouseInventoryPage UI & QueueType coverage', () => {
     });
   });
 
-  it('covers all 11 backend QueueType values including DONATION_PREP and LEGAL_CHANGE', () => {
+  it('covers all 12 backend QueueType values including RETURN_SHIP_BACK, DONATION_PREP and LEGAL_CHANGE', () => {
     const backendQueueTypes = [
       'FORM_REVIEW',
       'INSPECTION',
       'PACKING',
       'RETURN',
+      'RETURN_SHIP_BACK',
       'ORG_VERIFICATION',
       'LEGAL_CHANGE',
       'VIOLATION_REPORT',

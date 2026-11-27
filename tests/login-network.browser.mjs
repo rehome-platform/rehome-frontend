@@ -56,7 +56,7 @@ try {
       function Probe(){ const auth=useAuth(), location=useLocation(); return <output id="probe" data-path={location.pathname} data-authenticated={String(auth.isAuthenticated)} />; }
       window.mountLogin=(clear=true)=>{ if(clear)localStorage.clear(); root.render(<React.StrictMode><MemoryRouter key={version++} initialEntries={['/login']}><AuthProvider><Probe/><Routes>
         <Route path="/login" element={<Login/>}/><Route path="/admin" element={<PrivateRoute roles={['admin']}><p id="admin-dashboard">Admin</p></PrivateRoute>}/>
-        <Route path="/moderator/counter" element={<PrivateRoute roles={['staff','admin']}><p id="moderator-dashboard">Moderator</p></PrivateRoute>}/>
+        <Route path="/moderator" element={<PrivateRoute roles={['staff','admin']}><p id="moderator-dashboard">Moderator</p></PrivateRoute>}/>
       </Routes></AuthProvider></MemoryRouter></React.StrictMode>); };
       window.mountLogin();
     `, resolveDir: project, loader: 'jsx' }, bundle: true, write: false, format: 'iife', platform: 'browser',
@@ -98,7 +98,7 @@ try {
       verify('TC-AUTH-004: 401 shown without session',!!error()&&doc.getElementById('probe').dataset.authenticated==='false'&&!win.localStorage.getItem('rehome_token'));
       verify('401 is not silently retried',(await logins()).length===pending.length);
       for(const [status,label]of [[400,'invalid request'],[403,'forbidden'],[429,'rate limit'],[500,'server'],[0,'network']]){await reset(status);await fill();submit();await delay(40);await control('/__release',{});await delay(100);verify('HTTP '+status+' '+label+': failure ends loading',!!error()&&!doc.getElementById('submit-login-button').disabled&&doc.getElementById('probe').dataset.authenticated==='false');if(status===0)verify('TC-AUTH-011: localized connectivity feedback',error().textContent.includes('Không thể kết nối'));}
-      for(const role of ['admin','staff']){await reset(200,role);await fill();submit();await delay(60);const req=await logins();verify(role+': exactly one intended login request',req.length===1);verify('TC-AUTH-007: deployed payload shape',JSON.stringify(req[0].fields)===JSON.stringify(['email','password'])&&req[0].contentType.includes('application/json')&&!req[0].bearerPresent);await control('/__release',{});await delay(130);verify(role+': confirmed role redirect',doc.getElementById('probe').dataset.path===(role==='admin'?'/admin':'/moderator/counter'));win.mountLogin(false);await delay(130);verify(role+': session restored through identity endpoint',doc.getElementById('probe').dataset.path===(role==='admin'?'/admin':'/moderator/counter'));}
+      for(const role of ['admin','staff']){await reset(200,role);await fill();submit();await delay(60);const req=await logins();verify(role+': exactly one intended login request',req.length===1);verify('TC-AUTH-007: deployed payload shape',JSON.stringify(req[0].fields)===JSON.stringify(['email','password'])&&req[0].contentType.includes('application/json')&&!req[0].bearerPresent);await control('/__release',{});await delay(130);verify(role+': confirmed role redirect',doc.getElementById('probe').dataset.path===(role==='admin'?'/admin':'/moderator'));win.mountLogin(false);await delay(130);verify(role+': session restored through identity endpoint',doc.getElementById('probe').dataset.path===(role==='admin'?'/admin':'/moderator'));}
     }catch(error){verify('fixture execution',false,String(error.stack));}
     document.getElementById('login-results').textContent=btoa(unescape(encodeURIComponent(JSON.stringify(results))));frame.remove();
   };

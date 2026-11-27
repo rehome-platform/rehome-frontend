@@ -42,7 +42,7 @@ const READONLY_INPUT_CLASS =
   'w-full rounded-xl border border-[#d4d4d4] bg-[#f3f4f6] px-3 py-2 text-xs text-[#5f5f5f] cursor-not-allowed';
 
 const STATUS_ERROR_FALLBACKS = {
-  403: 'Bạn không có quyền chỉnh sửa sản phẩm thuộc kho khác.',
+  403: 'Bạn không có quyền chỉnh sửa sản phẩm thuộc điểm kí gửi khác.',
   404: 'Không tìm thấy sản phẩm.',
   409: 'Trạng thái sản phẩm đã thay đổi hoặc đang có đơn hàng, không thể chỉnh sửa.',
 };

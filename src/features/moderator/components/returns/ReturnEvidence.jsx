@@ -84,11 +84,11 @@ export function ReturnEvidence({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="space-y-1">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#ECFDF3] text-[#067647] border border-[#ABEFC6]">
-            Bằng chứng kiểm hàng tại kho
+            Bằng chứng kiểm hàng tại điểm kí gửi
           </span>
           <p className="font-bold text-text text-xs">Ảnh bằng chứng kiểm hàng (2 đến 5 ảnh) *</p>
           <p className="text-[11px] text-textSecondary">
-            Ảnh chụp thực tế khi mở kiện hàng tại kho, tách biệt với ảnh đóng gói và ảnh người mua gửi.
+            Ảnh chụp thực tế khi mở kiện hàng tại điểm kí gửi, tách biệt với ảnh đóng gói và ảnh người mua gửi.
           </p>
         </div>
         <span
@@ -257,7 +257,7 @@ export function ReturnPhotoComparison({
             <p className="text-[11px] text-textSecondary leading-snug">
               {hasPackingPhotos
                 ? 'So với ảnh đóng gói lúc xuất kho'
-                : `Đơn cũ dùng ảnh nhập kho ban đầu (${stockInDate || 'Kho'})`}
+                : `Đơn cũ dùng ảnh nhập kho ban đầu (${stockInDate || 'Điểm kí gửi'})`}
             </p>
             {referencePhotos.length > 0 ? (
               <div className={tileGridClass}>

@@ -54,3 +54,19 @@ export function formatDate(dateStr) {
     return String(dateStr);
   }
 }
+
+/**
+ * Chuẩn hóa tên cơ sở hiển thị trên UI ("Kho ..." -> "Điểm kí gửi ...")
+ * mà không làm thay đổi dữ liệu/payload gửi API.
+ * @param {string} name
+ * @returns {string}
+ */
+export function formatWarehouseDisplayName(name) {
+  if (!name || typeof name !== 'string') return name || '';
+  const trimmed = name.trim();
+  if (!trimmed) return '';
+  if (/^(?:địa\s+)?điểm\s+k[iíý]\s+gửi(?=\s|$|[-–—·:,./()])/iu.test(trimmed)) {
+    return trimmed;
+  }
+  return trimmed.replace(/^kho(?=\s|$|[-–—·:,./()])/iu, 'Điểm kí gửi');
+}

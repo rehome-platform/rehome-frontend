@@ -1,6 +1,6 @@
 import { useConsignmentQueue } from '../hooks/useConsignmentQueue.jsx';
 
-import { QueueClaimDialog, QueueReleaseDialog, QueueTaskDetailModal, QueueTaskRow, QueueFilters, QueueTabs, WithdrawalCheckModal } from '../components/queue/QueueSections.jsx';
+import { QueueClaimDialog, QueueReleaseDialog, QueueTaskDetailModal, QueueTaskRow, ReturnShipBackQueueRow, QueueFilters, QueueTabs, WithdrawalCheckModal } from '../components/queue/QueueSections.jsx';
 import React from "react";
 
 import Button from '../../../components/common/Button.jsx';
@@ -40,6 +40,10 @@ export function getQueueLinkTarget(item, typeParam) {
   if (type === 'RETURN') {
     const id = item.returnId || refId;
     return id ? `/moderator/returns?id=${encodeURIComponent(id)}` : `/moderator/returns`;
+  }
+  if (type === 'RETURN_SHIP_BACK') {
+    const id = item.returnId || refId;
+    return id ? `/moderator/returns/ship-back/${encodeURIComponent(id)}` : '/moderator/returns';
   }
   if (type === 'ORG_VERIFICATION') {
     return refId ? `/moderator/verifications?id=${encodeURIComponent(refId)}` : `/moderator/verifications`;
@@ -108,24 +112,37 @@ export default function ConsignmentQueuePage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[780px] text-left text-xs">
               <thead>
-                <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
-                  <th className="py-2.5 px-4">Loại việc</th>
-                  <th className="py-2.5 px-3">{TABLE_COLUMN_LABELS.TARGET}</th>
-                  <th className="py-2.5 px-3">Tạo lúc</th>
-                  <th className="py-2.5 px-3">{TABLE_COLUMN_LABELS.WAITED}</th>
-                  <th className="py-2.5 px-3">Người nhận</th>
-                  <th className="py-2.5 px-3 text-center w-24">Chi tiết</th>
-                  <th className="py-2.5 px-4 text-left w-[300px]">{TABLE_COLUMN_LABELS.ACTIONS}</th>
-                </tr>
+                {model.typeParam === 'RETURN_SHIP_BACK' ? (
+                  <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
+                    <th className="py-2.5 px-4">Mã đơn / SKU / Tên món</th>
+                    <th className="py-2.5 px-3">Người nhận / Tỉnh thành</th>
+                    <th className="py-2.5 px-3">Phí đã thu / Trả lúc</th>
+                    <th className="py-2.5 px-3">Hạn gửi</th>
+                    <th className="py-2.5 px-3">Người nhận việc</th>
+                    <th className="py-2.5 px-3 text-center w-24">Chi tiết</th>
+                    <th className="py-2.5 px-4 text-left w-[300px]">{TABLE_COLUMN_LABELS.ACTIONS}</th>
+                  </tr>
+                ) : (
+                  <tr className="bg-background border-b border-neutral text-xs font-semibold text-textSecondary whitespace-nowrap">
+                    <th className="py-2.5 px-4">Loại việc</th>
+                    <th className="py-2.5 px-3">{TABLE_COLUMN_LABELS.TARGET}</th>
+                    <th className="py-2.5 px-3">Tạo lúc</th>
+                    <th className="py-2.5 px-3">{TABLE_COLUMN_LABELS.WAITED}</th>
+                    <th className="py-2.5 px-3">Người nhận</th>
+                    <th className="py-2.5 px-3 text-center w-24">Chi tiết</th>
+                    <th className="py-2.5 px-4 text-left w-[300px]">{TABLE_COLUMN_LABELS.ACTIONS}</th>
+                  </tr>
+                )}
               </thead>
               <tbody className="divide-y divide-neutral">
                 {model.filteredItems.map((item) => {
                   const isMine = ownsClaim(item, model.scope.userId);
                   const isClaimedByOther = item.claimedBy && !isMine;
                   const linkTarget = getQueueLinkTarget(item, model.typeParam);
+                  const RowComp = model.typeParam === 'RETURN_SHIP_BACK' ? ReturnShipBackQueueRow : QueueTaskRow;
 
                   return (
-                    <QueueTaskRow
+                    <RowComp
                       key={item.queueId}
                       item={item}
                       isFocused={item.queueId === model.focusedQueueId}

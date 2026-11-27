@@ -46,7 +46,7 @@ function matchesCounterFormFilter(task, filterKey) {
     return status === 'SOLD';
   }
   if (filterKey === 'HANDOVER') {
-    return status === 'WITHDRAWN';
+    return ['WITHDRAWN', 'WAREHOUSE_WITHDRAWAL_PENDING_APPROVAL', 'WAREHOUSE_WITHDRAWAL_PENDING_PICKUP'].includes(status);
   }
   if (filterKey === 'OTHER') {
     const known =
@@ -99,9 +99,21 @@ export default function CounterPage() {
       }
       actions={
         model.selected ? (
-          <Button variant="outline" onClick={model.reset}>
-            Tra cứu khách khác
-          </Button>
+          <>
+            {model.confirmed && (
+              <Button
+                variant="outline"
+                type="button"
+                loading={model.tasks.loading}
+                onClick={() => model.tasks.refresh()}
+              >
+                Tải lại
+              </Button>
+            )}
+            <Button variant="outline" onClick={model.reset}>
+              Tra cứu khách khác
+            </Button>
+          </>
         ) : null
       }
     >
@@ -132,8 +144,8 @@ export default function CounterPage() {
                 <div
                   role="alert"
                   className={`rounded-xl p-4 text-xs font-semibold flex items-center justify-between ${model.handoverFeedback.type === 'success'
-                      ? 'bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7]'
-                      : 'bg-[#FFEBEE] text-[#C62828] border border-[#FFCDD2]'
+                    ? 'bg-[#E8F5E9] text-[#006B2C] border border-[#A5D6A7]'
+                    : 'bg-[#FFEBEE] text-[#C62828] border border-[#FFCDD2]'
                     }`}
                 >
                   <p>{model.handoverFeedback.message}</p>
@@ -164,11 +176,10 @@ export default function CounterPage() {
                           key={f.key}
                           type="button"
                           onClick={() => setStatusFilter(f.key)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors whitespace-nowrap cursor-pointer ${
-                            active
-                              ? 'border-[#006B2C] bg-[#006B2C] text-white shadow-sm'
-                              : 'border-neutral bg-white text-textSecondary hover:bg-[#F6F9F4] hover:text-text'
-                          }`}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors whitespace-nowrap cursor-pointer ${active
+                            ? 'border-[#006B2C] bg-[#006B2C] text-white shadow-sm'
+                            : 'border-neutral bg-white text-textSecondary hover:bg-[#F6F9F4] hover:text-text'
+                            }`}
                         >
                           {f.label}
                         </button>
@@ -234,7 +245,7 @@ export default function CounterPage() {
 
                 <div className="rounded-2xl border border-[#8a8a8a] bg-white p-4 flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-bold text-[#191C19]">Danh sách hàng cuối kỳ kho chi nhánh</p>
+                    <p className="text-xs font-bold text-[#191C19]">Danh sách hàng cuối kỳ điểm kí gửi</p>
                     <p className="text-[11px] text-[#5B6776] mt-0.5">
                       Xem toàn bộ danh sách đồ quá hạn hoặc chuyển giao cho tổ chức từ thiện
                     </p>
@@ -250,7 +261,7 @@ export default function CounterPage() {
                   <div>
                     <p className="text-xs font-bold text-[#191C19]">Ghi nhận quyên góp tại quầy</p>
                     <p className="text-[11px] text-[#5B6776] mt-0.5">
-                      Tiếp nhận đồ quyên góp của {model.selected.fullName || model.selected.name || 'Member'} cho chiến dịch đang mở tại kho
+                      Tiếp nhận đồ quyên góp của {model.selected.fullName || model.selected.name || 'Member'} cho chiến dịch đang mở tại điểm kí gửi
                     </p>
                   </div>
                   <Link

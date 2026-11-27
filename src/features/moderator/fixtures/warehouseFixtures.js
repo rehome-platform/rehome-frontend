@@ -247,7 +247,7 @@ export function resetFixtures() {
       sku: 'RH-D6P23L',
       id: 'RH-D6P23L',
       warehouseId: 'warehouse-b',
-      warehouseName: 'Kho Thủ Đức',
+      warehouseName: 'Điểm kí gửi Thủ Đức',
       memberId: 'member-1',
       name: 'Áo khoác gió',
       brand: 'Uniqlo',

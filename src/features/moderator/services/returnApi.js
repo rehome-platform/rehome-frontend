@@ -105,7 +105,7 @@ export function mapReturnItem(raw) {
     shippingFee: raw.shippingFee ?? null,
     buyerName: raw.buyerName || null,
     buyerPhone: raw.buyerPhone || null,
-    buyerAddress: raw.buyerAddress || 'Kho ReHome nhận hàng trả tại bưu cục GHN',
+    buyerAddress: raw.buyerAddress || 'Điểm kí gửi ReHome nhận hàng trả tại bưu cục GHN',
     buyerNote: raw.buyerNote || raw.conditionNote || '',
     consignorName: raw.sellerName || raw.consignorName || null,
     consignorCode: sellerCode || raw.consignorCode || senderCode,
@@ -140,14 +140,22 @@ export function mapReturnItem(raw) {
           ? `Đã duyệt${raw.ghnFallbackUsed ? ' (mã thu hồi nội bộ)' : ''} · Hạn bàn giao GHN: ${formatDeadlineWithCountdown(raw.handoverDeadline)}`
           : (raw.ghnFallbackUsed ? 'Đã duyệt · Mã thu hồi nội bộ (GHN fallback)' : 'Đã duyệt · Chờ người mua bàn giao GHN')
       ) :
-      status === 'RETURNING' ? 'Đang chuyển về kho qua GHN' :
-      status === 'RECEIVED_INSPECT' ? 'Hàng đã về kho · Chờ kiểm tra' :
+      status === 'RETURNING' ? 'Đang chuyển về điểm kí gửi qua GHN' :
+      status === 'RECEIVED_INSPECT' ? 'Hàng đã về điểm kí gửi · Chờ kiểm tra' :
       raw.status === 'VALID' && !raw.itemAction && !raw.degraded
         ? 'Đã hoàn tiền · Chờ chọn phương án xử lý' :
       raw.status === 'INVALID' ? (
-        raw.pickupDeadline
-          ? `Hàng không hợp lệ · Hạn nhận lại: ${formatDeadlineWithCountdown(raw.pickupDeadline)}`
-          : 'Hàng không hợp lệ · Chờ khách nhận lại'
+        raw.pickedUpAt
+          ? 'Hàng không hợp lệ · Đã bàn giao tại quầy'
+          : raw.shipBackDeliveryFailedAt
+            ? 'Hàng không hợp lệ · Giao thất bại, chờ nhận tại quầy'
+            : raw.shipBackDeliveredAt
+              ? 'Hàng không hợp lệ · Đã giao lại cho người mua'
+              : raw.shipBackTrackingCode
+                ? 'Hàng không hợp lệ · Đã gửi lại qua GHN'
+                : raw.pickupDeadline
+                  ? `Hàng không hợp lệ · Hạn nhận lại: ${formatDeadlineWithCountdown(raw.pickupDeadline)}`
+                  : 'Hàng không hợp lệ · Chờ khách nhận lại'
       ) :
       'Đã hoàn tất xử lý'
     ),
@@ -159,6 +167,24 @@ export function mapReturnItem(raw) {
     ghnFallbackUsed: Boolean(raw.ghnFallbackUsed),
     handoverDeadline: raw.handoverDeadline || null,
     pickupDeadline: raw.pickupDeadline || null,
+    pickedUpAt: raw.pickedUpAt || null,
+    invalidReturnChoice: raw.invalidReturnChoice || null,
+    shipBackFee: raw.shipBackFee ?? null,
+    shipBackPaymentMethod: raw.shipBackPaymentMethod || null,
+    shipBackFeePaymentDeadline: raw.shipBackFeePaymentDeadline || null,
+    shipBackFeePaidAt: raw.shipBackFeePaidAt || null,
+    shipBackDeadline: raw.shipBackDeadline || null,
+    shipBackTrackingCode: raw.shipBackTrackingCode || '',
+    shipBackShippedAt: raw.shipBackShippedAt || null,
+    shipBackDeliveredAt: raw.shipBackDeliveredAt || null,
+    shipBackDeliveryFailedAt: raw.shipBackDeliveryFailedAt || null,
+    shipBackDeliveryFailReason: raw.shipBackDeliveryFailReason || '',
+    shipBackStatus: raw.shipBackStatus || null,
+    shipBackRecipientName: raw.shipBackRecipientName || null,
+    shipBackPhone: raw.shipBackPhone || null,
+    shipBackAddress: raw.shipBackAddress || null,
+    shipBackProvinceName: raw.shipBackProvinceName || null,
+    shipBackPrintUrl: raw.shipBackPrintUrl || null,
     returnDeadline: raw.returnDeadline || null,
     autoCompleteDeadline: raw.autoCompleteDeadline || null,
     paymentDeadline: raw.paymentDeadline || null,
@@ -424,7 +450,7 @@ export const returnService = {
           matchesOriginal: inspectionData.matchesOriginal ?? true,
           degraded: inspectionData.degraded ?? false,
           counterfeitSuspected: inspectionData.counterfeitSuspected ?? false,
-          conditionNote: inspectionData.conditionNote || 'Đã kiểm tra hàng về kho',
+          conditionNote: inspectionData.conditionNote || 'Đã kiểm tra hàng về điểm kí gửi',
           evidenceImageUrls,
         },
       },
@@ -554,7 +580,7 @@ export const returnService = {
       {
         method: 'post',
         url: API_ENDPOINTS.MODERATOR.MARK_LOST(retId),
-        data: { note: note || 'GHN làm thất lạc trên đường vận chuyển về kho' },
+        data: { note: note || 'GHN làm thất lạc trên đường vận chuyển về điểm kí gửi' },
       },
       { signal: options?.signal }
     );
@@ -602,6 +628,58 @@ export const returnService = {
     const item = latestDegradedCase(cases, productId, options.notBefore);
     if (!item) throw new Phase2Error('Chưa tải được biên bản hàng xuống cấp. Vui lòng thử lại để tải biên bản; không cần chốt hoàn tiền lại.', 404);
     return returnService.getDegradedCase(item.id, options);
+  },
+
+  /**
+   * Tạo vận đơn GHN gửi lại hàng trả không hợp lệ cho người mua (QueueType.RETURN_SHIP_BACK)
+   * POST /return-requests/{id}/ship-back/ship
+   */
+  shipBack: async (retId, options = {}) => {
+    if (isFixtureMode) {
+      return {
+        id: retId,
+        shipBackTrackingCode: `GHN-SB-${String(retId).slice(0, 6).toUpperCase()}`,
+        shipBackShippedAt: new Date().toISOString(),
+        shipBackPrintUrl: '',
+      };
+    }
+
+    try {
+      const res = await callBackend(
+        {
+          method: 'post',
+          url: API_ENDPOINTS.MODERATOR.SHIP_BACK_RETURN(retId),
+        },
+        { signal: options?.signal }
+      );
+      const raw = res?.data || res;
+      return mapReturnItem(raw) || raw;
+    } catch (err) {
+      if (err?.status === 502 || /GHN/i.test(String(err?.code || ''))) {
+        throw new Phase2Error('GHN chưa tạo được vận đơn, thử lại', 502, err?.code || 'GHN_ERROR');
+      }
+      throw err;
+    }
+  },
+
+  /**
+   * Lấy link in nhãn GHN cho vận đơn gửi lại hàng trả không hợp lệ
+   * GET /return-requests/{id}/ship-back/label?size=A5
+   */
+  shipBackLabel: async (retId, size = 'A5', options = {}) => {
+    if (isFixtureMode) {
+      return { id: retId, ghnTrackingCode: `GHN-SB-${String(retId).slice(0, 6).toUpperCase()}`, size, printUrl: '' };
+    }
+
+    const res = await callBackend(
+      {
+        method: 'get',
+        url: API_ENDPOINTS.MODERATOR.SHIP_BACK_LABEL(retId),
+        params: { size },
+      },
+      { signal: options?.signal }
+    );
+    return res?.data || res;
   },
 
   /**

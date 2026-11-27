@@ -391,7 +391,7 @@ export function useReturnProcessing() {
         const resolved = await returnService.resolveInvalid(selectedItem.id, invalidReason);
         await refreshAfterMutation();
         const pickupNotice = resolved?.pickupDeadline
-          ? `Hạn người mua chọn phương thức hoặc đến kho nhận lại: ${formatDeadlineWithCountdown(resolved.pickupDeadline)}.`
+          ? `Hạn người mua chọn phương thức hoặc đến điểm kí gửi nhận lại: ${formatDeadlineWithCountdown(resolved.pickupDeadline)}.`
           : 'Hàng được lưu kho theo thời hạn cấu hình để người mua tự đến nhận lại hoặc thanh toán phí ship.';
         notify('success', `Đã lưu kết luận: TRẢ HÀNG KHÔNG HỢP LỆ. ${pickupNotice}`);
         setViewMode('QUEUE');
@@ -404,7 +404,7 @@ export function useReturnProcessing() {
             matchesOriginal: true,
             degraded: false,
             counterfeitSuspected: false,
-            conditionNote: 'Đã kiểm tra hàng về kho hợp lệ',
+            conditionNote: 'Đã kiểm tra hàng về điểm kí gửi hợp lệ',
           });
           const resolved = await returnService.resolveValid(selectedItem.id);
           const refundedAmount =
@@ -741,6 +741,7 @@ export function useReturnProcessing() {
         setIsRejectModalOpen,
         handleOpenOutcomeModal,
         approvingReturn,
+        onNavigateToCounter: () => navigate('/moderator/counter'),
       },
       ReturnInspectionProduct: {
         ...evidenceProps,

@@ -82,6 +82,8 @@ const TABS = [
       { group: 'ordersAndReturns', field: 'returnRequestWindowDays', label: 'Thời hạn gửi yêu cầu trả hàng (ngày)' },
       { group: 'ordersAndReturns', field: 'returnHandoverCarrierDays', label: 'Thời hạn bàn giao hàng trả cho GHN (ngày)' },
       { group: 'ordersAndReturns', field: 'counterPickupDays', label: 'Thời hạn đến địa điểm ký gửi nhận hàng trả / rút (ngày)' },
+      { group: 'ordersAndReturns', field: 'returnShipBackPaymentTimeoutMinutes', label: 'Hạn trả phí gửi lại (phút)' },
+      { group: 'ordersAndReturns', field: 'returnShipBackDispatchDays', label: 'Hạn Moderator gửi hàng (ngày)' },
     ],
   },
   {
@@ -325,7 +327,7 @@ export default function ConfigPage() {
     setErrorMessage('');
 
     try {
-      const dirtySet = new Set(dirtyFields);
+      const dirtySet = new Set(dirtyFields.map((d) => `${d.group}.${d.field}`));
       const targetItems = SYSTEM_CONFIG_FIELDS.filter(
         item => specs[item.key] && dirtySet.has(`${item.group}.${item.field}`)
       );
