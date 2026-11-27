@@ -58,10 +58,7 @@ export function PackingDetail({ orderId, onChanged }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Link to="/moderator/packing" className="text-primary underline text-xs font-semibold flex items-center gap-1">
-          <span>←</span> Quay lại hàng đợi đóng gói
-        </Link>
+      <div className="flex items-center justify-end">
         <div className="flex items-center gap-3">
           {isClaimedByMe && !model.order?.ghnTrackingCode && (
             <Button
@@ -170,7 +167,7 @@ export function PackingDetail({ orderId, onChanged }) {
 
       {/* Modal Quét Barcode Camera */}
       <QRScannerModal
-        isOpen={model.camera}
+        isOpen={model.camera && !(model.totalCount > 0 && model.scannedCount >= model.totalCount)}
         onClose={() => model.setCamera(false)}
         title="Quét barcode Mã hàng hóa sản phẩm"
         placeholder="Mã hàng hóa trên tem..."
@@ -276,7 +273,17 @@ export default function PackingOrdersPage() {
       }
     >
 
-      <WarehouseHistoryTabs type="PACKING">
+      <WarehouseHistoryTabs
+        type="PACKING"
+        onWorkTabClick={() =>
+          setSearch((previous) => {
+            const next = new URLSearchParams(previous);
+            next.delete('view');
+            next.delete('orderId');
+            return next;
+          })
+        }
+      >
         {!orderId ? (
           <div className="space-y-4">
             {/* Header tìm kiếm chuẩn DG-01 */}

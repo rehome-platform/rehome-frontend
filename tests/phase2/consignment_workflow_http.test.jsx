@@ -123,7 +123,8 @@ describe('L-02 HTTP workflow', () => {
     await screen.findByText('Đang chờ khách xác nhận biên nhận');
     expect(screen.queryByRole('button', { name: /Đạt kiểm định/ })).not.toBeInTheDocument();
     expect(requests.complete).toBe(1);
-    await user.click(screen.getByRole('link', { name: 'Thoát về danh sách' }));
+    expect(screen.queryByRole('link', { name: 'Thoát về danh sách' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('link', { name: /Quay lại danh sách form/ }));
     await screen.findByRole('link', { name: 'Chờ xác nhận' });
     expect(requests.stages).toContain('INSPECTING');
     expect(screen.queryByText('Bạn đang nhận việc này')).not.toBeInTheDocument();

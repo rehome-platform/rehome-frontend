@@ -568,6 +568,7 @@ export default function ViolationReportsPage() {
                   type="button"
                   onClick={handleBackToQueue}
                   className="w-9 h-9 flex items-center justify-center rounded-xl border border-neutral text-sm hover:bg-background text-text transition-colors cursor-pointer"
+                  aria-label="Quay lại danh sách hàng đợi"
                   title="Quay lại danh sách hàng đợi"
                 >
                   ←
@@ -917,14 +918,6 @@ export default function ViolationReportsPage() {
                         <p className="text-[11px]">
                           Mọi báo cáo đang chờ xử lý cùng đối tượng đã được đóng tự động.
                         </p>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={handleBackToQueue}
-                          className="mt-2 w-full"
-                        >
-                          Quay lại danh sách hàng đợi
-                        </Button>
                       </div>
                     ) : (
                       <div className="space-y-4">

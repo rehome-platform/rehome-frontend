@@ -64,7 +64,17 @@ export default function ConsignmentDetailPage() {
     }
   }, [model.form]);
 
-  const backStatus = model.form?.status || 'PENDING';
+  const rawStatus = model.form?.status;
+  const backStatus =
+    rawStatus === 'STOCKED'
+      ? 'STOCKED'
+      : model.receiptStep || rawStatus === 'INSPECTING' || rawStatus === 'WAITING_CONFIRMATION'
+        ? 'INSPECTING'
+        : rawStatus === 'APPROVED'
+          ? 'APPROVED'
+          : rawStatus === 'REJECTED'
+            ? 'REJECTED'
+            : 'PENDING';
   const backLabel =
     backStatus === 'APPROVED'
       ? 'Đã duyệt, chờ mang đến'
@@ -72,7 +82,9 @@ export default function ConsignmentDetailPage() {
         ? 'Đang kiểm định'
         : backStatus === 'STOCKED'
           ? 'Nhập kho hôm nay'
-          : 'Chờ duyệt';
+          : backStatus === 'REJECTED'
+            ? 'Đã từ chối'
+            : 'Chờ duyệt';
 
   return (
     <Page
@@ -118,7 +130,6 @@ export default function ConsignmentDetailPage() {
 
       {model.receiptStep && (
         <div className="space-y-5">
-          <Link className="inline-block text-sm font-semibold text-primary underline" to="/moderator/consignments?status=INSPECTING">Thoát về danh sách</Link>
           {model.receiptId ? (
             <ReceiptPanel
               key={model.receiptId}

@@ -30,11 +30,20 @@ it('scans multi-SKU using server state, preserves case, rejects duplicates and r
   });
   const first = mount();
   await screen.findByText('Đã quét 0/2 Mã hàng hóa');
-  async function submit(code, count) {
+  async function submit(code, count, { expectComplete = false } = {}) {
     fireEvent.change(screen.getByLabelText('Mã hàng hóa'), { target: { value: code } });
     fireEvent.click(screen.getByRole('button', { name: 'Đối chiếu' }));
     await waitFor(() => expect(scan).toHaveBeenCalledTimes(count));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Đối chiếu' })).toBeEnabled());
+    if (expectComplete) {
+      await waitFor(() => {
+        expect(screen.getByTestId('packing-scan-completed-status')).toBeInTheDocument();
+        expect(screen.queryByLabelText('Mã hàng hóa')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Đối chiếu' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Quét camera' })).not.toBeInTheDocument();
+      });
+    } else {
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Đối chiếu' })).toBeEnabled());
+    }
   }
   await submit('sku-a', 1);
   await screen.findByText('Đã quét 1/2 Mã hàng hóa');
@@ -42,11 +51,13 @@ it('scans multi-SKU using server state, preserves case, rejects duplicates and r
   expect(screen.getByText('Đã quét 1/2 Mã hàng hóa')).toBeInTheDocument();
   await submit('wrong', 3);
   await screen.findByText('Mã hàng hóa không thuộc đơn.');
-  await submit('SKU-B', 4);
+  await submit('SKU-B', 4, { expectComplete: true });
   await screen.findByText('Đã quét 2/2 Mã hàng hóa');
   expect(screen.getByRole('button', { name: 'Tạo vận đơn GHN' })).toBeEnabled();
   first.unmount(); mount();
   await screen.findByText('Đã quét 2/2 Mã hàng hóa');
+  expect(screen.getByTestId('packing-scan-completed-status')).toBeInTheDocument();
+  expect(screen.queryByLabelText('Mã hàng hóa')).not.toBeInTheDocument();
 });
 it('locks unknown shipment outcomes, reconciles and never retries automatically', async () => {
   const order = orderFixture(); order.scannedProductIds = ['sku-a', 'SKU-B']; order.scannedCount = 2;
@@ -240,4 +251,49 @@ it('uses canonical resolved order.id UUID for packing mutations when mounted wit
   readSpy.mockRestore();
   scanSpy.mockRestore();
   shipmentSpy.mockRestore();
+});
+
+it('hides SKU input and scan buttons for a single-item order once verified, showing only verified status', async () => {
+  const base = orderFixture();
+  const singleOrder = {
+    ...base,
+    items: [base.items[0]],
+    scannedProductIds: [],
+    scannedCount: 0,
+    totalCount: 1,
+  };
+  vi.spyOn(packingService, 'read').mockImplementation(async () => structuredClone(singleOrder));
+  const scanSpy = vi.spyOn(packingService, 'scan').mockImplementation(async (_, productId) => {
+    singleOrder.scannedProductIds = [productId];
+    singleOrder.scannedCount = 1;
+    return { matched: true, scannedCount: 1, totalCount: 1, scannedProductId: productId };
+  });
+
+  mount('o-single');
+  await screen.findByText('Đã quét 0/1 Mã hàng hóa');
+  expect(screen.getByLabelText('Mã hàng hóa')).toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText('Mã hàng hóa'), { target: { value: 'sku-a' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Đối chiếu' }));
+
+  await waitFor(() => expect(scanSpy).toHaveBeenCalledTimes(1));
+  await screen.findByText('Đã quét 1/1 Mã hàng hóa');
+  expect(screen.getByTestId('packing-scan-completed-status')).toHaveTextContent('Đã đối chiếu xong toàn bộ 1/1 Mã hàng hóa.');
+  expect(screen.queryByLabelText('Mã hàng hóa')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Đối chiếu' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Quét camera' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Tạo vận đơn GHN' })).toBeEnabled();
+});
+
+it('does not render redundant back link in PackingDetail while keeping action buttons', async () => {
+  const order = orderFixture();
+  order.claimedBy = 'mod-a';
+  vi.spyOn(packingService, 'read').mockImplementation(async () => structuredClone(order));
+
+  mount();
+  await screen.findByText('Đã quét 0/2 Mã hàng hóa');
+
+  expect(screen.queryByRole('link', { name: /Quay lại hàng đợi đóng gói/i })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Kiểm tra trạng thái' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Nhả việc' })).toBeInTheDocument();
 });
