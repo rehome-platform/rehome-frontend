@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { formatDate } from '../../../utils/formatters.js';
+import { formatDate, formatWarehouseDisplayName } from '../../../utils/formatters.js';
 import heroEditorialUrl from '../assets/hero-editorial.jpg';
 import { CITY_COORDS_PRESETS } from '../constants/landingConstants.js';
 import { isBrokenSeedAssetUrl } from '../services/landingApi.js';
@@ -149,20 +149,20 @@ export default function NetworkCommunitySection({
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
             <div className="editorial-reveal max-w-2xl space-y-2">
               <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#006B2C]">
-                Mạng lưới kho kiểm định
+                Mạng lưới điểm kí gửi kiểm định
               </p>
               <h2 className="landing-text-balance text-2xl sm:text-3xl font-extrabold tracking-[-0.02em] text-[#071D12]">
                 Điểm tiếp nhận &amp; kiểm định ReHome gần bạn
               </h2>
               <p className="text-sm text-[#46564C] leading-relaxed">
-                Trên ứng dụng Android, ReHome tự động sắp xếp điểm kho gần vị trí của bạn nhất.
+                Trên ứng dụng Android, ReHome tự động sắp xếp điểm kí gửi gần vị trí của bạn nhất.
               </p>
             </div>
 
             {!loading && warehouses.length > 1 && (
               <div
                 role="group"
-                aria-label="Sắp xếp kho theo khu vực"
+                aria-label="Sắp xếp điểm kí gửi theo khu vực"
                 className="flex flex-wrap items-center gap-2 shrink-0"
               >
                 {CITY_COORDS_PRESETS.map((preset) => {
@@ -215,7 +215,7 @@ export default function NetworkCommunitySection({
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 space-y-1">
                           <h3 className="text-base sm:text-lg font-bold text-[#071D12] leading-snug">
-                            {wh.name}
+                            {formatWarehouseDisplayName(wh.name)}
                           </h3>
                           <div className="flex flex-wrap items-center gap-2 text-xs">
                             <span className="inline-flex items-center gap-1.5 font-semibold text-[#006B2C]">
@@ -272,7 +272,7 @@ export default function NetworkCommunitySection({
           ) : (
             <div className="rounded-2xl bg-white border border-[#071D12]/10 p-8 text-center space-y-1.5">
               <p className="text-sm font-bold text-[#071D12]">
-                Danh sách điểm kho đang được đồng bộ từ hệ thống.
+                Danh sách điểm kí gửi đang được đồng bộ từ hệ thống.
               </p>
               <p className="text-xs text-[#46564C]">
                 Mở ứng dụng ReHome Android để bật định vị và xem các điểm tiếp nhận đang hoạt động.
@@ -368,7 +368,7 @@ export default function NetworkCommunitySection({
                         {Array.isArray(campaign.warehouses) && campaign.warehouses.length > 0 && (
                           <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#00685F] whitespace-nowrap">
                             <MapPinIcon className="w-3.5 h-3.5 shrink-0" />
-                            <span>Nhận tại {campaign.warehouses.length} kho</span>
+                            <span>Nhận tại {campaign.warehouses.length} điểm kí gửi</span>
                           </span>
                         )}
                       </div>
