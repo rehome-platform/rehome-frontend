@@ -210,6 +210,36 @@ describe('ProductEditModal', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it('toggles isOpen from false to true to false without React hook order errors', async () => {
+    const { rerender } = render(
+      <ProductEditModal isOpen={false} item={null} onUpdated={vi.fn()} onClose={vi.fn()} />,
+      { wrapper },
+    );
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    rerender(
+      <ProductEditModal isOpen={false} item={baseItem} onUpdated={vi.fn()} onClose={vi.fn()} />,
+    );
+    rerender(
+      <ProductEditModal isOpen item={baseItem} onUpdated={vi.fn()} onClose={vi.fn()} />,
+    );
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+    expect(screen.getByLabelText(/Tên sản phẩm/i)).toHaveValue(baseItem.name);
+
+    const categorySelect = await screen.findByLabelText(/Danh mục/i);
+    await waitFor(() => expect(categorySelect).not.toBeDisabled());
+    expect(categorySelect).toHaveValue('cat-top');
+    expect(screen.getByTestId('edit-product-tryon-slot')).toHaveTextContent('Áo (TOP)');
+
+    rerender(
+      <ProductEditModal isOpen={false} item={baseItem} onUpdated={vi.fn()} onClose={vi.fn()} />,
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('inventoryService.update sends PUT /products/{id} with strictly { name, photoUrls }', async () => {
     const requestSpy = vi.spyOn(baseApi, 'request').mockResolvedValue({
       status: 200,
