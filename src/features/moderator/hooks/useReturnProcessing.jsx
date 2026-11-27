@@ -23,7 +23,7 @@ export function useReturnProcessing() {
       window.alert(msg);
     }
   };
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const initialCachedReturns = cache?.read(RETURNS_CACHE_KEY)?.data;
   const [returnRequests, setReturnRequests] = useState(() =>
@@ -36,7 +36,19 @@ export function useReturnProcessing() {
 
   // Navigation states: 'QUEUE' | 'REVIEW' (TH-02) | 'INSPECT' (TH-03)
   const [viewMode, setViewMode] = useState('QUEUE');
-  const [activeSection, setActiveSection] = useState('WORK'); // 'WORK' | 'HISTORY'
+  const activeSection = searchParams.get('view') === 'history' ? 'HISTORY' : 'WORK';
+  const setActiveSection = (section) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (section === 'HISTORY') {
+        next.set('view', 'history');
+      } else {
+        next.delete('view');
+        next.delete('historyPage');
+      }
+      return next;
+    });
+  };
   const [selectedItem, setSelectedItem] = useState(null);
   const [quickDetailItem, setQuickDetailItem] = useState(null);
 
@@ -238,11 +250,14 @@ export function useReturnProcessing() {
     RESOLVED: returnRequests.filter((r) => isResolvedStatus(r.status) && !isPendingDisposition(r)).length,
   };
 
-  const sortReturnsNewestFirst = (list) => {
+  const sortReturnsNewestFirst = (
+    list,
+    getTimestamp = (item) => item?.createdAt || item?.resolvedAt,
+  ) => {
     if (!Array.isArray(list)) return [];
     return [...list].sort((a, b) => {
-      const rawA = a?.createdAt || a?.resolvedAt;
-      const rawB = b?.createdAt || b?.resolvedAt;
+      const rawA = getTimestamp(a);
+      const rawB = getTimestamp(b);
       const tA = rawA ? Date.parse(rawA) : NaN;
       const tB = rawB ? Date.parse(rawB) : NaN;
       if (Number.isFinite(tA) && Number.isFinite(tB)) return tB - tA;
@@ -277,7 +292,8 @@ export function useReturnProcessing() {
   );
 
   const historyRequests = sortReturnsNewestFirst(
-    returnRequests.filter((r) => isResolvedStatus(r.status) && !isPendingDisposition(r) && matchesReturnSearch(r))
+    returnRequests.filter((r) => isResolvedStatus(r.status) && !isPendingDisposition(r) && matchesReturnSearch(r)),
+    (item) => item?.resolvedAt || item?.createdAt,
   );
 
   const handleOpenReview = async (item) => {

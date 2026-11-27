@@ -1,5 +1,7 @@
 import { useReturnProcessing } from '../hooks/useReturnProcessing.jsx';
 import { useModerationShortcuts } from '../hooks/useModerationShortcuts.js';
+import { WarehouseHistoryTabs } from '../components/WarehouseHistoryTabs.jsx';
+import { mapReturnHistoryRow } from '../models/historyTableModel.js';
 import {
   ReturnCompareDialog,
   ReturnOutcomeDialog,
@@ -33,6 +35,13 @@ import ModeratorLayout from '../../../layouts/ModeratorLayout.jsx';
  */
 export default function ReturnProcessingPage() {
   const model = useReturnProcessing();
+  const returnHistoryRows = React.useMemo(
+    () =>
+      model.historyRequests.map((r) =>
+        mapReturnHistoryRow(r, { onViewDetail: model.setQuickDetailItem }),
+      ),
+    [model.historyRequests, model.setQuickDetailItem],
+  );
   const canReviewShortcuts =
     model.viewMode === 'REVIEW' &&
     model.selectedItem?.status === 'PENDING_APPROVAL' &&
@@ -85,86 +94,58 @@ export default function ReturnProcessingPage() {
               </div>
             </div>
 
-            {/* Search filter & History Switcher */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div role="tablist" aria-label="Công việc và lịch sử trả hàng" className="flex flex-wrap gap-2">
-                <Button
-                  role="tab"
-                  aria-selected={model.activeSection === 'WORK'}
-                  variant={model.activeSection === 'WORK' ? 'primary' : 'outline'}
-                  size="sm"
-                  className="whitespace-nowrap"
-                  onClick={() => model.setActiveSection('WORK')}
-                >
-                  Công việc
-                </Button>
-                <Button
-                  role="tab"
-                  aria-selected={model.activeSection === 'HISTORY'}
-                  variant={model.activeSection === 'HISTORY' ? 'primary' : 'outline'}
-                  size="sm"
-                  className="whitespace-nowrap"
-                  onClick={() => model.setActiveSection('HISTORY')}
-                >
-                  Lịch sử ({model.historyRequests.length})
-                </Button>
-              </div>
+            {/* Work / History Tabs + Search Filter */}
+            <WarehouseHistoryTabs
+              tabListLabel="Công việc và lịch sử trả hàng"
+              historyCount={model.historyRequests.length}
+              tabBarExtra={
+                <div className="relative flex-1 max-w-md min-w-[240px]">
+                  <input
+                    type="text"
+                    value={model.searchQuery}
+                    onChange={(e) => model.setSearchQuery(e.target.value)}
+                    placeholder="Tìm theo mã yêu cầu, mã đơn, Mã hàng hóa hoặc người mua..."
+                    className="w-full text-xs py-2 px-3 rounded-xl border border-neutral bg-surface text-text placeholder:text-textSecondary focus:outline-none focus:border-primary"
+                  />
+                  {model.searchQuery && (
+                    <Tooltip content="Xóa từ khóa tìm kiếm" className="absolute right-2 top-1/2 -translate-y-1/2">
+                      <button
+                        type="button"
+                        aria-label="Xóa từ khóa tìm kiếm"
+                        onClick={() => model.setSearchQuery('')}
+                        className="text-textSecondary hover:text-text text-xs p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                      >
+                        ✕
+                      </button>
+                    </Tooltip>
+                  )}
+                </div>
+              }
+              historySource={{
+                rows: returnHistoryRows,
+                loading: model.loading,
+                error: model.error,
+                onRefresh: () => model.fetchReturns?.({ force: true }),
+                emptyText: 'Chưa có yêu cầu trả hàng nào đã xử lý.',
+                sectionLabel: 'Lịch sử xử lý yêu cầu trả hàng',
+                pageSize: 20,
+              }}
+            >
+              {!model.loading && model.error && (
+                <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700 flex items-center justify-between gap-3">
+                  <span>{model.error}</span>
+                  <Button variant="outline" size="sm" onClick={() => model.fetchReturns?.({ force: true })}>
+                    Thử lại
+                  </Button>
+                </div>
+              )}
 
-              <div className="relative flex-1 max-w-md min-w-[240px]">
-                <input
-                  type="text"
-                  value={model.searchQuery}
-                  onChange={(e) => model.setSearchQuery(e.target.value)}
-                  placeholder="Tìm theo mã yêu cầu, mã đơn, Mã hàng hóa hoặc người mua..."
-                  className="w-full text-xs py-2 px-3 rounded-xl border border-neutral bg-surface text-text placeholder:text-textSecondary focus:outline-none focus:border-primary"
-                />
-                {model.searchQuery && (
-                  <Tooltip content="Xóa từ khóa tìm kiếm" className="absolute right-2 top-1/2 -translate-y-1/2">
-                    <button
-                      type="button"
-                      aria-label="Xóa từ khóa tìm kiếm"
-                      onClick={() => model.setSearchQuery('')}
-                      className="text-textSecondary hover:text-text text-xs p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                    >
-                      ✕
-                    </button>
-                  </Tooltip>
-                )}
-              </div>
-            </div>
+              {/* Tabs */}
+              <ReturnQueueTabs {...model.sections.ReturnQueueTabs} />
 
-            {!model.loading && model.error && (
-              <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700 flex items-center justify-between gap-3">
-                <span>{model.error}</span>
-                <Button variant="outline" size="sm" onClick={() => model.fetchReturns?.({ force: true })}>
-                  Thử lại
-                </Button>
-              </div>
-            )}
-
-            {model.activeSection === 'WORK' ? (
-              <>
-                {/* Tabs */}
-                <ReturnQueueTabs {...model.sections.ReturnQueueTabs} />
-
-                {/* Bảng TH-01 */}
-                <ReturnQueueTable {...model.sections.ReturnQueueTable} />
-              </>
-            ) : (
-              <section aria-label="Lịch sử xử lý yêu cầu trả hàng" className="space-y-4">
-                <ReturnQueueTable
-                  loading={model.loading}
-                  filteredRequests={model.historyRequests}
-                  activeTab="RESOLVED"
-                  handleOpenReview={model.handleOpenReview}
-                  handleOpenInspect={model.handleOpenInspect}
-                  handleOpenDegradedCaseView={model.handleOpenDegradedCaseView}
-                  handleOpenOutcomeModal={model.handleOpenOutcomeModal}
-                  handleOpenQuickDetail={model.setQuickDetailItem}
-                  emptyText="Chưa có yêu cầu trả hàng nào đã xử lý."
-                />
-              </section>
-            )}
+              {/* Bảng TH-01 */}
+              <ReturnQueueTable {...model.sections.ReturnQueueTable} />
+            </WarehouseHistoryTabs>
           </div>
         )}
 

@@ -41,7 +41,8 @@ it('does not fetch history on the work tab; handles errors and retry without fak
   expect(list).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('tab', { name: 'Lịch sử' }));
   await screen.findByText('Không tải được lịch sử');
-  fireEvent.click(screen.getByRole('button', { name: 'Tải lại lịch sử' }));
+  expect(screen.queryByRole('button', { name: 'Tải lại lịch sử' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Tải lại trạng thái' }));
   await waitFor(() => expect(screen.getByText('Chưa có lịch sử thao tác.')).toBeInTheDocument());
 });
 

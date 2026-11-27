@@ -107,6 +107,14 @@ export function formatHistoryResult(row) {
     return resolveProductStatusLabel({ status: 'WAREHOUSE', warehouseReason: reason });
   }
 
+  // 2b. Vận đơn gửi lại hàng trả không hợp lệ: BE lưu mã vận đơn GHN vào trường result
+  if (
+    normalizedAction === 'SHIP_BACK_RETURN' &&
+    !Object.prototype.hasOwnProperty.call(HISTORY_RESULT_LABELS, key)
+  ) {
+    return `Mã vận đơn ${String(rawResult).trim()}`;
+  }
+
   // 3. Tra cứu bảng chuẩn (đã gộp PRODUCT_STATUS_LABELS + kết quả các nghiệp vụ khác)
   return formatHistoryValue(rawResult, HISTORY_RESULT_LABELS, { context: 'result' });
 }

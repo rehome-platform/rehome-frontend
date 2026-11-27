@@ -139,6 +139,14 @@ export function mapReturnItem(raw) {
     compensationAmount,
     halfCompensationAmount,
     reason: raw.reason || 'Không đúng mô tả hoặc ảnh',
+    rawReason: raw.reason ? String(raw.reason).trim() : null,
+    actorName:
+      raw.actorName ||
+      raw.resolvedByName ||
+      raw.inspectorName ||
+      raw.moderatorName ||
+      raw.handledByName ||
+      null,
     conditionNote: raw.conditionNote || '',
     photoUrls: buyerPhotos,
     photos: buyerPhotos,
