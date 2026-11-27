@@ -3,6 +3,7 @@ import { fixtureFallback } from './fixtureTransport.js';
 import { API_ENDPOINTS } from '../../../configs/api.config.js';
 import { isFixtureMode } from "../config/warehouseContract.js";
 import { Phase2Error } from "../models/warehouseModel.js";
+import { formatReConsignError } from "../models/reConsignModel.js";
 import { callBackend } from './warehouseTransport.js';
 import { inventoryService } from './inventoryApi.js';
 import { getUser } from '../../../services/baseApi.js';
@@ -95,17 +96,65 @@ export const endTermService = {
         data,
       });
     }
-    return callBackend({
-      method: 'post',
-      url: API_ENDPOINTS.MODERATOR.RECONSIGN_TERMS(decisionIdOrSku),
-      data: {
-        agreedPrice: data.agreedPrice,
-        floorPrice: data.floorPrice,
-        conditionNote: data.conditionNote,
-        moderatorNote: data.moderatorNote,
-        termLengthDays: data.termLengthDays || 30,
-      },
-    }, { signal: options?.signal });
+    try {
+      return await callBackend({
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.RECONSIGN_TERMS(decisionIdOrSku),
+        data: {
+          agreedPrice: data.agreedPrice,
+          floorPrice: data.floorPrice,
+          conditionNote: data.conditionNote,
+          moderatorNote: data.moderatorNote,
+          termLengthDays: data.termLengthDays || 30,
+        },
+      }, { signal: options?.signal });
+    } catch (err) {
+      if (err?.code === 'INVALID_FLOOR_PRICE') {
+        throw new Phase2Error(formatReConsignError(err), err.status || 400, err.code, err.fields);
+      }
+      throw err;
+    }
+  },
+
+  // Moderator phản hồi đề xuất giá khác từ Member (ACCEPT / REPROPOSE / KEEP)
+  respondToCounterOffer: async (decisionId, data = {}, options = {}) => {
+    if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    if (!decisionId) throw new Phase2Error('Thiếu mã quyết định ký gửi lại. Vui lòng tải lại.', 422);
+    const action = String(data?.action || '').trim().toUpperCase();
+    if (!['ACCEPT', 'REPROPOSE', 'KEEP'].includes(action)) {
+      throw new Phase2Error('Hành động phản hồi không hợp lệ (chỉ hỗ trợ ACCEPT, REPROPOSE, KEEP).', 422);
+    }
+    if (isFixtureMode) {
+      return {
+        decisionId,
+        action,
+        reConsignStatus: 'PROPOSED',
+        agreedPrice: data.agreedPrice ?? null,
+        floorPrice: data.floorPrice ?? null,
+      };
+    }
+
+    const payload = {
+      action,
+      ...(data.agreedPrice != null && data.agreedPrice !== '' ? { agreedPrice: Number(data.agreedPrice) } : {}),
+      ...(data.floorPrice != null && data.floorPrice !== '' ? { floorPrice: Number(data.floorPrice) } : {}),
+      ...(data.moderatorNote && String(data.moderatorNote).trim()
+        ? { moderatorNote: String(data.moderatorNote).trim() }
+        : {}),
+    };
+
+    try {
+      return await callBackend({
+        method: 'post',
+        url: API_ENDPOINTS.MODERATOR.RECONSIGN_COUNTER_RESPONSE(decisionId),
+        data: payload,
+      }, { signal: options?.signal });
+    } catch (err) {
+      if (['RE_CONSIGN_NOT_COUNTERED', 'INVALID_FLOOR_PRICE'].includes(err?.code)) {
+        throw new Phase2Error(formatReConsignError(err), err.status || (err.code === 'INVALID_FLOOR_PRICE' ? 400 : 409), err.code, err.fields);
+      }
+      throw err;
+    }
   },
 
   // KG-12: Member xác nhận giá mới / biên nhận mới

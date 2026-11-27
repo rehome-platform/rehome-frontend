@@ -226,6 +226,9 @@ export default function WarehouseInventoryPage() {
   const rawItems = listItems(resource.data);
   const items = useMemo(() => {
     return [...rawItems].sort((a, b) => {
+      const counterA = a?.reConsignStatus === 'COUNTER_OFFERED' ? 0 : 1;
+      const counterB = b?.reConsignStatus === 'COUNTER_OFFERED' ? 0 : 1;
+      if (counterA !== counterB) return counterA - counterB;
       const tA = Date.parse(a?.createdAt || a?.stockedAt || a?.updatedAt || a?.degradedDate || '') || 0;
       const tB = Date.parse(b?.createdAt || b?.stockedAt || b?.updatedAt || b?.degradedDate || '') || 0;
       return tB - tA;
@@ -506,13 +509,18 @@ export default function WarehouseInventoryPage() {
                                 Chờ chọn phương án xử lý
                               </span>
                             )}
-                            {item.pricingEligible && item.status === 'WAREHOUSE' && (
+                            {item.pricingEligible && item.status === 'WAREHOUSE' && item.reConsignStatus !== 'COUNTER_OFFERED' && (
                               <span className="block text-[10px] text-[#006B2C] font-semibold mt-0.5">
                                 Member yêu cầu ký gửi lại
                               </span>
                             )}
-                            {item.status === 'WAREHOUSE' && item.reConsignStatus === 'PROPOSAL_SENT' && <span className="block text-[10px] mt-0.5">Chờ Member xác nhận biên nhận mới</span>}
-                            {item.status === 'WAREHOUSE' && item.decisionId && !item.pricingEligible && item.reConsignStatus !== 'PROPOSAL_SENT' && <span className="block text-[10px] mt-0.5">Chờ Member chọn phương án cuối kỳ</span>}
+                            {item.status === 'WAREHOUSE' && item.reConsignStatus === 'COUNTER_OFFERED' && (
+                              <span className="block text-[10px] text-[#B42318] font-bold mt-0.5">
+                                Member trả giá ký gửi lại
+                              </span>
+                            )}
+                            {item.status === 'WAREHOUSE' && (item.reConsignStatus === 'PROPOSAL_SENT' || item.reConsignStatus === 'PROPOSED') && <span className="block text-[10px] mt-0.5">Chờ Member xác nhận biên nhận mới</span>}
+                            {item.status === 'WAREHOUSE' && item.decisionId && !item.pricingEligible && !['PROPOSAL_SENT', 'PROPOSED', 'COUNTER_OFFERED'].includes(item.reConsignStatus) && <span className="block text-[10px] mt-0.5">Chờ Member chọn phương án cuối kỳ</span>}
                             {item.decision === 'TAKE_BACK' && item.status === 'WITHDRAWN' && (
                               <span className="block text-[10px] text-amber-800 font-semibold mt-0.5">
                                 Khách yêu cầu nhận lại
@@ -537,12 +545,16 @@ export default function WarehouseInventoryPage() {
                                   Đăng bán lại
                                 </Button>
                               ) : null}
-                              {(item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT') && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(item.status) ? (
+                              {(item.pricingEligible || ['PROPOSAL_SENT', 'PROPOSED', 'COUNTER_OFFERED'].includes(item.reConsignStatus)) && ['WAREHOUSE', 'WAITING_END_OF_TERM'].includes(item.status) ? (
                                 <Link
                                   to={`/moderator/inventory/${encodeURIComponent(item.sku)}/re-consign`}
                                   className={getButtonClasses({ variant: 'primary', size: 'sm', className: 'whitespace-nowrap' })}
                                 >
-                                  {item.reConsignStatus === 'PROPOSAL_SENT' ? 'Theo dõi xác nhận' : 'Đàm phán giá'}
+                                  {item.reConsignStatus === 'COUNTER_OFFERED'
+                                    ? 'Phản hồi trả giá'
+                                    : (item.reConsignStatus === 'PROPOSAL_SENT' || item.reConsignStatus === 'PROPOSED')
+                                      ? 'Theo dõi xác nhận'
+                                      : 'Đàm phán giá'}
                                 </Link>
                               ) : item.status === 'RETURNED' ? (
                                 <Link

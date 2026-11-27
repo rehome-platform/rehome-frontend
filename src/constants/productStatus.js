@@ -96,7 +96,12 @@ export function warehouseReasonOf(item) {
   const withdrawalStatus = norm(item?.activeWithdrawalStatus || item?.withdrawalStatus);
   if (withdrawalStatus === 'PENDING_APPROVAL') return WAREHOUSE_REASON.WITHDRAWAL_PENDING_APPROVAL;
   if (withdrawalStatus === 'PENDING_PICKUP') return WAREHOUSE_REASON.WITHDRAWAL_PENDING_PICKUP;
-  if (item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT') return WAREHOUSE_REASON.NEGOTIATING;
+  if (
+    item.pricingEligible ||
+    ['AWAITING_PRICE', 'PROPOSED', 'PROPOSAL_SENT', 'COUNTER_OFFERED'].includes(norm(item.reConsignStatus))
+  ) {
+    return WAREHOUSE_REASON.NEGOTIATING;
+  }
   if (item.decisionId) return WAREHOUSE_REASON.TERM_EXPIRED;
   return undefined;
 }
