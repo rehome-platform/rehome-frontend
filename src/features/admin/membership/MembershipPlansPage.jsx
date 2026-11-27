@@ -91,10 +91,13 @@ export default function MembershipPlansPage() {
   const columns = [
     {
       header: 'Hạng',
+      className: 'w-[24%]',
       render: (row) => <TierBadge tier={row.tier} label={TIER_LABELS[row.tier] || row.tier} />,
     },
     {
       header: 'Giá/tháng',
+      className: 'w-[15%] text-right',
+      cellClassName: 'text-right tabular-nums whitespace-nowrap text-[#1F2A37]',
       render: (row) =>
         row.tier === 'FREE' || row.pricePerMonth === null || row.pricePerMonth === undefined
           ? '—'
@@ -102,6 +105,8 @@ export default function MembershipPlansPage() {
     },
     {
       header: 'Giá/năm',
+      className: 'w-[15%] text-right',
+      cellClassName: 'text-right tabular-nums whitespace-nowrap text-[#1F2A37]',
       render: (row) =>
         row.tier === 'FREE' || row.pricePerYear === null || row.pricePerYear === undefined
           ? '—'
@@ -109,9 +114,11 @@ export default function MembershipPlansPage() {
     },
     {
       header: 'Đang bán',
+      className: 'w-[14%]',
+      cellClassName: 'whitespace-nowrap',
       render: (row) =>
         row.tier === 'FREE' ? (
-          '—'
+          <span className="text-[#98A2B3]">—</span>
         ) : (
           <Badge variant={row.active ? 'success' : 'default'} size="sm">
             {row.active ? 'Đang bán' : 'Ngưng bán'}
@@ -120,19 +127,31 @@ export default function MembershipPlansPage() {
     },
     {
       header: 'Đang dùng',
-      render: (row) => (
-        <Link
-          to={`/admin/membership-subscriptions?tier=${row.tier}`}
-          className="font-semibold text-[#006B2C] hover:underline"
-        >
-          {row.activeSubscriberCount ?? 0}
-        </Link>
-      ),
+      className: 'w-[12%] text-right',
+      cellClassName: 'text-right tabular-nums whitespace-nowrap',
+      render: (row) => {
+        const count = Number(row.activeSubscriberCount ?? 0);
+        return (
+          <Link
+            to={`/admin/membership-subscriptions?tier=${row.tier}`}
+            title="Xem danh sách thành viên thuộc hạng này"
+            className={`hover:underline transition-colors ${
+              count > 0
+                ? 'font-semibold text-[#1F2A37] hover:text-[#006B2C]'
+                : 'font-medium text-[#5B6776] hover:text-[#1F2A37]'
+            }`}
+          >
+            {count}
+          </Link>
+        );
+      },
     },
     {
       header: 'Thao tác',
+      className: 'w-[20%] text-right',
+      cellClassName: 'text-right whitespace-nowrap',
       render: (row) => (
-        <div className="flex items-center gap-2">
+        <div className="inline-flex items-center justify-end gap-2">
           <TableActionButton
             action="view"
             onClick={() => setDetailPlan(row)}
@@ -150,7 +169,7 @@ export default function MembershipPlansPage() {
 
   return (
     <div className="space-y-4">
-      <div className="p-6 bg-white rounded-xl border border-[#DDE5D9] space-y-4">
+      <div className="p-5 bg-white rounded-xl border border-[#DDE5D9] space-y-4">
         {error && (
           <div className="flex items-center justify-between gap-3 rounded-xl border border-[#D92D20]/30 bg-[#FFF5F5] px-4 py-3 text-sm text-[#D92D20]">
             <span>{error}</span>
@@ -168,9 +187,23 @@ export default function MembershipPlansPage() {
           emptyMessage="Chưa có dữ liệu gói thành viên."
         />
 
-        <p className="text-xs text-[#5B6776]">
-          Lưu ý hiển thị trên sàn: sản phẩm của thành viên có tin nổi bật được ưu tiên đầu danh sách, hạng cao hơn được xếp trên.
-        </p>
+        <div
+          role="note"
+          className="flex items-start gap-2.5 rounded-xl border border-[#DDE5D9] bg-[#F6F9F4] px-4 py-3 text-xs text-[#1F2A37]"
+        >
+          <span
+            aria-hidden="true"
+            className="material-symbols-outlined text-[18px] text-[#006B2C] shrink-0 mt-0.5"
+          >
+            info
+          </span>
+          <p className="leading-relaxed">
+            <strong className="font-semibold text-[#1F2A37]">Lưu ý hiển thị trên sàn:</strong>{' '}
+            <span className="text-[#475467]">
+              Sản phẩm của thành viên có tin nổi bật được ưu tiên đầu danh sách, hạng cao hơn được xếp trên.
+            </span>
+          </p>
+        </div>
       </div>
 
       <PlanEditModal
