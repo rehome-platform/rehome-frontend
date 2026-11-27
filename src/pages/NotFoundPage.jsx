@@ -13,13 +13,13 @@ export default function NotFoundPage() {
     isAuthenticated && user?.role === 'admin'
       ? '/admin'
       : isAuthenticated && (user?.role === 'moderator' || user?.role === 'staff')
-        ? '/moderator/counter'
+        ? '/moderator'
         : '/login';
 
   const homeLabel =
     homePath === '/admin'
       ? 'Về bảng điều khiển Quản trị'
-      : homePath === '/moderator/counter'
+      : homePath === '/moderator'
         ? 'Về cổng Điểm ký gửi'
         : 'Về trang đăng nhập';
 
