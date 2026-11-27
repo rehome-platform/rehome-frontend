@@ -58,10 +58,7 @@ export function PackingDetail({ orderId, onChanged }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Link to="/moderator/packing" className="text-primary underline text-xs font-semibold flex items-center gap-1">
-          <span>←</span> Quay lại hàng đợi đóng gói
-        </Link>
+      <div className="flex items-center justify-end">
         <div className="flex items-center gap-3">
           {isClaimedByMe && !model.order?.ghnTrackingCode && (
             <Button
@@ -112,7 +109,7 @@ export function PackingDetail({ orderId, onChanged }) {
                 </span>
               </div>
               <p className="text-xs text-[#5f5f5f]">
-                Lấy đủ {model.totalCount} món, tick từng món, rồi sang bước đối chiếu mã SKU.
+                Lấy đủ {model.totalCount} món, tick từng món, rồi sang bước đối chiếu Mã hàng hóa.
               </p>
               <div className="pt-2 text-xs font-bold text-[#191C19] flex items-center gap-2">
                 <span>Tiến độ đối chiếu:</span>
@@ -120,7 +117,7 @@ export function PackingDetail({ orderId, onChanged }) {
                   ? 'bg-[#ECFDF3] text-[#067647] border-[#ABEFC6]'
                   : 'bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]'
                   }`}>
-                  {`Đã quét ${model.scannedCount}/${model.totalCount} SKU`}
+                  {`Đã quét ${model.scannedCount}/${model.totalCount} Mã hàng hóa`}
                 </span>
               </div>
             </div>
@@ -170,10 +167,10 @@ export function PackingDetail({ orderId, onChanged }) {
 
       {/* Modal Quét Barcode Camera */}
       <QRScannerModal
-        isOpen={model.camera}
+        isOpen={model.camera && !(model.totalCount > 0 && model.scannedCount >= model.totalCount)}
         onClose={() => model.setCamera(false)}
-        title="Quét barcode mã SKU sản phẩm"
-        placeholder="Mã SKU trên tem..."
+        title="Quét barcode Mã hàng hóa sản phẩm"
+        placeholder="Mã hàng hóa trên tem..."
         onScanSuccess={(code) => {
           model.setCamera(false);
           model.scan(code);
@@ -260,7 +257,7 @@ export default function PackingOrdersPage() {
   return (
     <Page
       title="Đóng gói đơn hàng"
-      subtitle="Các đơn hàng bạn đã nhận đóng gói — đối chiếu đủ SKU trước khi tạo vận đơn GHN."
+      subtitle="Các đơn hàng bạn đã nhận đóng gói — đối chiếu đủ Mã hàng hóa trước khi tạo vận đơn GHN."
       actions={
         <div className="flex gap-2">
           <Link to="/moderator/queue?type=PACKING">
@@ -276,7 +273,17 @@ export default function PackingOrdersPage() {
       }
     >
 
-      <WarehouseHistoryTabs type="PACKING">
+      <WarehouseHistoryTabs
+        type="PACKING"
+        onWorkTabClick={() =>
+          setSearch((previous) => {
+            const next = new URLSearchParams(previous);
+            next.delete('view');
+            next.delete('orderId');
+            return next;
+          })
+        }
+      >
         {!orderId ? (
           <div className="space-y-4">
             {/* Header tìm kiếm chuẩn DG-01 */}
@@ -286,7 +293,7 @@ export default function PackingOrdersPage() {
                   type="text"
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
-                  placeholder="Tìm SKU, mã đơn, mã Member..."
+                  placeholder="Tìm Mã hàng hóa, mã đơn, mã Member..."
                   className="w-full text-xs outline-none bg-transparent"
                 />
                 {keyword && (

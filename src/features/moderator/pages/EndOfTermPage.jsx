@@ -204,7 +204,7 @@ export default function EndOfTermPage() {
             type="search"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="Tìm theo mã SKU hoặc tên sản phẩm..."
+            placeholder="Tìm theo Mã hàng hóa hoặc tên sản phẩm..."
             className="w-full rounded-xl border border-neutral px-3.5 py-2 text-sm focus:border-primary focus:outline-none"
           />
         </div>

@@ -110,7 +110,7 @@ describe('Moderator DonationsPage (Luồng A & B)', () => {
 
     renderDonations();
 
-    expect(await screen.findByText('Món ký gửi · SKU Q7-AK-000111')).toBeInTheDocument();
+    expect(await screen.findByText('Món ký gửi · Mã hàng hóa Q7-AK-000111')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Áo khoác dạ' })).toHaveAttribute('src', 'https://img.test/ao-khoac.jpg');
     expect(screen.getByText('MOD-01')).toBeInTheDocument();
 

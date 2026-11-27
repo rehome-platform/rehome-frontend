@@ -459,8 +459,14 @@ export function PackingScanPanel({
       ? order.packingPhotoUrls
       : []
   ).filter((url) => (typeof url === 'string' ? url.trim().length > 0 : Boolean(url))).length;
-  const scannedCount = order?.scannedCount ?? 0;
-  const skuReady = totalCount > 0 && scannedCount >= totalCount;
+  const items = Array.isArray(order?.items) ? order.items : [];
+  const scannedIds = new Set(Array.isArray(order?.scannedProductIds) ? order.scannedProductIds : []);
+  const effectiveTotal = totalCount || items.length;
+  const scannedCount = order?.scannedCount ?? scannedIds.size;
+  const allItemsScanned =
+    items.length > 0 &&
+    items.every((item) => Boolean(item?.scanned) || scannedIds.has(item.productId));
+  const skuReady = effectiveTotal > 0 && (scannedCount >= effectiveTotal || allItemsScanned);
   const canCreateShipment =
     operationReady('shipment') &&
     !resource.busy &&
@@ -479,53 +485,68 @@ export function PackingScanPanel({
   return (
     <div className="rounded-2xl border-2 border-[#2b2b2b] bg-white p-5 space-y-4 shadow-sm">
       <div className="flex flex-wrap justify-between items-center gap-2">
-        <h3 className="text-sm font-bold text-[#191C19]">Quét đối chiếu mã SKU</h3>
+        <h3 className="text-sm font-bold text-[#191C19]">
+          {skuReady ? 'Đã đối chiếu Mã hàng hóa' : 'Quét đối chiếu Mã hàng hóa'}
+        </h3>
         <span className="text-xs text-[#717971]">
-          Chỉ tạo được vận đơn khi đủ {totalCount} / {totalCount} món khớp mã và có ảnh đóng gói
+          Chỉ tạo được vận đơn khi đủ {effectiveTotal} / {effectiveTotal} món khớp mã và có ảnh đóng gói
         </span>
       </div>
 
-      <form
-        className="flex flex-wrap items-end gap-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const val = (input?.current?.value || sku || '').trim();
-          scan(val);
-        }}
-      >
-        <div className="flex-1 min-w-[200px]">
-          <label htmlFor="sku-input" className="block text-xs font-bold text-[#191C19] mb-1">
-            SKU
-          </label>
-          <input
-            ref={input}
-            id="sku-input"
-            value={sku}
-            onChange={(e) => setSku(e.target.value)}
-            placeholder="Nhập mã SKU trên tem sản phẩm (vd: RH-A7F31K)..."
-            className="w-full rounded-xl border-2 border-[#2b2b2b] px-3.5 py-2 text-sm font-mono font-bold focus:border-[#006B2C] focus:outline-none"
-            autoComplete="off"
-          />
+      {skuReady ? (
+        <div
+          data-testid="packing-scan-completed-status"
+          role="status"
+          className="flex items-center gap-2 rounded-xl border border-[#ABEFC6] bg-[#ECFDF3] px-3.5 py-2.5 text-xs font-semibold text-[#067647]"
+        >
+          <span aria-hidden="true">✓</span>
+          <span>
+            Đã đối chiếu xong toàn bộ {scannedCount}/{effectiveTotal} Mã hàng hóa.
+          </span>
         </div>
-        <Button
-          type="submit"
-          disabled={!operationReady('scan') || uncertain || resource.busy || resource.loading || !canPack(order, scope, now)}
-          className="py-2.5 px-5 bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs"
+      ) : (
+        <form
+          className="flex flex-wrap items-end gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const val = (input?.current?.value || sku || '').trim();
+            scan(val);
+          }}
         >
-          Đối chiếu
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={!operationReady('scan') || uncertain || resource.busy || !canPack(order, scope, now)}
-          onClick={() => setCamera(true)}
-          className="py-2.5 px-3.5 text-xs font-semibold"
-        >
-          Quét camera
-        </Button>
-      </form>
+          <div className="flex-1 min-w-[200px]">
+            <label htmlFor="sku-input" className="block text-xs font-bold text-[#191C19] mb-1">
+              Mã hàng hóa
+            </label>
+            <input
+              ref={input}
+              id="sku-input"
+              value={sku}
+              onChange={(e) => setSku(e.target.value)}
+              placeholder="Nhập Mã hàng hóa trên tem sản phẩm (vd: RH-A7F31K)..."
+              className="w-full rounded-xl border-2 border-[#2b2b2b] px-3.5 py-2 text-sm font-mono font-bold focus:border-[#006B2C] focus:outline-none"
+              autoComplete="off"
+            />
+          </div>
+          <Button
+            type="submit"
+            disabled={!operationReady('scan') || uncertain || resource.busy || resource.loading || !canPack(order, scope, now)}
+            className="py-2.5 px-5 bg-[#2b2b2b] text-white hover:bg-black font-bold text-xs"
+          >
+            Đối chiếu
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!operationReady('scan') || uncertain || resource.busy || !canPack(order, scope, now)}
+            onClick={() => setCamera(true)}
+            className="py-2.5 px-3.5 text-xs font-semibold"
+          >
+            Quét camera
+          </Button>
+        </form>
+      )}
 
-      {message && (
+      {message && !skuReady && (
         <p
           role="status"
           className={`text-xs font-bold p-2.5 rounded-lg border ${message.toLowerCase().includes('không') || message.toLowerCase().includes('lỗi') || message.toLowerCase().includes('sai') ? 'bg-red-50 text-[#BA1A1A] border-red-200' : 'bg-green-50 text-[#006B2C] border-green-200'
@@ -549,7 +570,7 @@ export function PackingScanPanel({
               : 'bg-[#FAFBF9] text-[#5B6776] border-[#DDE5D9]'
           }`}
         >
-          {skuReady ? `✓ Đủ SKU (${scannedCount}/${totalCount})` : `Quét SKU (${scannedCount}/${totalCount})`}
+          {skuReady ? `✓ Đủ Mã hàng hóa (${scannedCount}/${effectiveTotal})` : `Quét Mã hàng hóa (${scannedCount}/${effectiveTotal})`}
         </span>
         <span
           className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold border ${
@@ -611,7 +632,7 @@ export function PackingItemTable({ items, pickedItems, scannedProductIds, toggle
             <tr className="bg-[#f4f4f4] border-b border-[#8a8a8a] text-[10px] font-bold uppercase tracking-wider text-[#5f5f5f]">
               <th className="py-2.5 px-3 w-10 text-center">Lấy</th>
               <th className="py-2.5 px-3 w-14">Ảnh</th>
-              <th className="py-2.5 px-3">Mã SKU</th>
+              <th className="py-2.5 px-3">Mã hàng hóa</th>
               <th className="py-2.5 px-3">Sản phẩm</th>
               <th className="py-2.5 px-3">Cỡ</th>
               <th className="py-2.5 px-3 text-right">Trạng thái</th>
@@ -620,7 +641,7 @@ export function PackingItemTable({ items, pickedItems, scannedProductIds, toggle
           <tbody className="divide-y divide-[#e0e0e0]">
             {items.map((item) => {
               const isPicked = !!pickedItems[item.productId];
-              const isScanned = scannedProductIds.includes(item.productId);
+              const isScanned = Boolean(item.scanned) || scannedProductIds.includes(item.productId);
               return (
                 <tr key={item.productId} className={`hover:bg-[#fcfdfc] ${isScanned ? 'bg-[#F0F5EE]' : ''}`}>
                   <td className="py-3 px-3 text-center">

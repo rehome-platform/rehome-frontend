@@ -178,7 +178,7 @@ export default function StockInForm({ receipt, form, onSuccess }) {
         }}>
           <div className="rounded-xl border border-neutral bg-green-50 p-4 text-sm">
             Giá đã chốt với khách: <strong>{money(receipt.agreedPrice ?? receipt.snapshot?.agreedPrice)}</strong>
-            <p className="mt-1 text-xs">Giá, giá sàn và điều khoản giữ theo biên nhận đã xác nhận. SKU tự sinh khi lưu.</p>
+            <p className="mt-1 text-xs">Giá, giá sàn và điều khoản giữ theo biên nhận đã xác nhận. Mã hàng hóa tự sinh khi lưu.</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Tên sản phẩm" required value={name} onChange={e => setName(e.target.value)} error={errors.name} />
@@ -271,10 +271,10 @@ export default function StockInForm({ receipt, form, onSuccess }) {
           <p className="text-sm">Ghi chú kiểm định: {receipt.conditionNote || '—'}</p>
           <PhotoUpload disabled={operation.busy} onChange={onPhotos} />
           {uncertain && <div role="alert" className="space-y-2 rounded-xl border bg-amber-50 p-4 text-sm">
-            <p>Chưa xác định được kết quả nhập kho. Kiểm tra biên nhận và form trước khi gửi lại để tránh tạo trùng SKU.</p>
+            <p>Chưa xác định được kết quả nhập kho. Kiểm tra biên nhận và form trước khi gửi lại để tránh tạo trùng Mã hàng hóa.</p>
             <Button type="button" variant="outline" onClick={() => { operation.clearActionError(); setUncertain(false); verification.refresh(); }}>Kiểm tra kết quả theo biên nhận</Button>
           </div>}
-          <Button type="submit" disabled={!valid || operation.busy} loading={operation.busy}>Nhập kho · tạo SKU</Button>
+          <Button type="submit" disabled={!valid || operation.busy} loading={operation.busy}>Nhập kho · tạo Mã hàng hóa</Button>
         </form>
       )}
       {quickAdd && <BrandQuickAddModal isOpen existingBrands={brands} onClose={() => setQuickAdd(false)} onCreated={item => {

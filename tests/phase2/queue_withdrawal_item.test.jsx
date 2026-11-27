@@ -193,7 +193,7 @@ describe('Counter Handover Flow - Reuse Existing Rút hàng giữa kỳ (BG-01)'
     );
 
     // Verify SKU match and check identity box
-    const skuInput = screen.getByLabelText(/Nhập mã SKU/i);
+    const skuInput = screen.getByLabelText(/Nhập Mã hàng hóa/i);
     fireEvent.change(skuInput, { target: { value: 'SKU-VTG-01' } });
 
     const identityCheck = screen.getByRole('checkbox');

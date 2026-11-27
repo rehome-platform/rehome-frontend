@@ -176,11 +176,12 @@ export default function InventoryDetailPage() {
   return (
     <Page
       title="Chi tiết sản phẩm"
-      subtitle={`Mã SKU: ${sku}`}
+      subtitle={`Mã hàng hóa: ${sku}`}
       actions={
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => navigate('/moderator/inventory')}>
-            ← Quay lại Quản lý sản phẩm
+          <Button variant="outline" onClick={() => navigate('/moderator/inventory')} className="gap-1.5">
+            <span aria-hidden="true">←</span>
+            <span>Quay lại Quản lý sản phẩm</span>
           </Button>
           <Button variant="outline" onClick={() => product.refresh()}>
             Tải lại
@@ -195,11 +196,8 @@ export default function InventoryDetailPage() {
             <h3 className="font-bold text-amber-900 text-base">Sản phẩm không thuộc kho bạn quản lý</h3>
           </div>
           <p className="text-xs text-amber-800 leading-relaxed">
-            Sản phẩm với mã SKU <strong>{sku}</strong> đang được lưu trữ tại chi nhánh kho khác. Bạn chỉ có quyền kiểm kê và in tem đối với các sản phẩm thuộc kho bạn được phân công.
+            Sản phẩm với Mã hàng hóa <strong>{sku}</strong> đang được lưu trữ tại chi nhánh kho khác. Bạn chỉ có quyền kiểm kê và in tem đối với các sản phẩm thuộc kho bạn được phân công.
           </p>
-          <Button variant="outline" onClick={() => navigate('/moderator/inventory')}>
-            Quay lại Quản lý sản phẩm
-          </Button>
         </div>
       )}
 
@@ -209,11 +207,8 @@ export default function InventoryDetailPage() {
             <h3 className="font-bold text-red-900 text-base">Không tìm thấy sản phẩm</h3>
           </div>
           <p className="text-xs text-red-800 leading-relaxed">
-            Hệ thống không tìm thấy bất kỳ sản phẩm nào có mã SKU: <strong>{sku}</strong>. Vui lòng kiểm tra lại tem nhãn hoặc quét lại mã QR.
+            Hệ thống không tìm thấy bất kỳ sản phẩm nào có Mã hàng hóa: <strong>{sku}</strong>. Vui lòng kiểm tra lại tem nhãn hoặc quét lại mã QR.
           </p>
-          <Button variant="outline" onClick={() => navigate('/moderator/inventory')}>
-            Quay lại Quản lý sản phẩm
-          </Button>
         </div>
       )}
 
@@ -240,7 +235,7 @@ export default function InventoryDetailPage() {
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <span className="font-mono font-bold bg-[#f4f4f4] px-2.5 py-1 rounded-lg border border-[#d0d0d0] text-[#191C19]">
-                    SKU: {data.sku}
+                    Mã hàng hóa: {data.sku}
                   </span>
                   <button
                     type="button"
@@ -283,7 +278,7 @@ export default function InventoryDetailPage() {
                     onClick={() => setPrint(true)}
                     className="font-bold py-2 px-4 shadow-sm"
                   >
-                    Mở / In lại tem SKU
+                    Mở / In lại tem Mã hàng hóa
                   </Button>
                 </div>
               </div>
@@ -509,7 +504,7 @@ export default function InventoryDetailPage() {
               <div className="space-y-4 max-w-lg text-xs">
                 <div className="p-3 bg-[#fafafa] rounded-xl border border-[#e0e0e0] space-y-1">
                   <div className="flex justify-between">
-                    <span className="text-[#5f5f5f]">Mã SKU:</span>
+                    <span className="text-[#5f5f5f]">Mã hàng hóa:</span>
                     <span className="font-mono font-bold text-[#191C19]">{sku}</span>
                   </div>
                   <div className="flex justify-between">

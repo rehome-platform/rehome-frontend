@@ -195,7 +195,7 @@ export function QueueTaskDetailModal({ target, onClose, busy = false, onApproveW
           </div>
           {target.sku && (
             <div className="flex justify-between gap-4">
-              <span className="font-semibold text-textSecondary shrink-0">Mã SKU:</span>
+              <span className="font-semibold text-textSecondary shrink-0">Mã hàng hóa:</span>
               <span className="font-mono font-bold text-text text-right">{target.sku}</span>
             </div>
           )}
@@ -573,7 +573,7 @@ function WithdrawalModalContent({ target, busy, onApprove, onReject, onClose }) 
         <div className="min-w-0 flex-1 space-y-1">
           <p className="font-bold text-sm text-[#006B2C] truncate">{productName}</p>
           <p className="text-xs text-textSecondary">
-            Mã SKU: <span className="font-mono font-bold text-text">{sku || '—'}</span>
+            Mã hàng hóa: <span className="font-mono font-bold text-text">{sku || '—'}</span>
           </p>
         </div>
       </div>
@@ -712,8 +712,8 @@ function WithdrawalModalContent({ target, busy, onApprove, onReject, onClose }) 
         <>
           <div className="rounded-xl border border-neutral bg-white p-3 space-y-1 leading-relaxed">
             <p className="font-bold text-text">Lưu ý nghiệp vụ trước khi ra Quầy:</p>
-            <p>• Moderator kiểm tra hiện vật trong kho theo mã SKU, chuẩn bị sẵn để chờ giao.</p>
-            <p>• Khi Member tới, vào <strong>Quầy tiếp nhận</strong> đối chiếu danh tính và quét mã SKU để bàn giao.</p>
+            <p>• Moderator kiểm tra hiện vật trong kho theo Mã hàng hóa, chuẩn bị sẵn để chờ giao.</p>
+            <p>• Khi Member tới, vào <strong>Quầy tiếp nhận</strong> đối chiếu danh tính và quét Mã hàng hóa để bàn giao.</p>
           </div>
 
           <div className="flex gap-3 pt-2">

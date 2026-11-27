@@ -349,7 +349,7 @@ describe('LandingPage UI & APK CTA', () => {
     expect(heroStage).toBeInTheDocument();
 
     fireEvent.click(within(heroStage).getByRole('button', { name: 'Đồ kiểm định' }));
-    expect(within(heroStage).getByText('SKU VERIFIED')).toBeInTheDocument();
+    expect(within(heroStage).getByText('ĐÃ KIỂM ĐỊNH MÃ HÀNG HÓA')).toBeInTheDocument();
 
     fireEvent.click(within(heroStage).getByRole('button', { name: 'Nhận 90%' }));
     expect(within(heroStage).getByText(/\+450\.000/)).toBeInTheDocument();
@@ -401,6 +401,9 @@ describe('LandingPage UI & APK CTA', () => {
 
     const experienceCard = container.querySelector('#experience');
     expect(within(experienceCard).getByText('Áo sơ mi Zara trắng tay dài')).toBeInTheDocument();
+    expect(within(experienceCard).getByText('Slot Áo')).toBeInTheDocument();
+    expect(within(experienceCard).getByText('AI gợi ý')).toBeInTheDocument();
+    expect(within(experienceCard).queryByText(/\((TOP|BOTTOM|DRESS)\)/)).toBeNull();
 
     fireEvent.click(within(experienceCard).getByRole('button', { name: 'Năng động' }));
     expect(within(experienceCard).getByText('Áo khoác gió Nike xanh đen')).toBeInTheDocument();

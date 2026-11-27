@@ -33,7 +33,7 @@ export async function skuLabelError(error) {
   if (error.response?.data) {
     const body = await parseErrorBody(error.response.data);
     if (hasServerMessage(body)) {
-      return new Phase2Error(body.message || 'Lỗi in tem SKU', error.response.status, body.code || '');
+      return new Phase2Error(body.message || 'Lỗi in tem Mã hàng hóa', error.response.status, body.code || '');
     }
   }
   return normalizeError(error);

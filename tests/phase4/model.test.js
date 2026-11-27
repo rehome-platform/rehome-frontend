@@ -85,11 +85,11 @@ describe('order normalization and validation', () => {
   it('validates SKU input trimming and empty checks', () => {
     expect(validateSkuInput('')).toEqual({
       valid: false,
-      message: 'Vui lòng nhập hoặc quét mã SKU trên tem sản phẩm.',
+      message: 'Vui lòng nhập hoặc quét Mã hàng hóa trên tem sản phẩm.',
     });
     expect(validateSkuInput('   ')).toEqual({
       valid: false,
-      message: 'Vui lòng nhập hoặc quét mã SKU trên tem sản phẩm.',
+      message: 'Vui lòng nhập hoặc quét Mã hàng hóa trên tem sản phẩm.',
     });
     expect(validateSkuInput('  Q7-AT-000002  ')).toEqual({
       valid: true,

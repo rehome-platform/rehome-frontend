@@ -183,7 +183,7 @@ describe('receipt and recovery gates', () => {
     vi.spyOn(inventoryService, 'byReceipt').mockResolvedValue({ sku: 'RECOVERED-SKU' });
     render(<ReceiptPanel receiptId="r1" allowStockIn />, { wrapper: Wrapper });
     await screen.findByRole('link', { name: /Đã nhập kho · RECOVERED-SKU/ });
-    expect(screen.queryByRole('button', { name: 'Nhập kho · tạo SKU' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Nhập kho · tạo Mã hàng hóa' })).not.toBeInTheDocument();
   });
 });
 
@@ -724,7 +724,7 @@ describe('ConsignmentDetailPage component behaviors', () => {
       await user.upload(screen.getByLabelText('Ảnh sản phẩm'), file);
       await screen.findByText('shirt.png · Đã tải ảnh gốc');
 
-      const submitBtn = screen.getByRole('button', { name: 'Nhập kho · tạo SKU' });
+      const submitBtn = screen.getByRole('button', { name: 'Nhập kho · tạo Mã hàng hóa' });
       expect(submitBtn).toBeEnabled();
       await user.click(submitBtn);
 
@@ -771,7 +771,7 @@ describe('ConsignmentDetailPage component behaviors', () => {
       await user.upload(screen.getByLabelText('Ảnh sản phẩm'), file);
       await screen.findByText('jean.jpg · Đã tải ảnh gốc');
 
-      await user.click(screen.getByRole('button', { name: 'Nhập kho · tạo SKU' }));
+      await user.click(screen.getByRole('button', { name: 'Nhập kho · tạo Mã hàng hóa' }));
 
       expect(
         await screen.findByText(/Khách hàng chưa bấm xác nhận biên nhận trên ứng dụng/),
@@ -794,7 +794,7 @@ describe('ConsignmentDetailPage component behaviors', () => {
         { wrapper: Wrapper },
       );
 
-      expect(await screen.findByText('Tem mã vạch SKU · Q7-AK-000845')).toBeInTheDocument();
+      expect(await screen.findByText('Tem mã vạch Mã hàng hóa · Q7-AK-000845')).toBeInTheDocument();
       expect(await screen.findByText('File PDF tem mã vạch đã sẵn sàng')).toBeInTheDocument();
       expect(labelSpy).toHaveBeenCalledWith('Q7-AK-000845', expect.anything());
 
@@ -870,7 +870,7 @@ describe('ConsignmentDetailPage component behaviors', () => {
       );
 
       expect(await screen.findByRole('heading', { name: 'Áo khoác dạ Zara' })).toBeInTheDocument();
-      expect(screen.getByText('SKU: Q7-AK-000845')).toBeInTheDocument();
+      expect(screen.getAllByText('Mã hàng hóa: Q7-AK-000845').length).toBeGreaterThan(0);
       expect(screen.getByText('Kỳ 1 · ngày 4 / 30 · hoa hồng 5%')).toBeInTheDocument();
     });
 
@@ -894,7 +894,7 @@ describe('ConsignmentDetailPage component behaviors', () => {
       expect(
         await screen.findByText('Sản phẩm không thuộc kho bạn quản lý'),
       ).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Quay lại Quản lý sản phẩm' })).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: 'Quay lại Quản lý sản phẩm' })).toHaveLength(1);
     });
   });
 
@@ -923,7 +923,10 @@ describe('ConsignmentDetailPage component behaviors', () => {
       // Check header and categories table
       expect(await screen.findByRole('heading', { name: 'Danh mục & thương hiệu' })).toBeInTheDocument();
       expect(screen.getByText('Áo khoác dạ')).toBeInTheDocument();
-      expect(screen.getByText('Áo (TOP)')).toBeInTheDocument();
+      const table = screen.getByRole('table');
+      expect(within(table).getByText('Áo')).toBeInTheDocument();
+      expect(within(table).getByText('Quần / Váy')).toBeInTheDocument();
+      expect(screen.queryByText(/\((TOP|BOTTOM|DRESS)\)/)).not.toBeInTheDocument();
       expect(screen.getByText('Quần tây nam')).toBeInTheDocument();
       expect(screen.getByText('ĐÃ ẨN')).toBeInTheDocument();
 
@@ -1070,7 +1073,7 @@ describe('ConsignmentDetailPage component behaviors', () => {
       expect(screen.getByText('Áo dạ tweed cao cấp')).toBeInTheDocument();
 
       // Test search filter
-      const searchInput = screen.getByPlaceholderText(/Tìm theo mã SKU/);
+      const searchInput = screen.getByPlaceholderText(/Tìm theo Mã hàng hóa/);
       await user.type(searchInput, 'tweed');
       expect(screen.getByText('Áo dạ tweed cao cấp')).toBeInTheDocument();
 
@@ -1104,7 +1107,7 @@ describe('ConsignmentDetailPage component behaviors', () => {
       });
 
       // Verify success feedback
-      expect(await screen.findByText(/Đã chuyển giao thành công sản phẩm SKU Q7-AT-009/)).toBeInTheDocument();
+      expect(await screen.findByText(/Đã chuyển giao thành công sản phẩm Mã hàng hóa Q7-AT-009/)).toBeInTheDocument();
     });
   });
 });

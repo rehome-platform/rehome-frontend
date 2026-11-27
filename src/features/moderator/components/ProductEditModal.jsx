@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Modal from '../../../components/common/Modal.jsx';
 import Button from '../../../components/common/Button.jsx';
 import ImageLightbox from '../../../components/common/ImageLightbox.jsx';
@@ -61,6 +61,7 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [lightboxIndex, setLightboxIndex] = useState(null);
+  const errorAlertRef = useRef(null);
 
   const catalog = useResource((options) => catalogService.list(options), [isOpen], {
     enabled: Boolean(isOpen),
@@ -88,6 +89,8 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
     return categories.find((cat) => String(cat.name || '').trim().toLowerCase() === targetName)?.id || '';
   }, [item?.categoryId, item?.categoryName, item?.category, categories]);
 
+  const groupedCategories = useMemo(() => groupCategoriesBySlot(categories), [categories]);
+
   useEffect(() => {
     if (!isOpen) return;
     setName(item?.name || '');
@@ -98,6 +101,7 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
     setUploadPending(false);
     setUploadVersion((v) => v + 1);
     setErrorMessage('');
+    setLightboxIndex(null);
   }, [isOpen, item]);
 
   useEffect(() => {
@@ -112,6 +116,12 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
     setUploadPending(pending);
   }, []);
 
+  useEffect(() => {
+    if (errorMessage) {
+      errorAlertRef.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [errorMessage]);
+
   if (!isOpen) return null;
 
   const combinedPhotos = [...existingPhotos, ...uploadedPhotos];
@@ -119,7 +129,6 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
   const conditionLevel = detectConditionLevel(conditionNote);
   const categoryName = item?.categoryName || item?.category?.name || item?.category || '—';
   const brandName = item?.brandName || item?.brand?.name || item?.brand || '—';
-  const groupedCategories = useMemo(() => groupCategoriesBySlot(categories), [categories]);
   const selectedCategory = categories.find((cat) => cat.id === categoryId) || null;
   const activeSlot = normalizeTryOnSlot(selectedCategory) || normalizeTryOnSlot(item);
   const activeSlotInfo = activeSlot ? formatTryOnSlot(activeSlot) : null;
@@ -193,15 +202,6 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
             className="rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-amber-800 font-medium"
           >
             Chỉ được chỉnh sửa tên và ảnh bán hàng khi sản phẩm đang ở trạng thái Đang bán.
-          </div>
-        )}
-
-        {errorMessage && (
-          <div
-            role="alert"
-            className="rounded-xl border border-red-300 bg-red-50 px-3.5 py-2.5 text-red-700 font-medium"
-          >
-            {errorMessage}
           </div>
         )}
 
@@ -379,7 +379,7 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
               <label htmlFor="edit-product-sku" className="block font-semibold text-[#5f5f5f]">
-                SKU
+                Mã hàng hóa
               </label>
               <input
                 id="edit-product-sku"
@@ -490,6 +490,16 @@ export default function ProductEditModal({ isOpen, onClose, item, onUpdated }) {
             </div>
           </div>
         </div>
+
+        {errorMessage && (
+          <div
+            ref={errorAlertRef}
+            role="alert"
+            className="rounded-xl border border-red-300 bg-red-50 px-3.5 py-2.5 text-red-700 font-medium"
+          >
+            {errorMessage}
+          </div>
+        )}
 
         <div className="flex justify-end gap-2 pt-2 border-t border-[#e0e0e0]">
           <Button

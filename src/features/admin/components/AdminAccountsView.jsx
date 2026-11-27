@@ -236,7 +236,10 @@ function AccountActions({
   handleUnlockAccount, unlockingId,
 }) {
   return (
-    <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+    <div
+      data-testid="account-actions-cell"
+      className="inline-grid grid-cols-[auto_144px] items-center gap-2 whitespace-nowrap"
+    >
       <TableActionButton
         action="view"
         onClick={() => setDrawerAccount(acc)}
@@ -247,6 +250,7 @@ function AccountActions({
           icon="lock"
           label="Khóa tài khoản"
           variant="danger-outline"
+          className="w-full"
           onClick={() => {
             setLockModalAccount(acc);
             setLockReason('');
@@ -259,7 +263,7 @@ function AccountActions({
           icon="lock_open"
           label={unlockingId === acc.id ? 'Đang mở...' : 'Mở khóa'}
           disabled={unlockingId === acc.id}
-          className="border-[#ABEFC6] text-[#006B2C] hover:bg-[#ECFDF3] hover:border-[#006B2C] hover:text-[#006B2C]"
+          className="w-full border-[#ABEFC6] text-[#006B2C] hover:bg-[#ECFDF3] hover:border-[#006B2C] hover:text-[#006B2C]"
           onClick={() => handleUnlockAccount(acc)}
         />
       )}
@@ -341,7 +345,7 @@ function AccountRow({
       </td>
 
       {/* Actions */}
-      <td className="py-3.5 px-6 text-right whitespace-nowrap">
+      <td className="py-3.5 px-6 text-right align-middle whitespace-nowrap">
         <AccountActions
           acc={acc}
           setDrawerAccount={setDrawerAccount} setLockModalAccount={setLockModalAccount}

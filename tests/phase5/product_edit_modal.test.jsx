@@ -34,6 +34,7 @@ beforeEach(() => {
     categories: [
       { id: 'cat-top', name: 'Áo sơ mi', tryonSlot: 'TOP', hidden: false },
       { id: 'cat-bottom', name: 'Quần jeans', tryonSlot: 'BOTTOM', hidden: false },
+      { id: 'cat-dress', name: 'Đầm dự tiệc', tryonSlot: 'DRESS', hidden: false },
     ],
     brands: [{ id: 'brand-1', name: 'Zara', hidden: false }],
   });
@@ -52,7 +53,7 @@ describe('ProductEditModal', () => {
     );
 
     // Other fields remain visible and disabled/read-only
-    expect(screen.getByLabelText(/SKU/i)).toBeDisabled();
+    expect(screen.getByLabelText(/Mã hàng hóa/i)).toBeDisabled();
     expect(screen.getByLabelText(/Trạng thái/i)).toBeDisabled();
     expect(screen.getByLabelText(/Giá bán/i)).toBeDisabled();
     expect(screen.getByLabelText(/Thương hiệu/i)).toBeDisabled();
@@ -62,7 +63,7 @@ describe('ProductEditModal', () => {
 
     const categorySelect = await screen.findByLabelText(/Danh mục/i);
     await waitFor(() => expect(categorySelect).not.toBeDisabled());
-    expect(screen.getByTestId('edit-product-tryon-slot')).toHaveTextContent('Áo (TOP)');
+    expect(screen.getByTestId('edit-product-tryon-slot')).toHaveTextContent(/^Áo$/);
 
     // Only name and photos are edited -> payload omits unchanged categoryId
     const nameInput = screen.getByLabelText(/Tên sản phẩm/i);
@@ -102,7 +103,7 @@ describe('ProductEditModal', () => {
     const categorySelect = await screen.findByLabelText(/Danh mục/i);
     await waitFor(() => expect(categorySelect).toHaveValue('cat-top'));
     fireEvent.change(categorySelect, { target: { value: 'cat-bottom' } });
-    expect(screen.getByTestId('edit-product-tryon-slot')).toHaveTextContent('Quần / Váy (BOTTOM)');
+    expect(screen.getByTestId('edit-product-tryon-slot')).toHaveTextContent(/^Quần \/ Váy$/);
 
     fireEvent.click(screen.getByRole('button', { name: /Lưu thay đổi/i }));
 
@@ -208,6 +209,80 @@ describe('ProductEditModal', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(message);
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('supports editing a DRESS category product and scrolls 409 error alerts into view near submit', async () => {
+    const dressItem = {
+      ...baseItem,
+      id: 'HCM-AD-000081',
+      sku: 'HCM-AD-000081',
+      name: 'Đầm Elise',
+      categoryId: 'cat-dress',
+      categoryName: 'Đầm dự tiệc',
+      tryonSlot: 'DRESS',
+    };
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const updateSpy = vi.spyOn(inventoryService, 'update').mockRejectedValueOnce(
+      new Phase2Error(
+        'Trạng thái hoặc đơn hàng hiện tại không cho phép cập nhật sản phẩm.',
+        409,
+        'PRODUCT_UPDATE_CONFLICT',
+      ),
+    );
+
+    render(
+      <ProductEditModal isOpen item={dressItem} onUpdated={vi.fn()} onClose={vi.fn()} />,
+      { wrapper },
+    );
+
+    const categorySelect = await screen.findByLabelText(/Danh mục/i);
+    await waitFor(() => expect(categorySelect).toHaveValue('cat-dress'));
+    expect(screen.getByTestId('edit-product-tryon-slot')).toHaveTextContent(/^Đầm \/ Liền thân$/);
+
+    const saveBtn = screen.getByRole('button', { name: /Lưu thay đổi/i });
+    fireEvent.click(saveBtn);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Trạng thái hoặc đơn hàng hiện tại không cho phép cập nhật sản phẩm.');
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+    // Error alert sits after the readonly section (right above the action footer), not hidden at the top
+    const conditionField = screen.getByLabelText(/Ghi chú tình trạng/i);
+    expect(conditionField.compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(updateSpy).toHaveBeenCalledWith('HCM-AD-000081', {
+      name: 'Đầm Elise',
+      photoUrls: ['https://cdn.example/1.jpg', 'https://cdn.example/2.jpg'],
+    });
+  });
+
+  it('toggles isOpen from false to true to false without React hook order errors', async () => {
+    const { rerender } = render(
+      <ProductEditModal isOpen={false} item={null} onUpdated={vi.fn()} onClose={vi.fn()} />,
+      { wrapper },
+    );
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    rerender(
+      <ProductEditModal isOpen={false} item={baseItem} onUpdated={vi.fn()} onClose={vi.fn()} />,
+    );
+    rerender(
+      <ProductEditModal isOpen item={baseItem} onUpdated={vi.fn()} onClose={vi.fn()} />,
+    );
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+    expect(screen.getByLabelText(/Tên sản phẩm/i)).toHaveValue(baseItem.name);
+
+    const categorySelect = await screen.findByLabelText(/Danh mục/i);
+    await waitFor(() => expect(categorySelect).not.toBeDisabled());
+    expect(categorySelect).toHaveValue('cat-top');
+    expect(screen.getByTestId('edit-product-tryon-slot')).toHaveTextContent(/^Áo$/);
+
+    rerender(
+      <ProductEditModal isOpen={false} item={baseItem} onUpdated={vi.fn()} onClose={vi.fn()} />,
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('inventoryService.update sends PUT /products/{id} with strictly { name, photoUrls }', async () => {

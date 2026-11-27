@@ -289,7 +289,7 @@ export default function WarehouseInventoryPage() {
       actions={
         <div className="flex gap-2">
           <Button variant="outline" className="whitespace-nowrap" onClick={() => setScanner(true)}>
-            Quét QR SKU
+            Quét QR Mã hàng hóa
           </Button>
           <Button variant="outline" className="gap-1.5 whitespace-nowrap" onClick={resource.refresh}>
             <span aria-hidden="true" className="material-symbols-outlined text-[16px]">refresh</span>
@@ -325,14 +325,14 @@ export default function WarehouseInventoryPage() {
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-bold text-[#191C19]">Mã SKU hoặc tên</label>
+              <label className="block text-xs font-bold text-[#191C19]">Mã hàng hóa hoặc tên</label>
               {skuInput.trim() && (
                 <button
                   type="button"
                   onClick={() => navigate(`/moderator/inventory/${encodeURIComponent(skuInput.trim())}`)}
                   className="text-[11px] text-[#006B2C] font-semibold hover:underline"
                 >
-                  Mở chi tiết SKU →
+                  Mở chi tiết Mã hàng hóa →
                 </button>
               )}
             </div>
@@ -582,8 +582,8 @@ export default function WarehouseInventoryPage() {
       <QRScannerModal
         isOpen={scanner}
         onClose={() => setScanner(false)}
-        title="Quét QR SKU sản phẩm"
-        placeholder="Nhập SKU sản phẩm"
+        title="Quét QR Mã hàng hóa sản phẩm"
+        placeholder="Nhập Mã hàng hóa sản phẩm"
         onScanSuccess={(value) => {
           setScanner(false);
           navigate(`/moderator/inventory/${encodeURIComponent(value)}`);

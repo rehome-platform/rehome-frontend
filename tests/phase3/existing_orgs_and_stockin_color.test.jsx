@@ -94,7 +94,7 @@ describe('StockInForm - Color Dropdown & Custom Color Input', () => {
     await user.upload(screen.getByLabelText('Ảnh sản phẩm'), file);
     await screen.findByText('shirt.png · Đã tải ảnh gốc');
 
-    const submitBtn = screen.getByRole('button', { name: 'Nhập kho · tạo SKU' });
+    const submitBtn = screen.getByRole('button', { name: 'Nhập kho · tạo Mã hàng hóa' });
     expect(submitBtn).toBeEnabled();
     await user.click(submitBtn);
 
@@ -137,7 +137,7 @@ describe('StockInForm - Color Dropdown & Custom Color Input', () => {
     await user.upload(screen.getByLabelText('Ảnh sản phẩm'), file);
     await screen.findByText('dress.png · Đã tải ảnh gốc');
 
-    const submitBtn = screen.getByRole('button', { name: 'Nhập kho · tạo SKU' });
+    const submitBtn = screen.getByRole('button', { name: 'Nhập kho · tạo Mã hàng hóa' });
     await user.click(submitBtn);
 
     await waitFor(() => {
@@ -294,7 +294,8 @@ describe('StockInForm - Try-on cleanup & Category/Brand locking', () => {
 
     await screen.findByLabelText('Danh mục');
     expect(screen.getByLabelText('Lọc theo Slot thử đồ AI')).toBeInTheDocument();
-    expect(screen.getByTestId('stockin-tryon-slot-badge')).toHaveTextContent('Áo (TOP)');
+    expect(screen.getByTestId('stockin-tryon-slot-badge')).toHaveTextContent('Áo');
+    expect(screen.getByTestId('stockin-tryon-slot-badge')).not.toHaveTextContent('(TOP)');
     expect(screen.queryByText(/Ảnh dùng cho thử đồ AI/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Không cần tách nền/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/chưa tách nền/i)).not.toBeInTheDocument();

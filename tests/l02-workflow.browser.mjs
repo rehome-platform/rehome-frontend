@@ -60,8 +60,8 @@ try {
   await page.screenshot({ path: path.join(out, 'KD-08-no-tryon.png'), fullPage: true });
   await page.getByLabel('Vị trí kệ').fill('A1-02');
   await page.getByLabel('Ảnh sản phẩm', { exact: true }).setInputFiles({ name: 'product.png', mimeType: 'image/png', buffer: Buffer.from(image.split(',')[1], 'base64') });
-  await expect(page.getByRole('button', { name: 'Nhập kho · tạo SKU' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Nhập kho · tạo SKU' }).click();
+  await expect(page.getByRole('button', { name: 'Nhập kho · tạo Mã hàng hóa' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Nhập kho · tạo Mã hàng hóa' }).click();
   await expect(page.getByRole('heading', { name: 'Hàng đợi in tem', exact: true })).toBeVisible();
   await page.getByRole('checkbox', { name: `Chọn ${item.sku}`, exact: true }).check();
   await page.screenshot({ path: path.join(out, 'KD-10-print-queue.png'), fullPage: true });

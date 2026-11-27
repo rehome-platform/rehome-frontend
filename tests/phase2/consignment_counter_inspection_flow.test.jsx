@@ -440,7 +440,7 @@ describe('Luồng 2 - Bước 3: Quầy tiếp nhận, Kiểm định tại qu�
       );
 
       expect(await screen.findByText(/Sản phẩm đã tồn tại · prod-existing-99/i)).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /Nhập kho · tạo SKU/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Nhập kho · tạo Mã hàng hóa/i })).not.toBeInTheDocument();
       expect(createSpy).not.toHaveBeenCalled();
     });
 

@@ -137,7 +137,7 @@ export default function HeroSection({ products = [], stats = {}, onOpenInfoModal
                 <p className="text-xl sm:text-2xl font-extrabold text-[#071D12] tabular-nums tracking-tight">
                   6 bước
                 </p>
-                <p className="text-xs font-medium text-[#46564C] mt-0.5">Kiểm định tem SKU</p>
+                <p className="text-xs font-medium text-[#46564C] mt-0.5">Kiểm định tem Mã hàng hóa</p>
               </div>
               <div>
                 <p className="text-xl sm:text-2xl font-extrabold text-[#071D12] tabular-nums tracking-tight">

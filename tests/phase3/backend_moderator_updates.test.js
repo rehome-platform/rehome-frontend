@@ -43,6 +43,26 @@ describe('updated Moderator backend contracts', () => {
     await expect(warehouseInboxService.getConversations()).resolves.toEqual({ data: [summary], total: 1 });
   });
 
+  it('deduplicates concurrent in-flight getConversations requests and allows a fresh request after settlement', async () => {
+    const summary = { id: 'conv-1', counterpart: { id: 'member-1', displayName: 'Member' } };
+    let resolveFirst;
+    vi.mocked(callBackend)
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve; }))
+      .mockResolvedValueOnce([summary]);
+
+    const p1 = warehouseInboxService.getConversations();
+    const p2 = warehouseInboxService.getConversations();
+    expect(callBackend).toHaveBeenCalledTimes(1);
+
+    resolveFirst([summary]);
+    const [r1, r2] = await Promise.all([p1, p2]);
+    expect(r1).toEqual({ data: [summary], total: 1 });
+    expect(r2).toEqual({ data: [summary], total: 1 });
+
+    await expect(warehouseInboxService.getConversations()).resolves.toEqual({ data: [summary], total: 1 });
+    expect(callBackend).toHaveBeenCalledTimes(2);
+  });
+
   it('allows the Moderator organization detail flow to use API 100', async () => {
     vi.mocked(callBackend).mockResolvedValue({ id: 'org-1', displayName: 'Organization' });
     await expect(orgVerificationService.getOrgPublicDetail('org-1')).resolves.toMatchObject({ id: 'org-1' });

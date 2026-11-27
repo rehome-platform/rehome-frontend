@@ -315,7 +315,7 @@ export default function ReHomeInfoModal({
                   1. Chính sách kiểm hàng &amp; đổi trả 3 ngày
                 </h3>
                 <p className="text-xs text-[#46564C] leading-relaxed">
-                  Mọi sản phẩm trên sàn đều đã được dán tem SKU kiểm định tại kho. Người mua được hỗ
+                  Mọi sản phẩm trên sàn đều đã được dán tem Mã hàng hóa kiểm định tại kho. Người mua được hỗ
                   trợ khiếu nại và hoàn trả minh bạch trong vòng 3 ngày nếu sản phẩm sai mô tả phân hạng.
                 </p>
               </div>
