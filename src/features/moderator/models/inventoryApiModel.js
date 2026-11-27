@@ -55,7 +55,7 @@ function inventoryActions(res) {
 }
 
 export function inventoryDetail(res, sku) {
-  if (!res) throw new Phase2Error(`Không tìm thấy sản phẩm SKU ${sku}`, 404);
+  if (!res) throw new Phase2Error(`Không tìm thấy sản phẩm Mã hàng hóa ${sku}`, 404);
   const { shelfLocation: _sl, shelf: _s, ...rest } = res;
   return {
     ...rest,

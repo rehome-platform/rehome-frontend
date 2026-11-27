@@ -820,7 +820,7 @@ export function ReturnInspectionVerdict({
 
 export function ReturnInspectionChecklist() {
   const items = [
-    'Còn nguyên tem SKU trên sản phẩm',
+    'Còn nguyên tem Mã hàng hóa trên sản phẩm',
     'Không có hư hỏng mới so với ảnh nhập kho',
     'Không có dấu vết đã qua sử dụng thêm',
     'Đủ phụ kiện đi kèm nếu có',
@@ -1183,7 +1183,7 @@ export function ReturnQuickDetailModal({ item, onClose, onOpenFullReview }) {
           </div>
           {item.sku && (
             <div className="flex justify-between gap-4">
-              <span className="font-semibold shrink-0">Mã SKU:</span>
+              <span className="font-semibold shrink-0">Mã hàng hóa:</span>
               <span className="font-mono font-bold text-text text-right">{item.sku}</span>
             </div>
           )}

@@ -44,7 +44,7 @@ export default function MemberReConsignConfirmModal({
           <div>
             <div className="text-base font-bold">{product.name}</div>
             <div className="text-xs text-[#7a7a7a]">
-              SKU: {product.sku} · {product.brandName || product.brand || 'ReHome'}
+              Mã hàng hóa: {product.sku} · {product.brandName || product.brand || 'ReHome'}
             </div>
           </div>
           <span className="text-[10px] font-bold tracking-wider px-2.5 py-1 bg-[#006B2C] text-white rounded">

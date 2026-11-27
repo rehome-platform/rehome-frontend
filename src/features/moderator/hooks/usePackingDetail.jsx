@@ -176,7 +176,7 @@ export function usePackingDetail({ orderId, onChanged }) {
         skipRefresh: true,
         onSuccess: result => {
           if (result.matched) {
-            setMessage('Đã đối chiếu SKU. Tiến độ đã được cập nhật.');
+            setMessage('Đã đối chiếu Mã hàng hóa. Tiến độ đã được cập nhật.');
             setScanLogs(prev => [{ time: timeStr, code, status: 'Khớp — món thành công', matched: true }, ...prev]);
             setWrongItem(null);
             resource.setData(prev => {
@@ -205,7 +205,7 @@ export function usePackingDetail({ orderId, onChanged }) {
             });
             resource.silentRefresh?.();
           } else {
-            setMessage('SKU không thuộc đơn.');
+            setMessage('Mã hàng hóa không thuộc đơn.');
             setScanLogs(prev => [{ time: timeStr, code, status: 'Không có mã này — nhập lại', matched: false }, ...prev]);
             const wrongDetail = result?.wrongItem
               ? {

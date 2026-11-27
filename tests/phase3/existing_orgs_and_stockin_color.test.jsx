@@ -94,7 +94,7 @@ describe('StockInForm - Color Dropdown & Custom Color Input', () => {
     await user.upload(screen.getByLabelText('Ảnh sản phẩm'), file);
     await screen.findByText('shirt.png · Đã tải ảnh gốc');
 
-    const submitBtn = screen.getByRole('button', { name: 'Nhập kho · tạo SKU' });
+    const submitBtn = screen.getByRole('button', { name: 'Nhập kho · tạo Mã hàng hóa' });
     expect(submitBtn).toBeEnabled();
     await user.click(submitBtn);
 
@@ -137,7 +137,7 @@ describe('StockInForm - Color Dropdown & Custom Color Input', () => {
     await user.upload(screen.getByLabelText('Ảnh sản phẩm'), file);
     await screen.findByText('dress.png · Đã tải ảnh gốc');
 
-    const submitBtn = screen.getByRole('button', { name: 'Nhập kho · tạo SKU' });
+    const submitBtn = screen.getByRole('button', { name: 'Nhập kho · tạo Mã hàng hóa' });
     await user.click(submitBtn);
 
     await waitFor(() => {

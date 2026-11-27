@@ -12,7 +12,7 @@ export function PackingAccessNotice({  }) {
         Backend hiện tại giới hạn quyền gọi <code>GET /orders/{'{'}id{'}'}</code> chỉ dành cho tài khoản Người mua (Role: MEMBER). Nhân viên vận hành kho (Role: MODERATOR) chưa được cấp quyền đọc chi tiết đơn hàng này.
       </p>
       <p className="text-xs text-amber-700">
-        Hệ thống frontend đã tích hợp sẵn sàng contract Phase 4 (Quét SKU và Tạo vận đơn GHN). Bạn có thể quay lại danh sách hàng đợi để tiếp tục các công việc khác.
+        Hệ thống frontend đã tích hợp sẵn sàng contract Phase 4 (Quét Mã hàng hóa và Tạo vận đơn GHN). Bạn có thể quay lại danh sách hàng đợi để tiếp tục các công việc khác.
       </p>
       <div className="pt-2">
         <Link

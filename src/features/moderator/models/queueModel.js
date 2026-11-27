@@ -1,6 +1,12 @@
 import { ownsClaim } from './memberModel.js';
 import { OVERDUE_THRESHOLD_HOURS } from '../pages/ConsignmentQueuePage.config.js';
 
+export function queueListCacheKey(type, claim = '', page = 0) {
+  return `queue:list:${type || 'ALL'}:${claim || ''}:${page}`;
+}
+
+export const ALL_QUEUE_CACHE_KEY = queueListCacheKey('ALL', '', 0);
+
 export const QUEUE_TYPE_LABELS = {
   FORM_REVIEW: 'Duyệt form ký gửi',
   INSPECTION: 'Kiểm định tại quầy',
@@ -58,10 +64,25 @@ export function formatWaitTime(waitMinutes) {
   return `${hours}h${flooredRem}`;
 }
 
-export function queueItemMeta(item, typeParam) {
-  const timestamp = item.createdAt || item.queuedAt;
-  const createdTime = timestamp ? new Date(timestamp).getTime() : Date.now() - 3600000 * 2;
-  const elapsedMs = Math.max(0, Date.now() - createdTime);
+export function queueItemElapsedHours(item, now = Date.now()) {
+  const timestamp = item?.createdAt || item?.queuedAt;
+  if (!timestamp) return null;
+  const parsed = new Date(timestamp).getTime();
+  if (!Number.isFinite(parsed)) return null;
+  return Math.max(0, Math.floor((now - parsed) / 3600000));
+}
+
+export function isQueueItemOverdue(item, now = Date.now()) {
+  const hours = queueItemElapsedHours(item, now);
+  return hours !== null && hours >= OVERDUE_THRESHOLD_HOURS;
+}
+
+export function queueItemMeta(item, typeParam, now = Date.now()) {
+  const timestamp = item?.createdAt || item?.queuedAt;
+  const parsedTime = timestamp ? new Date(timestamp).getTime() : NaN;
+  const hasValidTimestamp = Number.isFinite(parsedTime);
+  const createdTime = hasValidTimestamp ? parsedTime : now - 3600000 * 2;
+  const elapsedMs = Math.max(0, now - createdTime);
   const minutes = Math.floor(elapsedMs / 60000);
   const hours = Math.max(0, Math.floor(elapsedMs / 3600000));
   const waitMinutes = item.waitMinutes !== undefined && item.waitMinutes !== null ? item.waitMinutes : minutes;
@@ -70,7 +91,7 @@ export function queueItemMeta(item, typeParam) {
     hours,
     waitMinutes,
     waitTimeFormatted: formatWaitTime(waitMinutes),
-    isOverdue: hours >= OVERDUE_THRESHOLD_HOURS,
+    isOverdue: hasValidTimestamp && hours >= OVERDUE_THRESHOLD_HOURS,
     typeLabel: taskTypeLabel(item, typeParam),
     formattedTime: new Date(createdTime).toLocaleString('vi-VN', {
       day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',

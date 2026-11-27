@@ -135,7 +135,7 @@ export function isOrderFullyScanned(order) {
 export function validateSkuInput(code) {
   const trimmed = String(code || '').trim();
   if (!trimmed) {
-    return { valid: false, message: 'Vui lòng nhập hoặc quét mã SKU trên tem sản phẩm.' };
+    return { valid: false, message: 'Vui lòng nhập hoặc quét Mã hàng hóa trên tem sản phẩm.' };
   }
   return { valid: true, value: trimmed };
 }

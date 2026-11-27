@@ -91,11 +91,11 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
         <div className="rounded-xl rounded-xl border-2 border-neutral p-3.5 space-y-2 bg-surface">
           <div className="flex items-center justify-between">
             <label htmlFor="counter-sku-verify" className="text-xs font-bold text-[#191C19] uppercase tracking-wide">
-              Nhập mã SKU để đối chiếu
+              Nhập Mã hàng hóa để đối chiếu
             </label>
             {targetSku && (
               <span className="text-[11px] font-mono text-[#5B6776]">
-                SKU cần so khớp: <strong className="text-[#191C19]">{targetSku}</strong>
+                Mã hàng hóa cần so khớp: <strong className="text-[#191C19]">{targetSku}</strong>
               </span>
             )}
           </div>
@@ -103,7 +103,7 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
             <input
               id="counter-sku-verify"
               type="text"
-              placeholder={targetSku ? `Nhập ${targetSku}` : 'Nhập mã SKU...'}
+              placeholder={targetSku ? `Nhập ${targetSku}` : 'Nhập Mã hàng hóa...'}
               value={skuInput}
               onChange={(e) => setSkuInput(e.target.value)}
               className={`flex-1 rounded-lg border-2 px-3 py-2 text-sm font-mono font-bold focus:outline-none ${
@@ -128,8 +128,8 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
           {targetSku && (
             <p className="text-[11px] text-[#5B6776]">
               {isSkuMatched
-                ? '✓ Đã đối chiếu khớp mã SKU sản phẩm'
-                : 'Vui lòng quét hoặc gõ đúng mã SKU dán trên hiện vật để tránh giao nhầm'}
+                ? '✓ Đã đối chiếu khớp Mã hàng hóa sản phẩm'
+                : 'Vui lòng quét hoặc gõ đúng Mã hàng hóa dán trên hiện vật để tránh giao nhầm'}
             </p>
           )}
         </div>
@@ -176,7 +176,7 @@ export function CounterHandoverDialog({ confirmHandover, selected, handoverLoadi
         {/* Footer actions */}
         <div className="flex items-center justify-between pt-2 border-t border-neutral">
           <span className="text-[11px] text-[#5B6776]">
-            {!canHandover ? 'Cần đối chiếu SKU và tích xác nhận để hoàn tất' : 'Sẵn sàng bàn giao'}
+            {!canHandover ? 'Cần đối chiếu Mã hàng hóa và tích xác nhận để hoàn tất' : 'Sẵn sàng bàn giao'}
           </span>
           <div className="flex gap-2">
             <Button
@@ -364,7 +364,7 @@ export function CounterConsignmentTasks({ taskGroups }) {
               <span className="text-[11px] text-[#5B6776] flex items-center gap-1.5 flex-wrap justify-end">
                 {sku && (
                   <span className="font-mono font-bold text-[#191C19] bg-white px-2 py-0.5 rounded border border-[#c4c4c4] whitespace-nowrap">
-                    SKU: {sku}
+                    Mã hàng hóa: {sku}
                   </span>
                 )}
                 <Status>{task.status}</Status>
@@ -439,7 +439,7 @@ export function CounterConsignmentTasks({ taskGroups }) {
               </div>
               {detailSku && (
                 <div className="flex justify-between gap-4">
-                  <span className="font-semibold shrink-0">Mã SKU:</span>
+                  <span className="font-semibold shrink-0">Mã hàng hóa:</span>
                   <span className="font-mono font-bold text-text text-right">{detailSku}</span>
                 </div>
               )}

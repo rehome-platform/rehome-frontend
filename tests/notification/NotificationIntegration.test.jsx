@@ -193,7 +193,7 @@ describe('Notification Integration into Layouts', () => {
         </ModeratorLayout>
       );
 
-      const skuInput = screen.getByPlaceholderText(/Tìm SKU tại điểm kí gửi/i);
+      const skuInput = screen.getByPlaceholderText(/Tìm Mã hàng hóa tại điểm kí gửi/i);
       const bell = screen.getByRole('button', { name: 'Thông báo' });
       const profileLink = screen.getByRole('link', { name: /Kiểm duyệt viên ReHome/i });
 

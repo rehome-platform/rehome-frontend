@@ -8,7 +8,7 @@ export const HISTORY_ACTION_LABELS = {
   // PACKING
   CLAIM_TASK: 'Nhận việc',
   RELEASE_TASK: 'Nhả việc',
-  SCAN_SKU: 'Đối chiếu SKU',
+  SCAN_SKU: 'Đối chiếu Mã hàng hóa',
   UPDATE_PACKING_PHOTOS: 'Cập nhật ảnh đóng gói',
   CREATE_SHIPMENT: 'Tạo vận đơn GHN',
   HANDOVER_ORDER: 'Bàn giao đơn vận chuyển',

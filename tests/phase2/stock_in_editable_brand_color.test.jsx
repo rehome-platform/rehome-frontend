@@ -167,7 +167,7 @@ describe('Task 5: Allow editing Category, Brand and Color during stock-in', () =
     fireEvent.change(photoInput, { target: { files: [file] } });
     await screen.findByText('shirt.png · Đã tải ảnh gốc');
 
-    const submitBtn = screen.getByRole('button', { name: 'Nhập kho · tạo SKU' });
+    const submitBtn = screen.getByRole('button', { name: 'Nhập kho · tạo Mã hàng hóa' });
     await waitFor(() => expect(submitBtn).toBeEnabled());
     fireEvent.click(submitBtn);
 

@@ -41,7 +41,7 @@ export const HERO_STORY_SLIDES = [
   {
     id: 'verified',
     label: 'Đồ kiểm định',
-    badge: 'SKU VERIFIED',
+    badge: 'ĐÃ KIỂM ĐỊNH MÃ HÀNG HÓA',
     metric: 'Như mới 99%',
     caption: 'Kiểm định 6 bước tại kho',
   },
@@ -100,7 +100,7 @@ export const INSPECTION_CHECKLIST = [
   'Độ sạch, mùi hương & xử lý vệ sinh kho',
   'Xếp hạng tình trạng 4 cấp minh bạch',
   'Chụp ảnh chuẩn sáng & gắn slot Thử đồ AI',
-  'Dán tem SKU riêng & lập biên nhận điện tử',
+  'Dán tem Mã hàng hóa riêng & lập biên nhận điện tử',
 ];
 
 export const CONSIGN_EARNING_PRESETS = [250000, 500000, 1000000, 2000000];
@@ -120,7 +120,7 @@ export const HOW_IT_WORKS_STEPS = [
   {
     step: '02',
     title: 'Kiểm định & gắn slot AI',
-    description: 'Chuyên viên kiểm tra 6 bước, thống nhất giá tại quầy và dán tem SKU chuẩn sàn.',
+    description: 'Chuyên viên kiểm tra 6 bước, thống nhất giá tại quầy và dán tem Mã hàng hóa chuẩn sàn.',
   },
   {
     step: '03',

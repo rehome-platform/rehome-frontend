@@ -46,7 +46,7 @@ export function useEndTermDetail({ sku, onClose, onChanged }) {
     if (confirm === 'TRANSFER') {
       setFeedback({
         type: 'success',
-        message: `Đã chuyển giao thành công sản phẩm SKU ${sku} cho tổ chức "${partner.trim()}". Trạng thái sản phẩm đổi sang ĐÃ CHUYỂN GIAO (DONATED).`,
+        message: `Đã chuyển giao thành công sản phẩm Mã hàng hóa ${sku} cho tổ chức "${partner.trim()}". Trạng thái sản phẩm đổi sang ĐÃ CHUYỂN GIAO (DONATED).`,
       });
     }
     setConfirm(null);

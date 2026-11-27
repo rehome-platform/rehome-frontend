@@ -349,7 +349,7 @@ describe('LandingPage UI & APK CTA', () => {
     expect(heroStage).toBeInTheDocument();
 
     fireEvent.click(within(heroStage).getByRole('button', { name: 'Đồ kiểm định' }));
-    expect(within(heroStage).getByText('SKU VERIFIED')).toBeInTheDocument();
+    expect(within(heroStage).getByText('ĐÃ KIỂM ĐỊNH MÃ HÀNG HÓA')).toBeInTheDocument();
 
     fireEvent.click(within(heroStage).getByRole('button', { name: 'Nhận 90%' }));
     expect(within(heroStage).getByText(/\+450\.000/)).toBeInTheDocument();

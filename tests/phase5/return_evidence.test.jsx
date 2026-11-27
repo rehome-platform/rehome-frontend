@@ -27,8 +27,8 @@ beforeEach(() => {
 
 it('uses existing item identity without SKU entry and shows missing real comparison photos', () => {
   render(<ReturnInspectionProduct selectedItem={item} checklist={{}} setChecklist={() => {}} />);
-  expect(screen.queryByPlaceholderText(/Nhập SKU/i)).not.toBeInTheDocument();
-  expect(screen.queryByLabelText(/mã SKU/i)).not.toBeInTheDocument();
+  expect(screen.queryByPlaceholderText(/Nhập Mã hàng hóa/i)).not.toBeInTheDocument();
+  expect(screen.queryByLabelText(/Mã hàng hóa/i)).not.toBeInTheDocument();
   expect(screen.getByText(/Chưa có ảnh nhập kho/i)).toBeInTheDocument();
   expect(screen.getByText(/Chưa có ảnh người mua/i)).toBeInTheDocument();
 });

@@ -111,8 +111,8 @@ async function stock(user) {
   expect(screen.getByLabelText('Thương hiệu')).toHaveValue('brand-1');
   await user.selectOptions(screen.getByLabelText('Màu sắc'), 'Be');
   await user.upload(screen.getByLabelText('Ảnh sản phẩm'), new File(['image'], 'photo.png', { type: 'image/png' }));
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Nhập kho · tạo SKU' })).toBeEnabled());
-  await user.click(screen.getByRole('button', { name: 'Nhập kho · tạo SKU' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Nhập kho · tạo Mã hàng hóa' })).toBeEnabled());
+  await user.click(screen.getByRole('button', { name: 'Nhập kho · tạo Mã hàng hóa' }));
 }
 
 describe('L-02 HTTP workflow', () => {
@@ -183,7 +183,7 @@ describe('L-02 HTTP workflow', () => {
     app(); await stock(userEvent.setup());
     await screen.findByText(`Sản phẩm đã tồn tại · ${label.sku}`);
     expect(requests.create).toHaveLength(1);
-    expect(screen.queryByRole('button', { name: 'Nhập kho · tạo SKU' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Nhập kho · tạo Mã hàng hóa' })).not.toBeInTheDocument();
   });
 
   it('keeps new brand selection and form input without web AI try-on/background-removal UI', async () => {

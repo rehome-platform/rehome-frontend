@@ -354,7 +354,7 @@ describe('L-05 Returns Flow (API & UI integration)', () => {
     });
 
     // Verify checklist guidance items are rendered (without checkboxes)
-    expect(screen.getByText(/Còn nguyên tem SKU trên sản phẩm/i)).toBeInTheDocument();
+    expect(screen.getByText(/Còn nguyên tem Mã hàng hóa trên sản phẩm/i)).toBeInTheDocument();
     expect(screen.getByText(/Không có hư hỏng mới so với ảnh nhập kho/i)).toBeInTheDocument();
     expect(screen.getByText(/Không có dấu vết đã qua sử dụng thêm/i)).toBeInTheDocument();
     expect(screen.getByText(/Đủ phụ kiện đi kèm nếu có/i)).toBeInTheDocument();

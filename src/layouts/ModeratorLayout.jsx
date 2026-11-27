@@ -345,8 +345,8 @@ export default function ModeratorLayout({ children, apiColors = true }) {
                 type="search"
                 value={skuQuery}
                 onChange={(event) => setSkuQuery(event.target.value)}
-                aria-label="Tìm SKU tại điểm kí gửi"
-                placeholder="Tìm SKU tại điểm kí gửi…"
+                aria-label="Tìm Mã hàng hóa tại điểm kí gửi"
+                placeholder="Tìm Mã hàng hóa tại điểm kí gửi…"
                 className="w-60 rounded-xl border border-neutral bg-background/50 pl-8 pr-3 py-1.5 text-xs text-text placeholder:text-textSecondary focus:bg-surface focus:border-[#006B2C] focus:outline-none focus:ring-2 focus:ring-[#006B2C]/20 transition-colors"
               />
             </form>

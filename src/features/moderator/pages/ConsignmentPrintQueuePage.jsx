@@ -91,7 +91,7 @@ export default function ConsignmentPrintQueuePage() {
       {feedback && <p role={feedback.error ? 'alert' : 'status'} className={`rounded-xl border p-4 text-sm ${feedback.error ? 'bg-red-50 text-red-800' : 'bg-green-50 text-green-800'}`}>{feedback.message}</p>}
       <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
         <Card title="Danh sách chờ in tem">
-          <input aria-label="Tìm tem" placeholder="Tìm SKU, tên món, danh mục…" value={search}
+          <input aria-label="Tìm tem" placeholder="Tìm Mã hàng hóa, tên món, danh mục…" value={search}
             onChange={event => setSearch(event.target.value)} className="w-full rounded-xl border border-neutral p-3 text-sm" />
           <p className="text-xs text-textSecondary">đã chọn {chosen.length} / {items.length} món</p>
           <div className="overflow-x-auto">
@@ -101,7 +101,7 @@ export default function ConsignmentPrintQueuePage() {
                   onChange={() => setSelected(previous => allSelected
                     ? previous.filter(sku => !filtered.some(item => item.sku === sku))
                     : [...new Set([...previous, ...filtered.map(item => item.sku)])])} /></th>
-                <th>SKU</th><th>Sản phẩm</th><th>Danh mục</th><th>Nhập kho lúc</th><th>Người nhập</th>
+                <th>Mã hàng hóa</th><th>Sản phẩm</th><th>Danh mục</th><th>Nhập kho lúc</th><th>Người nhập</th>
               </tr></thead>
               <tbody>
                 {!resource.loading && !resource.error && !filtered.length && <tr>

@@ -23,7 +23,7 @@ beforeEach(() => {
 });
 
 async function scanSku(code) {
-  const input = await screen.findByLabelText('SKU');
+  const input = await screen.findByLabelText('Mã hàng hóa');
   fireEvent.change(input, { target: { value: code } });
   const submitBtn = screen.getByRole('button', { name: 'Đối chiếu' });
   fireEvent.click(submitBtn);
@@ -97,7 +97,7 @@ describe('L-04 Moderator Packing Wireframe Test Suite (DG-01 to DG-04)', () => {
       </MemoryRouter>
     );
 
-    await screen.findByText('Đã quét 0/2 SKU');
+    await screen.findByText('Đã quét 0/2 Mã hàng hóa');
 
     // Quét món sai: RH-K9B47T (thuộc đơn DH-00239 theo wireframe DG-03-SaiMon)
     await scanSku('RH-K9B47T');
@@ -111,11 +111,11 @@ describe('L-04 Moderator Packing Wireframe Test Suite (DG-01 to DG-04)', () => {
 
     // Quét món đúng thứ 1
     await scanSku('RH-A7F31K');
-    await screen.findByText('Đã quét 1/2 SKU');
+    await screen.findByText('Đã quét 1/2 Mã hàng hóa');
 
     // Quét món đúng thứ 2
     await scanSku('RH-C2M08P');
-    await screen.findByText('Đã quét 2/2 SKU');
+    await screen.findByText('Đã quét 2/2 Mã hàng hóa');
 
     // Mở khóa nút tạo vận đơn GHN
     await waitFor(() => {
@@ -136,10 +136,10 @@ describe('L-04 Moderator Packing Wireframe Test Suite (DG-01 to DG-04)', () => {
     );
 
     await scanSku('RH-A7F31K');
-    await screen.findByText('Đã quét 1/2 SKU');
+    await screen.findByText('Đã quét 1/2 Mã hàng hóa');
 
     await scanSku('RH-C2M08P');
-    await screen.findByText('Đã quét 2/2 SKU');
+    await screen.findByText('Đã quét 2/2 Mã hàng hóa');
 
     const shipmentBtn = await screen.findByRole('button', { name: 'Tạo vận đơn GHN' });
     await waitFor(() => expect(shipmentBtn).toBeEnabled());

@@ -59,7 +59,7 @@ beforeEach(() => {
 
 describe('Open dashboard tasks in the queue', () => {
   it.each(['FORM_REVIEW', 'INSPECTION'])('opens and highlights %s without reading form details', async (type) => {
-    vi.spyOn(queueService, 'list').mockImplementation(async (params) => params.type === type ? [task(type)] : []);
+    vi.spyOn(queueService, 'list').mockImplementation(async (params = {}) => (!params.type || params.type === type) ? [task(type)] : []);
     const scroll = vi.fn();
     vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(scroll);
     renderApp();
@@ -77,7 +77,7 @@ describe('Open dashboard tasks in the queue', () => {
   });
 
   it('keeps the packing destination and encoded order id', async () => {
-    vi.spyOn(queueService, 'list').mockImplementation(async ({ type }) => type === 'PACKING' ? [task(type)] : []);
+    vi.spyOn(queueService, 'list').mockImplementation(async ({ type } = {}) => (!type || type === 'PACKING') ? [task('PACKING')] : []);
     renderApp();
     await userEvent.click(await screen.findByRole('link', { name: 'Mở', exact: true }));
     expect(screen.getByTestId('location')).toHaveTextContent('/moderator/packing?orderId=order%20%2F1');

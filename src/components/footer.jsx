@@ -50,7 +50,7 @@ export default function Footer() {
               <li><span className="text-[#414942]">Hoa hồng 3 kỳ: 10% - 15% - 20%</span></li>
               <li><span className="text-[#414942]">Giá sàn bảo vệ người bán (50% giá chốt)</span></li>
               <li><span className="text-[#414942]">Cửa sổ rút hàng miễn phí 7 ngày</span></li>
-              <li><span className="text-[#414942]">Kiểm định điểm ký gửi & Tem nhãn SKU</span></li>
+              <li><span className="text-[#414942]">Kiểm định điểm ký gửi & Tem nhãn Mã hàng hóa</span></li>
             </ul>
           </div>
 

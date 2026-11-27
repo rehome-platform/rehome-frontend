@@ -55,7 +55,7 @@ export function PackingWrongItemModal({ isOpen, onClose, wrongItem, currentOrder
                 {currentOrderNo ? `Món này không thuộc đơn ${currentOrderNo}` : 'Món này không thuộc đơn hiện tại'}
               </h3>
               <p className="text-xs text-[#5f5f5f]">
-                Phát hiện quét sai mã SKU sản phẩm trong khâu đối chiếu.
+                Phát hiện quét sai Mã hàng hóa sản phẩm trong khâu đối chiếu.
               </p>
             </div>
           </div>
