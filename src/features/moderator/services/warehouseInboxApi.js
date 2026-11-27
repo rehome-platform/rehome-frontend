@@ -8,6 +8,28 @@ import { isFixtureMode } from '../config/warehouseContract.js';
 import { callBackend } from './warehouseTransport.js';
 import { warehouseInboxMockApi } from './moderatorMockData.js';
 
+const inFlightConversations = new Map();
+const inFlightMessages = new Map();
+
+function clearInFlightInboxRequests() {
+  inFlightConversations.clear();
+  inFlightMessages.clear();
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('auth:logout', clearInFlightInboxRequests);
+  window.addEventListener('auth:expired', clearInFlightInboxRequests);
+}
+
+function serializeParams(params = {}) {
+  if (!params || typeof params !== 'object') return '';
+  return Object.keys(params)
+    .sort()
+    .filter((key) => params[key] !== undefined)
+    .map((key) => `${key}=${JSON.stringify(params[key])}`)
+    .join('&');
+}
+
 function parseListResponse(res, errorMessage = 'Dữ liệu trả về không hợp lệ.') {
   if (Array.isArray(res)) {
     return { data: res, total: res.length };
@@ -37,16 +59,35 @@ export const warehouseInboxService = {
   getConversations: async (params = {}, options = {}) => {
     if (isFixtureMode) return warehouseInboxMockApi.getConversations(params);
 
-    const res = await callBackend(
-      {
-        method: 'get',
-        url: API_ENDPOINTS.MODERATOR.WAREHOUSE_INBOX,
-        params,
-      },
-      { signal: options?.signal }
-    );
+    const canDedupe = !options?.signal && !options?.force;
+    const key = serializeParams(params);
+    if (canDedupe && inFlightConversations.has(key)) {
+      return inFlightConversations.get(key);
+    }
 
-    return parseListResponse(res, 'Dữ liệu hộp thư không hợp lệ.');
+    const requestPromise = (async () => {
+      const res = await callBackend(
+        {
+          method: 'get',
+          url: API_ENDPOINTS.MODERATOR.WAREHOUSE_INBOX,
+          params,
+        },
+        { signal: options?.signal }
+      );
+
+      return parseListResponse(res, 'Dữ liệu hộp thư không hợp lệ.');
+    })();
+
+    if (!canDedupe) {
+      return requestPromise;
+    }
+
+    inFlightConversations.set(key, requestPromise);
+    return requestPromise.finally(() => {
+      if (inFlightConversations.get(key) === requestPromise) {
+        inFlightConversations.delete(key);
+      }
+    });
   },
 
   /**
@@ -55,16 +96,35 @@ export const warehouseInboxService = {
   getMessages: async (convId, params = { page: 0, size: 50 }, options = {}) => {
     if (isFixtureMode) return warehouseInboxMockApi.getMessages(convId, params);
 
-    const res = await callBackend(
-      {
-        method: 'get',
-        url: API_ENDPOINTS.MODERATOR.WAREHOUSE_INBOX_MESSAGES(convId),
-        params,
-      },
-      { signal: options?.signal }
-    );
+    const canDedupe = !options?.signal && !options?.force;
+    const key = `${convId}:${serializeParams(params)}`;
+    if (canDedupe && inFlightMessages.has(key)) {
+      return inFlightMessages.get(key);
+    }
 
-    return parseListResponse(res, 'Dữ liệu tin nhắn không hợp lệ.');
+    const requestPromise = (async () => {
+      const res = await callBackend(
+        {
+          method: 'get',
+          url: API_ENDPOINTS.MODERATOR.WAREHOUSE_INBOX_MESSAGES(convId),
+          params,
+        },
+        { signal: options?.signal }
+      );
+
+      return parseListResponse(res, 'Dữ liệu tin nhắn không hợp lệ.');
+    })();
+
+    if (!canDedupe) {
+      return requestPromise;
+    }
+
+    inFlightMessages.set(key, requestPromise);
+    return requestPromise.finally(() => {
+      if (inFlightMessages.get(key) === requestPromise) {
+        inFlightMessages.delete(key);
+      }
+    });
   },
 
   /**
