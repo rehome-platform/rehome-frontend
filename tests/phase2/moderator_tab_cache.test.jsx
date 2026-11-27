@@ -176,18 +176,18 @@ describe('Moderator sidebar tab caching & stale-while-revalidate', () => {
 
     renderModeratorApp('/moderator');
 
-    // 1. Home loads initially
+    // 1. Home loads initially via unified GET /queues (shared cache with Work Queue ALL tab)
     expect(await screen.findByText('Nguyễn Văn A')).toBeInTheDocument();
     const homeCallsAfterInit = queueSpy.mock.calls.length;
     const invCallsAfterInit = inventorySpy.mock.calls.length;
-    expect(homeCallsAfterInit).toBe(4);
+    expect(homeCallsAfterInit).toBe(1);
     expect(invCallsAfterInit).toBe(1);
 
-    // 2. Switch to Hàng đợi công việc
+    // 2. Switch to Hàng đợi công việc -> reuses shared ALL queue cache with ZERO extra API call
     fireEvent.click(screen.getByRole('link', { name: 'Nav Queue' }));
     expect(await screen.findByRole('heading', { name: 'Hàng đợi công việc' })).toBeInTheDocument();
     expect(await screen.findByText('Nguyễn Văn A')).toBeInTheDocument();
-    expect(queueSpy).toHaveBeenCalledTimes(homeCallsAfterInit + 1);
+    expect(queueSpy).toHaveBeenCalledTimes(homeCallsAfterInit);
 
     // 3. Switch to Quản lý sản phẩm
     fireEvent.click(screen.getByRole('link', { name: 'Nav Inventory' }));
@@ -199,7 +199,7 @@ describe('Moderator sidebar tab caching & stale-while-revalidate', () => {
     expect(screen.getByRole('heading', { name: 'Tổng quan hôm nay' })).toBeInTheDocument();
     expect(screen.getByText('Nguyễn Văn A')).toBeInTheDocument();
     expect(screen.queryByText('Đang tải dữ liệu…')).not.toBeInTheDocument();
-    expect(queueSpy).toHaveBeenCalledTimes(homeCallsAfterInit + 1);
+    expect(queueSpy).toHaveBeenCalledTimes(homeCallsAfterInit);
     expect(inventorySpy).toHaveBeenCalledTimes(invCallsAfterInit + 1);
 
     // 5. Switch back to Queue within staleTime -> immediate render, ZERO loading, ZERO extra API calls
@@ -207,7 +207,7 @@ describe('Moderator sidebar tab caching & stale-while-revalidate', () => {
     expect(screen.getByRole('heading', { name: 'Hàng đợi công việc' })).toBeInTheDocument();
     expect(screen.getByText('Nguyễn Văn A')).toBeInTheDocument();
     expect(screen.queryByText('Đang tải dữ liệu…')).not.toBeInTheDocument();
-    expect(queueSpy).toHaveBeenCalledTimes(homeCallsAfterInit + 1);
+    expect(queueSpy).toHaveBeenCalledTimes(homeCallsAfterInit);
 
     // 6. Switch back to Inventory within staleTime -> immediate render, ZERO loading, ZERO extra API calls
     fireEvent.click(screen.getByRole('link', { name: 'Nav Inventory' }));

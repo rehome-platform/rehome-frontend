@@ -22,8 +22,8 @@ describe('Moderator queue display regressions', () => {
     const now = new Date('2026-11-07T12:00:00Z').getTime();
     vi.spyOn(Date, 'now').mockReturnValue(now);
     vi.spyOn(inventoryService, 'list').mockResolvedValue([]);
-    vi.spyOn(queueService, 'list').mockImplementation(async ({ type }) => type === 'FORM_REVIEW' ? [{
-      queueId: 'queue-1', refId: 'form-1', formId: 'form-1', type,
+    vi.spyOn(queueService, 'list').mockImplementation(async ({ type } = {}) => (!type || type === 'FORM_REVIEW') ? [{
+      queueId: 'queue-1', refId: 'form-1', formId: 'form-1', type: 'FORM_REVIEW',
       targetName: 'Áo khoác len', subjectSubtitle: 'Nguyễn Minh An', claimedBy: null,
       createdAt: '2026-11-06T11:00:00Z',
     }] : []);

@@ -17,23 +17,16 @@ import {
   QueueTaskDetailModal,
   extractQueueSubjectName,
 } from '../components/queue/QueueSections.jsx';
-import { formatElapsedHours, sortQueueItemsNewestFirst } from '../models/queueModel.js';
+import {
+  ALL_QUEUE_CACHE_KEY,
+  formatElapsedHours,
+  queueItemMeta,
+  sortQueueItemsNewestFirst,
+} from '../models/queueModel.js';
+import { OVERDUE_THRESHOLD_HOURS } from './ConsignmentQueuePage.config.js';
 import { TABLE_COLUMN_LABELS } from '../../../constants/tableColumns.js';
 
-const OVERDUE_HOURS = 48;
-const QUEUE_TYPES = [
-  { type: 'FORM_REVIEW', label: 'Duyệt form ký gửi' },
-  { type: 'INSPECTION', label: 'Kiểm định tại quầy' },
-  { type: 'PACKING', label: 'Đóng gói đơn hàng' },
-  { type: 'WITHDRAWAL', label: 'Yêu cầu rút hàng', to: '/moderator/queue?type=WITHDRAWAL' },
-];
-
 const countOf = (data) => data?.totalElements ?? listItems(data).length;
-const waitedHours = (item) => {
-  const created = item.createdAt || item.queuedAt;
-  const time = created ? new Date(created).getTime() : NaN;
-  return Number.isFinite(time) ? Math.max(0, Math.floor((Date.now() - time) / 3600000)) : null;
-};
 
 function Stat({ label, value, tone, icon, to }) {
   const isAlert = tone === 'alert' && Number(value) > 0;
@@ -94,33 +87,20 @@ export default function WarehouseHomePage() {
   const [claimTarget, setClaimTarget] = useState(null);
   const [detailTarget, setDetailTarget] = useState(null);
 
-  const review = useResource((o) => queueService.list({ type: 'FORM_REVIEW' }, o), [], {
-    cacheKey: 'queue:home:FORM_REVIEW',
-    invalidatePrefixes: ['queue:', 'consignments:', 'history:'],
-  });
-  const inspection = useResource((o) => queueService.list({ type: 'INSPECTION' }, o), [], {
-    cacheKey: 'queue:home:INSPECTION',
-    invalidatePrefixes: ['queue:', 'consignments:', 'history:'],
-  });
-  const packing = useResource((o) => queueService.list({ type: 'PACKING' }, o), [], {
-    cacheKey: 'queue:home:PACKING',
-    invalidatePrefixes: ['queue:', 'history:'],
-  });
-  const withdrawal = useResource((o) => queueService.list({ type: 'WITHDRAWAL' }, o), [], {
-    cacheKey: 'queue:home:WITHDRAWAL',
-    invalidatePrefixes: ['queue:', 'inventory:', 'history:'],
+  const allQueues = useResource((o) => queueService.list({}, o), [], {
+    cacheKey: ALL_QUEUE_CACHE_KEY,
+    invalidatePrefixes: ['queue:', 'consignments:', 'inventory:', 'returns:', 'verifications:', 'violation-reports:', 'history:'],
   });
   const onSale = useResource((o) => inventoryService.list({ status: 'ON_SALE' }, o), [], {
     cacheKey: 'inventory:home:ON_SALE',
   });
-  const queues = [review, inspection, packing, withdrawal];
-  const stocks = [onSale];
+  const resources = [allQueues, onSale];
 
-  const conflictError = queues.find(
-    (q) =>
-      q.actionError?.status === 409 ||
-      q.actionError?.code === 'QUEUE_ITEM_ALREADY_CLAIMED',
-  );
+  const conflictError =
+    allQueues.actionError?.status === 409 ||
+    allQueues.actionError?.code === 'QUEUE_ITEM_ALREADY_CLAIMED'
+      ? allQueues.actionError
+      : null;
 
   useEffect(() => {
     if (conflictError) {
@@ -132,29 +112,40 @@ export default function WarehouseHomePage() {
     }
   }, [conflictError]);
 
-  const tasks = QUEUE_TYPES.flatMap(({ type, label }, index) =>
-    listItems(queues[index].data).map((item) => ({ ...item, kind: type, kindLabel: label, source: queues[index], hours: waitedHours(item) })),
-  );
-  const pending = queues.reduce((sum, r) => sum + countOf(r.data), 0);
-  const overdue = tasks.filter((t) => (t.hours ?? 0) >= OVERDUE_HOURS).length;
+  const tasks = listItems(allQueues.data).map((item) => {
+    const meta = queueItemMeta(item);
+    return {
+      ...meta,
+      kind: meta.type,
+      kindLabel: meta.typeLabel,
+      source: allQueues,
+    };
+  });
+  const pending = countOf(allQueues.data);
+  const overdue = tasks.filter((t) => t.isOverdue).length;
+  const packingCount = tasks.filter((t) => t.type === 'PACKING').length;
+  const withdrawalCount = tasks.filter(
+    (t) => t.type === 'WITHDRAWAL' || t.type === 'ITEM_WITHDRAWAL',
+  ).length;
   const sorted = sortQueueItemsNewestFirst(tasks).slice(0, 5);
-  const loading = [...queues, ...stocks].some((r) => r.loading);
-  const firstError = [...queues, ...stocks].find((r) => r.error);
+  const loading = resources.some((r) => r.loading);
+  const firstError = resources.find((r) => r.error);
   const today = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
   const refresh = (clearFeedback = true) => {
     if (clearFeedback) setFeedback(null);
-    [...queues, ...stocks].forEach((r) => r.refresh());
+    resources.forEach((r) => r.refresh());
   };
 
   const handleClaim = (task) => {
     setFeedback(null);
-    task.source.mutate((o) => queueService.claim(task.queueId, o), {
+    allQueues.mutate((o) => queueService.claim(task.queueId, o), {
+      skipRefresh: true,
       onSuccess: () => {
         setClaimTarget(null);
-        cache?.invalidate(['queue:', 'consignments:', 'inventory:']);
+        cache?.invalidate(['queue:', 'consignments:', 'inventory:', 'returns:', 'verifications:', 'violation-reports:']);
         setFeedback({
           type: 'success',
-          message: `Đã nhận việc "${task.kindLabel}" (${task.formId || task.orderId || task.queueId}) thành công.`,
+          message: `Đã nhận việc "${task.kindLabel}" (${task.formId || task.orderId || task.refId || task.queueId}) thành công.`,
         });
         refresh(false);
       },
@@ -215,9 +206,9 @@ export default function WarehouseHomePage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Stat label="Việc chờ xử lý" value={pending} icon="pending_actions" tone="info" to="/moderator/queue" />
-        <Stat label={`Quá hạn ${OVERDUE_HOURS}h`} value={overdue} icon="schedule" tone="alert" to="/moderator/queue" />
-        <Stat label="Đơn chờ đóng gói" value={countOf(packing.data)} icon="package_2" tone="warning" to="/moderator/packing" />
-        <Stat label="Chờ rút hàng" value={countOf(withdrawal.data)} icon="assignment_return" tone="warning" to="/moderator/queue?type=WITHDRAWAL" />
+        <Stat label={`Quá hạn ${OVERDUE_THRESHOLD_HOURS}h`} value={overdue} icon="schedule" tone="alert" to="/moderator/queue" />
+        <Stat label="Đơn chờ đóng gói" value={packingCount} icon="package_2" tone="warning" to="/moderator/packing" />
+        <Stat label="Chờ rút hàng" value={withdrawalCount} icon="assignment_return" tone="warning" to="/moderator/queue?type=WITHDRAWAL" />
         <Stat label="Sản phẩm đang bán" value={countOf(onSale.data)} icon="inventory_2" tone="success" to="/moderator/inventory?status=ON_SALE" />
       </div>
 
@@ -247,17 +238,21 @@ export default function WarehouseHomePage() {
                 <tbody className="divide-y divide-neutral/70">
                   {sorted.map((task) => {
                     const mine = ownsClaim(task, scope.userId);
-                    const isOverdue = (task.hours ?? 0) >= OVERDUE_HOURS;
+                    const isOverdue = Boolean(task.isOverdue);
                     const subjectName = extractQueueSubjectName(task);
                     const displaySubject =
                       subjectName !== '—'
                         ? subjectName
                         : (task.targetName && !/^(OD-|#|[0-9a-f-]{8,})/i.test(task.targetName) ? task.targetName : task.name) || '—';
+                    const isWithdrawal = task.kind === 'WITHDRAWAL' || task.kind === 'ITEM_WITHDRAWAL';
                     const link = task.kind === 'PACKING'
                       ? `/moderator/packing?orderId=${encodeURIComponent(task.orderId || task.refId || '')}`
-                      : task.kind === 'WITHDRAWAL'
+                      : isWithdrawal && task.status !== 'PENDING_APPROVAL'
                         ? `/moderator/counter?refId=${encodeURIComponent(task.refId || task.id || '')}`
-                        : `/moderator/queue?${new URLSearchParams({ type: task.kind, queueId: task.queueId })}`;
+                        : `/moderator/queue?${new URLSearchParams({
+                            ...(task.kind ? { type: task.kind } : {}),
+                            queueId: task.queueId,
+                          })}`;
                     return (
                       <tr key={`${task.kind}-${task.queueId}`} className={`transition-colors ${isOverdue ? 'border-l-4 border-l-[#F04438] bg-[#FEF3F2]/40 hover:bg-[#FEF3F2]/70' : 'hover:bg-[#F6F9F4]/60'}`}>
                         <td className="py-3 px-3.5 font-semibold text-[#191C19] whitespace-nowrap">{task.kindLabel}</td>
@@ -330,7 +325,7 @@ export default function WarehouseHomePage() {
 
       <QueueClaimDialog
         claimTarget={claimTarget}
-        resource={claimTarget?.source || review}
+        resource={claimTarget?.source || allQueues}
         setClaimTarget={setClaimTarget}
         handleClaim={handleClaim}
       />

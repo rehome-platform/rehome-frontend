@@ -1,4 +1,4 @@
-import { queueItemMeta, matchesQueueFilter, queueActionError, sortQueueItemsByDate } from '../models/queueModel.js';
+import { queueItemMeta, queueListCacheKey, matchesQueueFilter, queueActionError, sortQueueItemsByDate } from '../models/queueModel.js';
 
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -35,7 +35,7 @@ export function useConsignmentQueue() {
     (options) => queueService.list({ type: queryType, claim: claimParam, page }, options),
     [queryType, claimParam, page],
     {
-      cacheKey: `queue:list:${queryType || 'ALL'}:${claimParam}:${page}`,
+      cacheKey: queueListCacheKey(queryType, claimParam, page),
       invalidatePrefixes: ['queue:', 'consignments:', 'inventory:', 'returns:', 'verifications:', 'violation-reports:'],
     },
   );
