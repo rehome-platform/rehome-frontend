@@ -82,6 +82,18 @@ export function mapReturnItem(raw) {
   const senderCode = sellerCode || (raw.sellerName ? `MB-${String(raw.sellerName).substring(0, 6).toUpperCase()}` : null);
   const submittedAt = raw.submittedAt || (raw.createdAt ? new Date(raw.createdAt).toLocaleDateString('vi-VN') : 'Gần đây');
 
+  const shipBackFeeDeadline = raw.shipBackFeeDeadline || raw.shipBackFeePaymentDeadline || null;
+  const shipBackPaidAt = raw.shipBackPaidAt || raw.shipBackFeePaidAt || null;
+  const shipBackShipDeadline = raw.shipBackShipDeadline || raw.shipBackDeadline || null;
+  const shipBackFailedAt = raw.shipBackFailedAt || raw.shipBackDeliveryFailedAt || null;
+  const composedShipBackAddress = [
+    raw.shipBackAddressDetail,
+    raw.shipBackWardName,
+    raw.shipBackProvinceName,
+  ].filter(Boolean).join(', ');
+  const shipBackAddress = raw.shipBackAddress || composedShipBackAddress || null;
+  const shipBackStatus = raw.shipBackStatus || null;
+
   return {
     id,
     code,
@@ -147,15 +159,19 @@ export function mapReturnItem(raw) {
       raw.status === 'INVALID' ? (
         raw.pickedUpAt
           ? 'Hàng không hợp lệ · Đã bàn giao tại quầy'
-          : raw.shipBackDeliveryFailedAt
+          : shipBackStatus === 'FAILED' || shipBackFailedAt
             ? 'Hàng không hợp lệ · Giao thất bại, chờ nhận tại quầy'
-            : raw.shipBackDeliveredAt
+            : shipBackStatus === 'DELIVERED' || raw.shipBackDeliveredAt
               ? 'Hàng không hợp lệ · Đã giao lại cho người mua'
-              : raw.shipBackTrackingCode
-                ? 'Hàng không hợp lệ · Đã gửi lại qua GHN'
-                : raw.pickupDeadline
-                  ? `Hàng không hợp lệ · Hạn nhận lại: ${formatDeadlineWithCountdown(raw.pickupDeadline)}`
-                  : 'Hàng không hợp lệ · Chờ khách nhận lại'
+              : shipBackStatus === 'SHIPPING' || raw.shipBackTrackingCode
+                ? 'Hàng không hợp lệ · Đang gửi lại qua GHN'
+                : shipBackStatus === 'PAID' || shipBackPaidAt
+                  ? 'Hàng không hợp lệ · Đã trả phí gửi lại, chờ tạo vận đơn'
+                  : shipBackStatus === 'AWAITING_PAYMENT' || shipBackFeeDeadline
+                    ? 'Hàng không hợp lệ · Chờ người mua trả phí gửi lại'
+                    : raw.pickupDeadline
+                      ? `Hàng không hợp lệ · Hạn nhận lại: ${formatDeadlineWithCountdown(raw.pickupDeadline)}`
+                      : 'Hàng không hợp lệ · Chờ khách nhận lại'
       ) :
       'Đã hoàn tất xử lý'
     ),
@@ -171,18 +187,25 @@ export function mapReturnItem(raw) {
     invalidReturnChoice: raw.invalidReturnChoice || null,
     shipBackFee: raw.shipBackFee ?? null,
     shipBackPaymentMethod: raw.shipBackPaymentMethod || null,
-    shipBackFeePaymentDeadline: raw.shipBackFeePaymentDeadline || null,
-    shipBackFeePaidAt: raw.shipBackFeePaidAt || null,
-    shipBackDeadline: raw.shipBackDeadline || null,
+    shipBackFeeDeadline,
+    shipBackFeePaymentDeadline: shipBackFeeDeadline,
+    shipBackPaidAt,
+    shipBackFeePaidAt: shipBackPaidAt,
+    shipBackShipDeadline,
+    shipBackDeadline: shipBackShipDeadline,
     shipBackTrackingCode: raw.shipBackTrackingCode || '',
     shipBackShippedAt: raw.shipBackShippedAt || null,
     shipBackDeliveredAt: raw.shipBackDeliveredAt || null,
-    shipBackDeliveryFailedAt: raw.shipBackDeliveryFailedAt || null,
+    shipBackFailedAt,
+    shipBackDeliveryFailedAt: shipBackFailedAt,
     shipBackDeliveryFailReason: raw.shipBackDeliveryFailReason || '',
-    shipBackStatus: raw.shipBackStatus || null,
+    shipBackStatus,
+    shipBackAddressId: raw.shipBackAddressId || null,
     shipBackRecipientName: raw.shipBackRecipientName || null,
     shipBackPhone: raw.shipBackPhone || null,
-    shipBackAddress: raw.shipBackAddress || null,
+    shipBackAddressDetail: raw.shipBackAddressDetail || null,
+    shipBackWardName: raw.shipBackWardName || null,
+    shipBackAddress,
     shipBackProvinceName: raw.shipBackProvinceName || null,
     shipBackPrintUrl: raw.shipBackPrintUrl || null,
     returnDeadline: raw.returnDeadline || null,

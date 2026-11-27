@@ -18,6 +18,7 @@ export const QUEUE_TYPE_LABELS = {
   DONATION_PREP: 'Chuẩn bị quyên góp',
   RETURN: 'Yêu cầu trả hàng',
   RETURN_SHIP_BACK: 'Gửi lại hàng trả không hợp lệ',
+  RECONSIGN_COUNTER: 'Phản hồi trả giá ký gửi lại',
   ORG_VERIFICATION: 'Xác minh tổ chức',
   LEGAL_CHANGE: 'Thay đổi pháp lý',
   VIOLATION_REPORT: 'Báo cáo vi phạm',

@@ -212,6 +212,14 @@ export default function ReturnShipBackDetailPage() {
             <div className="lg:col-span-5 space-y-5">
               <Card title="Phí gửi lại đã thu">
                 <div className="space-y-2 text-xs">
+                  {item.shipBackStatus && (
+                    <div className="flex justify-between gap-4 items-center">
+                      <span className="text-textSecondary">Trạng thái gửi lại:</span>
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#ECFDF3] text-[#006B2C] border border-[#ABEFC6]">
+                        {item.shipBackStatus}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between gap-4">
                     <span className="text-textSecondary">Phí đã thu:</span>
                     <span className="font-bold text-[#006B2C] text-sm">
@@ -225,14 +233,14 @@ export default function ReturnShipBackDetailPage() {
                   <div className="flex justify-between gap-4">
                     <span className="text-textSecondary">Thời điểm trả phí:</span>
                     <span className="text-text">
-                      {item.shipBackFeePaidAt ? date(item.shipBackFeePaidAt) : 'Chưa thanh toán'}
+                      {item.shipBackPaidAt || item.shipBackFeePaidAt ? date(item.shipBackPaidAt || item.shipBackFeePaidAt) : 'Chưa thanh toán'}
                     </span>
                   </div>
-                  {item.shipBackDeadline && (
+                  {(item.shipBackShipDeadline || item.shipBackDeadline) && (
                     <div className="flex justify-between gap-4">
                       <span className="text-textSecondary">Hạn gửi hàng:</span>
                       <span className={nearDeadline ? 'font-bold text-[#B42318]' : 'font-semibold text-text'}>
-                        {formatDeadlineWithCountdown(item.shipBackDeadline)}
+                        {formatDeadlineWithCountdown(item.shipBackShipDeadline || item.shipBackDeadline)}
                       </span>
                     </div>
                   )}

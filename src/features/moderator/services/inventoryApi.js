@@ -78,6 +78,13 @@ export const inventoryService = {
             ...(proposal ? { reConsignStatus: 'PROPOSAL_SENT', newReceiptId: proposal.receiptId } : {}), ...(request ? {
               decisionId: request.decisionId, pricingEligible: true, decision: 'RE_CONSIGN',
               previousAgreedPrice: request.previousAgreedPrice,
+              ...(request.reConsignStatus ? { reConsignStatus: request.reConsignStatus } : {}),
+              ...(request.newReceiptId ? { newReceiptId: request.newReceiptId } : {}),
+              ...(request.memberCounterPrice != null ? { memberCounterPrice: request.memberCounterPrice } : {}),
+              ...(request.counteredAt || request.counterOfferedAt ? { counteredAt: request.counteredAt || request.counterOfferedAt } : {}),
+              ...(request.decidedAt ? { decidedAt: request.decidedAt } : {}),
+              ...(request.proposalDeadline ? { proposalDeadline: request.proposalDeadline } : {}),
+              ...(Array.isArray(request.negotiationHistory) ? { negotiationHistory: request.negotiationHistory } : {}),
             } : {})
           }, item.sku));
         });
@@ -332,10 +339,17 @@ async function termExpiredRows(options, includeTerminal) {
       ...(request ? {
         decisionId: request.decisionId, decision: 'RE_CONSIGN', pricingEligible: true,
         name: item.name || request.productName, currentPrice: request.currentPrice,
-        previousAgreedPrice: request.previousAgreedPrice
+        previousAgreedPrice: request.previousAgreedPrice,
+        ...(request.reConsignStatus ? { reConsignStatus: request.reConsignStatus } : {}),
+        ...(request.newReceiptId ? { newReceiptId: request.newReceiptId } : {}),
+        ...(request.memberCounterPrice != null ? { memberCounterPrice: request.memberCounterPrice } : {}),
+        ...(request.counteredAt || request.counterOfferedAt ? { counteredAt: request.counteredAt || request.counterOfferedAt } : {}),
+        ...(request.decidedAt ? { decidedAt: request.decidedAt } : {}),
+        ...(request.proposalDeadline ? { proposalDeadline: request.proposalDeadline } : {}),
+        ...(Array.isArray(request.negotiationHistory) ? { negotiationHistory: request.negotiationHistory } : {}),
       } : {}),
     }, item.id || item.sku));
-  }).filter(item => !item.activeWithdrawalStatus && (['WITHDRAWN', 'UNCLAIMED'].includes(item.status) || (item.status === 'WAREHOUSE' && (item.decisionId || item.pricingEligible || item.reConsignStatus === 'PROPOSAL_SENT'))));
+  }).filter(item => !item.activeWithdrawalStatus && (['WITHDRAWN', 'UNCLAIMED'].includes(item.status) || (item.status === 'WAREHOUSE' && (item.decisionId || item.pricingEligible || ['AWAITING_PRICE', 'PROPOSED', 'PROPOSAL_SENT', 'COUNTER_OFFERED'].includes(item.reConsignStatus)))));
 }
 
 const rowsOf = result => result?.content || result?.items || (Array.isArray(result) ? result : []);

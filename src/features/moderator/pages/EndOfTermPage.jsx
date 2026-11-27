@@ -20,8 +20,16 @@ import {
   filterUnclaimedItems,
   hasNoEndTermActions,
 } from "../models/warehouseModel.js";
-import { Page, Card, ResourceState, MemberSummary, Pager } from "../components/WarehouseUi.jsx";
+import { Page, Card, ResourceState, MemberSummary, Pager, date, money } from "../components/WarehouseUi.jsx";
 import ReceiptPanel from '../components/ReceiptPanel.jsx';
+import {
+  RECONSIGN_STATUS,
+  RECONSIGN_STATUS_META,
+  counterResponseTimestamp,
+  isCounterResponseOverdue,
+  normalizeReConsignStatus,
+  sortPendingPricingRows,
+} from '../models/reConsignModel.js';
 
 function EndTermDetail({ sku, onClose, onChanged }) {
   const model = useEndTermDetail({ sku, onClose, onChanged });
@@ -143,6 +151,13 @@ export default function EndOfTermPage() {
   const list = useResource((options) => endTermService.list({ page }, options), [page], {
     cacheKey: `end-of-term:list:${page}`,
   });
+  const pendingPricing = useResource((options) => endTermService.pendingPricing(options), [], {
+    cacheKey: 'end-of-term:pending-pricing',
+  });
+  const sortedPendingPricing = useMemo(
+    () => sortPendingPricingRows(Array.isArray(pendingPricing.data) ? pendingPricing.data : []),
+    [pendingPricing.data],
+  );
   const rawItems = listItems(list.data);
   const normalizedItems = useMemo(
     () => rawItems.map(normalizeUnclaimedItem).filter(Boolean),
@@ -175,7 +190,14 @@ export default function EndOfTermPage() {
           <Link to="/moderator/counter">
             <Button variant="outline">Quầy tiếp nhận</Button>
           </Link>
-          <Button variant="outline" onClick={list.refresh} className="gap-1.5 whitespace-nowrap">
+          <Button
+            variant="outline"
+            onClick={() => {
+              list.refresh();
+              pendingPricing.refresh();
+            }}
+            className="gap-1.5 whitespace-nowrap"
+          >
             <span aria-hidden="true" className="material-symbols-outlined text-[16px]">refresh</span>
             <span>Tải lại</span>
           </Button>
@@ -214,6 +236,91 @@ export default function EndOfTermPage() {
       </div>
 
       <ResourceState resource={list} empty={!filteredItems.length} />
+
+      {/* Danh sách ký gửi lại – chờ chốt giá mới (GET /end-of-term-decisions/pending-pricing) */}
+      {sortedPendingPricing.length > 0 && (
+        <Card
+          title="Danh sách ký gửi lại – chờ chốt giá mới"
+          actions={
+            <span className="text-xs font-semibold text-textSecondary">
+              {sortedPendingPricing.length} yêu cầu
+            </span>
+          }
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-neutral bg-background text-textSecondary font-semibold whitespace-nowrap">
+                  <th className="py-2.5 px-3">Sản phẩm</th>
+                  <th className="py-2.5 px-3 text-right">Giá hiện tại / Giá cũ</th>
+                  <th className="py-2.5 px-3">Trạng thái</th>
+                  <th className="py-2.5 px-3">Cập nhật</th>
+                  <th className="py-2.5 px-3 text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral">
+                {sortedPendingPricing.map((row) => {
+                  const status = normalizeReConsignStatus(row.reConsignStatus, { hasDecision: Boolean(row.decisionId) });
+                  const meta = RECONSIGN_STATUS_META[status] || RECONSIGN_STATUS_META.AWAITING_PRICE;
+                  const overdue = isCounterResponseOverdue(row);
+                  const ts = status === RECONSIGN_STATUS.COUNTER_OFFERED ? counterResponseTimestamp(row) : row.decidedAt;
+                  return (
+                    <tr
+                      key={row.decisionId || row.productId}
+                      className={overdue ? 'border-l-4 border-l-[#B42318] bg-[#FEF3F2]/60' : 'hover:bg-[#F6F9F4]/60'}
+                    >
+                      <td className="py-3 px-3">
+                        <p className="font-bold text-text">{row.productName || '—'}</p>
+                        <p className="font-mono text-[11px] text-textSecondary">{row.productId}</p>
+                      </td>
+                      <td className="py-3 px-3 text-right whitespace-nowrap">
+                        <p className="font-bold text-text">{row.currentPrice != null ? money(row.currentPrice) : '—'}</p>
+                        {row.previousAgreedPrice != null && (
+                          <p className="text-[11px] text-textSecondary">
+                            Giá cũ: {money(row.previousAgreedPrice)}
+                          </p>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        <div className="flex flex-col items-start gap-1">
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${meta.badgeClass}`}>
+                            {meta.label}
+                          </span>
+                          {status === RECONSIGN_STATUS.COUNTER_OFFERED && row.memberCounterPrice != null && (
+                            <span className="text-[11px] font-semibold text-[#B42318]">
+                              Member trả: {money(row.memberCounterPrice)}
+                            </span>
+                          )}
+                          {overdue && (
+                            <span className="text-[11px] font-bold text-[#B42318]">
+                              Quá 2 ngày chưa phản hồi
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 whitespace-nowrap text-textSecondary">
+                        {ts ? date(ts) : '—'}
+                      </td>
+                      <td className="py-3 px-3 text-right whitespace-nowrap">
+                        <Link
+                          to={`/moderator/inventory/${encodeURIComponent(row.productId)}/re-consign`}
+                          className="inline-flex items-center justify-center rounded-xl bg-[#006B2C] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#005523]"
+                        >
+                          {status === RECONSIGN_STATUS.COUNTER_OFFERED
+                            ? 'Phản hồi trả giá →'
+                            : status === RECONSIGN_STATUS.AWAITING_PRICE
+                              ? 'Chốt giá mới →'
+                              : 'Theo dõi →'}
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
 
       {/* Danh sách sản phẩm */}
       {filteredItems.length > 0 && (

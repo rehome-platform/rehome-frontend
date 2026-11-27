@@ -921,6 +921,20 @@ function shipBackMethodLabel(method) {
   return method || '';
 }
 
+export function invalidReturnChoiceLabel(choice) {
+  if (choice === 'WAREHOUSE_PICKUP') return 'Đến địa điểm lấy';
+  if (choice === 'SHIP_BACK') return 'ReHome gửi lại';
+  return 'Chờ người mua chọn';
+}
+
+export const SHIP_BACK_STATUS_LABELS = {
+  AWAITING_PAYMENT: 'Chờ trả phí',
+  PAID: 'Đã trả phí — chờ tạo vận đơn GHN',
+  SHIPPING: 'Đang gửi lại qua GHN',
+  DELIVERED: 'Đã giao lại thành công',
+  FAILED: 'Giao thất bại — chuyển nhận tại quầy',
+};
+
 export function InvalidReturnDispositionCard({ selectedItem, onNavigateToCounter }) {
   const [copiedCode, setCopiedCode] = React.useState(false);
   const [printingLabel, setPrintingLabel] = React.useState(false);
@@ -931,15 +945,32 @@ export function InvalidReturnDispositionCard({ selectedItem, onNavigateToCounter
   }
 
   const choice = selectedItem.invalidReturnChoice;
+  const shipBackStatus = selectedItem.shipBackStatus || null;
+  const feeDeadline = selectedItem.shipBackFeeDeadline || selectedItem.shipBackFeePaymentDeadline || null;
+  const paidAt = selectedItem.shipBackPaidAt || selectedItem.shipBackFeePaidAt || null;
+  const shipDeadline = selectedItem.shipBackShipDeadline || selectedItem.shipBackDeadline || null;
+  const failedAt = selectedItem.shipBackFailedAt || selectedItem.shipBackDeliveryFailedAt || null;
   const hasShipBackHistory = Boolean(
     choice === 'SHIP_BACK' ||
-      selectedItem.shipBackFeePaidAt ||
+      shipBackStatus ||
+      paidAt ||
       selectedItem.shipBackTrackingCode ||
       selectedItem.shipBackDeliveredAt ||
-      selectedItem.shipBackDeliveryFailedAt ||
-      selectedItem.shipBackFeePaymentDeadline,
+      failedAt ||
+      feeDeadline,
   );
   const isWarehousePickup = choice === 'WAREHOUSE_PICKUP';
+
+  const isPaidDone = Boolean(
+    paidAt || ['PAID', 'SHIPPING', 'DELIVERED', 'FAILED'].includes(shipBackStatus),
+  );
+  const isShippingOrDone = Boolean(
+    selectedItem.shipBackTrackingCode ||
+      selectedItem.shipBackShippedAt ||
+      ['SHIPPING', 'DELIVERED', 'FAILED'].includes(shipBackStatus),
+  );
+  const isDelivered = Boolean(selectedItem.shipBackDeliveredAt || shipBackStatus === 'DELIVERED');
+  const isFailed = Boolean(failedAt || shipBackStatus === 'FAILED');
 
   const handleCopyCode = async (code) => {
     if (!code) return;
@@ -974,47 +1005,55 @@ export function InvalidReturnDispositionCard({ selectedItem, onNavigateToCounter
     }
   };
 
+  const choiceBadgeLabel =
+    hasShipBackHistory && isWarehousePickup
+      ? 'ReHome gửi lại (thất bại) → Đến địa điểm lấy'
+      : choice === 'SHIP_BACK' || hasShipBackHistory
+        ? 'ReHome gửi lại'
+        : isWarehousePickup
+          ? 'Đến địa điểm lấy'
+          : 'Chờ người mua chọn';
+
   return (
     <div className="border border-neutral rounded-2xl p-4 bg-surface space-y-3 text-xs shadow-sm">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <span className="text-[10px] uppercase font-bold text-textSecondary tracking-wider">
           Cách nhận lại hàng trả không hợp lệ
         </span>
         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FFFAEB] text-[#B54708] border border-[#FEDF89]">
-          {hasShipBackHistory && isWarehousePickup
-            ? 'Gửi lại thất bại → Nhận tại quầy'
-            : choice === 'SHIP_BACK' || hasShipBackHistory
-              ? 'Gửi lại qua GHN'
-              : isWarehousePickup
-                ? 'Đến điểm kí gửi nhận lại'
-                : 'Chờ người mua chọn'}
+          {choiceBadgeLabel}
         </span>
       </div>
 
       {hasShipBackHistory && (
         <div className="space-y-2 rounded-xl border border-neutral bg-background p-3">
-          <p className="font-bold text-text">Tiến trình gửi lại hàng trả (SHIP_BACK)</p>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="font-bold text-text">Tiến trình gửi lại hàng trả (SHIP_BACK)</p>
+            {shipBackStatus && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white border border-neutral text-text">
+                {SHIP_BACK_STATUS_LABELS[shipBackStatus] || shipBackStatus}
+              </span>
+            )}
+          </div>
           <ul className="space-y-1.5 text-[11px]">
             <li>
               <span className="font-semibold text-text">1. Chờ trả phí: </span>
-              {selectedItem.shipBackFeePaidAt ? (
+              {isPaidDone ? (
                 <span className="text-[#067647]">Đã hoàn tất</span>
               ) : (
                 <span className="text-[#B54708]">
                   Đang chờ thanh toán
-                  {selectedItem.shipBackFeePaymentDeadline
-                    ? ` · Hạn trả phí: ${formatDeadlineWithCountdown(selectedItem.shipBackFeePaymentDeadline)}`
-                    : ''}
+                  {feeDeadline ? ` · Hạn trả phí: ${formatDeadlineWithCountdown(feeDeadline)}` : ''}
                 </span>
               )}
             </li>
             <li>
               <span className="font-semibold text-text">2. Đã trả phí: </span>
-              {selectedItem.shipBackFeePaidAt ? (
+              {isPaidDone ? (
                 <span className="text-[#067647] font-medium">
                   {selectedItem.shipBackFee != null ? money(selectedItem.shipBackFee) : 'Đã thanh toán'}
                   {selectedItem.shipBackPaymentMethod ? ` (${shipBackMethodLabel(selectedItem.shipBackPaymentMethod)})` : ''}
-                  {` lúc ${date(selectedItem.shipBackFeePaidAt)}`}
+                  {paidAt ? ` lúc ${date(paidAt)}` : ''}
                 </span>
               ) : (
                 <span className="text-textSecondary">Chưa thanh toán</span>
@@ -1035,18 +1074,28 @@ export function InvalidReturnDispositionCard({ selectedItem, onNavigateToCounter
                   >
                     {copiedCode ? 'Đã sao chép' : 'Copy'}
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleOpenLabel}
-                    disabled={printingLabel}
-                    className="px-1.5 py-0.5 rounded border border-[#006B2C] text-[#006B2C] bg-white text-[10px] font-semibold hover:bg-[#ECFDF3]"
-                  >
-                    {printingLabel ? 'Đang mở...' : 'In nhãn GHN'}
-                  </button>
+                  {selectedItem.shipBackPrintUrl && (
+                    <button
+                      type="button"
+                      onClick={handleOpenLabel}
+                      disabled={printingLabel}
+                      className="px-1.5 py-0.5 rounded border border-[#006B2C] text-[#006B2C] bg-white text-[10px] font-semibold hover:bg-[#ECFDF3]"
+                    >
+                      {printingLabel ? 'Đang mở...' : 'In nhãn GHN'}
+                    </button>
+                  )}
                 </span>
-              ) : selectedItem.shipBackFeePaidAt && !isWarehousePickup ? (
-                <span className="inline-flex items-center gap-2 text-[#B54708]">
-                  <span>Chờ điểm kí gửi tạo vận đơn GHN</span>
+              ) : isShippingOrDone ? (
+                <span className="text-[#067647] font-medium">
+                  Đang gửi lại qua GHN
+                  {selectedItem.shipBackShippedAt ? ` (${date(selectedItem.shipBackShippedAt)})` : ''}
+                </span>
+              ) : isPaidDone && !isWarehousePickup ? (
+                <span className="inline-flex flex-wrap items-center gap-2 text-[#B54708]">
+                  <span>
+                    Chờ điểm kí gửi tạo vận đơn GHN
+                    {shipDeadline ? ` · Hạn gửi: ${formatDeadlineWithCountdown(shipDeadline)}` : ''}
+                  </span>
                   {selectedItem.id && (
                     <Link
                       to={`/moderator/returns/ship-back/${encodeURIComponent(selectedItem.id)}`}
@@ -1060,14 +1109,14 @@ export function InvalidReturnDispositionCard({ selectedItem, onNavigateToCounter
                 <span className="text-textSecondary">Chưa gửi</span>
               )}
             </li>
-            {selectedItem.shipBackDeliveredAt && (
+            {isDelivered && (
               <li className="text-[#067647] font-semibold">
-                4. Đã giao: Đã giao thành công lúc {date(selectedItem.shipBackDeliveredAt)}
+                4. Đã giao: Đã giao thành công{selectedItem.shipBackDeliveredAt ? ` lúc ${date(selectedItem.shipBackDeliveredAt)}` : ''}
               </li>
             )}
-            {selectedItem.shipBackDeliveryFailedAt && (
+            {isFailed && (
               <li className="text-[#B42318] font-semibold">
-                5. Giao thất bại: Giao thất bại lúc {date(selectedItem.shipBackDeliveryFailedAt)}
+                5. Giao thất bại: Giao thất bại{failedAt ? ` lúc ${date(failedAt)}` : ''}
                 {selectedItem.shipBackDeliveryFailReason ? ` (${selectedItem.shipBackDeliveryFailReason})` : ''}
                 {' · Hệ thống đã chuyển về nhận tại quầy.'}
               </li>
@@ -1077,9 +1126,9 @@ export function InvalidReturnDispositionCard({ selectedItem, onNavigateToCounter
         </div>
       )}
 
-      {isWarehousePickup && (
+      {(isWarehousePickup || selectedItem.pickedUpAt) && (
         <div className="space-y-1.5 rounded-xl border border-neutral bg-background p-3">
-          <p className="font-bold text-text">Nhận lại tại quầy (WAREHOUSE_PICKUP)</p>
+          <p className="font-bold text-text">Đến địa điểm lấy (WAREHOUSE_PICKUP)</p>
           {selectedItem.pickedUpAt ? (
             <p className="font-semibold text-[#006B2C]">
               Đã bàn giao tại quầy lúc {date(selectedItem.pickedUpAt)}
@@ -1100,7 +1149,7 @@ export function InvalidReturnDispositionCard({ selectedItem, onNavigateToCounter
         </div>
       )}
 
-      {!hasShipBackHistory && !isWarehousePickup && (
+      {!hasShipBackHistory && !isWarehousePickup && !selectedItem.pickedUpAt && (
         <p className="text-[11px] text-textSecondary">
           Người mua chưa chọn cách nhận lại hàng.
           {selectedItem.pickupDeadline ? ` Hạn chọn/nhận lại: ${formatDeadlineWithCountdown(selectedItem.pickupDeadline)}` : ''}
@@ -1422,6 +1471,22 @@ export function ReturnQuickDetailModal({ item, onClose, onOpenFullReview }) {
             <span className="font-semibold shrink-0">Trạng thái:</span>
             <span className="font-bold text-text text-right">{statusMap[item.status] || item.carrierStatus || item.status}</span>
           </div>
+          {item.rawStatus === 'INVALID' && (
+            <div className="flex justify-between gap-4">
+              <span className="font-semibold shrink-0">Cách nhận lại:</span>
+              <span className="font-semibold text-text text-right">
+                {invalidReturnChoiceLabel(item.invalidReturnChoice)}
+              </span>
+            </div>
+          )}
+          {item.rawStatus === 'INVALID' && item.shipBackStatus && (
+            <div className="flex justify-between gap-4">
+              <span className="font-semibold shrink-0">Trạng thái gửi lại:</span>
+              <span className="font-semibold text-text text-right">
+                {SHIP_BACK_STATUS_LABELS[item.shipBackStatus] || item.shipBackStatus}
+              </span>
+            </div>
+          )}
           {item.rawStatus === 'INVALID' && item.pickedUpAt && (
             <div className="flex justify-between gap-4">
               <span className="font-semibold shrink-0">Bàn giao tại quầy:</span>

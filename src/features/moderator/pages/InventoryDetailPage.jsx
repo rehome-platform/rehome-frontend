@@ -442,13 +442,21 @@ export default function InventoryDetailPage() {
               <div className="rounded-2xl border border-neutral bg-[#F8FAF8] p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-[#006B2C] text-white rounded">
-                      {data.reConsignStatus === 'PROPOSAL_SENT' ? 'ĐÃ GỬI ĐỀ XUẤT' : 'ĐƯỢC YÊU CẦU KÝ GỬI LẠI'}
+                    <span className={`text-[10px] font-bold tracking-wider px-2 py-0.5 text-white rounded ${
+                      (pricingRequest?.reConsignStatus || data.reConsignStatus) === 'COUNTER_OFFERED' ? 'bg-[#B42318]' : 'bg-[#006B2C]'
+                    }`}>
+                      {(pricingRequest?.reConsignStatus || data.reConsignStatus) === 'COUNTER_OFFERED'
+                        ? 'MEMBER TRẢ GIÁ'
+                        : ['PROPOSAL_SENT', 'PROPOSED'].includes(pricingRequest?.reConsignStatus || data.reConsignStatus)
+                          ? 'ĐÃ GỬI ĐỀ XUẤT'
+                          : 'ĐƯỢC YÊU CẦU KÝ GỬI LẠI'}
                     </span>
                     <h3 className="text-sm font-bold text-[#191C19]">Ký gửi lại cuối kỳ (Hết kỳ 3: 90 ngày)</h3>
                   </div>
                   <p className="text-xs text-[#5f5f5f]">
-                    Member đã chọn ký gửi lại với giá mới. Moderator cần đàm phán giá và tạo biên nhận mới tại quầy.
+                    {(pricingRequest?.reConsignStatus || data.reConsignStatus) === 'COUNTER_OFFERED'
+                      ? 'Member đã gửi mức giá đề xuất khác. Vui lòng mở màn ký gửi lại để chấp nhận, đề xuất giá khác hoặc giữ nguyên giá cũ.'
+                      : 'Member đã chọn ký gửi lại với giá mới. Moderator cần đàm phán giá và tạo biên nhận mới tại quầy.'}
                   </p>
                 </div>
                 <Button
@@ -456,7 +464,7 @@ export default function InventoryDetailPage() {
                   onClick={() => navigate(`/moderator/inventory/${encodeURIComponent(sku)}/re-consign`)}
                   className="text-xs py-2 px-3.5 font-semibold"
                 >
-                  Đàm phán giá →
+                  {(pricingRequest?.reConsignStatus || data.reConsignStatus) === 'COUNTER_OFFERED' ? 'Phản hồi trả giá →' : 'Đàm phán giá →'}
                 </Button>
               </div>
             )}

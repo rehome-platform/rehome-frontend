@@ -348,6 +348,7 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
   const isWithdrawal = item.type === 'WITHDRAWAL' || item.type === 'ITEM_WITHDRAWAL';
   const isPendingWithdrawalApproval = isWithdrawal && item.status === 'PENDING_APPROVAL';
   const isReturnShipBack = item.type === 'RETURN_SHIP_BACK';
+  const isReConsignCounter = item.type === 'RECONSIGN_COUNTER';
   const shipBackNearDeadline = isReturnShipBack && isShipBackDeadlineNear(item.shipBackDeadline);
   const subjectName = extractQueueSubjectName(item);
 
@@ -355,7 +356,7 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
     <tr
       ref={rowRef}
       key={item.queueId}
-      className={`transition-colors hover:bg-[#F6F9F4] ${shipBackNearDeadline
+      className={`transition-colors hover:bg-[#F6F9F4] ${shipBackNearDeadline || (isReConsignCounter && item.isOverdue)
         ? 'border-l-4 border-l-[#B42318] bg-[#FEF3F2]/40'
         : item.isOverdue
           ? 'border-l-4 border-l-[#006B2C] bg-[#F6F9F4]'
@@ -470,7 +471,7 @@ export function QueueTaskRow({ item, isFocused, isMine, isClaimedByOther, resour
             </Button>
           ) : isMine && linkTarget ? (
             <Link to={linkTarget} className={`${QUEUE_PRIMARY_LINK_CLASS} w-full`}>
-              {item.type === 'PACKING' ? 'Đóng gói' : item.type === 'RETURN_SHIP_BACK' ? 'Gửi hàng' : 'Mở việc'}
+              {item.type === 'PACKING' ? 'Đóng gói' : item.type === 'RETURN_SHIP_BACK' ? 'Gửi hàng' : item.type === 'RECONSIGN_COUNTER' ? 'Phản hồi giá' : 'Mở việc'}
             </Link>
           ) : (
             <span aria-hidden="true" />
@@ -515,7 +516,9 @@ export function ReturnShipBackQueueRow({
       <td className="py-3 px-4 align-middle">
         <p className="font-mono font-bold text-text">{item.orderNo || '—'}</p>
         <p className="font-mono text-[11px] font-semibold text-[#006B2C]">{item.sku || '—'}</p>
-        <p className="text-xs font-medium text-text">{item.targetName || item.name || '—'}</p>
+        <p className="text-xs font-medium text-text">
+          {item.productName || (item.targetName && item.targetName !== item.orderNo ? item.targetName : null) || (item.name && item.name !== item.orderNo ? item.name : null) || '—'}
+        </p>
       </td>
       <td className="py-3 px-3 align-middle">
         <p className="font-semibold text-text">{recipient}</p>
