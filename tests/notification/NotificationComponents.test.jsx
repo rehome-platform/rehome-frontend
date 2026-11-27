@@ -328,6 +328,86 @@ describe('Notification UI Components', () => {
       const loadingBtn = screen.getByRole('button', { name: /đang tải|tải thêm/i });
       expect(loadingBtn).toBeDisabled();
     });
+
+    it('hides UUID suffixes in dropdown display while preserving business codes and click navigation', async () => {
+      const markAsRead = vi.fn();
+      const onClose = vi.fn();
+      const returnUuid = 'd7a7ab15-1234-4567-89ab-cdef01234567';
+      const orderUuid = '62954734-abcd-4ef0-8123-456789abcdef';
+      const consignmentUuid = '99112233-aaaa-4bbb-8ccc-0123456789ab';
+
+      renderWithProviders(<NotificationDropdown onClose={onClose} />, {
+        context: {
+          ...mockContextValue,
+          markAsRead,
+          notifications: [
+            {
+              id: 'notif-uuid-1',
+              title: 'Có việc mới cần xử lý',
+              message: `Xử lý yêu cầu trả hàng · ${returnUuid}`,
+              targetType: 'RETURN_REQUEST',
+              targetId: returnUuid,
+              isRead: false,
+              read: false,
+            },
+            {
+              id: 'notif-uuid-2',
+              title: 'Có việc mới cần xử lý',
+              message: `Đóng gói đơn hàng · ${orderUuid}`,
+              targetType: 'ORDER',
+              targetId: orderUuid,
+              isRead: false,
+              read: false,
+            },
+            {
+              id: 'notif-uuid-3',
+              title: 'Có việc mới cần xử lý',
+              message: 'Xử lý yêu cầu trả hàng · d7a7ab15-...',
+              targetType: 'RETURN_REQUEST',
+              targetId: returnUuid,
+              isRead: false,
+              read: false,
+            },
+            {
+              id: 'notif-uuid-4',
+              title: 'Kiểm định ký gửi',
+              message: `Đơn ĐKG-101 (${consignmentUuid}) đang chờ kiểm định`,
+              targetType: 'CONSIGNMENT_FORM',
+              targetId: consignmentUuid,
+              isRead: false,
+              read: false,
+            },
+          ],
+        },
+      });
+
+      const item1 = screen.getByTestId('notification-item-notif-uuid-1');
+      expect(within(item1).getByText('Xử lý yêu cầu trả hàng')).toBeInTheDocument();
+      expect(item1.textContent).not.toContain(returnUuid);
+
+      const item2 = screen.getByTestId('notification-item-notif-uuid-2');
+      expect(within(item2).getByText('Đóng gói đơn hàng')).toBeInTheDocument();
+      expect(item2.textContent).not.toContain(orderUuid);
+
+      const item3 = screen.getByTestId('notification-item-notif-uuid-3');
+      expect(within(item3).getByText('Xử lý yêu cầu trả hàng')).toBeInTheDocument();
+      expect(item3.textContent).not.toContain('d7a7ab15-...');
+
+      const item4 = screen.getByTestId('notification-item-notif-uuid-4');
+      expect(within(item4).getByText('Đơn ĐKG-101 đang chờ kiểm định')).toBeInTheDocument();
+      expect(item4.textContent).not.toContain(consignmentUuid);
+
+      await userEvent.click(item4);
+      expect(markAsRead).toHaveBeenCalledWith('notif-uuid-4');
+      expect(mockNavigate).toHaveBeenCalledWith(`/moderator/consignments/${consignmentUuid}`);
+
+      await userEvent.click(item2);
+      expect(mockNavigate).toHaveBeenCalledWith('/moderator/packing');
+
+      await userEvent.click(item1);
+      expect(mockNavigate).toHaveBeenCalledWith('/moderator/returns');
+      expect(onClose).toHaveBeenCalledTimes(3);
+    });
   });
 
   describe('NotificationToastItem', () => {
@@ -440,6 +520,38 @@ describe('Notification UI Components', () => {
       expect(onDismiss).toHaveBeenCalledWith('toast-1');
 
       vi.useRealTimers();
+    });
+
+    it('hides UUID suffix on toast display while navigating with targetId on click', async () => {
+      const markAsRead = vi.fn();
+      const onDismiss = vi.fn();
+      const formUuid = 'd7a7ab15-1234-4567-89ab-cdef01234567';
+
+      renderWithProviders(
+        <NotificationToastItem
+          toast={{
+            id: 'toast-uuid',
+            title: 'Có việc mới cần xử lý',
+            message: `Duyệt yêu cầu ký gửi · ${formUuid}`,
+            targetType: 'CONSIGNMENT_FORM',
+            targetId: formUuid,
+            createdAt: '2026-11-07T12:00:00Z',
+          }}
+          onDismiss={onDismiss}
+        />,
+        {
+          context: { ...mockContextValue, markAsRead },
+        }
+      );
+
+      const body = screen.getByTestId('notification-toast-content');
+      expect(within(body).getByText('Duyệt yêu cầu ký gửi')).toBeInTheDocument();
+      expect(body.textContent).not.toContain(formUuid);
+
+      await userEvent.click(body);
+      expect(markAsRead).toHaveBeenCalledWith('toast-uuid');
+      expect(mockNavigate).toHaveBeenCalledWith(`/moderator/consignments/${formUuid}`);
+      expect(onDismiss).toHaveBeenCalledWith('toast-uuid');
     });
   });
 
